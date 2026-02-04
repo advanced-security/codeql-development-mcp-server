@@ -1,0 +1,3 @@
+| Example1.rb:7:3:7:12 | call to unrelated1 | Call from `unrelated2` to `unrelated1` |
+| Example1.rb:12:3:12:12 | call to unrelated1 | Call from `sourceFunc` to `unrelated1` |
+| Example1.rb:13:3:13:12 | call to unrelated2 | Call from `sourceFunc` to `unrelated2` |

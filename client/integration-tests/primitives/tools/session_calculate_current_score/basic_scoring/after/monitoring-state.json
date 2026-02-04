@@ -1,0 +1,64 @@
+{
+  "sessions": [
+    {
+      "sessionId": "scoring-test-session",
+      "queryPath": "/test/scoring-query.ql",
+      "language": "java",
+      "queryType": "security",
+      "description": "Quality scoring test",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "state": {
+        "compilationStatus": "success",
+        "testStatus": "passing",
+        "documentationStatus": "present",
+        "filesPresent": [
+          "/test/scoring-query.ql",
+          "/test/scoring-query.md",
+          "/test/scoring-query-test/test.qlref"
+        ]
+      },
+      "mcpCalls": [
+        {
+          "callId": "scoring-call-id",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "session_calculate_current_score",
+          "parameters": {
+            "sessionId": "scoring-test-session"
+          },
+          "result": {
+            "scoreId": "expected-score-id",
+            "timestamp": "2024-01-01T00:00:00.000Z",
+            "overallScore": 85,
+            "dimensions": {
+              "syntacticCorrectness": 100,
+              "testCoverageResults": 85,
+              "documentationQuality": 90,
+              "functionalCorrectness": 75
+            },
+            "grade": "B",
+            "recommendations": ["Consider improving functional test coverage"]
+          },
+          "success": true,
+          "duration": 125
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": [
+        {
+          "scoreId": "expected-score-id",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "overallScore": 85,
+          "dimensions": {
+            "syntacticCorrectness": 100,
+            "testCoverageResults": 85,
+            "documentationQuality": 90,
+            "functionalCorrectness": 75
+          },
+          "grade": "B",
+          "recommendations": ["Consider improving functional test coverage"]
+        }
+      ]
+    }
+  ]
+}

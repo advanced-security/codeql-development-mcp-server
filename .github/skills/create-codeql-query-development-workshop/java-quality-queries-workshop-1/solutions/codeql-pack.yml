@@ -1,0 +1,5 @@
+name: java-quality-workshop-solutions
+version: 0.0.1
+library: false
+dependencies:
+  codeql/java-all: '*'

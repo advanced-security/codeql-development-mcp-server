@@ -1,0 +1,98 @@
+name: QL MCP Client Integration Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/actions/setup-codeql-environment/action.yml'
+      - '.github/workflows/client-integration-tests.yml'
+      - '.node-version'
+      - '.codeql-version'
+      - 'client/**'
+      - 'server/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/actions/setup-codeql-environment/action.yml'
+      - '.github/workflows/client-integration-tests.yml'
+      - '.node-version'
+      - '.codeql-version'
+      - 'client/**'
+      - 'server/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    env:
+      HTTP_HOST: 'localhost'
+      HTTP_PORT: '3000'
+      TIMEOUT_SECONDS: '30'
+      URL_SCHEME: 'http'
+
+    steps:
+      - name: MCP Integration Tests - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: MCP Integration Tests - Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: MCP Integration Tests - Install OS dependencies
+        run: sudo apt-get install -y jq
+
+      - name: MCP Integration Tests - Install node dependencies for client and server workspaces
+        run: npm ci --workspace=client && npm ci --workspace=server
+
+      - name: MCP Integration Tests - Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          install-language-runtimes: false
+
+      ## Install packs used in the integration tests.
+      - name: MCP Integration Tests - Install CodeQL packs
+        run: ./server/scripts/install-packs.sh
+
+      ## Extract test databases used in the integration tests.
+      - name: MCP Integration Tests - Extract test databases
+        run: ./server/scripts/extract-test-databases.sh
+
+      ## Run integration tests. This script builds the server bundle and runs tests.
+      ## We do NOT use 'npm run build-and-test' as it runs query unit tests which
+      ## have a dedicated workflow (query-unit-tests.yml).
+      - name: MCP Integration Tests - Run integration tests
+        run: npm run test:integration --workspace=client
+
+      - name: MCP Integration Tests - Stop the background MCP server process
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            PID=$(cat server.pid)
+            echo "Stopping server with PID $PID"
+            if kill -0 $PID 2>/dev/null; then
+              kill $PID || true
+              sleep 2
+              # Force kill if still running
+              if kill -0 $PID 2>/dev/null; then
+                echo "Force killing server process"
+                kill -9 $PID || true
+              fi
+            else
+              echo "Server process was not running"
+            fi
+            rm server.pid
+          else
+            echo "No server.pid file found"
+          fi
+
+          # Clean up log files
+          if [ -f server.log ]; then
+            echo "Removing server.log"
+            rm server.log
+          fi

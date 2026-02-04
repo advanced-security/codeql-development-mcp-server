@@ -1,0 +1,5 @@
+name: example-cpp-solutions
+version: 0.0.1
+library: false
+dependencies:
+  codeql/cpp-all: '*'

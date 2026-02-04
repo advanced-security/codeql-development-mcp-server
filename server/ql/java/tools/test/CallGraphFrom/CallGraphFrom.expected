@@ -1,0 +1,4 @@
+| Example1.java:2:7:2:14 | super(...) | Call from `Example1` to `Object` |
+| Example1.java:8:9:8:20 | unrelated1(...) | Call from `unrelated2` to `unrelated1` |
+| Example1.java:13:9:13:20 | unrelated1(...) | Call from `sourceFunc` to `unrelated1` |
+| Example1.java:14:9:14:20 | unrelated2(...) | Call from `sourceFunc` to `unrelated2` |

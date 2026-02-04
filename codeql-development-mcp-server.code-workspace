@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{ "path": "." }
+	],
+	"settings": {
+		"codeQL.canary": true,
+		"codeQL.githubDatabase.download": "never",
+		"codeQL.runningTests.additionalTestArguments": [
+			"--keep-databases",
+			"--show-extractor-output"
+		],
+		"sarif-viewer.connectToGithubCodeScanning": "off"
+	}
+}

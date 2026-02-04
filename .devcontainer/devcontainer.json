@@ -1,0 +1,17 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.vscode-github-actions",
+        "github.vscode-codeql",
+        "ms-vscode.cpptools"
+      ],
+      "settings": {
+        "codeQL.runningQueries.memory": 2048,
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "npm install"
+}

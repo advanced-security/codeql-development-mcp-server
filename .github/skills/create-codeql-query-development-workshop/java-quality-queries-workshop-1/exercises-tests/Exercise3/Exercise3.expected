@@ -1,0 +1,14 @@
+WARNING: unused method 'getLambdaExprBody' (Exercise3.ql:56,8-25)
+WARNING: unused method 'getTryStmt' (Exercise3.ql:81,11-21)
+| JUnit4_Test.java:71:13:74:13 | assertThrows(...) | Test method 'testCompliant4' uses assertThrows pattern for exception testing |
+| JUnit4_Test.java:84:13:87:13 | assertThrows(...) | Test method 'testCompliant5' uses assertThrows pattern for exception testing |
+| JUnit4_Test.java:97:13:100:13 | assertThrows(...) | Test method 'testCompliant6' uses assertThrows pattern for exception testing |
+| JUnit4_Test.java:118:13:121:13 | assertThrows(...) | Test method 'testNonCompliant1' uses assertThrows pattern for exception testing |
+| JUnit4_Test.java:136:17:136:67 | fail(...) | Test method 'testNonCompliant2' uses fail() in try block pattern for exception testing |
+| JUnit4_Test.java:151:17:151:67 | fail(...) | Test method 'testNonCompliant3' uses fail() in try block pattern for exception testing |
+| JUnit5_Test.java:38:13:41:13 | assertThrows(...) | Test method 'testCompliant2' uses assertThrows pattern for exception testing |
+| JUnit5_Test.java:51:13:54:13 | assertThrows(...) | Test method 'testCompliant3' uses assertThrows pattern for exception testing |
+| JUnit5_Test.java:64:13:67:13 | assertThrows(...) | Test method 'testCompliant4' uses assertThrows pattern for exception testing |
+| JUnit5_Test.java:85:13:88:13 | assertThrows(...) | Test method 'testNonCompliant1' uses assertThrows pattern for exception testing |
+| JUnit5_Test.java:103:17:103:71 | fail(...) | Test method 'testNonCompliant2' uses fail() in try block pattern for exception testing |
+| JUnit5_Test.java:118:17:118:71 | fail(...) | Test method 'testNonCompliant3' uses fail() in try block pattern for exception testing |

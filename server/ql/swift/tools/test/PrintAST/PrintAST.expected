@@ -1,0 +1,64 @@
+Example1.swift:
+#    1| [Comment] // Example1 test case for PrintAST.ql
+#    1| 
+#    2| [ClassDecl] SomeClass
+#    3|   getMember(0): [NamedFunction] f()
+#    3|       InterfaceType = (SomeClass) -> () -> ()
+#    3|     getSelfParam(): [ParamDecl] self
+#    3|         Type = SomeClass
+#    3|     getBody(): [BraceStmt] { ... }
+#    4|   getMember(1): [NamedFunction] g(i:j:)
+#    4|       InterfaceType = (SomeClass) -> (Int, Int) -> Int
+#    4|     getSelfParam(): [ParamDecl] self
+#    4|         Type = SomeClass
+#    4|     getParam(0): [ParamDecl] i
+#    4|         Type = Int
+#    4|     getParam(1): [ParamDecl] j
+#    4|         Type = Int
+#    4|     getBody(): [BraceStmt] { ... }
+#    5|       getElement(0): [ReturnStmt] return ...
+#    5|         getResult(): [BinaryExpr] ... .+(_:_:) ...
+#    5|           getFunction(): [MethodLookupExpr] .+(_:_:)
+#    5|             getBase(): [TypeExpr] Int.Type
+#    5|               getTypeRepr(): [TypeRepr] Int
+#    5|             getMethodRef(): [DeclRefExpr] +(_:_:)
+#    5|           getArgument(0): [Argument] : i
+#    5|             getExpr(): [DeclRefExpr] i
+#    5|           getArgument(1): [Argument] : j
+#    5|             getExpr(): [DeclRefExpr] j
+#    2|   getMember(2): [Deinitializer] SomeClass.deinit()
+#    2|       InterfaceType = (SomeClass) -> () -> ()
+#    2|     getSelfParam(): [ParamDecl] self
+#    2|         Type = SomeClass
+#    2|     getBody(): [BraceStmt] { ... }
+#    2|   getMember(3): [Initializer] SomeClass.init()
+#    2|       InterfaceType = (SomeClass.Type) -> () -> SomeClass
+#    2|     getSelfParam(): [ParamDecl] self
+#    2|         Type = SomeClass
+#    2|     getBody(): [BraceStmt] { ... }
+#    2|       getElement(0): [ReturnStmt] return
+#    9| [NamedFunction] fun3(sc:)
+#    9|     InterfaceType = (SomeClass) -> ()
+#    9|   getParam(0): [ParamDecl] sc
+#    9|       Type = SomeClass
+#    9|   getBody(): [BraceStmt] { ... }
+#   10|     getVariable(0): [ConcreteVarDecl] i
+#   10|         Type = Int
+#   10|     getElement(0): [PatternBindingDecl] var ... = ...
+#   10|       getPattern(0): [TypedPattern] ... as ...
+#   10|         getSubPattern(): [NamedPattern] i
+#   10|         getTypeRepr(): [TypeRepr] Int
+#   11|     getElement(1): [CallExpr] call to f()
+#   11|       getFunction(): [MethodLookupExpr] .f()
+#   11|         getBase(): [DeclRefExpr] sc
+#   11|         getMethodRef(): [DeclRefExpr] f()
+#   12|     getElement(2): [AssignExpr]  ... = ...
+#   12|       getDest(): [DeclRefExpr] i
+#   12|       getSource(): [CallExpr] call to g(i:j:)
+#   12|         getFunction(): [MethodLookupExpr] .g(i:j:)
+#   12|           getBase(): [DeclRefExpr] sc
+#   12|           getMethodRef(): [DeclRefExpr] g(i:j:)
+#   12|         getArgument(0): [Argument] i: 1
+#   12|           getExpr(): [IntegerLiteralExpr] 1
+#   12|         getArgument(1): [Argument] j: 2
+#   12|           getExpr(): [IntegerLiteralExpr] 2

@@ -1,0 +1,9 @@
+{
+  "toolName": "find_codeql_query_files",
+  "parameters": {
+    "queryPath": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+    "language": "javascript"
+  },
+  "expectedSuccess": true,
+  "description": "Test find_codeql_query_files for JavaScript ExampleQuery1"
+}

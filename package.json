@@ -1,0 +1,59 @@
+{
+  "name": "codeql-development-mcp-server",
+  "version": "1.0.0",
+  "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "codeql",
+    "security",
+    "typescript",
+    "claude",
+    "anthropic",
+    "ai",
+    "llm",
+    "development",
+    "static-analysis"
+  ],
+  "author": "@github/ps-codeql",
+  "license": "MIT",
+  "engines": {
+    "node": ">=25.2.1",
+    "npm": ">=11.6.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
+  },
+  "scripts": {
+    "build": "npm run build -w server",
+    "build-and-test": "npm run build:all && npm run test:all",
+    "build:all": "npm run tidy && npm run build -w server && npm run build -w client",
+    "clean": "npm run clean -w client -w server",
+    "dev:stdio": "npm run dev:stdio -w server",
+    "dev:http": "npm run dev:http -w server",
+    "format": "prettier --write '**/*.{yml,yaml,md}'",
+    "format:check": "prettier --check '**/*.{yml,yaml,md}'",
+    "lint": "npm run lint -w client -w server",
+    "lint:fix": "npm run lint:fix -w client -w server",
+    "start": "npm run start -w server",
+    "test": "npm run test:server && npm run test:client",
+    "test:all": "npm run test:server && npm run test:client",
+    "test:client": "npm run test -w client",
+    "test:server": "npm run test -w server",
+    "tidy": "npm run lint:fix && npm run format",
+    "tidy:check": "npm run lint && npm run format:check",
+    "upgrade": "npm run upgrade:node",
+    "upgrade:node": "npx -y npm-check-updates --color --install always --reject zod --root --upgrade --workspaces"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
+}

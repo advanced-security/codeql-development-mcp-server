@@ -1,0 +1,81 @@
+name: Query Unit Tests - CodeQL Development MCP Server
+
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - '.codeql-version'
+      - '.gitmodules'
+      - '.github/actions/setup-codeql-environment/**'
+      - '.github/workflows/query-unit-tests.yml'
+      - '.node-version'
+      - 'codeql-pack.yml'
+      - 'codeql-pack.lock.yml'
+      - 'qlpack.yml'
+      - 'server/ql/**'
+      - 'server/scripts/install-packs.sh'
+      - 'server/scripts/run-query-unit-tests.sh'
+  push:
+    branches: ['main']
+    paths:
+      - '.codeql-version'
+      - '.gitmodules'
+      - '.github/actions/setup-codeql-environment/**'
+      - '.github/workflows/query-unit-tests.yml'
+      - '.node-version'
+      - 'codeql-pack.yml'
+      - 'codeql-pack.lock.yml'
+      - 'qlpack.yml'
+      - 'server/ql/**'
+      - 'server/scripts/install-packs.sh'
+      - 'server/scripts/run-query-unit-tests.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  query-unit-tests:
+    name: Query Unit Tests - ${{ matrix.language }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['actions', 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby']
+
+    steps:
+      - name: Query Unit Tests - ${{ matrix.language }} - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Query Unit Tests - ${{ matrix.language }} - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Query Unit Tests - ${{ matrix.language }} - Install OS dependencies
+        run: sudo apt-get install -y jq
+
+      - name: Query Unit Tests - ${{ matrix.language }} - Install node dependencies for all workspaces
+        run: npm ci --workspaces
+
+      - name: Query Unit Tests - ${{ matrix.language }} - Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          install-language-runtimes: true
+
+      ## Install packs used in the unit tests that we're about to run.
+      - name: Query Unit Tests - ${{ matrix.language }} - Install CodeQL packs used in unit tests
+        run: ./server/scripts/install-packs.sh --language ${{ matrix.language }}
+
+      ## Ensure the `codeql` CLI is installed and PATH env is setup before running
+      ## the unit test script, which requires the `codeql` CLI to be accessible via user PATH env.
+      - name: Query Unit Tests - ${{ matrix.language }} - Run unit tests for `server/ql/${{ matrix.language }}/tools/test/**` directories
+        run: ./server/scripts/run-query-unit-tests.sh --language ${{ matrix.language }}
+
+      - name: Query Unit Tests - ${{ matrix.language }} - Summary
+        run: |
+          echo "## Query Unit Tests Summary - ${{ matrix.language }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ CodeQL query unit tests completed successfully for ${{ matrix.language }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All PrintAST and tool queries validated for ${{ matrix.language }}" >> $GITHUB_STEP_SUMMARY

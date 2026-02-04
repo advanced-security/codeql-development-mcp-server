@@ -1,0 +1,5 @@
+name: ql-mcp-actions-tools-test
+version: 2.23.9
+dependencies:
+  ql-mcp-actions-tools-src: 2.23.9
+extractor: actions

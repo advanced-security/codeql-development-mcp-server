@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "codeql_query_compile-test-session",
+      "queryPath": "/test/query.ql",
+      "language": "java",
+      "queryType": "general",
+      "description": "codeql_query_compile integration test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["/test/query.ql"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "codeql_query_compile-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_query_compile",
+          "parameters": {
+            "param": "/test/query.ql"
+          },
+          "success": true,
+          "duration": 500,
+          "result": "codeql_query_compile operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

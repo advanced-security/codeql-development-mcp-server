@@ -1,0 +1,7 @@
+{
+  "toolName": "codeql_test_run",
+  "arguments": {
+    "tests": ["server/ql/javascript/examples/test/ExampleQuery1"],
+    "logDir": "client/integration-tests/primitives/tools/codeql_test_run/custom_log_directory/after"
+  }
+}

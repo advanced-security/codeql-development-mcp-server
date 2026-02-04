@@ -1,0 +1,23 @@
+{
+  "sessions": [
+    {
+      "id": "integration_test_session",
+      "calls": [
+        {
+          "tool": "codeql_test_run",
+          "timestamp": "2025-09-25T16:06:00.000Z",
+          "status": "success",
+          "arguments": {
+            "tests": ["server/ql/javascript/examples/test/ExampleQuery1"],
+            "logDir": "client/integration-tests/primitives/tools/codeql_test_run/custom_log_directory/after"
+          },
+          "response": {
+            "stdout": "All tests passed successfully",
+            "stderr": "",
+            "filesGenerated": []
+          }
+        }
+      ]
+    }
+  ]
+}

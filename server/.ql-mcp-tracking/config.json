@@ -1,0 +1,11 @@
+{
+  "storageLocation": ".ql-mcp-tracking/",
+  "autoTrackSessions": true,
+  "retentionDays": 90,
+  "includeCallParameters": true,
+  "includeCallResults": true,
+  "maxActiveSessionsPerQuery": 3,
+  "scoringFrequency": "per_call",
+  "archiveCompletedSessions": true,
+  "enableRecommendations": true
+}

@@ -1,0 +1,5 @@
+| test.cpp:5:16:5:22 | nullptr | Null literal |
+| test.cpp:11:16:11:16 | 0 | Null literal |
+| test.cpp:22:16:22:22 | nullptr | Null literal |
+| test.cpp:30:17:30:23 | nullptr | Null literal |
+| test.cpp:31:17:31:23 | nullptr | Null literal |

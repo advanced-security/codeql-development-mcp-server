@@ -1,0 +1,7 @@
+{
+  "toolName": "session_end",
+  "arguments": {
+    "sessionId": "test-session-id",
+    "status": "completed"
+  }
+}

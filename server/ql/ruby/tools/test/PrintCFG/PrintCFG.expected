@@ -1,0 +1,220 @@
+Example1.rb:
+#    4| enter simple_method
+#-----|  -> x
+
+#   17| enter complex_method
+#-----|  -> value
+
+#    1| enter Example1.rb
+#-----|  -> simple_method
+
+#   11| enter do ... end
+#-----|  -> i
+
+#    6| call to puts
+#-----|  -> then ...
+
+#    8| call to puts
+#-----|  -> else ...
+
+#   11| call to each
+#-----|  -> exit simple_method (normal)
+
+#    6| Positive
+#-----|  -> "Positive"
+
+#    8| Non-positive
+#-----|  -> "Non-positive"
+
+#    5| ... > ...
+#-----|  -> self
+#-----|  -> self
+
+#    6| "Positive"
+#-----|  -> call to puts
+
+#    8| "Non-positive"
+#-----|  -> call to puts
+
+#   11| _ .. _
+#-----|  -> ( ... )
+
+#    5| 0
+#-----|  -> ... > ...
+
+#   11| 0
+#-----|  -> 2
+
+#   11| 2
+#-----|  -> _ .. _
+
+#   11| ( ... )
+#-----|  -> do ... end
+
+#    5| then ...
+#-----|  -> if ...
+
+#    7| else ...
+#-----|  -> if ...
+
+#   11| do ... end
+#-----|  -> call to each
+
+#    5| if ...
+#-----|  -> 0
+
+#    4| x
+#-----|  -> x
+
+#    5| x
+#-----|  -> 0
+
+#    6| self
+#-----|  -> Positive
+
+#    8| self
+#-----|  -> Non-positive
+
+#   25| [no-match] when ...
+#-----|  -> 1
+
+#   25| [match] when ...
+#-----|  -> 0
+
+#   27| [no-match] when ...
+#-----|  -> value
+
+#   27| [match] when ...
+#-----|  -> 1
+
+#   18| ... if ...
+#-----|  -> value
+
+#   18| return
+#-----|  -> exit complex_method (normal)
+
+#   20| while ...
+#-----|  -> value
+
+#   18| - ...
+#-----|  -> return
+
+#   20| ... > ...
+#-----|  -> while ...
+#-----|  -> value
+
+#   18| ... < ...
+#-----|  -> ... if ...
+#-----|  -> 1
+
+#   21| ... / ...
+#-----|  -> ... = ...
+
+#   30| ... * ...
+#-----|  -> else ...
+
+#   18| 1
+#-----|  -> - ...
+
+#   18| 0
+#-----|  -> ... < ...
+
+#   20| 10
+#-----|  -> ... > ...
+
+#   21| 2
+#-----|  -> ... / ...
+
+#   25| 0
+#-----|  -> [no-match] when ...
+#-----|  -> [match] when ...
+
+#   26| 0
+#-----|  -> then ...
+
+#   27| 1
+#-----|  -> [no-match] when ...
+#-----|  -> [match] when ...
+
+#   28| 1
+#-----|  -> then ...
+
+#   30| 2
+#-----|  -> ... * ...
+
+#   24| case ...
+#-----|  -> exit complex_method (normal)
+
+#   25| then ...
+#-----|  -> case ...
+
+#   27| then ...
+#-----|  -> case ...
+
+#   29| else ...
+#-----|  -> case ...
+
+#   20| do ...
+#-----|  -> value
+
+#   21| ... = ...
+#-----|  -> do ...
+
+#   17| value
+#-----|  -> value
+
+#   18| value
+#-----|  -> 0
+
+#   20| value
+#-----|  -> 10
+
+#   21| value
+#-----|  -> value
+
+#   21| value
+#-----|  -> 2
+
+#   24| value
+#-----|  -> 0
+
+#   30| value
+#-----|  -> 2
+
+#    4| simple_method
+#-----|  -> complex_method
+
+#   17| complex_method
+#-----|  -> exit Example1.rb (normal)
+
+#   12| call to puts
+#-----|  -> exit do ... end (normal)
+
+#   11| i
+#-----|  -> self
+
+#   12| i
+#-----|  -> call to puts
+
+#   12| self
+#-----|  -> i
+
+#    4| exit simple_method
+
+#   17| exit complex_method
+
+#    1| exit Example1.rb
+
+#   11| exit do ... end
+
+#    4| exit simple_method (normal)
+#-----|  -> exit simple_method
+
+#   17| exit complex_method (normal)
+#-----|  -> exit complex_method
+
+#    1| exit Example1.rb (normal)
+#-----|  -> exit Example1.rb
+
+#   11| exit do ... end (normal)
+#-----|  -> exit do ... end

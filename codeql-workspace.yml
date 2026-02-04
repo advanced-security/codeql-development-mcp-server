@@ -1,0 +1,16 @@
+## This repository standardizes on using the `codeql-pack.yml` file name
+## -- instead of `qlpack.yml` -- for CodeQL packs. Either name is equally
+## supported by CodeQL, but this repository chooses to use `codeql-pack.yml`
+## as this is (we think) the long-term preferred name.
+ignore:
+  - '**/qlpack.yml'
+  - '.github/**'
+
+## The following `codeql-pack.yml` patterns are used by the `codeql pack ls`
+## command to identify CodeQL packs in the repository. Each pack name must be
+## unique across the entire repository.
+provide:
+  - 'server/ql/*/examples/src/codeql-pack.yml'
+  - 'server/ql/*/examples/test/codeql-pack.yml'
+  - 'server/ql/*/tools/src/codeql-pack.yml'
+  - 'server/ql/*/tools/test/codeql-pack.yml'

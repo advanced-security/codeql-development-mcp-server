@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "codeql_resolve_library_path-test-session",
+      "queryPath": "/test/qlpack.yml",
+      "language": "java",
+      "queryType": "general",
+      "description": "codeql_resolve_library_path integration test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["/test/qlpack.yml"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "codeql_resolve_library_path-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_resolve_library_path",
+          "parameters": {
+            "param": "/test/qlpack.yml"
+          },
+          "success": true,
+          "duration": 500,
+          "result": "codeql_resolve_library_path operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

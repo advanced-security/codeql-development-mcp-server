@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "find_predicate_position-test-session",
+      "queryPath": "myPredicate",
+      "language": "java",
+      "queryType": "general",
+      "description": "find_predicate_position integration test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["myPredicate"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "find_predicate_position-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "find_predicate_position",
+          "parameters": {
+            "param": "myPredicate"
+          },
+          "success": true,
+          "duration": 500,
+          "result": "find_predicate_position operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

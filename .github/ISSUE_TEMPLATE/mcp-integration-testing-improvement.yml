@@ -1,0 +1,162 @@
+name: Integration Testing Improvement for MCP Server Primitives
+
+description: Request improvements to integration testing for MCP server primitives (tools/resources)
+
+title: '[Integration Testing]: '
+labels: ['enhancement', 'mcp-server', 'testing']
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **🧪 Created from issue template:** `.github/ISSUE_TEMPLATE/mcp-integration-testing-improvement.yml`
+
+        This template helps you request improvements to integration testing for MCP server primitives (especially tool primitives).
+
+        Please provide examples of file contents expected (1) before and (2) after calling a given MCP server primitive, and any links or references to relevant files or test cases.
+
+        Once this issue is accepted and assigned, open a pull request using the PR template: `mcp-integration-testing-improvement`.
+
+        ✅ Scope Limitation: The corresponding PR MUST only modify files under `client/integration-tests/**` (plus this issue template or the PR template only if absolutely required). Changes outside that path will be asked to split into another PR.
+
+  - type: input
+    id: primitive-name
+    attributes:
+      label: Primitive Name
+      description: Name of the MCP server primitive (tool/resource) needing improved integration testing
+      placeholder: 'e.g., validate_codeql_query, update_resource_file'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: primitive-type
+    attributes:
+      label: Primitive Type
+      description: What type of primitive is this?
+      options:
+        - Tool (Interactive function)
+        - Resource (Static content)
+        - Prompt (Dynamic prompt content)
+        - Combination (Multiple types together)
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: integration-test-gaps
+    attributes:
+      label: Integration Test Gaps
+      description: Describe the current gaps or limitations in integration testing for this primitive
+      placeholder: 'Current integration tests do not cover X, or fail to check Y...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: improvement-suggestion
+    attributes:
+      label: Improvement Suggestion
+      description: Describe the desired improvement to integration testing
+      placeholder: 'Integration tests should be updated to cover Z, or include checks for W...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: before-content
+    attributes:
+      label: Example File Content(s) Before (One or Many Files)
+      description: Provide one or more file states BEFORE invoking the primitive. You can supply links and/or inline snippets. For multiple files, list each as a fenced block preceded by a header line.
+      placeholder: |
+        You may list multiple files. Suggested structure:
+
+        file: path/to/fileA.ext (optional link)
+        ```lang
+        <contents before>
+        ```
+
+        file: path/to/fileB.ext
+        ```
+        <contents before>
+        ```
+
+        Or just provide links:
+        - https://github.com/org/repo/blob/sha/path/to/fileA.ext
+        - https://github.com/org/repo/blob/sha/path/to/fileB.ext
+    validations:
+      required: false
+
+  - type: textarea
+    id: after-content
+    attributes:
+      label: Example File Content(s) After (Match Each Before)
+      description: Provide corresponding AFTER states. Keep ordering aligned with the before list for clarity.
+      placeholder: |
+        Match each BEFORE entry:
+
+        file: path/to/fileA.ext (after)
+        ```lang
+        <contents after>
+        ```
+
+        file: path/to/fileB.ext (after)
+        ```
+        <contents after>
+        ```
+
+        If unchanged, note: (no change)
+    validations:
+      required: false
+
+  - type: textarea
+    id: test-scenarios
+    attributes:
+      label: Test Scenarios
+      description: Specific scenarios that should be tested to validate the integration improvement
+      placeholder: |
+        List scenarios or cases that should be covered by improved integration tests.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to related issues, documentation, or examples
+      placeholder: 'e.g., GitHub issue #123, MCP docs, CodeQL examples'
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority-level
+    attributes:
+      label: Priority Level
+      description: How urgent is this improvement?
+      options:
+        - Critical (Blocking key functionality)
+        - High (Major workflow improvement)
+        - Medium (Important but not urgent)
+        - Low (Minor enhancement)
+      default: 2
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+
+  - type: checkboxes
+    id: integration-tests-requirements
+    attributes:
+      label: Integration Test Requirements Acknowledgement
+      description: Confirm you have reviewed and will follow the integration test requirements (structure, before/after, determinism, no binaries).
+      options:
+        - label: I reviewed client/integration-tests/README.md
+        - label: I will follow directory structure under client/integration-tests/primitives/tools/
+        - label: Each test will have clear before/after matching files
+        - label: No binary or non-diffable files will be added
+        - label: Tests will be deterministic and focused on a single primitive
+        - label: I will run npm run lint:fix and npm run build-and-test before requesting review

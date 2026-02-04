@@ -1,0 +1,12 @@
+{
+  "toolName": "codeql_resolve_queries",
+  "parameters": {
+    "directory": "server/ql/javascript/tools/src/",
+    "format": "json"
+  },
+  "success": true,
+  "description": "Successfully resolved queries in JavaScript tools directory",
+  "resolvedQueries": [
+    "PrintAST.ql"
+  ]
+}

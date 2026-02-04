@@ -1,0 +1,222 @@
+Example1.cs:
+#    7| {...}
+#-----|  -> ... ...;
+
+#    9| ... ...;
+#-----|  -> 5
+
+#    9| Int32 x = ...
+#-----|  -> if (...) ...
+
+#    9| 5
+#-----|  -> Int32 x = ...
+
+#   11| if (...) ...
+#-----|  -> access to local variable x
+
+#   11| ... > ...
+#-----|  -> {...}
+#-----|  -> {...}
+
+#   12| {...}
+#-----|  -> ...;
+
+#   13| ...;
+#-----|  -> "Positive"
+
+#   13| call to method WriteLine
+#-----|  -> for (...;...;...) ...
+
+#   13| "Positive"
+#-----|  -> call to method WriteLine
+
+#   16| {...}
+#-----|  -> ...;
+
+#   17| ...;
+#-----|  -> "Non-positive"
+
+#   17| call to method WriteLine
+#-----|  -> for (...;...;...) ...
+
+#   17| "Non-positive"
+#-----|  -> call to method WriteLine
+
+#   20| for (...;...;...) ...
+#-----|  -> 0
+
+#   20| Int32 i = ...
+#-----|  -> access to local variable i
+
+#   20| 0
+#-----|  -> Int32 i = ...
+
+#   20| ... < ...
+#-----|  -> {...}
+#-----|  -> exit Main (normal)
+
+#   20| ...++
+#-----|  -> access to local variable i
+
+#   20| access to local variable i
+#-----|  -> ...++
+
+#   21| {...}
+#-----|  -> ...;
+
+#   22| ...;
+#-----|  -> access to local variable i
+
+#   22| call to method WriteLine
+#-----|  -> access to local variable i
+
+#   22| access to local variable i
+#-----|  -> call to method WriteLine
+
+#   11| access to local variable x
+#-----|  -> 0
+
+#   11| 0
+#-----|  -> ... > ...
+
+#   20| access to local variable i
+#-----|  -> 3
+
+#   20| 3
+#-----|  -> ... < ...
+
+#   28| {...}
+#-----|  -> if (...) ...
+
+#   29| if (...) ...
+#-----|  -> access to parameter value
+
+#   29| ... < ...
+#-----|  -> {...}
+#-----|  -> while (...) ...
+
+#   30| {...}
+#-----|  -> 1
+
+#   31| return ...;
+#-----|  -> exit ComplexMethod (normal)
+
+#   31| -...
+#-----|  -> return ...;
+
+#   31| 1
+#-----|  -> -...
+
+#   34| while (...) ...
+#-----|  -> access to parameter value
+
+#   34| ... > ...
+#-----|  -> {...}
+#-----|  -> switch (...) {...}
+
+#   35| {...}
+#-----|  -> ...;
+
+#   36| ...;
+#-----|  -> access to parameter value
+
+#   36| ... = ...
+#-----|  -> access to parameter value
+
+#   36| ... / ...
+#-----|  -> ... = ...
+
+#   39| switch (...) {...}
+#-----|  -> access to parameter value
+
+#   39| access to parameter value
+#-----|  -> case ...:
+
+#   41| case ...:
+#-----|  -> 0
+
+#   41| 0
+#-----|  -> 0
+#-----|  -> case ...:
+
+#   42| return ...;
+#-----|  -> exit ComplexMethod (normal)
+
+#   42| 0
+#-----|  -> return ...;
+
+#   43| case ...:
+#-----|  -> 1
+
+#   43| 1
+#-----|  -> 1
+#-----|  -> default:
+
+#   44| return ...;
+#-----|  -> exit ComplexMethod (normal)
+
+#   44| 1
+#-----|  -> return ...;
+
+#   45| default:
+#-----|  -> access to parameter value
+
+#   46| return ...;
+#-----|  -> exit ComplexMethod (normal)
+
+#   46| ... * ...
+#-----|  -> return ...;
+
+#   29| access to parameter value
+#-----|  -> 0
+
+#   29| 0
+#-----|  -> ... < ...
+
+#   34| access to parameter value
+#-----|  -> 10
+
+#   34| 10
+#-----|  -> ... > ...
+
+#   36| access to parameter value
+#-----|  -> 2
+
+#   36| 2
+#-----|  -> ... / ...
+
+#   46| access to parameter value
+#-----|  -> 2
+
+#   46| 2
+#-----|  -> ... * ...
+
+#    4| {...}
+#-----|  -> exit Example1 (normal)
+
+#    4| call to constructor Object
+#-----|  -> {...}
+
+#    6| enter Main
+#-----|  -> {...}
+
+#   27| enter ComplexMethod
+#-----|  -> {...}
+
+#    4| enter Example1
+#-----|  -> call to constructor Object
+
+#    6| exit Main (normal)
+#-----|  -> exit Main
+
+#   27| exit ComplexMethod (normal)
+#-----|  -> exit ComplexMethod
+
+#    4| exit Example1 (normal)
+#-----|  -> exit Example1
+
+#    6| exit Main
+
+#   27| exit ComplexMethod
+
+#    4| exit Example1

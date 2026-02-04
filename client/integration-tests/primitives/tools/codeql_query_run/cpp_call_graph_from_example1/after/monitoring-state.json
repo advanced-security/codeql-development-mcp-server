@@ -1,0 +1,15 @@
+{
+  "toolName": "codeql_query_run",
+  "parameters": {
+    "queryName": "CallGraphFrom",
+    "queryLanguage": "cpp",
+    "database": "server/ql/cpp/tools/test/CallGraphFrom/CallGraphFrom.testproj",
+    "sourceFunction": "sourceFunc",
+    "output": "query-results.bqrs",
+    "format": "sarif-latest",
+    "interpretedOutput": "query-results.sarif",
+    "timeout": 300000
+  },
+  "success": true,
+  "description": "Successfully executed CallGraphFrom (@kind problem) query using query name resolution with external predicates and SARIF format interpretation"
+}

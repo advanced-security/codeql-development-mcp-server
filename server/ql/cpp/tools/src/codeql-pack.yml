@@ -1,0 +1,5 @@
+name: ql-mcp-cpp-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/cpp-all: 6.1.4

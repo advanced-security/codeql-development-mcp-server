@@ -1,0 +1,5 @@
+name: example-cpp-exercises-tests
+version: 0.0.1
+dependencies:
+  example-cpp-exercises: '*'
+extractor: cpp

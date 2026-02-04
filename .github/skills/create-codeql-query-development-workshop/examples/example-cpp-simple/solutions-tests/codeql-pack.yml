@@ -1,0 +1,5 @@
+name: example-cpp-solutions-tests
+version: 0.0.1
+dependencies:
+  example-cpp-solutions: '*'
+extractor: cpp

@@ -1,0 +1,174 @@
+Example1.py:
+#    4| ControlFlowNode for x
+#-----|  -> ControlFlowNode for x
+
+#    4| Entry node for Function simple_method
+#-----|  -> ControlFlowNode for x
+
+#    5| ControlFlowNode for x
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#    5| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for Compare
+
+#    5| ControlFlowNode for Compare
+#-----|  -> ControlFlowNode for print
+#-----|  -> ControlFlowNode for print
+
+#    6| ControlFlowNode for print
+#-----|  -> ControlFlowNode for StringLiteral
+
+#    6| ControlFlowNode for StringLiteral
+#-----|  -> ControlFlowNode for print()
+
+#    6| ControlFlowNode for print()
+#-----|  -> ControlFlowNode for range
+
+#    8| ControlFlowNode for print
+#-----|  -> ControlFlowNode for StringLiteral
+
+#    8| ControlFlowNode for StringLiteral
+#-----|  -> ControlFlowNode for print()
+
+#    8| ControlFlowNode for print()
+#-----|  -> ControlFlowNode for range
+
+#   10| ControlFlowNode for range
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#   10| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for range()
+
+#   10| ControlFlowNode for range()
+#-----|  -> ControlFlowNode for For
+
+#   10| ControlFlowNode for For
+#-----|  -> ControlFlowNode for i
+#-----|  -> Exit node for Function simple_method
+
+#   10| ControlFlowNode for i
+#-----|  -> ControlFlowNode for print
+
+#   11| ControlFlowNode for print
+#-----|  -> ControlFlowNode for i
+
+#   11| ControlFlowNode for i
+#-----|  -> ControlFlowNode for print()
+
+#   11| ControlFlowNode for print()
+#-----|  -> ControlFlowNode for For
+
+#    4| Exit node for Function simple_method
+
+#   14| ControlFlowNode for value
+#-----|  -> ControlFlowNode for value
+
+#   14| Entry node for Function complex_method
+#-----|  -> ControlFlowNode for value
+
+#   15| ControlFlowNode for value
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#   15| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for Compare
+
+#   15| ControlFlowNode for Compare
+#-----|  -> ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for While
+
+#   16| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for UnaryExpr
+
+#   16| ControlFlowNode for UnaryExpr
+#-----|  -> ControlFlowNode for Return
+
+#   16| ControlFlowNode for Return
+#-----|  -> Exit node for Function complex_method
+
+#   18| ControlFlowNode for While
+#-----|  -> ControlFlowNode for value
+
+#   18| ControlFlowNode for value
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#   18| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for Compare
+
+#   18| ControlFlowNode for Compare
+#-----|  -> ControlFlowNode for value
+#-----|  -> ControlFlowNode for value
+
+#   19| ControlFlowNode for value
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#   19| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for BinaryExpr
+
+#   19| ControlFlowNode for BinaryExpr
+#-----|  -> ControlFlowNode for value
+
+#   19| ControlFlowNode for value
+#-----|  -> ControlFlowNode for While
+
+#   21| ControlFlowNode for value
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#   21| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for Compare
+
+#   21| ControlFlowNode for Compare
+#-----|  -> ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for value
+
+#   22| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for Return
+
+#   22| ControlFlowNode for Return
+#-----|  -> Exit node for Function complex_method
+
+#   23| ControlFlowNode for value
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#   23| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for Compare
+
+#   23| ControlFlowNode for Compare
+#-----|  -> ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for value
+
+#   24| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for Return
+
+#   24| ControlFlowNode for Return
+#-----|  -> Exit node for Function complex_method
+
+#   26| ControlFlowNode for value
+#-----|  -> ControlFlowNode for IntegerLiteral
+
+#   26| ControlFlowNode for IntegerLiteral
+#-----|  -> ControlFlowNode for BinaryExpr
+
+#   26| ControlFlowNode for BinaryExpr
+#-----|  -> ControlFlowNode for Return
+
+#   26| ControlFlowNode for Return
+#-----|  -> Exit node for Function complex_method
+
+#   14| Exit node for Function complex_method
+
+#    4| ControlFlowNode for FunctionExpr
+#-----|  -> ControlFlowNode for simple_method
+
+#    0| Entry node for Module Example1
+#-----|  -> ControlFlowNode for FunctionExpr
+
+#    4| ControlFlowNode for simple_method
+#-----|  -> ControlFlowNode for FunctionExpr
+
+#   14| ControlFlowNode for FunctionExpr
+#-----|  -> ControlFlowNode for complex_method
+
+#   14| ControlFlowNode for complex_method
+#-----|  -> Exit node for Module Example1
+
+#    0| Exit node for Module Example1

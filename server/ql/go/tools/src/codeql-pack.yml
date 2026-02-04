@@ -1,0 +1,5 @@
+name: ql-mcp-go-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/go-all: 5.0.0

@@ -1,0 +1,62 @@
+name: 'Copilot Setup Steps'
+
+on:
+  # Allow manual testing through the repository's "Actions" tab
+  workflow_dispatch: {}
+  # Automatically run the setup steps when an associated workflow is changed.
+  push:
+    paths:
+      - '.codeql-version'
+      - '.github/workflows/copilot-setup-steps.yml'
+      - '.node-version'
+      - '.github/actions/setup-codeql-environment/action.yml'
+      - '**/codeql-pack.yml'
+      - '**/codeql-pack.lock.yml'
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '**/qlpack.yml'
+  pull_request:
+    paths:
+      - '.codeql-version'
+      - '.github/workflows/copilot-setup-steps.yml'
+      - '.node-version'
+      - '.github/actions/setup-codeql-environment/action.yml'
+      - '**/codeql-pack.yml'
+      - '**/codeql-pack.lock.yml'
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '**/qlpack.yml'
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Copilot Setup - Checkout code
+        uses: actions/checkout@v6
+        ## TODO : fix and/or rework to avoid "token not provided" error when this workflow
+        ## is initiated purely for use by Copilot Coding Agent (CCA) (i.e. not triggered
+        ## by normal code change). Uncomment the `with` section or refactor approach.
+        #with:
+        #  submodules: recursive
+        #  token: ${{ secrets.QL_DEV_TOKEN }}
+
+      - name: Copilot Setup - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Copilot Setup - Install dependencies
+        run: npm ci
+
+      - name: Copilot Setup - Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          install-language-runtimes: true
+
+      - name: Copilot Setup - Install CodeQL packs used in integration tests
+        run: ./server/scripts/install-packs.sh

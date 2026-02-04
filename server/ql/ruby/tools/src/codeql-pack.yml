@@ -1,0 +1,5 @@
+name: ql-mcp-ruby-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/ruby-all: 5.1.7

@@ -1,0 +1,200 @@
+Example1.java:
+#    0| [CompilationUnit] Example1
+#-----|   -1: (Imports)
+#    3|     1: [ImportType] import Arrays
+#    4|     2: [ImportType] import List
+#    6|   1: [Class] Example1
+#    7|     1: [FieldDeclaration] String name;
+#    7|       -1: [TypeAccess] String
+#    9|     2: [Constructor] Example1
+#    9|       5: [BlockStmt] { ... }
+#   10|         0: [ThisConstructorInvocationStmt] this(...)
+#   10|           0: [StringLiteral] "World"
+#   13|     3: [Constructor] Example1
+#-----|       4: (Parameters)
+#   13|         0: [Parameter] name
+#   13|           0: [TypeAccess] String
+#   13|       5: [BlockStmt] { ... }
+#   14|         1: [ExprStmt] <Expr>;
+#   14|           0: [AssignExpr] ...=...
+#   14|             0: [VarAccess] this.name
+#   14|               -1: [ThisAccess] this
+#   14|             1: [VarAccess] name
+#   17|     4: [Method] main
+#   17|       3: [TypeAccess] void
+#-----|       4: (Parameters)
+#   17|         0: [Parameter] args
+#   17|           0: [ArrayTypeAccess] ...[]
+#   17|             0: [TypeAccess] String
+#   17|       5: [BlockStmt] { ... }
+#   20|         0: [LocalVariableDeclStmt] var ...;
+#   20|           0: [TypeAccess] Example1
+#   20|           1: [LocalVariableDeclExpr] example
+#   20|             0: [ClassInstanceExpr] new Example1(...)
+#   20|               -3: [TypeAccess] Example1
+#   21|         1: [LocalVariableDeclStmt] var ...;
+#   21|           0: [TypeAccess] String
+#   21|           1: [LocalVariableDeclExpr] message
+#   21|             0: [StringLiteral] "Hello World!"
+#   23|         2: [IfStmt] if (...)
+#   23|           0: [GTExpr] ... > ...
+#   23|             0: [VarAccess] args.length
+#   23|               -1: [VarAccess] args
+#   23|             1: [IntegerLiteral] 0
+#   23|           1: [BlockStmt] { ... }
+#   24|             0: [ExprStmt] <Expr>;
+#   24|               0: [AssignExpr] ...=...
+#   24|                 0: [VarAccess] example.name
+#   24|                   -1: [VarAccess] example
+#   24|                 1: [ArrayAccess] ...[...]
+#   24|                   0: [VarAccess] args
+#   24|                   1: [IntegerLiteral] 0
+#   25|           2: [BlockStmt] { ... }
+#   26|             0: [ExprStmt] <Expr>;
+#   26|               0: [MethodCall] println(...)
+#   26|                 -1: [VarAccess] System.out
+#   26|                   -1: [TypeAccess] System
+#   26|                 0: [VarAccess] message
+#   29|         3: [ExprStmt] <Expr>;
+#   29|           0: [MethodCall] demo(...)
+#   29|             -1: [VarAccess] example
+#   32|     5: [Method] demo
+#   32|       3: [TypeAccess] void
+#   32|       5: [BlockStmt] { ... }
+#   33|         0: [LocalVariableDeclStmt] var ...;
+#   33|           0: [TypeAccess] List<Integer>
+#   33|             0: [TypeAccess] Integer
+#   33|           1: [LocalVariableDeclExpr] numbers
+#   33|             0: [MethodCall] asList(...)
+#   33|               -1: [TypeAccess] Arrays
+#   33|               0: [IntegerLiteral] 1
+#   33|               1: [IntegerLiteral] 2
+#   33|               2: [IntegerLiteral] 3
+#   36|         1: [ForStmt] for (...;...;...)
+#-----|           0: (For Initializers) 
+#   36|             0: [TypeAccess] int
+#   36|             1: [LocalVariableDeclExpr] i
+#   36|               0: [IntegerLiteral] 0
+#   36|           1: [LTExpr] ... < ...
+#   36|             0: [VarAccess] i
+#   36|             1: [MethodCall] size(...)
+#   36|               -1: [VarAccess] numbers
+#   36|           2: [BlockStmt] { ... }
+#   37|             0: [ExprStmt] <Expr>;
+#   37|               0: [MethodCall] println(...)
+#   37|                 -1: [VarAccess] System.out
+#   37|                   -1: [TypeAccess] System
+#   37|                 0: [MethodCall] get(...)
+#   37|                   -1: [VarAccess] numbers
+#   37|                   0: [VarAccess] i
+#   36|           3: [PostIncExpr] ...++
+#   36|             0: [VarAccess] i
+#   41|         2: [EnhancedForStmt] for (... : ...)
+#-----|           0: (Single Local Variable Declaration)
+#   41|             0: [TypeAccess] int
+#   41|             1: [LocalVariableDeclExpr] n
+#   41|           1: [VarAccess] numbers
+#   41|           2: [BlockStmt] { ... }
+#   42|             0: [ExprStmt] <Expr>;
+#   42|               0: [MethodCall] println(...)
+#   42|                 -1: [VarAccess] System.out
+#   42|                   -1: [TypeAccess] System
+#   42|                 0: [MulExpr] ... * ...
+#   42|                   0: [VarAccess] n
+#   42|                   1: [IntegerLiteral] 2
+#   46|         3: [ExprStmt] <Expr>;
+#   46|           0: [MethodCall] forEach(...)
+#   46|             -1: [MethodCall] stream(...)
+#   46|               -1: [VarAccess] numbers
+#   46|             0: [LambdaExpr] ...->...
+#   46|               -4: [AnonymousClass] new Consumer<Integer>(...) { ... }
+#   46|                 2: [Method] accept
+#-----|                   4: (Parameters)
+#   46|                     0: [Parameter] n
+#   46|                   5: [BlockStmt] { ... }
+#   46|                     0: [ReturnStmt] return ...
+#   46|                       0: [MethodCall] println(...)
+#   46|                         -1: [VarAccess] System.out
+#   46|                           -1: [TypeAccess] System
+#   46|                         0: [MulExpr] ... * ...
+#   46|                           0: [VarAccess] n
+#   46|                           1: [IntegerLiteral] 3
+#   46|               -3: [TypeAccess] Consumer<Integer>
+#   46|                 0: [TypeAccess] Integer
+#   49|         4: [LocalVariableDeclStmt] var ...;
+#   49|           0: [TypeAccess] Person
+#   49|           1: [LocalVariableDeclExpr] person
+#   49|             0: [ClassInstanceExpr] new Person(...)
+#   49|               -3: [TypeAccess] Person
+#   49|               0: [VarAccess] this.name
+#   49|                 -1: [ThisAccess] this
+#   49|               1: [IntegerLiteral] 25
+#   50|         5: [ExprStmt] <Expr>;
+#   50|           0: [MethodCall] printf(...)
+#   50|             -1: [VarAccess] System.out
+#   50|               -1: [TypeAccess] System
+#   50|             0: [StringLiteral] "Hello, %s (age %d)!%n"
+#   50|             1: [MethodCall] getName(...)
+#   50|               -1: [VarAccess] person
+#   50|             2: [MethodCall] getAge(...)
+#   50|               -1: [VarAccess] person
+#   53|         6: [TryStmt] try ...
+#   53|           -1: [BlockStmt] { ... }
+#   54|             0: [LocalVariableDeclStmt] var ...;
+#   54|               0: [TypeAccess] int
+#   54|               1: [LocalVariableDeclExpr] result
+#   54|                 0: [DivExpr] ... / ...
+#   54|                   0: [IntegerLiteral] 10
+#   54|                   1: [IntegerLiteral] 0
+#   55|             1: [ExprStmt] <Expr>;
+#   55|               0: [MethodCall] println(...)
+#   55|                 -1: [VarAccess] System.out
+#   55|                   -1: [TypeAccess] System
+#   55|                 0: [VarAccess] result
+#   56|           0: [CatchClause] catch (...)
+#-----|             0: (Single Local Variable Declaration)
+#   56|               0: [TypeAccess] ArithmeticException
+#   56|               1: [LocalVariableDeclExpr] e
+#   56|             1: [BlockStmt] { ... }
+#   57|               0: [ExprStmt] <Expr>;
+#   57|                 0: [MethodCall] println(...)
+#   57|                   -1: [VarAccess] System.out
+#   57|                     -1: [TypeAccess] System
+#   57|                   0: [StringLiteral] "Error occurred"
+#   61|     6: [Class] Person
+#   62|       1: [FieldDeclaration] String name;
+#   62|         -1: [TypeAccess] String
+#   63|       2: [FieldDeclaration] int age;
+#   63|         -1: [TypeAccess] int
+#   65|       3: [Constructor] Person
+#-----|         4: (Parameters)
+#   65|           0: [Parameter] name
+#   65|             0: [TypeAccess] String
+#   65|           1: [Parameter] age
+#   65|             0: [TypeAccess] int
+#   65|         5: [BlockStmt] { ... }
+#   66|           1: [ExprStmt] <Expr>;
+#   66|             0: [AssignExpr] ...=...
+#   66|               0: [VarAccess] this.name
+#   66|                 -1: [ThisAccess] this
+#   66|               1: [VarAccess] name
+#   67|           2: [ExprStmt] <Expr>;
+#   67|             0: [AssignExpr] ...=...
+#   67|               0: [VarAccess] this.age
+#   67|                 -1: [ThisAccess] this
+#   67|               1: [VarAccess] age
+#   70|       4: [Method] getName
+#   70|         3: [TypeAccess] String
+#   70|         5: [BlockStmt] { ... }
+#   71|           0: [ReturnStmt] return ...
+#   71|             0: [VarAccess] name
+#   74|       5: [Method] getAge
+#   74|         3: [TypeAccess] int
+#   74|         5: [BlockStmt] { ... }
+#   75|           0: [ReturnStmt] return ...
+#   75|             0: [VarAccess] age
+#   79|     7: [Method] helper
+#   79|       3: [TypeAccess] String
+#   79|       5: [BlockStmt] { ... }
+#   80|         0: [ReturnStmt] return ...
+#   80|           0: [StringLiteral] "Helper"

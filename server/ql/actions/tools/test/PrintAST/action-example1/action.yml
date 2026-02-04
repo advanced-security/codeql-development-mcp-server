@@ -1,0 +1,18 @@
+# This is a "Hello World" action.yml for testing purposes only.
+name: 'Hello World'
+description: 'Greet someone'
+inputs:
+  who-to-greet: # id of input
+    description: 'Who to greet'
+    required: true
+    default: 'World'
+
+runs:
+  using: 'composite'
+  steps:
+    # This is a "Hello World" comment for the "Greeting" step.
+    - name: Greeting
+      run: echo "Hello $INPUT_WHO_TO_GREET."
+      shell: bash
+      env:
+        INPUT_WHO_TO_GREET: ${{ inputs.who-to-greet }}

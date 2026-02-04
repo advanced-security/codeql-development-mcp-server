@@ -1,0 +1,37 @@
+{
+  "sessions": [
+    {
+      "sessionId": "codeql_bqrs_interpret-sarif-test-session",
+      "queryPath": "/test/results.bqrs",
+      "language": "java",
+      "queryType": "security",
+      "description": "codeql_bqrs_interpret integration test for SARIF format",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["/test/results.bqrs", "/test/results.sarif"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "codeql_bqrs_interpret-sarif-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_bqrs_interpret",
+          "parameters": {
+            "file": "/test/results.bqrs",
+            "format": "sarif-latest",
+            "output": "/test/results.sarif",
+            "t": ["kind=problem", "id=java/sql-injection"],
+            "sarif-add-snippets": true
+          },
+          "success": true,
+          "duration": 750,
+          "result": "codeql_bqrs_interpret operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+Example1.rb:
+#    1| [Toplevel] Example1.rb
+#    2|   getStmt: [MethodCall] call to require
+#    2|     getReceiver: [SelfVariableAccess] self
+#    2|     getArgument: [StringLiteral] "time"
+#    2|       getComponent: [StringTextComponent] time
+#    4|   getStmt: [ClassDeclaration] Example1
+#    6|     getStmt: [AssignExpr] ... = ...
+#    6|       getAnOperand/getLeftOperand: [ClassVariableAccess] @@count
+#    6|       getAnOperand/getRightOperand: [IntegerLiteral] 0
+#    7|     getStmt: [AssignExpr] ... = ...
+#    7|       getAnOperand/getLeftOperand: [ConstantAssignment] GREETING
+#    7|       getAnOperand/getRightOperand: [MethodCall] call to freeze
+#    7|         getReceiver: [StringLiteral] "Hello"
+#    7|           getComponent: [StringTextComponent] Hello
+#   10|     getStmt: [MethodCall] call to attr_accessor
+#   10|       getReceiver: [SelfVariableAccess] self
+#   10|       getArgument: [SymbolLiteral] :name
+#   10|         getComponent: [StringTextComponent] name
+#   12|     getStmt: [Method] initialize
+#   12|       getParameter: [OptionalParameter] name
+#   12|         getDefiningAccess: [LocalVariableAccess] name
+#   12|         getDefaultValue: [StringLiteral] "World"
+#   12|           getComponent: [StringTextComponent] World
+#   13|       getStmt: [AssignExpr] ... = ...
+#   13|         getAnOperand/getLeftOperand: [InstanceVariableAccess] @name
+#   13|           getReceiver: [SelfVariableAccess] self
+#   13|         getAnOperand/getRightOperand: [LocalVariableAccess] name
+#   14|       getStmt: [AssignAddExpr] ... += ...
+#   14|         getAnOperand/getLeftOperand: [ClassVariableAccess] @@count
+#   14|         getAnOperand/getRightOperand: [IntegerLiteral] 1
+#   17|     getStmt: [SingletonMethod] main
+#   17|       getObject: [SelfVariableAccess] self
+#   17|       getParameter: [OptionalParameter] args
+#   17|         getDefiningAccess: [LocalVariableAccess] args
+#   17|         getDefaultValue: [ConstantReadAccess] ARGV
+#   21|       getStmt: [AssignExpr] ... = ...
+#   21|         getAnOperand/getLeftOperand: [LocalVariableAccess] example
+#   21|         getAnOperand/getRightOperand: [MethodCall] call to new
+#   21|           getReceiver: [ConstantReadAccess] Example1
+#   22|       getStmt: [AssignExpr] ... = ...
+#   22|         getAnOperand/getLeftOperand: [LocalVariableAccess] message
+#   22|         getAnOperand/getRightOperand: [StringLiteral] "#{...}, #{...}!"
+#   22|           getComponent: [StringInterpolationComponent] #{...}
+#   22|             getStmt: [ConstantReadAccess] GREETING
+#   22|           getComponent: [StringTextComponent] , 
+#   22|           getComponent: [StringInterpolationComponent] #{...}
+#   22|             getStmt: [MethodCall] call to name
+#   22|               getReceiver: [LocalVariableAccess] example
+#   22|           getComponent: [StringTextComponent] !
+#   23|       getStmt: [AssignExpr] ... = ...
+#   23|         getAnOperand/getLeftOperand: [LocalVariableAccess] length
+#   23|         getAnOperand/getRightOperand: [MethodCall] call to length
+#   23|           getReceiver: [LocalVariableAccess] message
+#   26|       getStmt: [IfExpr] if ...
+#   26|         getCondition: [GTExpr] ... > ...
+#   26|           getAnOperand/getGreaterOperand/getLeftOperand/getReceiver: [MethodCall] call to length
+#   26|             getReceiver: [LocalVariableAccess] args
+#   26|           getAnOperand/getArgument/getLesserOperand/getRightOperand: [IntegerLiteral] 0
+#   26|         getBranch/getThen: [StmtSequence] then ...
+#   27|           getStmt: [AssignExpr] ... = ...
+#   27|             getAnOperand/getLeftOperand: [MethodCall] call to name
+#   27|               getReceiver: [LocalVariableAccess] example
+#   27|             getAnOperand/getRightOperand: [ElementReference] ...[...]
+#   27|               getReceiver: [LocalVariableAccess] args
+#   27|               getArgument: [IntegerLiteral] 0
+#   28|         getBranch/getElse: [StmtSequence] else ...
+#   29|           getStmt: [MethodCall] call to puts
+#   29|             getReceiver: [SelfVariableAccess] self
+#   29|             getArgument: [LocalVariableAccess] message
+#   33|       getStmt: [CaseExpr] case ...
+#   33|         getValue: [MethodCall] call to wday
+#   33|           getReceiver: [MethodCall] call to now
+#   33|             getReceiver: [ConstantReadAccess] Time
+#   34|         getBranch: [WhenClause] when ...
+#   34|           getPattern: [IntegerLiteral] 1
+#   34|           getBody: [StmtSequence] then ...
+#   35|             getStmt: [MethodCall] call to puts
+#   35|               getReceiver: [SelfVariableAccess] self
+#   35|               getArgument: [StringLiteral] "Monday"
+#   35|                 getComponent: [StringTextComponent] Monday
+#   36|         getBranch/getElseBranch: [StmtSequence] else ...
+#   37|           getStmt: [MethodCall] call to puts
+#   37|             getReceiver: [SelfVariableAccess] self
+#   37|             getArgument: [StringLiteral] "Other day"
+#   37|               getComponent: [StringTextComponent] Other day
+#   41|       getStmt: [MethodCall] call to demo_loops
+#   41|         getReceiver: [LocalVariableAccess] example
+#   44|       getStmt: [BeginExpr] begin ... 
+#   45|         getStmt: [AssignExpr] ... = ...
+#   45|           getAnOperand/getLeftOperand: [LocalVariableAccess] result
+#   45|           getAnOperand/getRightOperand: [DivExpr] ... / ...
+#   45|             getAnOperand/getLeftOperand/getReceiver: [IntegerLiteral] 10
+#   45|             getAnOperand/getArgument/getRightOperand: [ParenthesizedExpr] ( ... )
+#   45|               getStmt: [TernaryIfExpr] ... ? ... : ...
+#   45|                 getCondition: [MethodCall] call to empty?
+#   45|                   getReceiver: [LocalVariableAccess] args
+#   45|                 getBranch/getThen: [IntegerLiteral] 1
+#   45|                 getBranch/getElse: [IntegerLiteral] 0
+#   46|         getRescue: [RescueClause] rescue ...
+#   46|           getException: [ConstantReadAccess] ZeroDivisionError
+#   46|           getVariableExpr: [LocalVariableAccess] e
+#   46|           getBody: [StmtSequence] then ...
+#   47|             getStmt: [MethodCall] call to puts
+#   47|               getReceiver: [SelfVariableAccess] self
+#   47|               getArgument: [StringLiteral] "Error: #{...}"
+#   47|                 getComponent: [StringTextComponent] Error: 
+#   47|                 getComponent: [StringInterpolationComponent] #{...}
+#   47|                   getStmt: [MethodCall] call to message
+#   47|                     getReceiver: [LocalVariableAccess] e
+#   52|     getStmt: [Method] demo_loops
+#   53|       getStmt: [AssignExpr] ... = ...
+#   53|         getAnOperand/getLeftOperand: [LocalVariableAccess] numbers
+#   53|         getAnOperand/getRightOperand: [ArrayLiteral] [...]
+#   53|           getElement: [IntegerLiteral] 1
+#   53|           getElement: [IntegerLiteral] 2
+#   53|           getElement: [IntegerLiteral] 3
+#   56|       getStmt: [ForExpr] for ... in ...
+#   56|         getPattern: [LocalVariableAccess] i
+#   56|         getValue: [RangeLiteral] _ ... _
+#   56|           getBegin: [IntegerLiteral] 0
+#   56|           getEnd: [MethodCall] call to length
+#   56|             getReceiver: [LocalVariableAccess] numbers
+#   56|         getBody: [StmtSequence] do ...
+#   57|           getStmt: [MethodCall] call to print
+#   57|             getReceiver: [SelfVariableAccess] self
+#   57|             getArgument: [ElementReference] ...[...]
+#   57|               getReceiver: [LocalVariableAccess] numbers
+#   57|               getArgument: [LocalVariableAccess] i
+#   59|       getStmt: [MethodCall] call to puts
+#   59|         getReceiver: [SelfVariableAccess] self
+#   62|       getStmt: [MethodCall] call to each
+#   62|         getReceiver: [LocalVariableAccess] numbers
+#   62|         getBlock: [BraceBlock] { ... }
+#   62|           getParameter: [SimpleParameter] n
+#   62|             getDefiningAccess: [LocalVariableAccess] n
+#   62|           getStmt: [MethodCall] call to print
+#   62|             getReceiver: [SelfVariableAccess] self
+#   62|             getArgument: [MulExpr] ... * ...
+#   62|               getAnOperand/getLeftOperand/getReceiver: [LocalVariableAccess] n
+#   62|               getAnOperand/getArgument/getRightOperand: [IntegerLiteral] 2
+#   63|       getStmt: [MethodCall] call to puts
+#   63|         getReceiver: [SelfVariableAccess] self
+#   66|       getStmt: [AssignExpr] ... = ...
+#   66|         getAnOperand/getLeftOperand: [LocalVariableAccess] index
+#   66|         getAnOperand/getRightOperand: [IntegerLiteral] 0
+#   67|       getStmt: [WhileExpr] while ...
+#   67|         getCondition: [LTExpr] ... < ...
+#   67|           getAnOperand/getLeftOperand/getLesserOperand/getReceiver: [LocalVariableAccess] index
+#   67|           getAnOperand/getArgument/getGreaterOperand/getRightOperand: [IntegerLiteral] 2
+#   67|         getBody: [StmtSequence] do ...
+#   68|           getStmt: [MethodCall] call to print
+#   68|             getReceiver: [SelfVariableAccess] self
+#   68|             getArgument: [LocalVariableAccess] index
+#   69|           getStmt: [AssignAddExpr] ... += ...
+#   69|             getAnOperand/getLeftOperand: [LocalVariableAccess] index
+#   69|             getAnOperand/getRightOperand: [IntegerLiteral] 1
+#   71|       getStmt: [MethodCall] call to puts
+#   71|         getReceiver: [SelfVariableAccess] self
+#   74|       getStmt: [AssignExpr] ... = ...
+#   74|         getAnOperand/getLeftOperand: [LocalVariableAccess] person
+#   74|         getAnOperand/getRightOperand: [HashLiteral] {...}
+#   74|           getElement: [Pair] Pair
+#   74|             getKey: [SymbolLiteral] :name
+#   74|               getComponent: [StringTextComponent] name
+#   74|             getValue: [InstanceVariableAccess] @name
+#   74|               getReceiver: [SelfVariableAccess] self
+#   74|           getElement: [Pair] Pair
+#   74|             getKey: [SymbolLiteral] :age
+#   74|               getComponent: [StringTextComponent] age
+#   74|             getValue: [IntegerLiteral] 25
+#   75|       getStmt: [MethodCall] call to each
+#   75|         getReceiver: [LocalVariableAccess] person
+#   75|         getBlock: [DoBlock] do ... end
+#   75|           getParameter: [SimpleParameter] key
+#   75|             getDefiningAccess: [LocalVariableAccess] key
+#   75|           getParameter: [SimpleParameter] value
+#   75|             getDefiningAccess: [LocalVariableAccess] value
+#   76|           getStmt: [MethodCall] call to puts
+#   76|             getReceiver: [SelfVariableAccess] self
+#   76|             getArgument: [StringLiteral] "#{...}: #{...}"
+#   76|               getComponent: [StringInterpolationComponent] #{...}
+#   76|                 getStmt: [LocalVariableAccess] key
+#   76|               getComponent: [StringTextComponent] : 
+#   76|               getComponent: [StringInterpolationComponent] #{...}
+#   76|                 getStmt: [LocalVariableAccess] value
+#   80|       getStmt: [AssignExpr] ... = ...
+#   80|         getAnOperand/getLeftOperand: [LocalVariableAccess] text
+#   80|         getAnOperand/getRightOperand: [StringLiteral] "Hello Ruby"
+#   80|           getComponent: [StringTextComponent] Hello Ruby
+#   81|       getStmt: [IfExpr] if ...
+#   81|         getCondition: [MethodCall] call to match?
+#   81|           getReceiver: [LocalVariableAccess] text
+#   81|           getArgument: [RegExpLiteral] /ruby/
+#   81|             getParsed: [RegExpConstant, RegExpNormalChar] ruby
+#   81|             getComponent: [RegExpTextComponent] ruby
+#   81|         getBranch/getThen: [StmtSequence] then ...
+#   82|           getStmt: [MethodCall] call to puts
+#   82|             getReceiver: [SelfVariableAccess] self
+#   82|             getArgument: [MethodCall] call to upcase
+#   82|               getReceiver: [LocalVariableAccess] text
+#   87|     getStmt: [SingletonMethod] count
+#   87|       getObject: [SelfVariableAccess] self
+#   88|       getStmt: [ClassVariableAccess] @@count
+#   93|   getStmt: [ModuleDeclaration] Helper
+#   94|     getStmt: [Method] helper_method
+#   95|       getStmt: [StringLiteral] "Helper"
+#   95|         getComponent: [StringTextComponent] Helper
+#  100|   getStmt: [ClassDeclaration] Example1
+#  101|     getStmt: [MethodCall] call to include
+#  101|       getReceiver: [SelfVariableAccess] self
+#  101|       getArgument: [ConstantReadAccess] Helper
+#  105|   getStmt: [IfExpr] if ...
+#  105|     getCondition: [EqExpr] ... == ...
+#  105|       getAnOperand/getLeftOperand/getReceiver: [MethodCall] call to __FILE__
+#  105|         getReceiver: [SelfVariableAccess] self
+#  105|       getAnOperand/getArgument/getRightOperand: [GlobalVariableAccess] $0
+#  105|     getBranch/getThen: [StmtSequence] then ...
+#  106|       getStmt: [MethodCall] call to main
+#  106|         getReceiver: [ConstantReadAccess] Example1

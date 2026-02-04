@@ -1,0 +1,385 @@
+name: 'Setup CodeQL Environment with Languages'
+description: 'Install and configure CodeQL CLI via GitHub CLI extension and language-specific tools with optimized caching'
+
+inputs:
+  install-language-runtimes:
+    description: 'Whether to install language-specific runtimes and build tools'
+    required: false
+    default: 'true'
+
+  # Language selection (only used if install-language-runtimes is true)
+  languages:
+    description: 'Comma-separated list of target programming languages for which dependencies should be installed'
+    required: false
+    default: 'csharp,go,java,javascript,python,ruby'
+
+  # Language runtime versions (only used if install-language-runtimes is true)
+  python-version:
+    description: 'Python version to install'
+    required: false
+    default: '3.11'
+  java-version:
+    description: 'Java version to install'
+    required: false
+    default: '17'
+  go-version:
+    description: 'Go version to install'
+    required: false
+    default: '1.21'
+  dotnet-version:
+    description: '.NET version to install'
+    required: false
+    default: '8.0'
+  ruby-version:
+    description: 'Ruby version to install'
+    required: false
+    default: '3.2'
+
+outputs:
+  codeql-home:
+    description: 'CodeQL installation directory'
+    value: ${{ env.CODEQL_HOME }}
+  codeql-path:
+    description: 'CodeQL binary path'
+    value: ${{ env.CODEQL_PATH }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Read CodeQL version from .codeql-version file
+      id: codeql-version
+      shell: bash
+      run: |
+        # Read CodeQL version from .codeql-version for cache key
+        if [[ ! -f ".codeql-version" ]]; then
+          echo "❌ Error: .codeql-version not found in repository root"
+          echo "This action requires a .codeql-version file to determine the CodeQL version to use."
+          exit 1
+        fi
+
+        CODEQL_VERSION=$(cat .codeql-version | tr -d '[:space:]')
+
+        if [[ -z "$CODEQL_VERSION" ]]; then
+          echo "❌ Error: CodeQL version not specified in .codeql-version"
+          exit 1
+        fi
+
+        echo "codeql-version=$CODEQL_VERSION" >> $GITHUB_OUTPUT
+        echo "runner-os=${{ runner.os }}" >> $GITHUB_OUTPUT
+
+        # Create cache key for CodeQL
+        CODEQL_CACHE_KEY="gh-codeql-${{ runner.os }}-${CODEQL_VERSION}"
+        echo "codeql-cache-key=$CODEQL_CACHE_KEY" >> $GITHUB_OUTPUT
+
+        echo "Version information prepared:"
+        echo "  CodeQL Version: $CODEQL_VERSION"
+        echo "  Cache Key: $CODEQL_CACHE_KEY"
+
+    - name: Cache `gh-codeql` extension and CodeQL packages
+      id: cache-codeql
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/share/gh-codeql
+          ~/.codeql/packages
+        key: ${{ steps.codeql-version.outputs.codeql-cache-key }}
+        restore-keys: |
+          gh-codeql-${{ runner.os }}-${{ steps.codeql-version.outputs.codeql-version }}-
+
+    # Install GitHub CLI CodeQL extension and set `codeql` CLI version
+    - name: Install GitHub CLI CodeQL extension and set version
+      id: install-gh-codeql
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        echo "🔧 Installing GitHub CLI CodeQL extension..."
+
+        # Verify GitHub CLI is available
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "❌ Error: GitHub CLI (gh) is not available"
+          echo "GitHub CLI should be pre-installed on GitHub Actions runners"
+          exit 1
+        fi
+
+        echo "GitHub CLI version: $(gh --version | head -1)"
+
+        # Install CodeQL CLI extension
+        echo "Installing gh-codeql extension..."
+        gh extension install github/gh-codeql
+
+        # Set CodeQL to specific version from .codeql-version, with the 'v' prefix removed if present
+        CODEQL_VERSION=`echo "${{ steps.codeql-version.outputs.codeql-version }}" | sed 's/v//g'`
+        echo "Setting CodeQL to version: $CODEQL_VERSION"
+        gh codeql set-version "$CODEQL_VERSION"
+
+        # Verify the extension is installed and working
+        echo "Verifying CodeQL installation..."
+        INSTALLED_VERSION=$(gh codeql version --format=terse)
+        echo "Installed CodeQL version: $INSTALLED_VERSION"
+
+        if [[ "$INSTALLED_VERSION" != "$CODEQL_VERSION" ]]; then
+          echo "❌ Error: Installed CodeQL version ($INSTALLED_VERSION) does not match requested version ($CODEQL_VERSION)"
+          exit 1
+        fi
+
+        # Create a directory for the CodeQL stub and install it there
+        CODEQL_STUB_DIR="$HOME/.local/bin"
+        mkdir -p "$CODEQL_STUB_DIR"
+
+        echo "Installing CodeQL stub in $CODEQL_STUB_DIR..."
+        gh codeql install-stub "$CODEQL_STUB_DIR/"
+
+        # Add the stub directory to PATH
+        export PATH="$CODEQL_STUB_DIR:$PATH"
+        echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+        echo "✅ GitHub CLI CodeQL extension installed successfully"
+
+    - name: Setup CodeQL environment variables
+      id: setup-codeql-env
+      shell: bash
+      run: |
+        echo "🔧 Setting up CodeQL environment variables..."
+
+        _configured_version=`echo "${{ steps.codeql-version.outputs.codeql-version }}" | sed 's/v//g'`
+        if [[ -z "$_configured_version" ]]; then
+          echo "❌ Error: .codeql-version is empty"
+          exit 2
+        fi
+
+        echo "Making sure CodeQL CLI is available in PATH..."
+        # Ensure codeql is available in PATH by running a simple command that forces gh-codeql to set up the binary
+        _installed_version=`gh codeql version --format=terse 2> /dev/null`
+        if [[ "$_installed_version" != "$_configured_version" ]]; then
+          echo "❌ Installed CodeQL version ($_installed_version) does not match configured version ($_configured_version)"
+          exit 3
+        fi
+
+        # Now check that codeql is available in PATH
+        CODEQL_BINARY_PATH=`which codeql`
+        if [[ -z "$CODEQL_BINARY_PATH" ]]; then
+          echo "❌ CodeQL binary not found in PATH after installing stub"
+          exit 1
+        fi
+
+        _in_path_version=`codeql version --format=terse 2> /dev/null || echo ""`
+        if [[ "$_in_path_version" != "$_configured_version" ]]; then
+          echo "❌ CodeQL version in PATH ($_in_path_version) does not match configured version ($_configured_version)"
+          exit 4
+        else
+          echo "✅ CodeQL CLI is correctly installed and available in PATH"
+        fi
+
+        # Get the directory containing the CodeQL binary
+        CODEQL_HOME_DIR=$(dirname "$CODEQL_BINARY_PATH")
+
+        export CODEQL_HOME="$CODEQL_HOME_DIR"
+        export CODEQL_PATH="$CODEQL_BINARY_PATH"
+
+        # Set GitHub environment variables
+        echo "CODEQL_HOME=$CODEQL_HOME" >> "$GITHUB_ENV"
+        echo "CODEQL_PATH=$CODEQL_PATH" >> "$GITHUB_ENV"
+
+        echo "✅ Environment variables set:"
+        echo "  CODEQL_HOME=$CODEQL_HOME"
+        echo "  CODEQL_PATH=$CODEQL_PATH"
+
+    # Verify CodeQL installation
+    - name: Verify `codeql` CLI installation
+      shell: bash
+      run: |
+        echo "=== CodeQL Installation Verification ==="
+        echo "GitHub CLI version: $(gh --version | head -1)"
+        echo "CodeQL Home: $CODEQL_HOME"
+        echo "CodeQL Binary: $CODEQL_PATH"
+        echo "CodeQL Version: $(codeql --version)"
+        echo "CodeQL in PATH: $(which codeql || echo 'Not found in PATH')"
+        echo "Current PATH: $PATH"
+        echo "========================================="
+
+    - name: Check for dependency files
+      id: check-deps
+      if: inputs.install-language-runtimes == 'true'
+      shell: bash
+      run: |
+        echo "Checking for language dependency files..."
+
+        # Check for Python dependency files
+        if [[ -f "requirements.txt" ]] || [[ -f "pyproject.toml" ]] || [[ -f "setup.py" ]] || [[ -f "Pipfile" ]]; then
+          echo "python-deps=true" >> $GITHUB_OUTPUT
+          echo "Found Python dependency files"
+        else
+          echo "python-deps=false" >> $GITHUB_OUTPUT
+          echo "No Python dependency files found"
+        fi
+
+        # Check for Go dependency files
+        if [[ -f "go.mod" ]]; then
+          echo "go-deps=true" >> $GITHUB_OUTPUT
+          echo "Found Go dependency files"
+        else
+          echo "go-deps=false" >> $GITHUB_OUTPUT
+          echo "No Go dependency files found"
+        fi
+
+        # Check for Ruby dependency files
+        if [[ -f "Gemfile" ]]; then
+          echo "ruby-deps=true" >> $GITHUB_OUTPUT
+          echo "Found Ruby dependency files"
+        else
+          echo "ruby-deps=false" >> $GITHUB_OUTPUT
+          echo "No Ruby dependency files found"
+        fi
+
+        # Check for Java dependency files
+        if [[ -f "pom.xml" ]] || [[ -f "build.gradle" ]] || [[ -f "build.gradle.kts" ]]; then
+          echo "java-deps=true" >> $GITHUB_OUTPUT
+          echo "Found Java dependency files"
+        else
+          echo "java-deps=false" >> $GITHUB_OUTPUT
+          echo "No Java dependency files found"
+        fi
+
+        # Check for .NET dependency files
+        if [[ -f "*.csproj" ]] || [[ -f "*.sln" ]] || [[ -f "packages.config" ]]; then
+          echo "dotnet-deps=true" >> $GITHUB_OUTPUT
+          echo "Found .NET dependency files"
+        else
+          echo "dotnet-deps=false" >> $GITHUB_OUTPUT
+          echo "No .NET dependency files found"
+        fi
+
+    - name: Setup Node.js
+      if: inputs.install-language-runtimes == 'true'
+      uses: actions/setup-node@v6
+      with:
+        cache: 'npm'
+        cache-dependency-path: 'package-lock.json'
+        node-version-file: '.node-version'
+
+    # Cache language runtimes to avoid repeated downloads (excluding .NET which is cached separately)
+    - name: Cache language runtimes
+      id: cache-runtimes
+      if: inputs.install-language-runtimes == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/.gem
+          ~/.bundle
+          ~/.ccache
+        key: language-runtimes-${{ runner.os }}-py${{ inputs.python-version }}-java${{ inputs.java-version }}-go${{ inputs.go-version }}-dotnet${{ inputs.dotnet-version }}-ruby${{ inputs.ruby-version }}
+        restore-keys: |
+          language-runtimes-${{ runner.os }}-
+
+    - name: Setup Python (with cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'true'
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+
+    - name: Setup Python (without cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'false'
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Setup Java (with cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'true'
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: ${{ inputs.java-version }}
+        cache: 'maven'
+
+    - name: Setup Java (without cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'false'
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: ${{ inputs.java-version }}
+
+    - name: Setup Go (with cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'true'
+      uses: actions/setup-go@v6
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: true
+
+    - name: Setup Go (without cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'false'
+      uses: actions/setup-go@v6
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: false
+
+    # Cache .NET packages and tools
+    - name: Cache .NET packages
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp')
+      id: cache-dotnet-packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.nuget/packages
+          ~/.dotnet/tools
+        key: dotnet-packages-${{ runner.os }}-${{ inputs.dotnet-version }}-${{ hashFiles('**/*.csproj', '**/*.sln', '**/packages.config') }}
+        restore-keys: |
+          dotnet-packages-${{ runner.os }}-${{ inputs.dotnet-version }}-
+          dotnet-packages-${{ runner.os }}-
+
+    - name: Setup .NET (for C#)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp')
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Setup Ruby (with cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'true'
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ inputs.ruby-version }}
+        bundler-cache: true
+
+    - name: Setup Ruby (without cache)
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'false'
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ inputs.ruby-version }}
+        bundler-cache: false
+
+    - name: Verify language-specific tools
+      if: inputs.install-language-runtimes == 'true' && inputs.languages != ''
+      shell: bash
+      run: |
+        echo "=== Language-specific tool verification ==="
+
+        if [[ "${{ inputs.languages }}" == *"javascript"* ]] || [[ "${{ inputs.languages }}" == *"typescript"* ]]; then
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
+        fi
+
+        if [[ "${{ inputs.languages }}" == *"python"* ]]; then
+          echo "Python version: $(python --version)"
+          echo "pip version: $(pip --version)"
+        fi
+
+        if [[ "${{ inputs.languages }}" == *"java"* ]]; then
+          echo "Java version: $(java -version 2>&1 | head -1)"
+        fi
+
+        if [[ "${{ inputs.languages }}" == *"go"* ]]; then
+          echo "Go version: $(go version)"
+        fi
+
+        if [[ "${{ inputs.languages }}" == *"csharp"* ]]; then
+          echo "dotnet version: $(dotnet --version)"
+        fi
+
+        if [[ "${{ inputs.languages }}" == *"ruby"* ]]; then
+          echo "Ruby version: $(ruby --version)"
+        fi
+
+        echo "================================="

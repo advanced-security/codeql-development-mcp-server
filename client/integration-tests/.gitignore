@@ -1,0 +1,2 @@
+# Ignore binary query results files in integration tests
+**/*.bqrs

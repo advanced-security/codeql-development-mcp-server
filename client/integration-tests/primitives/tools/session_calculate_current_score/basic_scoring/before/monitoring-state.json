@@ -1,0 +1,26 @@
+{
+  "sessions": [
+    {
+      "sessionId": "scoring-test-session",
+      "queryPath": "/test/scoring-query.ql",
+      "language": "java",
+      "queryType": "security",
+      "description": "Quality scoring test",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "state": {
+        "compilationStatus": "success",
+        "testStatus": "passing",
+        "documentationStatus": "present",
+        "filesPresent": [
+          "/test/scoring-query.ql",
+          "/test/scoring-query.md",
+          "/test/scoring-query-test/test.qlref"
+        ]
+      },
+      "mcpCalls": [],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

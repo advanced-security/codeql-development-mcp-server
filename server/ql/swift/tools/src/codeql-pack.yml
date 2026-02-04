@@ -1,0 +1,5 @@
+name: ql-mcp-swift-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/swift-all: 6.1.0

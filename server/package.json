@@ -1,0 +1,73 @@
+{
+  "name": "codeql-development-mcp-server_server",
+  "version": "1.0.0",
+  "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
+  "main": "dist/ql-mcp-server.js",
+  "types": "dist/ql-mcp-server.d.ts",
+  "type": "module",
+  "bin": {
+    "codeql-mcp-server": "./dist/ql-mcp-server.js"
+  },
+  "keywords": [
+    "codeql",
+    "github",
+    "integration-testing",
+    "mcp",
+    "model-context-protocol",
+    "ql",
+    "sast",
+    "security",
+    "static-analysis",
+    "typescript"
+  ],
+  "author": "GitHub",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.10.0",
+    "npm": ">=11.6.1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "js-yaml": "^4.1.1",
+    "lowdb": "^7.0.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.2.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "esbuild": "^0.27.2",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^4.0.18"
+  },
+  "scripts": {
+    "build": "npm run clean && npm run lint && npm run bundle",
+    "build:all": "npm run build && npm run test:ql:fail-fast",
+    "bundle": "node esbuild.config.js",
+    "clean": "rm -rf dist",
+    "dev:stdio": "npm run build && TRANSPORT_MODE=stdio node dist/ql-mcp-server.js",
+    "dev:http": "npm run build && TRANSPORT_MODE=http node dist/ql-mcp-server.js",
+    "lint": "eslint src test --ext .ts",
+    "lint:fix": "eslint src test --ext .ts --fix",
+    "format": "prettier --write 'src/**/*.ts'",
+    "start": "npm run build && node dist/ql-mcp-server.js",
+    "test": "npm run build && npm run test:ts:coverage",
+    "test:coverage": "npm run test:ts:coverage",
+    "test:ql": "./scripts/run-query-unit-tests.sh",
+    "test:ql:fail-fast": "./scripts/run-query-unit-tests.sh --fail-fast",
+    "test:ts": "vitest --run",
+    "test:ts:coverage": "vitest --run --coverage",
+    "test:watch": "vitest --watch"
+  }
+}

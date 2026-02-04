@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "codeql_pack_ls-test-session",
+      "queryPath": "/test/packs/",
+      "language": "java",
+      "queryType": "general",
+      "description": "codeql_pack_ls integration test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["/test/packs/"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "codeql_pack_ls-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_pack_ls",
+          "parameters": {
+            "param": "/test/packs/"
+          },
+          "success": true,
+          "duration": 500,
+          "result": "codeql_pack_ls operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

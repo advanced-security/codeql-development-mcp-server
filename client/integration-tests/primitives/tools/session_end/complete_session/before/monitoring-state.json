@@ -1,0 +1,22 @@
+{
+  "sessions": [
+    {
+      "sessionId": "test-session-id",
+      "queryPath": "/test/session-test.ql",
+      "language": "javascript",
+      "queryType": "test",
+      "description": "Session end test",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "state": {
+        "compilationStatus": "success",
+        "testStatus": "passing",
+        "documentationStatus": "present",
+        "filesPresent": ["/test/session-test.ql"]
+      },
+      "mcpCalls": [],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

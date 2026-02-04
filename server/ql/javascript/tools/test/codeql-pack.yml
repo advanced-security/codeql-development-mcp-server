@@ -1,0 +1,5 @@
+name: ql-mcp-javascript-tools-test
+version: 2.23.9
+dependencies:
+  ql-mcp-javascript-tools-src: 2.23.9
+extractor: javascript

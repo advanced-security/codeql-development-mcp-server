@@ -1,0 +1,159 @@
+{
+  "queryName": "/home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+  "totalDuration": 203.810255,
+  "totalEvents": 39,
+  "pipelines": [
+    {
+      "eventId": 3,
+      "name": "files",
+      "position": "/home/runner/.codeql/packages/codeql/javascript-all/2.6.11/semmlecode.javascript.dbscheme:21,1-24,3",
+      "type": "EXTENSIONAL",
+      "startTime": 2671659226,
+      "dependencies": [],
+      "dependencyEventIds": [],
+      "endTime": 2692594639,
+      "duration": 20.935413,
+      "resultSize": 1
+    },
+    {
+      "eventId": 5,
+      "name": "Files::Container.splitAbsolutePath/2#dispred#43b82b7b_120#join_rhs",
+      "position": "/home/runner/.codeql/packages/codeql/util/2.0.18/codeql/util/FileSystem.qll:220,5-221,90",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2708624143,
+      "dependencies": [
+        "cached_Files::Container.splitAbsolutePath/2#dispred#43b82b7b"
+      ],
+      "dependencyEventIds": [],
+      "endTime": 2767139284,
+      "duration": 58.515141,
+      "resultSize": 27
+    },
+    {
+      "eventId": 9,
+      "name": "m#Files::Impl::File.getURL/0#dispred#3f789d74#bf",
+      "position": "/home/runner/.codeql/packages/codeql/util/2.0.18/codeql/util/FileSystem.qll:220,5-221,90",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2770110139,
+      "dependencies": [
+        "Files::Container.splitAbsolutePath/2#dispred#43b82b7b_120#join_rhs",
+        "files"
+      ],
+      "dependencyEventIds": [
+        5,
+        3
+      ],
+      "endTime": 2779734856,
+      "duration": 9.624717,
+      "resultSize": 1
+    },
+    {
+      "eventId": 13,
+      "name": "m#Files::Container.getAbsolutePath/0#dispred#051b95e1#bf",
+      "position": "/home/runner/.codeql/packages/codeql/util/2.0.18/codeql/util/FileSystem.qll:63,5-87,66",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2783012486,
+      "dependencies": [
+        "m#Files::Impl::File.getURL/0#dispred#3f789d74#bf"
+      ],
+      "dependencyEventIds": [
+        9
+      ],
+      "endTime": 2785822158,
+      "duration": 2.809672,
+      "resultSize": 1
+    },
+    {
+      "eventId": 17,
+      "name": "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf",
+      "position": "/home/runner/.codeql/packages/codeql/util/2.0.18/codeql/util/FileSystem.qll:63,5-87,66",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2786308509,
+      "dependencies": [
+        "m#Files::Container.getAbsolutePath/0#dispred#051b95e1#bf",
+        "files"
+      ],
+      "dependencyEventIds": [
+        13,
+        3
+      ],
+      "endTime": 2790452671,
+      "duration": 4.144162,
+      "resultSize": 1
+    },
+    {
+      "eventId": 21,
+      "name": "Files::Impl::File.getURL/0#dispred#3f789d74#bf",
+      "position": "/home/runner/.codeql/packages/codeql/util/2.0.18/codeql/util/FileSystem.qll:220,5-221,90",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2794513007,
+      "dependencies": [
+        "m#Files::Impl::File.getURL/0#dispred#3f789d74#bf",
+        "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf"
+      ],
+      "dependencyEventIds": [
+        9,
+        17
+      ],
+      "endTime": 2805788255,
+      "duration": 11.275248,
+      "resultSize": 1
+    },
+    {
+      "eventId": 25,
+      "name": "Files::Impl::File.getURL/0#dispred#3f789d74#bf_0#antijoin_rhs",
+      "position": "/home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql:13,1-15,80",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2806487966,
+      "dependencies": [
+        "Files::Impl::File.getURL/0#dispred#3f789d74#bf"
+      ],
+      "dependencyEventIds": [
+        21
+      ],
+      "endTime": 2807208556,
+      "duration": 0.72059,
+      "resultSize": 1
+    },
+    {
+      "eventId": 29,
+      "name": "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf_0#antijoin_rhs",
+      "position": "/home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql:13,1-15,80",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2807593857,
+      "dependencies": [
+        "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf"
+      ],
+      "dependencyEventIds": [
+        17
+      ],
+      "endTime": 2811299598,
+      "duration": 3.705741,
+      "resultSize": 1
+    },
+    {
+      "eventId": 33,
+      "name": "#select#query",
+      "position": "/home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql:13,1-15,80",
+      "type": "SIMPLE_INTENSIONAL",
+      "startTime": 2812285565,
+      "dependencies": [
+        "m#Files::Impl::File.getURL/0#dispred#3f789d74#bf",
+        "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf",
+        "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf_0#antijoin_rhs",
+        "Files::Impl::File.getURL/0#dispred#3f789d74#bf",
+        "Files::Impl::File.getURL/0#dispred#3f789d74#bf_0#antijoin_rhs"
+      ],
+      "dependencyEventIds": [
+        9,
+        17,
+        29,
+        21,
+        25
+      ],
+      "endTime": 2821299479,
+      "duration": 9.013914,
+      "resultSize": 1
+    }
+  ]
+}

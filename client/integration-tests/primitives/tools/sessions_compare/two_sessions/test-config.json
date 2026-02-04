@@ -1,0 +1,7 @@
+{
+  "toolName": "sessions_compare",
+  "arguments": {
+    "sessionIds": ["session-1", "session-2"],
+    "dimensions": ["quality", "performance"]
+  }
+}

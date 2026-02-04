@@ -1,0 +1,9 @@
+{
+  "toolName": "profile_codeql_query",
+  "arguments": {
+    "query": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+    "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj",
+    "evaluatorLog": "client/integration-tests/primitives/tools/profile_codeql_query/javascript_example1_with_log/before/evaluator-log.jsonl",
+    "outputDir": "client/integration-tests/primitives/tools/profile_codeql_query/javascript_example1_with_log/after"
+  }
+}

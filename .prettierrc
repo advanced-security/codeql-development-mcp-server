@@ -1,0 +1,39 @@
+{
+  "bracketSameLine": false,
+  "bracketSpacing": true,
+  "embeddedLanguageFormatting": "auto",
+  "endOfLine": "lf",
+  "jsxSingleQuote": true,
+  "printWidth": 100,
+  "quoteProps": "consistent",
+  "semi": true,
+  "singleAttributePerLine": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "none",
+  "useTabs": false,
+  "overrides": [
+    {
+      "files": ["*.yml", "*.yaml"],
+      "options": {
+        "bracketSpacing": true,
+        "printWidth": 120,
+        "proseWrap": "preserve",
+        "singleQuote": true,
+        "tabWidth": 2,
+        "useTabs": false
+      }
+    },
+    {
+      "files": ["*.md"],
+      "options": {
+        "embeddedLanguageFormatting": "auto",
+        "printWidth": 100,
+        "proseWrap": "preserve",
+        "singleQuote": true,
+        "tabWidth": 2,
+        "useTabs": false
+      }
+    }
+  ]
+}

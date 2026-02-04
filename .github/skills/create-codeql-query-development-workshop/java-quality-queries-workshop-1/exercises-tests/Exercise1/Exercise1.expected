@@ -1,0 +1,16 @@
+| JUnit4_Test.java:21:21:21:34 | testCompliant1 | Found test method: testCompliant1 |
+| JUnit4_Test.java:35:21:35:34 | testCompliant2 | Found test method: testCompliant2 |
+| JUnit4_Test.java:49:21:49:34 | testCompliant3 | Found test method: testCompliant3 |
+| JUnit4_Test.java:68:21:68:34 | testCompliant4 | Found test method: testCompliant4 |
+| JUnit4_Test.java:81:21:81:34 | testCompliant5 | Found test method: testCompliant5 |
+| JUnit4_Test.java:94:21:94:34 | testCompliant6 | Found test method: testCompliant6 |
+| JUnit4_Test.java:115:21:115:37 | testNonCompliant1 | Found test method: testNonCompliant1 |
+| JUnit4_Test.java:129:21:129:37 | testNonCompliant2 | Found test method: testNonCompliant2 |
+| JUnit4_Test.java:146:21:146:37 | testNonCompliant3 | Found test method: testNonCompliant3 |
+| JUnit5_Test.java:21:21:21:34 | testCompliant1 | Found test method: testCompliant1 |
+| JUnit5_Test.java:35:21:35:34 | testCompliant2 | Found test method: testCompliant2 |
+| JUnit5_Test.java:48:21:48:34 | testCompliant3 | Found test method: testCompliant3 |
+| JUnit5_Test.java:61:21:61:34 | testCompliant4 | Found test method: testCompliant4 |
+| JUnit5_Test.java:82:21:82:37 | testNonCompliant1 | Found test method: testNonCompliant1 |
+| JUnit5_Test.java:96:21:96:37 | testNonCompliant2 | Found test method: testNonCompliant2 |
+| JUnit5_Test.java:113:21:113:37 | testNonCompliant3 | Found test method: testNonCompliant3 |

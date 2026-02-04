@@ -1,0 +1,65 @@
+name: Query Unit Tests - Swift (macOS)
+
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - '.codeql-version'
+      - '.github/actions/setup-codeql-environment/**'
+      - '.github/workflows/query-unit-tests-swift.yml'
+      - '.node-version'
+      - 'server/ql/swift/**'
+      - 'server/scripts/install-packs.sh'
+      - 'server/scripts/run-query-unit-tests.sh'
+  push:
+    branches: ['main']
+    paths:
+      - '.codeql-version'
+      - '.github/actions/setup-codeql-environment/**'
+      - '.github/workflows/query-unit-tests-swift.yml'
+      - '.node-version'
+      - 'server/ql/swift/**'
+      - 'server/scripts/install-packs.sh'
+      - 'server/scripts/run-query-unit-tests.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  query-unit-tests-swift:
+    name: Query Unit Tests - swift
+    runs-on: macos-latest
+
+    steps:
+      - name: Query Unit Tests - swift - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Query Unit Tests - swift - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Query Unit Tests - swift - Install node dependencies for all workspaces
+        run: npm ci --workspaces
+
+      - name: Query Unit Tests - swift - Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          install-language-runtimes: false
+
+      ## Install packs used in query unit tests for Swift
+      - name: Query Unit Tests - swift - Install CodeQL packs used in unit tests
+        run: ./server/scripts/install-packs.sh --language swift
+
+      ## Ensure the `codeql` CLI is installed and PATH env is setup before running
+      ## the unit test script, which requires the `codeql` CLI to be accessible via user PATH env.
+      - name: Query Unit Tests - swift - Run unit tests for `server/ql/swift/tools/test/**` directories
+        run: ./server/scripts/run-query-unit-tests.sh --language swift
+
+      - name: Query Unit Tests - swift - Summary
+        run: |
+          echo "## Query Unit Tests Summary - swift" >> $GITHUB_STEP_SUMMARY
+          echo "✅ CodeQL query unit tests completed successfully for swift" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All PrintAST and tool queries validated for swift" >> $GITHUB_STEP_SUMMARY

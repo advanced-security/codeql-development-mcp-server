@@ -1,0 +1,6 @@
+| test.cpp:6:5:6:8 | access to pointer | Pointer dereference |
+| test.cpp:12:5:12:8 | access to pointer | Pointer dereference |
+| test.cpp:18:5:18:8 | access to pointer | Pointer dereference |
+| test.cpp:24:9:24:12 | access to pointer | Pointer dereference |
+| test.cpp:31:5:31:9 | access to pointer | Pointer dereference |
+| test.cpp:32:5:32:9 | access to pointer | Pointer dereference |

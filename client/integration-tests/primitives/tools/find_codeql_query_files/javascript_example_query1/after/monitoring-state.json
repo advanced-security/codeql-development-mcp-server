@@ -1,0 +1,48 @@
+{
+  "toolName": "find_codeql_query_files",
+  "parameters": {
+    "queryPath": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+    "language": "javascript"
+  },
+  "success": true,
+  "description": "Successfully found all files related to ExampleQuery1",
+  "queryFiles": {
+    "queryName": "ExampleQuery1",
+    "language": "javascript",
+    "allFilesExist": false,
+    "files": {
+      "query": {
+        "directory": "server/ql/javascript/examples/src/ExampleQuery1",
+        "file": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+        "documentation": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.md",
+        "specification": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.qspec"
+      },
+      "test": {
+        "directory": "server/ql/javascript/examples/test/ExampleQuery1",
+        "qlref": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.qlref",
+        "testCode": [
+          "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.js"
+        ],
+        "expectedResults": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.expected",
+        "actualResults": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.actual",
+        "testDatabase": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj"
+      }
+    },
+    "status": {
+      "queryExists": true,
+      "documentationExists": true,
+      "specificationExists": false,
+      "testDirectoryExists": true,
+      "qlrefExists": true,
+      "hasTestCode": true,
+      "expectedResultsExist": true,
+      "actualResultsExist": false,
+      "testDatabaseExists": false
+    },
+    "missingFiles": [
+      "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.qspec",
+      "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.actual",
+      "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj"
+    ]
+  }
+}

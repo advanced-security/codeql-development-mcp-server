@@ -1,0 +1,8 @@
+dist/
+node_modules/
+*.log
+.coverage/
+coverage/
+.nyc_output/
+scratch/*
+!scratch/.gitkeep

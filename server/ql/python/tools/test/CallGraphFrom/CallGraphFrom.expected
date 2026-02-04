@@ -1,0 +1,3 @@
+| Example1.py:7:5:7:16 | unrelated1() | Call from `unrelated2` to `unrelated1` |
+| Example1.py:11:5:11:16 | unrelated1() | Call from `sourceFunc` to `unrelated1` |
+| Example1.py:12:5:12:16 | unrelated2() | Call from `sourceFunc` to `unrelated2` |

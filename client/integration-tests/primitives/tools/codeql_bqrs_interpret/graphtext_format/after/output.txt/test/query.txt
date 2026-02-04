@@ -1,0 +1,5 @@
+/home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/client/integration-tests/static/javascript/test/ExampleQuery1/ExampleQuery1.js:
+#    0| /home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/client/integration-tests/static/javascript/test/ExampleQuery1/ExampleQuery1.js
+#-----|  -> Example test code file found for codeql_test_extract example query.
+
+#-----| Example test code file found for codeql_test_extract example query.

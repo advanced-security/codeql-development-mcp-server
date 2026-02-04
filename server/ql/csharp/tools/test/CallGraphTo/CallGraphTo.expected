@@ -1,0 +1,3 @@
+| Example1.cs:9:9:9:20 | call to method Unrelated1 | Call to `Unrelated1` from `TargetFunc` |
+| Example1.cs:13:9:13:20 | call to method TargetFunc | Call to `TargetFunc` from `Caller1` |
+| Example1.cs:17:9:17:20 | call to method TargetFunc | Call to `TargetFunc` from `Caller2` |

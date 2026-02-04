@@ -1,0 +1,64 @@
+# Query Unit Tests for {LANGUAGE}
+#
+# This workflow template is for languages that require special OS runners
+# (e.g., macOS for Swift, Windows for specific .NET languages).
+#
+# For languages that can run on Ubuntu, add them to the matrix in:
+#   .github/workflows/query-unit-tests.yml
+#
+# Usage:
+#   1. Copy this file to: .github/workflows/query-unit-tests-{language}.yml
+#   2. Replace all {LANGUAGE} placeholders with the actual language name
+#   3. Replace {RUNNER_OS} with the required runner (e.g., macos-latest, windows-latest)
+#   4. Update the file extension in the workflow if needed
+#
+name: Query Unit Tests ({LANGUAGE})
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/ql/{LANGUAGE}/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'server/ql/{LANGUAGE}/**'
+      - 'server/scripts/extract-test-databases.sh'
+      - 'server/scripts/install-packs.sh'
+      - 'server/scripts/run-query-unit-tests.sh'
+  workflow_dispatch:
+
+# Prevent duplicate runs from push + PR on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  query-unit-tests:
+    name: '{LANGUAGE} Query Unit Tests'
+    # Change this to the required runner for the language
+    # Options: macos-latest, windows-latest, ubuntu-latest
+    runs-on: { RUNNER_OS }
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up CodeQL CLI
+        uses: github/codeql-action/init@v3
+        with:
+          languages: '{LANGUAGE}'
+
+      - name: Install CodeQL packs
+        run: |
+          ./server/scripts/install-packs.sh --language {LANGUAGE}
+
+      - name: Extract test databases
+        run: |
+          ./server/scripts/extract-test-databases.sh --language {LANGUAGE}
+
+      - name: Run query unit tests
+        run: |
+          ./server/scripts/run-query-unit-tests.sh --language {LANGUAGE}

@@ -1,0 +1,69 @@
+name: Build Server - CodeQL Development MCP Server
+
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - '.github/workflows/build-server.yml'
+      - '.node-version'
+      - 'server/**'
+  push:
+    branches: ['main']
+    paths:
+      - '.github/workflows/build-server.yml'
+      - '.node-version'
+      - 'server/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-server:
+    name: Build Server
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Build Server - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build Server - Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Build Server - Install dependencies
+        run: npm ci
+
+      - name: Build Server - Clean previous build
+        run: npm run clean
+
+      - name: Build Server - Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Build Server - Bundle application
+        run: npm run bundle
+
+      - name: Build Server - Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "❌ Uncommitted changes detected after build:"
+            git status --porcelain
+            git diff
+            exit 1
+          else
+            echo "✅ No uncommitted changes after build"
+          fi
+
+      - name: Build Server - Summary
+        run: |
+          echo "## Build Server Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ ESLint checks completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All tests passed with coverage" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Application bundled successfully" >> $GITHUB_STEP_SUMMARY
+          echo "✅ No uncommitted changes detected" >> $GITHUB_STEP_SUMMARY

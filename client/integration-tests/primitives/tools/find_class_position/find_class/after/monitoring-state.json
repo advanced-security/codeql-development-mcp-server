@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "find_class_position-test-session",
+      "queryPath": "MyClass",
+      "language": "java",
+      "queryType": "general",
+      "description": "find_class_position integration test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["MyClass"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "find_class_position-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "find_class_position",
+          "parameters": {
+            "param": "MyClass"
+          },
+          "success": true,
+          "duration": 500,
+          "result": "find_class_position operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

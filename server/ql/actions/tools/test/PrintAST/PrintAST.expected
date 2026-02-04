@@ -1,0 +1,208 @@
+action-example1/action.yml:
+#    2| [CompositeActionImpl] name: 'Hello World'
+#-----| 1 -> [ScalarValueImpl] Hello World
+#-----| 2 -> [ScalarValueImpl] Greet someone
+#-----| 3 -> [InputsImpl] who-to- ... f input
+#-----| 4 -> [ScalarValueImpl] Who to greet
+#-----| 5 -> [ScalarValueImpl] true
+#-----| 6 -> [ScalarValueImpl] World
+#-----| 7 -> [RunsImpl] using: 'composite'
+#-----| 8 -> [ScalarValueImpl] composite
+#-----| 9 -> [ScalarValueImpl] Greeting
+#-----| 10 -> [ScalarValueImpl] echo "Hello $INPUT_WHO_TO_GREET."
+#-----| 11 -> [ScalarValueImpl] bash
+#-----| 12 -> [ScalarValueImpl] ${{ inputs.who-to-greet }}
+
+#    2| [ScalarValueImpl] Hello World
+
+#    3| [ScalarValueImpl] Greet someone
+
+#    5| [InputImpl] who-to-greet
+
+#    5| [InputsImpl] who-to- ... f input
+#-----| 1 -> [InputImpl] who-to-greet
+#-----| 2 -> [InputsImpl] who-to- ... f input
+#-----| 3 -> [ScalarValueImpl] Who to greet
+#-----| 4 -> [ScalarValueImpl] true
+#-----| 5 -> [ScalarValueImpl] World
+
+#    6| [ScalarValueImpl] Who to greet
+
+#    7| [ScalarValueImpl] true
+
+#    8| [ScalarValueImpl] World
+
+#   11| [RunsImpl] using: 'composite'
+#-----| 1 -> [ScalarValueImpl] composite
+#-----| 2 -> [StepImpl] Run Step
+#-----| 3 -> [ScalarValueImpl] Greeting
+#-----| 4 -> [ScalarValueImpl] echo "Hello $INPUT_WHO_TO_GREET."
+#-----| 5 -> [ScalarValueImpl] bash
+#-----| 6 -> [ScalarValueImpl] ${{ inputs.who-to-greet }}
+
+#   11| [ScalarValueImpl] composite
+
+#   14| [StepImpl] Run Step
+#-----| 1 -> [ScalarValueImpl] Greeting
+#-----| 2 -> [ScalarValueImpl] echo "Hello $INPUT_WHO_TO_GREET."
+#-----| 3 -> [ScalarValueImpl] bash
+#-----| 4 -> [EnvImpl] INPUT_W ... reet }}
+#-----| 5 -> [ScalarValueImpl] ${{ inputs.who-to-greet }}
+
+#   14| [ScalarValueImpl] Greeting
+
+#   15| [ScalarValueImpl] echo "Hello $INPUT_WHO_TO_GREET."
+
+#   16| [ScalarValueImpl] bash
+
+#   18| [EnvImpl] INPUT_W ... reet }}
+#-----| 1 -> [ScalarValueImpl] ${{ inputs.who-to-greet }}
+
+#   18| [ScalarValueImpl] ${{ inputs.who-to-greet }}
+#-----| 1 -> [ExpressionImpl] inputs.who-to-greet
+
+#   18| [ExpressionImpl] inputs.who-to-greet
+
+.github/workflows/reusable_workflow.yml:
+#    1| [WorkflowImpl] name: R ... example
+#-----| 1 -> [ScalarValueImpl] Reusable workflow example
+#-----| 2 -> [OnImpl] workflow_call:
+#-----| 3 -> [InputsImpl] config-path:
+#-----| 4 -> [ScalarValueImpl] true
+#-----| 5 -> [ScalarValueImpl] string
+#-----| 6 -> [OutputsImpl] Job outputs node
+#-----| 7 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output1 }}
+#-----| 8 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output2 }}
+#-----| 9 -> [ScalarValueImpl] true
+#-----| 10 -> [JobImpl] Job: job1
+#-----| 11 -> [ScalarValueImpl] ubuntu-latest
+#-----| 12 -> [OutputsImpl] Job outputs node
+#-----| 13 -> [ScalarValueImpl] ${{ steps.step1.outputs.step-output}}
+#-----| 14 -> [ScalarValueImpl] ${{ steps.step2.outputs.all_changed_files}}
+#-----| 15 -> [ScalarValueImpl] step1
+#-----| 16 -> [ScalarValueImpl] ${{ inputs.config-path }}
+#-----| 17 -> [ScalarValueImpl] echo ${{ inputs.config-path }}
+#-----| echo "::set-output name=step-output::$CONFIG_PATH"
+#-----| 
+#-----| 18 -> [ScalarValueImpl] Get changed files
+#-----| 19 -> [ScalarValueImpl] step2
+#-----| 20 -> [ScalarValueImpl] tj-actions/changed-files@v40
+
+#    1| [ScalarValueImpl] Reusable workflow example
+
+#    4| [EventImpl] workflow_call
+#-----| 1 -> [InputsImpl] config-path:
+#-----| 2 -> [ScalarValueImpl] true
+#-----| 3 -> [ScalarValueImpl] string
+#-----| 4 -> [OutputsImpl] Job outputs node
+#-----| 5 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output1 }}
+#-----| 6 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output2 }}
+#-----| 7 -> [ScalarValueImpl] true
+
+#    4| [OnImpl] workflow_call:
+#-----| 1 -> [EventImpl] workflow_call
+#-----| 2 -> [InputsImpl] config-path:
+#-----| 3 -> [ScalarValueImpl] true
+#-----| 4 -> [ScalarValueImpl] string
+#-----| 5 -> [OutputsImpl] Job outputs node
+#-----| 6 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output1 }}
+#-----| 7 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output2 }}
+#-----| 8 -> [ScalarValueImpl] true
+
+#    6| [InputImpl] config-path
+
+#    6| [InputsImpl] config-path:
+#-----| 2 -> [InputImpl] config-path
+#-----| 1 -> [InputsImpl] config-path:
+#-----| 3 -> [ScalarValueImpl] true
+#-----| 4 -> [ScalarValueImpl] string
+
+#    7| [ScalarValueImpl] true
+
+#    8| [ScalarValueImpl] string
+
+#   10| [OutputsImpl] Job outputs node
+#-----| 1 -> [OutputsImpl] Job outputs node
+#-----| 2 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output1 }}
+#-----| 3 -> [ScalarValueImpl] ${{ jobs.job1.outputs.job-output2 }}
+
+#   11| [ScalarValueImpl] ${{ jobs.job1.outputs.job-output1 }}
+#-----| 1 -> [ExpressionImpl] jobs.job1.outputs.job-output1
+
+#   11| [ExpressionImpl] jobs.job1.outputs.job-output1
+
+#   13| [ScalarValueImpl] ${{ jobs.job1.outputs.job-output2 }}
+#-----| 1 -> [ExpressionImpl] jobs.job1.outputs.job-output2
+
+#   13| [ExpressionImpl] jobs.job1.outputs.job-output2
+
+#   16| [ScalarValueImpl] true
+
+#   20| [JobImpl] Job: job1
+#-----| 1 -> [ScalarValueImpl] ubuntu-latest
+#-----| 2 -> [OutputsImpl] Job outputs node
+#-----| 3 -> [ScalarValueImpl] ${{ steps.step1.outputs.step-output}}
+#-----| 4 -> [ScalarValueImpl] ${{ steps.step2.outputs.all_changed_files}}
+#-----| 5 -> [StepImpl] Run Step: step1
+#-----| 6 -> [ScalarValueImpl] step1
+#-----| 7 -> [ScalarValueImpl] ${{ inputs.config-path }}
+#-----| 8 -> [ScalarValueImpl] echo ${{ inputs.config-path }}
+#-----| echo "::set-output name=step-output::$CONFIG_PATH"
+#-----| 
+#-----| 9 -> [StepImpl] Uses Step: step2
+#-----| 10 -> [ScalarValueImpl] Get changed files
+#-----| 11 -> [ScalarValueImpl] step2
+#-----| 12 -> [ScalarValueImpl] tj-actions/changed-files@v40
+
+#   20| [ScalarValueImpl] ubuntu-latest
+
+#   22| [OutputsImpl] Job outputs node
+#-----| 1 -> [OutputsImpl] Job outputs node
+#-----| 2 -> [ScalarValueImpl] ${{ steps.step1.outputs.step-output}}
+#-----| 3 -> [ScalarValueImpl] ${{ steps.step2.outputs.all_changed_files}}
+
+#   22| [ScalarValueImpl] ${{ steps.step1.outputs.step-output}}
+#-----| 1 -> [ExpressionImpl] steps.step1.outputs.step-output
+
+#   22| [ExpressionImpl] steps.step1.outputs.step-output
+
+#   23| [ScalarValueImpl] ${{ steps.step2.outputs.all_changed_files}}
+#-----| 1 -> [ExpressionImpl] steps.step2.outputs.all_changed_files
+
+#   23| [ExpressionImpl] steps.step2.outputs.all_changed_files
+
+#   25| [StepImpl] Run Step: step1
+#-----| 1 -> [ScalarValueImpl] step1
+#-----| 2 -> [EnvImpl] CONFIG_ ... path }}
+#-----| 3 -> [ScalarValueImpl] ${{ inputs.config-path }}
+#-----| 4 -> [ScalarValueImpl] echo ${{ inputs.config-path }}
+#-----| echo "::set-output name=step-output::$CONFIG_PATH"
+#-----| 
+
+#   25| [ScalarValueImpl] step1
+
+#   27| [EnvImpl] CONFIG_ ... path }}
+#-----| 1 -> [ScalarValueImpl] ${{ inputs.config-path }}
+
+#   27| [ScalarValueImpl] ${{ inputs.config-path }}
+#-----| 1 -> [ExpressionImpl] inputs.config-path
+
+#   27| [ExpressionImpl] inputs.config-path
+
+#   28| [ScalarValueImpl] echo ${{ inputs.config-path }}
+#   28| echo "::set-output name=step-output::$CONFIG_PATH"
+#   28| 
+#-----| 1 -> [ExpressionImpl] inputs.config-path
+
+#   29| [ExpressionImpl] inputs.config-path
+
+#   31| [StepImpl] Uses Step: step2
+#-----| 1 -> [ScalarValueImpl] Get changed files
+#-----| 2 -> [ScalarValueImpl] step2
+#-----| 3 -> [ScalarValueImpl] tj-actions/changed-files@v40
+
+#   31| [ScalarValueImpl] Get changed files
+
+#   32| [ScalarValueImpl] step2
+
+#   33| [ScalarValueImpl] tj-actions/changed-files@v40

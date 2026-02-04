@@ -1,0 +1,266 @@
+Example1.go:
+#   30| case 0
+#-----|  -> 0
+#-----|  -> 1
+
+#   32| case 1
+#-----|  -> 1
+#-----|  -> value
+
+#   22| return statement
+#-----|  -> exit
+
+#   31| return statement
+#-----|  -> exit
+
+#   33| return statement
+#-----|  -> exit
+
+#   35| return statement
+#-----|  -> exit
+
+#    7| function declaration
+#-----|  -> skip
+
+#   20| function declaration
+#-----|  -> skip
+
+#   39| function declaration
+#-----|  -> exit
+
+#    8| ...>... is false
+#-----|  -> selection of Println
+
+#    8| ...>... is true
+#-----|  -> selection of Println
+
+#   14| ...<... is false
+#-----|  -> exit
+
+#   14| ...<... is true
+#-----|  -> selection of Println
+
+#   21| ...<... is false
+#-----|  -> value
+
+#   21| ...<... is true
+#-----|  -> -...
+
+#   25| ...>... is false
+#-----|  -> value
+
+#   25| ...>... is true
+#-----|  -> skip
+
+#   14| assignment to i
+#-----|  -> i
+
+#   26| assignment to value
+#-----|  -> value
+
+#   41| assignment to result
+#-----|  -> selection of Println
+
+#   14| increment statement
+#-----|  -> i
+
+#    7| exit
+
+#   20| exit
+
+#   39| exit
+
+#    0| exit
+
+#    7| entry
+#-----|  -> argument corresponding to x
+
+#   20| entry
+#-----|  -> argument corresponding to value
+
+#   39| entry
+#-----|  -> simpleMethod
+
+#    0| entry
+#-----|  -> skip
+
+#   14| 1
+#-----|  -> rhs of increment statement
+
+#   14| rhs of increment statement
+#-----|  -> increment statement
+
+#    4| skip
+#-----|  -> skip
+
+#    7| skip
+#-----|  -> function declaration
+
+#   14| skip
+#-----|  -> 0
+
+#   20| skip
+#-----|  -> function declaration
+
+#   26| skip
+#-----|  -> value
+
+#   39| skip
+#-----|  -> function declaration
+
+#   41| skip
+#-----|  -> complexMethod
+
+#    8| ...>...
+#-----|  -> ...>... is false
+#-----|  -> ...>... is true
+
+#    8| x
+#-----|  -> 0
+
+#    8| 0
+#-----|  -> ...>...
+
+#    9| call to Println
+#-----|  -> exit
+#-----|  -> skip
+
+#    9| selection of Println
+#-----|  -> "Positive"
+
+#    9| "Positive"
+#-----|  -> call to Println
+
+#   11| call to Println
+#-----|  -> exit
+#-----|  -> skip
+
+#   11| selection of Println
+#-----|  -> "Non-positive"
+
+#   11| "Non-positive"
+#-----|  -> call to Println
+
+#   14| 0
+#-----|  -> assignment to i
+
+#   14| ...<...
+#-----|  -> ...<... is false
+#-----|  -> ...<... is true
+
+#   14| i
+#-----|  -> 3
+
+#   14| 3
+#-----|  -> ...<...
+
+#   14| i
+#-----|  -> 1
+
+#   15| call to Println
+#-----|  -> exit
+#-----|  -> i
+
+#   15| selection of Println
+#-----|  -> i
+
+#   15| i
+#-----|  -> call to Println
+
+#   21| ...<...
+#-----|  -> ...<... is false
+#-----|  -> ...<... is true
+
+#   21| value
+#-----|  -> 0
+
+#   21| 0
+#-----|  -> ...<...
+
+#   22| -...
+#-----|  -> return statement
+
+#   25| ...>...
+#-----|  -> ...>... is false
+#-----|  -> ...>... is true
+
+#   25| value
+#-----|  -> 10
+
+#   25| 10
+#-----|  -> ...>...
+
+#   26| .../...
+#-----|  -> assignment to value
+#-----|  -> exit
+
+#   26| value
+#-----|  -> 2
+
+#   26| 2
+#-----|  -> .../...
+
+#   29| value
+#-----|  -> 0
+
+#   30| 0
+#-----|  -> case 0
+
+#   31| 0
+#-----|  -> return statement
+
+#   32| 1
+#-----|  -> case 1
+
+#   33| 1
+#-----|  -> return statement
+
+#   35| ...*...
+#-----|  -> return statement
+
+#   35| value
+#-----|  -> 2
+
+#   35| 2
+#-----|  -> ...*...
+
+#   40| call to simpleMethod
+#-----|  -> exit
+#-----|  -> skip
+
+#   40| simpleMethod
+#-----|  -> 5
+
+#   40| 5
+#-----|  -> call to simpleMethod
+
+#   41| call to complexMethod
+#-----|  -> assignment to result
+#-----|  -> exit
+
+#   41| complexMethod
+#-----|  -> 20
+
+#   41| 20
+#-----|  -> call to complexMethod
+
+#   42| call to Println
+#-----|  -> exit
+
+#   42| selection of Println
+#-----|  -> result
+
+#   42| result
+#-----|  -> call to Println
+
+#    7| initialization of x
+#-----|  -> x
+
+#   20| initialization of value
+#-----|  -> value
+
+#    7| argument corresponding to x
+#-----|  -> initialization of x
+
+#   20| argument corresponding to value
+#-----|  -> initialization of value

@@ -1,0 +1,151 @@
+name: Release - CodeQL Development MCP Server
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Release - Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # Explicitly checkout the tag ref to ensure we build the correct commit
+          # For tag pushes: refs/tags/vX.Y.Z
+          # For workflow_dispatch: refs/heads/<branch> (will be validated below)
+          ref: ${{ github.ref }}
+
+      - name: Release - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Release - Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          # Validate version starts with 'v'
+          if [[ ! "${VERSION}" =~ ^v ]]; then
+            echo "::error::Version '${VERSION}' must start with 'v'"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Release - Checkout tag for workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # For workflow_dispatch, we need to checkout the specific tag
+          TAG="${{ steps.version.outputs.version }}"
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Checking out existing tag: ${TAG}"
+            git checkout "refs/tags/${TAG}"
+          else
+            echo "::error::Tag '${TAG}' does not exist. Create the tag first before running this workflow."
+            exit 1
+          fi
+
+      - name: Release - Verify checkout matches expected version
+        run: |
+          # Verify we're on the correct commit for the release
+          CURRENT_SHA=$(git rev-parse HEAD)
+          TAG="${{ steps.version.outputs.version }}"
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            TAG_SHA=$(git rev-parse "refs/tags/${TAG}^{commit}" 2>/dev/null || git rev-parse "refs/tags/${TAG}")
+            if [ "${CURRENT_SHA}" != "${TAG_SHA}" ]; then
+              echo "::error::Current checkout (${CURRENT_SHA}) does not match tag ${TAG} (${TAG_SHA})"
+              exit 1
+            fi
+            echo "✅ Verified: Building from tag ${TAG} at commit ${CURRENT_SHA:0:8}"
+          else
+            echo "::warning::Tag ${TAG} not found, building from current checkout at ${CURRENT_SHA:0:8}"
+          fi
+
+      - name: Release - Install dependencies
+        run: npm ci
+
+      - name: Release - Build server
+        run: npm run build -w server
+
+      - name: Release - Create distribution directory
+        run: |
+          mkdir -p dist-package/server
+          mkdir -p dist-package/docs
+
+          # Copy server distributable files
+          cp -r server/dist dist-package/server/
+          cp -r server/ql dist-package/server/
+          cp server/package.json dist-package/server/
+
+          # Copy root package-lock.json for npm ci (monorepo lockfile)
+          cp package-lock.json dist-package/server/
+
+          # Copy root files
+          cp README.md dist-package/
+          cp LICENSE.md dist-package/
+
+          # Copy documentation
+          cp -r docs/* dist-package/docs/
+
+      - name: Release - Clean QL test directories from distribution
+        run: |
+          # Remove test and examples directories from ql folders (only keep src)
+          find dist-package/server/ql -type d \( -name "test" -o -name "examples" \) -prune -exec rm -rf {} \;
+
+      - name: Release - Install production dependencies
+        working-directory: dist-package/server
+        run: npm ci --omit=dev
+
+      - name: Release - Create archive
+        run: |
+          tar -czvf codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz -C dist-package .
+
+      - name: Release - Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: codeql-development-mcp-server-${{ steps.version.outputs.version }}
+          path: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+
+      - name: Release - Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        with:
+          files: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+          generate_release_notes: true
+
+      - name: Release - Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Server built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Distribution package created" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Production dependencies installed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Archive created: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Package Contents" >> $GITHUB_STEP_SUMMARY
+          echo "- \`server/dist/\` - Bundled JavaScript output" >> $GITHUB_STEP_SUMMARY
+          echo "- \`server/ql/*/tools/src/\` - CodeQL tool queries" >> $GITHUB_STEP_SUMMARY
+          echo "- \`server/node_modules/\` - Production dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "- \`docs/\` - User documentation" >> $GITHUB_STEP_SUMMARY
+          echo "- \`README.md\` - Project overview" >> $GITHUB_STEP_SUMMARY
+          echo "- \`LICENSE.md\` - CodeQL Terms and Conditions" >> $GITHUB_STEP_SUMMARY

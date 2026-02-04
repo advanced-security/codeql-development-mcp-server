@@ -1,0 +1,14 @@
+{
+  "toolName": "codeql_query_run",
+  "parameters": {
+    "queryName": "PrintAST",
+    "queryLanguage": "javascript",
+    "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj",
+    "sourceFiles": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.js",
+    "output": "query-results.bqrs",
+    "format": "graphtext",
+    "interpretedOutput": "query-results"
+  },
+  "success": true,
+  "description": "Successfully executed PrintAST query using query name resolution with external predicates and graphtext format interpretation"
+}

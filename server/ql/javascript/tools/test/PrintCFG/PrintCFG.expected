@@ -1,0 +1,276 @@
+Example1.js:
+#    4| functio ...     }\n}
+#-----|  -> functio ...     }\n}
+
+#    4| simpleMethod
+#-----|  -> complexMethod
+
+#    4| x
+#-----|  -> {\n    i ...     }\n}
+
+#    4| {\n    i ...     }\n}
+#-----|  -> if (x > ... ;\n    }
+
+#    5| if (x > ... ;\n    }
+#-----|  -> x
+
+#    5| x > 0
+#-----|  -> guard: x > 0 is true
+#-----|  -> guard: x > 0 is false
+
+#    5| x
+#-----|  -> 0
+
+#    5| 0
+#-----|  -> x > 0
+
+#    5| {\n      ... ;\n    }
+#-----|  -> console ... tive");
+
+#    6| console ... tive");
+#-----|  -> console
+
+#    6| console ... itive")
+#-----|  -> for (le ... ;\n    }
+
+#    6| console.log
+#-----|  -> "Positive"
+
+#    6| console
+#-----|  -> log
+
+#    6| log
+#-----|  -> console.log
+
+#    6| "Positive"
+#-----|  -> console ... itive")
+
+#    7| {\n      ... ;\n    }
+#-----|  -> console ... tive");
+
+#    8| console ... tive");
+#-----|  -> console
+
+#    8| console ... itive")
+#-----|  -> for (le ... ;\n    }
+
+#    8| console.log
+#-----|  -> "Non-positive"
+
+#    8| console
+#-----|  -> log
+
+#    8| log
+#-----|  -> console.log
+
+#    8| "Non-positive"
+#-----|  -> console ... itive")
+
+#   11| for (le ... ;\n    }
+#-----|  -> let i = 0
+
+#   11| i < 3
+#-----|  -> guard: i < 3 is true
+#-----|  -> guard: i < 3 is false
+
+#   11| i
+#-----|  -> 3
+
+#   11| 3
+#-----|  -> i < 3
+
+#   11| i++
+#-----|  -> i
+
+#   11| i
+#-----|  -> i++
+
+#   11| let i = 0
+#-----|  -> i
+
+#   11| i = 0
+#-----|  -> i
+
+#   11| i
+#-----|  -> 0
+
+#   11| 0
+#-----|  -> i = 0
+
+#   11| {\n      ... ;\n    }
+#-----|  -> console.log(i);
+
+#   12| console.log(i);
+#-----|  -> console
+
+#   12| console.log(i)
+#-----|  -> i
+
+#   12| console.log
+#-----|  -> i
+
+#   12| console
+#-----|  -> log
+
+#   12| log
+#-----|  -> console.log
+
+#   12| i
+#-----|  -> console.log(i)
+
+#   17| functio ...     }\n}
+#-----|  -> exit node of <toplevel>
+
+#   17| complexMethod
+#-----|  -> functio ...     }\n}
+
+#   17| value
+#-----|  -> {\n    i ...     }\n}
+
+#   17| {\n    i ...     }\n}
+#-----|  -> if (val ... ;\n    }
+
+#   18| if (val ... ;\n    }
+#-----|  -> value
+
+#   18| value < 0
+#-----|  -> guard: value < 0 is true
+#-----|  -> guard: value < 0 is false
+
+#   18| value
+#-----|  -> 0
+
+#   18| 0
+#-----|  -> value < 0
+
+#   18| {\n      ... ;\n    }
+#-----|  -> 1
+
+#   19| return -1;
+#-----|  -> exit node of functio ...     }\n}
+
+#   19| -1
+#-----|  -> return -1;
+
+#   19| 1
+#-----|  -> -1
+
+#   22| while ( ... ;\n    }
+#-----|  -> value
+
+#   22| value > 10
+#-----|  -> guard: value > 10 is true
+#-----|  -> guard: value > 10 is false
+
+#   22| value
+#-----|  -> 10
+
+#   22| 10
+#-----|  -> value > 10
+
+#   22| {\n      ... ;\n    }
+#-----|  -> value = value / 2;
+
+#   23| value = value / 2;
+#-----|  -> value
+
+#   23| value = value / 2
+#-----|  -> value
+
+#   23| value
+#-----|  -> value
+
+#   23| value / 2
+#-----|  -> value = value / 2
+
+#   23| value
+#-----|  -> 2
+
+#   23| 2
+#-----|  -> value / 2
+
+#   26| switch  ... ;\n    }
+#-----|  -> value
+
+#   26| value
+#-----|  -> case 0: ... turn 0;
+
+#   27| case 0: ... turn 0;
+#-----|  -> 0
+
+#   27| 0
+#-----|  -> 0
+#-----|  -> case 1: ... turn 1;
+
+#   28| return 0;
+#-----|  -> exit node of functio ...     }\n}
+
+#   28| 0
+#-----|  -> return 0;
+
+#   29| case 1: ... turn 1;
+#-----|  -> 1
+
+#   29| 1
+#-----|  -> 1
+#-----|  -> default ... ue * 2;
+
+#   30| return 1;
+#-----|  -> exit node of functio ...     }\n}
+
+#   30| 1
+#-----|  -> return 1;
+
+#   31| default ... ue * 2;
+#-----|  -> value
+
+#   32| return value * 2;
+#-----|  -> exit node of functio ...     }\n}
+
+#   32| value * 2
+#-----|  -> return value * 2;
+
+#   32| value
+#-----|  -> 2
+
+#   32| 2
+#-----|  -> value * 2
+
+#    1| entry node of <toplevel>
+#-----|  -> simpleMethod
+
+#   35| exit node of <toplevel>
+
+#   17| entry node of functio ...     }\n}
+#-----|  -> value
+
+#   34| exit node of functio ...     }\n}
+
+#   22| guard: value > 10 is true
+#-----|  -> {\n      ... ;\n    }
+
+#   22| guard: value > 10 is false
+#-----|  -> switch  ... ;\n    }
+
+#   18| guard: value < 0 is true
+#-----|  -> {\n      ... ;\n    }
+
+#   18| guard: value < 0 is false
+#-----|  -> while ( ... ;\n    }
+
+#    4| entry node of functio ...     }\n}
+#-----|  -> x
+
+#   14| exit node of functio ...     }\n}
+
+#   11| guard: i < 3 is true
+#-----|  -> {\n      ... ;\n    }
+
+#   11| guard: i < 3 is false
+#-----|  -> exit node of functio ...     }\n}
+
+#    5| guard: x > 0 is true
+#-----|  -> {\n      ... ;\n    }
+
+#    5| guard: x > 0 is false
+#-----|  -> {\n      ... ;\n    }

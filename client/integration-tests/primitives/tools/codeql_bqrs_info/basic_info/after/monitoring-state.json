@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "bqrs-info-test-session",
+      "queryPath": "/test/results.bqrs",
+      "language": "java",
+      "queryType": "general",
+      "description": "CodeQL BQRS info test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["/test/results.bqrs"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "bqrs-info-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_bqrs_info",
+          "parameters": {
+            "bqrs": "/test/results.bqrs"
+          },
+          "success": true,
+          "duration": 800,
+          "result": "BQRS info retrieval completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

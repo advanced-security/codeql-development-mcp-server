@@ -1,0 +1,9 @@
+{
+  "toolName": "codeql_resolve_queries",
+  "parameters": {
+    "directory": "server/ql/javascript/tools/src/",
+    "format": "json"
+  },
+  "expectedSuccess": true,
+  "description": "Test codeql_resolve_queries for JavaScript tools directory"
+}

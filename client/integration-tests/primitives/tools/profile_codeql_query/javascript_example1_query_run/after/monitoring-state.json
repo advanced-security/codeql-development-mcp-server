@@ -1,0 +1,28 @@
+{
+  "sessions": [
+    {
+      "id": "integration_test_session",
+      "calls": [
+        {
+          "tool": "profile_codeql_query",
+          "timestamp": "2025-10-08T19:48:00.000Z",
+          "status": "success",
+          "arguments": {
+            "query": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+            "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj",
+            "outputDir": "client/integration-tests/primitives/tools/profile_codeql_query/javascript_example1_query_run/after"
+          },
+          "response": {
+            "message": "Query profiling completed successfully",
+            "filesGenerated": [
+              "evaluator-log.jsonl",
+              "query-evaluation-profile.json",
+              "query-evaluation-profile.md",
+              "query-results.bqrs"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

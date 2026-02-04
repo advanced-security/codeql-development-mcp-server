@@ -1,0 +1,102 @@
+Example1.py:
+#    2| [Import] 
+#    2|   1: [ImportExpr] 
+#    4| [ClassDef] 
+#    4|   1: [ClassExpr] class Example1
+#    4|     1: [Class] class Example1
+#-----|       5: (StmtList) body
+#    5|         0: [FunctionDef] 
+#    5|           1: [FunctionExpr] function __init__(...)
+#    5|             1: [Function] function __init__(...)
+#-----|               0: (parameters)
+#-----|               5: (StmtList) body
+#    6|                 0: [AssignStmt] 
+#    6|                   1: [Attribute] (...).name
+#    5|             2: [StringLiteral] World
+#    8|         1: [FunctionDef] 
+#    8|           1: [FunctionExpr] function greet(...)
+#    8|             1: [Function] function greet(...)
+#-----|               0: (parameters)
+#-----|               5: (StmtList) body
+#    9|                 0: [AssignStmt] 
+#    9|                   2: [Fstring] 
+#    9|                     1: [StringLiteral] Hello, 
+#    9|                     2: [Attribute] (...).name
+#    9|                     3: [StringLiteral] !
+#   10|                 1: [ExprStmt] 
+#   10|                   1: [Call] 
+#-----|                     1: (arguments)
+#   13|         2: [FunctionDef] 
+#   12|           1: [Call] 
+#-----|             1: (arguments)
+#   13|               2: [FunctionExpr] function main(...)
+#   13|                 1: [Function] function main(...)
+#-----|                   0: (parameters)
+#-----|                   10: (StmtList) body
+#   16|                     0: [If] 
+#   16|                       0: [Compare] 
+#   16|                         2: [NameConstant] None
+#-----|                       2: (StmtList) body
+#   17|                         0: [AssignStmt] 
+#   17|                           2: [Subscript] 
+#   17|                             1: [Attribute] (...).argv
+#   17|                             2: [Slice] 
+#   17|                               1: [IntegerLiteral] 1
+#   20|                     1: [AssignStmt] 
+#   20|                       2: [Call] 
+#-----|                         1: (arguments)
+#   23|                     2: [If] 
+#   23|                       0: [Compare] 
+#   23|                         1: [Call] 
+#-----|                           1: (arguments)
+#   23|                         2: [IntegerLiteral] 0
+#-----|                       2: (StmtList) body
+#   24|                         0: [AssignStmt] (...).name = args[0]
+#   24|                           1: [Attribute] (...).name
+#   24|                           2: [Subscript] args[0]
+#   24|                             2: [IntegerLiteral] 0
+#   27|                     3: [ExprStmt] (...).greet()
+#   27|                       1: [Call] (...).greet()
+#   27|                         0: [Attribute] (...).greet
+#-----|                         1: (arguments)
+#   30|                     4: [AssignStmt] 
+#   30|                       2: [List] [...]
+#   30|                         1: [IntegerLiteral] 1
+#   30|                         2: [IntegerLiteral] 2
+#   30|                         3: [IntegerLiteral] 3
+#   31|                     5: [For] 
+#-----|                       5: (StmtList) body
+#   32|                         0: [ExprStmt] 
+#   32|                           1: [Call] 
+#-----|                             1: (arguments)
+#   32|                               2: [BinaryExpr] 
+#   32|                                 2: [IntegerLiteral] 2
+#   35|                     6: [Try] 
+#-----|                       3: (StmtList) body
+#   36|                         0: [AssignStmt] 
+#   36|                           2: [BinaryExpr] 
+#   36|                             1: [IntegerLiteral] 10
+#   36|                             2: [IntegerLiteral] 0
+#-----|                       5: (StmtList) handlers
+#   37|                         0: [ExceptStmt] 
+#-----|                           4: (StmtList) body
+#   38|                             0: [ExprStmt] 
+#   38|                               1: [Call] 
+#-----|                                 1: (arguments)
+#   38|                                   2: [StringLiteral] Cannot divide by zero
+#   13|                 2: [NameConstant] None
+#   40| [FunctionDef] 
+#   40|   1: [FunctionExpr] function helper(...)
+#   40|     1: [Function] function helper(...)
+#-----|       0: (parameters)
+#-----|       3: (StmtList) body
+#   41|         0: [Return] return Helper
+#   41|           1: [StringLiteral] Helper
+#   43| [If] 
+#   43|   0: [Compare] 
+#   43|     2: [StringLiteral] __main__
+#-----|   2: (StmtList) body
+#   44|     0: [ExprStmt] (...).main()
+#   44|       1: [Call] (...).main()
+#   44|         0: [Attribute] (...).main
+#-----|         1: (arguments)

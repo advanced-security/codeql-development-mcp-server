@@ -1,0 +1,54 @@
+Example1.cpp:
+#    2| [CopyAssignmentOperator] someClass& someClass::operator=(someClass const&)
+#    2|   <params>: 
+#-----|     getParameter(0): [Parameter] (unnamed parameter 0)
+#-----|         Type = [LValueReferenceType] const someClass &
+#    2| [MoveAssignmentOperator] someClass& someClass::operator=(someClass&&)
+#    2|   <params>: 
+#-----|     getParameter(0): [Parameter] (unnamed parameter 0)
+#-----|         Type = [RValueReferenceType] someClass &&
+#    4| [MemberFunction] void someClass::f()
+#    4|   <params>: 
+#    5| [MemberFunction] int someClass::g(int, int)
+#    5|   <params>: 
+#    5|     getParameter(0): [Parameter] i
+#    5|         Type = [IntType] int
+#    5|     getParameter(1): [Parameter] j
+#    5|         Type = [IntType] int
+#    8| [TopLevelFunction] void fun3(someClass*)
+#    8|   <params>: 
+#    8|     getParameter(0): [Parameter] sc
+#    8|         Type = [PointerType] someClass *
+#    8|   getEntryPoint(): [BlockStmt] { ... }
+#    9|     getStmt(0): [DeclStmt] declaration
+#    9|       getDeclarationEntry(0): [VariableDeclarationEntry] definition of i
+#    9|           Type = [IntType] int
+#   10|     getStmt(1): [ExprStmt] ExprStmt
+#   10|       getExpr(): [FunctionCall] call to f
+#   10|           Type = [VoidType] void
+#   10|           ValueCategory = prvalue
+#   10|         getQualifier(): [VariableAccess] sc
+#   10|             Type = [PointerType] someClass *
+#   10|             ValueCategory = prvalue(load)
+#   11|     getStmt(2): [ExprStmt] ExprStmt
+#   11|       getExpr(): [AssignExpr] ... = ...
+#   11|           Type = [IntType] int
+#   11|           ValueCategory = lvalue
+#   11|         getLValue(): [VariableAccess] i
+#   11|             Type = [IntType] int
+#   11|             ValueCategory = lvalue
+#   11|         getRValue(): [FunctionCall] call to g
+#   11|             Type = [IntType] int
+#   11|             ValueCategory = prvalue
+#   11|           getQualifier(): [VariableAccess] sc
+#   11|               Type = [PointerType] someClass *
+#   11|               ValueCategory = prvalue(load)
+#   11|           getArgument(0): [Literal] 1
+#   11|               Type = [IntType] int
+#   11|               Value = [Literal] 1
+#   11|               ValueCategory = prvalue
+#   11|           getArgument(1): [Literal] 2
+#   11|               Type = [IntType] int
+#   11|               Value = [Literal] 2
+#   11|               ValueCategory = prvalue
+#   12|     getStmt(3): [ReturnStmt] return ...

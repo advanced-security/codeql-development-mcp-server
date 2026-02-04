@@ -1,0 +1,14 @@
+/home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.js:
+#    2| [FunctionDeclStmt] functio ... uery1 }
+#    2|   0: [VarDecl] main
+#    2|   5: [BlockStmt] { // ... uery1 }
+#    6| [IfStmt] if (req ... in(); }
+#    6|   1: [BinaryExpr] require ... module
+#    6|     1: [DotExpr] require.main
+#    6|       1: [VarRef] require
+#    6|       2: [Label] main
+#    6|     2: [VarRef] module
+#    6|   2: [BlockStmt] { main(); }
+#    7|     1: [ExprStmt] main();
+#    7|       1: [CallExpr] main()
+#    7|         0: [VarRef] main

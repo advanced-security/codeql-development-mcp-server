@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "codeql_pack_install-test-session",
+      "queryPath": "github/codeql/java-queries",
+      "language": "java",
+      "queryType": "general",
+      "description": "codeql_pack_install integration test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["github/codeql/java-queries"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "codeql_pack_install-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_pack_install",
+          "parameters": {
+            "param": "github/codeql/java-queries"
+          },
+          "success": true,
+          "duration": 500,
+          "result": "codeql_pack_install operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

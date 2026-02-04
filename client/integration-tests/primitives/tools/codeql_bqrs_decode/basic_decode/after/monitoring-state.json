@@ -1,0 +1,33 @@
+{
+  "sessions": [
+    {
+      "sessionId": "codeql_bqrs_decode-test-session",
+      "queryPath": "/test/results.bqrs",
+      "language": "java",
+      "queryType": "general",
+      "description": "codeql_bqrs_decode integration test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["/test/results.bqrs"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "codeql_bqrs_decode-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_bqrs_decode",
+          "parameters": {
+            "param": "/test/results.bqrs"
+          },
+          "success": true,
+          "duration": 500,
+          "result": "codeql_bqrs_decode operation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

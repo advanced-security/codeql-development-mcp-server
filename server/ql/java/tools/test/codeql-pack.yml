@@ -1,0 +1,5 @@
+name: ql-mcp-java-tools-test
+version: 2.23.9
+dependencies:
+  ql-mcp-java-tools-src: 2.23.9
+extractor: java

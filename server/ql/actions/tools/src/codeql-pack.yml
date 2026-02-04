@@ -1,0 +1,5 @@
+name: ql-mcp-actions-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/actions-all: 0.4.25

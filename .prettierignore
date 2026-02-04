@@ -1,0 +1,16 @@
+.prettierignore
+
+*.actual
+*.expected
+*.log
+*.qlref
+*.testproj/
+options
+
+build
+client/**/after/
+client/**/before/
+coverage
+node_modules
+server/dist/
+

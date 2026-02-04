@@ -1,0 +1,5 @@
+name: ql-mcp-csharp-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/csharp-all: 5.4.4

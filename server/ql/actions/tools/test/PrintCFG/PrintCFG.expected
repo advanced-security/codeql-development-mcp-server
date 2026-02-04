@@ -1,0 +1,23 @@
+workflow.yml:
+#    1| enter name: Example1
+#-----|  -> name: Example1
+
+#    1| name: Example1
+#-----|  -> Job: test
+
+#    7| Uses Step
+#-----|  -> Run Step
+
+#    8| Run Step
+#-----|  -> echo "Testing"
+
+#    9| echo "Testing"
+#-----|  -> exit name: Example1 (normal)
+
+#    5| Job: test
+#-----|  -> Uses Step
+
+#    1| exit name: Example1 (normal)
+#-----|  -> exit name: Example1
+
+#    1| exit name: Example1

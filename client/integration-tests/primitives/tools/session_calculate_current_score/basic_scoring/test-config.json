@@ -1,0 +1,6 @@
+{
+  "toolName": "session_calculate_current_score",
+  "arguments": {
+    "sessionId": "test-session-id"
+  }
+}

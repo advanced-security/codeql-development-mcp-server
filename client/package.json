@@ -1,0 +1,60 @@
+{
+  "name": "codeql-development-mcp-server_client",
+  "version": "1.0.0",
+  "description": "MCP client for integration testing of the CodeQL development MCP server",
+  "main": "src/ql-mcp-client.js",
+  "type": "module",
+  "bin": {
+    "codeql-mcp-client": "src/ql-mcp-client.js"
+  },
+  "keywords": [
+    "codeql",
+    "github",
+    "integration-testing",
+    "mcp",
+    "model-context-protocol",
+    "ql",
+    "sast",
+    "security",
+    "static-analysis"
+  ],
+  "author": "GitHub",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.10.0",
+    "npm": ">=11.6.1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "dotenv": "^17.2.3",
+    "js-yaml": "^4.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.1"
+  },
+  "scripts": {
+    "build": "echo 'NOOP client build'",
+    "clean": "echo 'NOOP client clean'",
+    "format": "prettier --write 'src/**/*.js'",
+    "format:check": "prettier --check 'src/**/*.js'",
+    "integration-test": "node src/ql-mcp-client.js integration-tests",
+    "lint": "eslint src --ext .js",
+    "lint:fix": "eslint src --ext .js --fix",
+    "server:logs": "scripts/show-server-logs.sh",
+    "server:start": "scripts/start-server.sh",
+    "server:stop": "scripts/stop-server.sh",
+    "server:wait": "scripts/wait-for-server.sh",
+    "start": "node src/ql-mcp-client.js integration-tests",
+    "test": "npm run test:integration",
+    "test:coverage": "echo 'NOOP client test:coverage'",
+    "test:integration": "scripts/run-integration-tests.sh --no-install-packs",
+    "test:integration:default": "ENABLE_MONITORING_TOOLS=false scripts/run-integration-tests.sh",
+    "test:integration:install-packs": "scripts/run-integration-tests.sh",
+    "test:integration:monitoring": "ENABLE_MONITORING_TOOLS=true scripts/run-integration-tests.sh",
+    "tidy": "npm run lint && npm run format"
+  }
+}

@@ -1,0 +1,5 @@
+name: ql-mcp-swift-tools-test
+version: 2.23.9
+dependencies:
+  ql-mcp-swift-tools-src: 2.23.9
+extractor: swift

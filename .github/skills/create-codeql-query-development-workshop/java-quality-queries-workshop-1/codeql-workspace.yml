@@ -1,0 +1,2 @@
+provide:
+  - '*/codeql-pack.yml'

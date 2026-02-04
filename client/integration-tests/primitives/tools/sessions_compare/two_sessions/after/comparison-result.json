@@ -1,0 +1,31 @@
+{
+  "sessionIds": ["compare-session-1", "compare-session-2"],
+  "comparisonResults": {
+    "dimensions": ["compilation", "testing", "documentation", "overall"],
+    "summary": {
+      "compare-session-1": {
+        "compilation": "success",
+        "testing": "passing", 
+        "documentation": "present",
+        "overallScore": 90,
+        "grade": "A"
+      },
+      "compare-session-2": {
+        "compilation": "failed",
+        "testing": "no_tests",
+        "documentation": "missing", 
+        "overallScore": 30,
+        "grade": "F"
+      }
+    },
+    "analysis": {
+      "bestPerforming": "compare-session-1",
+      "worstPerforming": "compare-session-2",
+      "recommendations": [
+        "compare-session-2 needs compilation fixes",
+        "compare-session-2 needs test implementation",
+        "compare-session-2 needs documentation"
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "toolName": "codeql_query_run",
+  "arguments": {
+    "query": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+    "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj",
+    "logDir": "client/integration-tests/primitives/tools/codeql_query_run/custom_log_directory/after",
+    "tuple-counting": true
+  }
+}

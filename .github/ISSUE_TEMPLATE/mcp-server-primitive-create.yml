@@ -1,0 +1,320 @@
+name: Request new MCP Server Primitive
+description: Request a new tool or resource for the CodeQL Development MCP Server
+title: '[Primitive Create]: '
+labels: ['feature', 'enhancement', 'mcp-server']
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **📝 Created from issue template:** `.github/ISSUE_TEMPLATE/mcp-server-primitive-create.yml`
+
+        Thanks for taking the time to request a new MCP server primitive!
+
+        MCP server primitives are the fundamental building blocks of the Model Context Protocol server - tools and resources that help AI assistants work effectively with CodeQL development. This template helps you request new primitives that will enhance the server's capabilities.
+
+        ## 🤖 For Agentic LLMs (GitHub Copilot)
+
+        This issue template provides structured information for automated MCP primitive development. When processing this issue:
+
+        1. **Repository Context**: Begin by reading these critical reference files:
+           - **Repository Structure**: `README.md` - Overview of MCP server architecture and capabilities
+           - **Server Implementation**: `server/src/ql-mcp-server.ts` - Main server implementation
+           - **Existing Tools**: `server/src/tools/codeql-tools.ts` - Current tool implementations
+           - **Existing Resources**: `server/src/tools/codeql-resources.ts` - Current resource implementations
+
+        2. **Primitive Type**: Identify whether this is a **tool** (interactive function) or **resource** (static content):
+           - **Tools**: Interactive functions that perform operations (validate, generate, transform)
+           - **Resources**: Static content that provides information (guides, templates, references)
+
+        3. **Implementation Requirements**:
+           - Follow existing patterns in the server codebase
+           - Implement proper error handling and logging
+           - Include TypeScript types and Zod schema validation
+           - Add comprehensive JSDoc documentation
+
+        4. **Validation Requirements**:
+           - Compile successfully with TypeScript
+           - Pass all existing tests
+           - Include unit tests for new functionality
+           - Validate MCP protocol compliance
+
+        5. **PR Workflow**:
+           - Create PR using `.github/PULL_REQUEST_TEMPLATE/mcp-server-primitive-create.md`
+           - Include comprehensive tests and documentation
+
+  - type: dropdown
+    id: primitive-type
+    attributes:
+      label: Primitive Type
+      description: What type of MCP primitive are you requesting?
+      options:
+        - Tool (Interactive function)
+        - Resource (Static content)
+        - Both (Tool and related resource)
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target-domain
+    attributes:
+      label: Target Domain
+      description: Which area of CodeQL development does this primitive address?
+      options:
+        - Query Development
+        - Database Management
+        - Analysis & Results
+        - Testing & Validation
+        - Documentation & Learning
+        - Performance & Optimization
+        - Security Analysis
+        - Custom Analysis
+        - Other
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Primitive Description
+      description: Please provide a clear description of the primitive you want to create
+      placeholder: 'Describe what this tool or resource should do and why it would be valuable...'
+      value: 'This primitive should provide the following functionality:'
+    validations:
+      required: true
+
+  - type: input
+    id: primitive-name
+    attributes:
+      label: Primitive Name (Optional)
+      description: Suggested name for the tool or resource (e.g., 'optimize_query_performance', 'advanced_patterns_guide')
+      placeholder: 'e.g., analyze_query_complexity, codeql_best_practices_guide'
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 📋 Reference Materials (Provide any/all that are available)
+
+        The following reference materials help define what the new primitive should do or provide. **You don't need to provide all of these** - even one or two can drive effective implementation.
+
+  - type: textarea
+    id: example-codeql-query
+    attributes:
+      label: Example CodeQL Query
+      description: Example CodeQL query that this primitive should work with or generate
+      placeholder: |
+        Provide either:
+        - URL: https://github.com/owner/repo/blob/main/path/to/query.ql
+        - Query code:
+
+        ```ql
+        /**
+         * @name Example Query
+         * @description Detects a specific pattern
+         */
+
+        import java
+
+        from Method m
+        where m.hasName("vulnerableMethod")
+        select m, "Potentially vulnerable method"
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: query-documentation
+    attributes:
+      label: Query Documentation
+      description: Documentation or help content that describes CodeQL concepts this primitive should address
+      placeholder: |
+        Provide either:
+        - URL: https://codeql.github.com/docs/...
+        - Documentation content:
+
+        ```markdown
+        # CodeQL Concept
+
+        ## Description
+        This explains a specific CodeQL concept or pattern.
+
+        ## Examples
+        Code examples showing the concept in practice.
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: test-cases
+    attributes:
+      label: Test Cases
+      description: Test code files or scenarios that should be used to validate this primitive
+      placeholder: |
+        Provide either:
+        - URL(s): https://github.com/owner/repo/blob/main/path/to/test.java
+        - Test code snippets:
+
+        ```java
+        // Test case that should trigger certain behavior
+        public void testMethod() {
+            // example code
+        }
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-results
+    attributes:
+      label: Expected Results
+      description: What the primitive should return or produce when given the test inputs
+      placeholder: |
+        Describe or provide examples of expected outputs:
+
+        For a tool: "Should return validation results with specific error messages"
+        For a resource: "Should provide comprehensive guide with code examples"
+
+        Example output format:
+        ```json
+        {
+          "status": "success",
+          "result": "..."
+        }
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-case-scenario
+    attributes:
+      label: MCP Server Use Case
+      description: Specific scenario where an AI assistant would use this primitive
+      placeholder: |
+        Describe a concrete use case:
+
+        "An AI assistant is helping a developer write a CodeQL query to detect SQL injection. 
+        The assistant needs to [specific functionality] to provide accurate guidance."
+
+        Or provide examples of how this would integrate with existing primitives.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔗 Additional Context (Optional)
+
+        Provide any additional context that might help with implementation.
+
+  - type: input
+    id: references
+    attributes:
+      label: References
+      description: Links to related documentation, examples, or specifications
+      placeholder: 'e.g., MCP specification docs, CodeQL documentation, example implementations'
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority-level
+    attributes:
+      label: Priority Level
+      description: How urgent is this new primitive?
+      options:
+        - Critical (Blocking key functionality)
+        - High (Significant value addition)
+        - Medium (Notable improvement)
+        - Low (Nice to have enhancement)
+      default: 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity-estimate
+    attributes:
+      label: Estimated Complexity
+      description: How complex do you think this primitive would be to implement?
+      options:
+        - Simple (Basic function or content)
+        - Moderate (Some logic or processing)
+        - Complex (Advanced algorithms or integrations)
+        - Unknown (Needs investigation)
+      default: 3
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧪 Implementation Requirements (For LLM Implementation)
+
+        The following requirements must be met for MCP primitive implementation:
+
+  - type: checkboxes
+    id: implementation-requirements
+    attributes:
+      label: Implementation Checklist (Auto-populated for LLM guidance)
+      description: These requirements will be automatically validated during implementation
+      options:
+        - label: '**Type Safety**: Implement with proper TypeScript types and Zod schema validation'
+          required: false
+        - label: '**Error Handling**: Include comprehensive error handling and logging'
+          required: false
+        - label: '**MCP Compliance**: Follow Model Context Protocol specifications'
+          required: false
+        - label: '**Documentation**: Include JSDoc comments and usage examples'
+          required: false
+        - label: '**Testing**: Implement unit tests for all functionality'
+          required: false
+        - label: '**Integration**: Integrate properly with existing server architecture'
+          required: false
+        - label: '**Monitoring Compatibility**: Ensure session tracking integration for quality assessment'
+          required: false
+        - label: '**Performance**: Optimize for reasonable execution time'
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔄 Implementation Workflow (For LLM Processing)
+
+        **Automated Implementation Steps:**
+        1. **Context Analysis**: Review server architecture and existing primitives
+        2. **Type Identification**: Determine if tool, resource, or both
+        3. **Schema Design**: Create Zod schemas for inputs/outputs
+        4. **Implementation**: Code the primitive following existing patterns
+        5. **Registration**: Add to appropriate registration function
+        6. **Testing**: Create comprehensive unit tests
+        7. **Monitoring Integration**: Ensure session tracking compatibility
+        8. **Documentation**: Update README and add JSDoc comments
+        9. **Integration**: Ensure proper server integration
+
+        **Quality Gates:**
+        - ✅ TypeScript compilation without errors
+        - ✅ All unit tests pass
+        - ✅ MCP protocol compliance validated
+        - ✅ Error handling comprehensive
+        - ✅ Session tracking compatibility
+        - ✅ Documentation complete
+
+        **PR Decision Logic:**
+        - **Ready for Review**: All tests pass, monitoring integration verified, and documentation complete
+        - **Draft PR**: Implementation done but needs refinement
+
+        **Monitoring & Reporting Integration:**
+        - New tools automatically participate in session tracking when sessionId parameter is provided
+        - Quality assessment includes new tool usage patterns
+        - Test-driven development workflow captures tool effectiveness metrics
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

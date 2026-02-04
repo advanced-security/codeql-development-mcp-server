@@ -1,0 +1,5 @@
+name: ql-mcp-java-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/java-all: 7.8.3

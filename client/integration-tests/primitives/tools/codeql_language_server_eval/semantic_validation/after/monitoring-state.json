@@ -1,0 +1,35 @@
+{
+  "sessions": [
+    {
+      "sessionId": "codeql-eval-session",
+      "queryPath": "/test/semantic_query.ql",
+      "language": "javascript",
+      "queryType": "test",
+      "description": "CodeQL language server evaluation test",
+      "status": "active",
+      "state": {
+        "compilationStatus": "success",
+        "testStatus": "no_tests",
+        "documentationStatus": "missing",
+        "filesPresent": ["/test/semantic_query.ql"]
+      },
+      "mcpCalls": [
+        {
+          "callId": "eval-call-1",
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "toolName": "codeql_language_server_eval",
+          "parameters": {
+            "sessionId": "codeql-eval-session",
+            "query": "from DataFlow::Configuration cfg select cfg",
+            "language": "javascript"
+          },
+          "success": true,
+          "duration": 1500,
+          "result": "semantic validation completed"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

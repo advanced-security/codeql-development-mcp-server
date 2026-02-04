@@ -1,0 +1,349 @@
+name: Update MCP Server Primitive
+description: Request updates to existing tools or resources in the CodeQL Development MCP Server
+title: '[Primitive Update]: '
+labels: ['enhancement', 'mcp-server', 'update']
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **📝 Created from issue template:** `.github/ISSUE_TEMPLATE/mcp-server-primitive-update.yml`
+
+        Thanks for taking the time to improve existing MCP server primitives!
+
+        This template helps you request updates to existing tools and resources in the Model Context Protocol server. Updates can include bug fixes, feature enhancements, performance improvements, or expanded functionality.
+
+        ## 🤖 For Agentic LLMs (GitHub Copilot)
+
+        This issue template provides structured information for automated primitive updates. When processing this issue:
+
+        1. **Repository Context**: Begin by reading these critical reference files:
+           - **Repository Structure**: `README.md` - Overview of MCP server architecture
+           - **Server Implementation**: `server/src/ql-mcp-server.ts` - Main server implementation
+           - **Current Tools**: `server/src/tools/codeql-tools.ts` - Tool implementations to update
+           - **Current Resources**: `server/src/tools/codeql-resources.ts` - Resource implementations to update
+
+        2. **Existing Primitive Analysis**: Locate and analyze the target primitive:
+           - **Identify Location**: Find the primitive implementation in the codebase
+           - **Current Behavior**: Understand existing functionality and limitations
+           - **Dependencies**: Check for related components and dependencies
+
+        3. **Update Requirements**: Based on the issue description and examples:
+           - **Preserve Compatibility**: Maintain existing API contracts where possible
+           - **Enhance Functionality**: Add requested features or improvements
+           - **Fix Issues**: Address any bugs or performance problems
+
+        4. **Validation Requirements**:
+           - All existing tests continue to pass
+           - New functionality includes comprehensive tests
+           - TypeScript compilation remains error-free
+           - MCP protocol compliance maintained
+
+        5. **PR Workflow**:
+           - Create PR using `.github/PULL_REQUEST_TEMPLATE/mcp-server-primitive-update.md`
+           - Include before/after comparisons and test coverage
+
+  - type: dropdown
+    id: primitive-type
+    attributes:
+      label: Primitive Type
+      description: What type of primitive are you updating?
+      options:
+        - Tool (Interactive function)
+        - Resource (Static content)
+        - Both (Tool and related resource)
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: primitive-name
+    attributes:
+      label: Primitive Name
+      description: Name of the existing tool or resource to update
+      placeholder: 'e.g., validate_codeql_query, CodeQL Getting Started'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: update-type
+    attributes:
+      label: Update Type
+      description: What type of update are you requesting?
+      options:
+        - Bug Fix
+        - Feature Enhancement
+        - Performance Improvement
+        - Documentation Update
+        - API Enhancement
+        - Error Handling Improvement
+        - Other
+      default: 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: Describe how the primitive currently works and what issues exist
+      placeholder: 'Currently, the primitive does X, but it has these limitations or problems...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: Desired Behavior
+      description: Describe how you want the primitive to work after the update
+      placeholder: 'The primitive should be updated to do Y, which would provide these benefits...'
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 📋 Supporting Materials (Provide any/all that are available)
+
+        The following materials help define the desired updates and validate the improvements.
+
+  - type: textarea
+    id: example-inputs
+    attributes:
+      label: Example Inputs
+      description: Example inputs that demonstrate the current limitations or new use cases
+      placeholder: |
+        Provide either:
+        - URL: https://github.com/owner/repo/blob/main/path/to/example.ql
+        - Code examples:
+
+        ```ql
+        // Current input that doesn't work well:
+        import java
+        from Method m
+        where m.hasName("test")
+        select m
+        ```
+
+        ```json
+        // Or tool input parameters:
+        {
+          "query": "...",
+          "options": {...}
+        }
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-outputs
+    attributes:
+      label: Expected Outputs
+      description: What the primitive should return after the update
+      placeholder: |
+        Current output vs. desired output:
+
+        **Current:**
+        ```json
+        {
+          "status": "error",
+          "message": "Limited information"
+        }
+        ```
+
+        **Desired:**
+        ```json
+        {
+          "status": "success",
+          "result": {
+            "detailed_analysis": "...",
+            "suggestions": [...]
+          }
+        }
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: test-scenarios
+    attributes:
+      label: Test Scenarios
+      description: Specific scenarios that should be tested to validate the update
+      placeholder: |
+        Test scenarios that should work after the update:
+
+        1. **Scenario 1**: Test with complex queries
+        2. **Scenario 2**: Handle edge cases properly
+        3. **Scenario 3**: Performance with large inputs
+
+        Include any specific test cases or URLs to test materials.
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation-examples
+    attributes:
+      label: Documentation or Reference Materials
+      description: Documentation that shows the desired functionality or standards to follow
+      placeholder: |
+        Provide either:
+        - URL: https://codeql.github.com/docs/...
+        - Reference content:
+
+        ```markdown
+        # Expected Behavior
+
+        The primitive should follow these patterns...
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-case-improvement
+    attributes:
+      label: Use Case Improvement
+      description: How this update improves real AI assistant workflows
+      placeholder: |
+        Describe how this update helps AI assistants work better:
+
+        "Currently when an AI assistant tries to X, it fails because Y. 
+        With this update, the assistant will be able to Z, which enables better W."
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Issue Details (If this is a bug fix)
+
+  - type: textarea
+    id: bug-reproduction
+    attributes:
+      label: Bug Reproduction Steps (If applicable)
+      description: Steps to reproduce the current issue
+      placeholder: |
+        1. Call the primitive with these parameters...
+        2. Observe this incorrect behavior...
+        3. Expected behavior should be...
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages or Logs (If applicable)
+      description: Any error messages or logs that demonstrate the issue
+      placeholder: |
+        ```
+        Error: [timestamp] [level] Message details...
+        Stack trace or additional context...
+        ```
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔗 Additional Context (Optional)
+
+  - type: input
+    id: references
+    attributes:
+      label: References
+      description: Links to related issues, documentation, or examples
+      placeholder: 'e.g., GitHub issue #123, MCP docs, CodeQL examples'
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority-level
+    attributes:
+      label: Priority Level
+      description: How urgent is this update?
+      options:
+        - Critical (Blocking key functionality)
+        - High (Significant impact on usability)
+        - Medium (Notable improvement)
+        - Low (Minor enhancement)
+      default: 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes Acceptable
+      description: Are breaking changes to the API acceptable for this update?
+      options:
+        - 'No - Must maintain full backward compatibility'
+        - 'Minor - Small API changes acceptable with deprecation'
+        - 'Yes - Breaking changes acceptable if necessary'
+      default: 0
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧪 Update Requirements (For LLM Implementation)
+
+        The following requirements must be met for primitive updates:
+
+  - type: checkboxes
+    id: update-requirements
+    attributes:
+      label: Update Checklist (Auto-populated for LLM guidance)
+      description: These requirements will be automatically validated during implementation
+      options:
+        - label: '**Backward Compatibility**: Maintain existing API contracts where possible'
+          required: false
+        - label: '**Test Coverage**: All existing tests continue to pass'
+          required: false
+        - label: '**New Functionality Testing**: Comprehensive tests for new features'
+          required: false
+        - label: '**Error Handling**: Improved error handling and edge case coverage'
+          required: false
+        - label: '**Performance**: No performance regressions, ideally improvements'
+          required: false
+        - label: '**Documentation**: Updated JSDoc and usage examples'
+          required: false
+        - label: '**Type Safety**: Maintained or improved TypeScript type safety'
+          required: false
+        - label: '**Integration**: Verify integration with dependent components'
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔄 Update Workflow (For LLM Processing)
+
+        **Automated Update Steps:**
+        1. **Locate Primitive**: Find the existing implementation in the codebase
+        2. **Analyze Current State**: Understand current functionality and limitations
+        3. **Design Updates**: Plan changes while preserving compatibility
+        4. **Implement Changes**: Update the primitive with new functionality
+        5. **Update Tests**: Modify and add tests to cover new behavior
+        6. **Validate Integration**: Ensure compatibility with existing systems
+        7. **Update Documentation**: Revise JSDoc and examples
+        8. **Performance Testing**: Verify no regressions
+
+        **Quality Gates:**
+        - ✅ All existing tests pass
+        - ✅ New functionality thoroughly tested
+        - ✅ TypeScript compilation clean
+        - ✅ No performance regressions
+        - ✅ API compatibility maintained (unless breaking changes approved)
+        - ✅ Documentation updated
+
+        **PR Decision Logic:**
+        - **Ready for Review**: All tests pass, documentation complete
+        - **Draft PR**: Implementation done but needs validation
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

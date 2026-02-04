@@ -1,0 +1,9 @@
+name: Example1
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run tests
+        run: echo "Testing"

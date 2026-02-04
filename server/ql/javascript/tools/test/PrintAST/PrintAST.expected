@@ -1,0 +1,169 @@
+Example1.js:
+#    3| [ClassDefinition,TypeDefinition] class E ... } }
+#    3|   1: [VarDecl] Example1
+#    4|   2: [ClassInitializedMember,ConstructorDefinition] constru ... ; }
+#    4|     1: [Label] constructor
+#    4|     2: [FunctionExpr] (name = ... ; }
+#-----|       1: (Parameters)
+#    4|         0: [SimpleParameter] name
+#    4|           -1: [Literal] "World"
+#    4|       5: [BlockStmt] { ... ; }
+#    5|         1: [ExprStmt] this.name = name;
+#    5|           1: [AssignExpr] this.name = name
+#    5|             1: [DotExpr] this.name
+#    5|               1: [ThisExpr] this
+#    5|               2: [Label] name
+#    5|             2: [VarRef] name
+#    8|   3: [ClassInitializedMember,MethodDefinition] static ... ; }
+#    8|     1: [Label] main
+#    8|     2: [FunctionExpr] (args = ... ; }
+#-----|       1: (Parameters)
+#    8|         0: [SimpleParameter] args
+#    8|           -1: [ArrayExpr] []
+#    8|       5: [BlockStmt] { ... ; }
+#   11|         1: [DeclStmt] const example = ...
+#   11|           1: [VariableDeclarator] example ... mple1()
+#   11|             1: [VarDecl] example
+#   11|             2: [NewExpr] new Example1()
+#   11|               0: [VarRef] Example1
+#   12|         2: [DeclStmt] let message = ...
+#   12|           1: [VariableDeclarator] message ... World!"
+#   12|             1: [VarDecl] message
+#   12|             2: [Literal] "Hello World!"
+#   14|         3: [IfStmt] if (arg ... }
+#   14|           1: [BinaryExpr] args.length > 0
+#   14|             1: [DotExpr] args.length
+#   14|               1: [VarRef] args
+#   14|               2: [Label] length
+#   14|             2: [Literal] 0
+#   14|           2: [BlockStmt] { ... }
+#   15|             1: [ExprStmt] example ... rgs[0];
+#   15|               1: [AssignExpr] example ... args[0]
+#   15|                 1: [DotExpr] example.name
+#   15|                   1: [VarRef] example
+#   15|                   2: [Label] name
+#   15|                 2: [IndexExpr] args[0]
+#   15|                   1: [VarRef] args
+#   15|                   2: [Literal] 0
+#   16|           3: [BlockStmt] { ... }
+#   17|             1: [ExprStmt] console ... ssage);
+#   17|               1: [MethodCallExpr] console.log(message)
+#   17|                 0: [DotExpr] console.log
+#   17|                   1: [VarRef] console
+#   17|                   2: [Label] log
+#-----|                 1: (Arguments)
+#   17|                   0: [VarRef] message
+#   20|         4: [ExprStmt] example.demo();
+#   20|           1: [MethodCallExpr] example.demo()
+#   20|             0: [DotExpr] example.demo
+#   20|               1: [VarRef] example
+#   20|               2: [Label] demo
+#   23|   4: [ClassInitializedMember,MethodDefinition] demo() ... } }
+#   23|     1: [Label] demo
+#   23|     2: [FunctionExpr] () { ... } }
+#   23|       5: [BlockStmt] { ... } }
+#   24|         1: [DeclStmt] const numbers = ...
+#   24|           1: [VariableDeclarator] numbers = [1, 2, 3]
+#   24|             1: [VarDecl] numbers
+#   24|             2: [ArrayExpr] [1, 2, 3]
+#   24|               1: [Literal] 1
+#   24|               2: [Literal] 2
+#   24|               3: [Literal] 3
+#   27|         2: [ForStmt] for (le ... }
+#   27|           1: [DeclStmt] let i = ...
+#   27|             1: [VariableDeclarator] i = 0
+#   27|               1: [VarDecl] i
+#   27|               2: [Literal] 0
+#   27|           2: [BinaryExpr] i < numbers.length
+#   27|             1: [VarRef] i
+#   27|             2: [DotExpr] numbers.length
+#   27|               1: [VarRef] numbers
+#   27|               2: [Label] length
+#   27|           3: [UpdateExpr] i++
+#   27|             1: [VarRef] i
+#   27|           4: [BlockStmt] { ... }
+#   28|             1: [ExprStmt] console ... rs[i]);
+#   28|               1: [MethodCallExpr] console ... ers[i])
+#   28|                 0: [DotExpr] console.log
+#   28|                   1: [VarRef] console
+#   28|                   2: [Label] log
+#-----|                 1: (Arguments)
+#   28|                   0: [IndexExpr] numbers[i]
+#   28|                     1: [VarRef] numbers
+#   28|                     2: [VarRef] i
+#   32|         3: [ExprStmt] numbers ... * 2));
+#   32|           1: [MethodCallExpr] numbers ... n * 2))
+#   32|             0: [DotExpr] numbers.forEach
+#   32|               1: [VarRef] numbers
+#   32|               2: [Label] forEach
+#-----|             1: (Arguments)
+#   32|               0: [ArrowFunctionExpr] n => co ... (n * 2)
+#-----|                 1: (Parameters)
+#   32|                   0: [SimpleParameter] n
+#   32|                 5: [MethodCallExpr] console.log(n * 2)
+#   32|                   0: [DotExpr] console.log
+#   32|                     1: [VarRef] console
+#   32|                     2: [Label] log
+#-----|                   1: (Arguments)
+#   32|                     0: [BinaryExpr] n * 2
+#   32|                       1: [VarRef] n
+#   32|                       2: [Literal] 2
+#   35|         4: [DeclStmt] const person = ...
+#   35|           1: [VariableDeclarator] person ... e: 25 }
+#   35|             1: [VarDecl] person
+#   35|             2: [ObjectExpr] {name: ...}
+#   35|               1: [Property] name: this.name
+#   35|                 1: [Label] name
+#   35|                 2: [DotExpr] this.name
+#   35|                   1: [ThisExpr] this
+#   35|                   2: [Label] name
+#   35|               2: [Property] age: 25
+#   35|                 1: [Label] age
+#   35|                 2: [Literal] 25
+#   36|         5: [ExprStmt] console ... me}!`);
+#   36|           1: [MethodCallExpr] console ... ame}!`)
+#   36|             0: [DotExpr] console.log
+#   36|               1: [VarRef] console
+#   36|               2: [Label] log
+#-----|             1: (Arguments)
+#   36|               0: [TemplateLiteral] `Hello, ... name}!`
+#   36|                 1: [TemplateElement] Hello, 
+#   36|                 2: [DotExpr] person.name
+#   36|                   1: [VarRef] person
+#   36|                   2: [Label] name
+#   36|                 3: [TemplateElement] !
+#   39|         6: [TryStmt] try { ... }
+#   39|           1: [BlockStmt] { ... }
+#   40|             1: [DeclStmt] const result = ...
+#   40|               1: [VariableDeclarator] result = 10 / 0
+#   40|                 1: [VarDecl] result
+#   40|                 2: [BinaryExpr] 10 / 0
+#   40|                   1: [Literal] 10
+#   40|                   2: [Literal] 0
+#   41|           2: [CatchClause] catch ( ... }
+#   41|             1: [SimpleParameter] error
+#   41|             2: [BlockStmt] { ... }
+#   42|               1: [ExprStmt] console ... rred");
+#   42|                 1: [MethodCallExpr] console ... urred")
+#   42|                   0: [DotExpr] console.log
+#   42|                     1: [VarRef] console
+#   42|                     2: [Label] log
+#-----|                   1: (Arguments)
+#   42|                     0: [Literal] "Error occurred"
+#   48| [FunctionDeclStmt] functio ... per"; }
+#   48|   0: [VarDecl] helper
+#   48|   5: [BlockStmt] { r ... per"; }
+#   49|     1: [ReturnStmt] return "Helper";
+#   49|       1: [Literal] "Helper"
+#   53| [IfStmt] if (req ... in(); }
+#   53|   1: [BinaryExpr] require ... module
+#   53|     1: [DotExpr] require.main
+#   53|       1: [VarRef] require
+#   53|       2: [Label] main
+#   53|     2: [VarRef] module
+#   53|   2: [BlockStmt] { E ... in(); }
+#   54|     1: [ExprStmt] Example1.main();
+#   54|       1: [MethodCallExpr] Example1.main()
+#   54|         0: [DotExpr] Example1.main
+#   54|           1: [VarRef] Example1
+#   54|           2: [Label] main

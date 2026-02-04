@@ -1,0 +1,5 @@
+name: ql-mcp-python-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/python-all: 5.0.4

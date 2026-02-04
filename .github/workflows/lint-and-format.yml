@@ -1,0 +1,41 @@
+name: Lint and Format - CodeQL Development MCP Server
+
+on:
+  pull_request:
+    branches: ['main']
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-format-markdown-and-yaml:
+    name: Lint and Format Checks for CodeQL Development MCP Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Lint and Format - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Lint and Format - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Lint and Format - Install node dependencies for all workspaces
+        run: npm ci --workspaces
+
+      - name: Lint and Format - Run eslint
+        run: npm run lint
+
+      - name: Lint and Format - Run prettier format check
+        run: npm run format:check
+
+      - name: Lint and Format - Summary
+        run: |
+          echo "## Lint and Format Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ ESLint checks completed on all workspaces" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Prettier format checks completed" >> $GITHUB_STEP_SUMMARY

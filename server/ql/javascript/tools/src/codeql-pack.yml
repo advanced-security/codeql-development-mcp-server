@@ -1,0 +1,5 @@
+name: ql-mcp-javascript-tools-src
+version: 2.23.9
+library: false
+dependencies:
+  codeql/javascript-all: 2.6.19

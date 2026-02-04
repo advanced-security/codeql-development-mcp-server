@@ -1,0 +1,146 @@
+name: CodeQL Workshop Request
+description: Request creation of a custom CodeQL query development workshop from a production query
+title: '[Workshop] Create workshop for: '
+labels: ['workshop', 'learning']
+assignees:
+  - ''
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## CodeQL Workshop Request
+
+        Request a custom CodeQL query development workshop to be created from an existing production-grade query.
+        The workshop will teach developers how to build the query incrementally using test-driven development.
+
+  - type: input
+    id: workshop-name
+    attributes:
+      label: Workshop Name
+      description: Short name for the workshop (e.g., "dataflow-analysis-cpp", "find-sql-injection-java")
+      placeholder: 'dataflow-analysis-cpp'
+    validations:
+      required: true
+
+  - type: textarea
+    id: source-query
+    attributes:
+      label: Source Query
+      description: |
+        Provide either:
+        - The full content of the production-ready CodeQL query (.ql file)
+        - A public URL to the query file (e.g., GitHub raw URL)
+
+        This should be a complete, tested query that you want to teach developers how to build.
+      placeholder: |
+        /**
+         * @name Find unsafe pointer dereference
+         * @description Detects pointer dereferences that may be null
+         * @kind problem
+         * @id cpp/null-pointer-dereference
+         */
+
+        import cpp
+
+        from PointerDereferenceExpr deref
+        where ...
+        select deref, "Potential null pointer dereference"
+    validations:
+      required: true
+
+  - type: textarea
+    id: source-query-tests
+    attributes:
+      label: Source Query Unit Tests
+      description: |
+        Provide either:
+        - The full content of test files (.qlref, .expected, test source code)
+        - A public URL to the test directory
+        - A description of test cases if tests don't exist yet
+
+        Tests are essential for validating the workshop exercises and solutions.
+      placeholder: |
+        test.cpp:
+        ```cpp
+        void unsafe() {
+          int* ptr = nullptr;
+          *ptr = 42; // Should detect
+        }
+        ```
+
+        test.expected:
+        ```
+        | file     | line | col | endLine | endCol | message |
+        | test.cpp | 3    | 3   | 3       | 6      | Potential null pointer dereference |
+        ```
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target-language
+    attributes:
+      label: Target Language
+      description: What programming language does this query analyze?
+      options:
+        - C/C++
+        - C#
+        - Go
+        - Java
+        - JavaScript/TypeScript
+        - Python
+        - Ruby
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Query Complexity
+      description: How complex is the source query?
+      options:
+        - Simple (syntactic analysis only)
+        - Moderate (includes control/data flow)
+        - Complex (advanced dataflow, multiple stages)
+    validations:
+      required: true
+
+  - type: textarea
+    id: learning-goals
+    attributes:
+      label: Learning Goals
+      description: What should developers learn from this workshop?
+      placeholder: |
+        - How to identify pointer dereferences using AST analysis
+        - How to track null values through control flow
+        - How to use data flow to connect null assignments to dereferences
+        - How to eliminate false positives with proper guards
+    validations:
+      required: true
+
+  - type: input
+    id: expected-stages
+    attributes:
+      label: Expected Number of Stages
+      description: How many incremental stages should the workshop have? (4-8 recommended)
+      placeholder: '5'
+    validations:
+      required: false
+
+  - type: textarea
+    id: target-audience
+    attributes:
+      label: Target Audience
+      description: Who is this workshop for? What's their current CodeQL experience level?
+      placeholder: 'Software engineers with basic C++ knowledge but new to CodeQL. Need to learn dataflow analysis.'
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help create an effective workshop?
+      placeholder: 'This query is based on a real vulnerability we found in production. We want the workshop to focus on practical detection techniques.'
+    validations:
+      required: false

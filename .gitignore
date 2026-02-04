@@ -1,0 +1,55 @@
+# Files and dirs to ignore
+.DS_Store
+.cache/
+.env
+.env.*
+!.env.example*
+.idea/
+.npm
+.parcel-cache/
+coverage/
+dist/
+node_modules/
+tsconfig.tsbuildinfo
+
+## Globs to ignore
+*.log
+*.pid
+*.swp
+*.swo
+*.tgz
+*.tar.gz
+*~
+
+.vscode/settings.json
+
+# Ignore state tracking for local, integration testing
+.ql-mcp-tracking/*
+# But do not ignore the config file
+!.ql-mcp-tracking/config.json
+
+# The 'codeql test run` command generates `<QueryBaseName>.actual` files
+*.actual
+# The 'codeql test run` command generates `<QueryBaseName>.testproj` test database directories
+*.testproj
+
+# Prevent accidentally committing integration test output files in root directory
+# These should only be in client/integration-tests/primitives/tools/*/after/ directories
+/evaluator-log.json
+/query-results/
+/query-results.bqrs
+/query-results.sarif
+/*.bqrs
+/evaluator-*.json
+
+# Ignore test scaffolding directory created by query-scaffolding tests
+.test-query-scaffolding
+
+
+# Scratch directories
+scratch/
+**/scratch/
+
+# Ignore 'workflows/**' created as part of testing the workshop development agent skill
+/workshops/
+
