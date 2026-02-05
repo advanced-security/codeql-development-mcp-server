@@ -1,2 +1,5 @@
 # Ignore binary query results files in integration tests
 **/*.bqrs
+
+# But allow .bqrs files in before directories (needed as test inputs)
+!**/before/*.bqrs
