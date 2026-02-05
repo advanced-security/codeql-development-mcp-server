@@ -4,6 +4,7 @@ queries:
   - uses: security-extended
 
 paths-ignore:
+  - '.github/skills/create-codeql-query-development-workshop/examples/*/*-tests/**'
   ## Ignore test code used for integration tests
   - 'client/integration-tests/**'
   ## Ignore test code for CodeQL query unit tests, because queries that
@@ -11,7 +12,6 @@ paths-ignore:
   ## that contain those patterns.
   - 'server/ql/*/examples/test/**'
   - 'server/ql/*/tools/test/**'
+  - 'server/test/**'
   - 'workshops/*/exercises-tests/*/**'
   - 'workshops/*/solutions-tests/*/**'
-  - '.github/skills/create-codeql-query-development-workshop/examples/*/exercises-tests/**'
-  - '.github/skills/create-codeql-query-development-workshop/examples/*/solutions-tests/**'
