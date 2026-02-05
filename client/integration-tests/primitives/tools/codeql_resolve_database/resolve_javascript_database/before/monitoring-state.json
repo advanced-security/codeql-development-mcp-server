@@ -1,0 +1,7 @@
+{
+  "sessions": [],
+  "parameters": {
+    "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj",
+    "format": "json"
+  }
+}

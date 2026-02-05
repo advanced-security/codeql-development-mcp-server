@@ -1,0 +1,7 @@
+{
+  "sessions": [],
+  "parameters": {
+    "qlref": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.qlref",
+    "format": "json"
+  }
+}

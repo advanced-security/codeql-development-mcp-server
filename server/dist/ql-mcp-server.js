@@ -620,7 +620,7 @@ function registerCLITool(server, definition) {
       const tempDirsToCleanup = [];
       try {
         logger.info(`Executing CLI tool: ${name}`, { command, subcommand, params });
-        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode";
+        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_generate_query-help" || name === "codeql_database_analyze";
         const extractedParams = formatShouldBePassedToCLI ? {
           _positional: params._positional || [],
           files: params.files,
@@ -639,7 +639,8 @@ function registerCLITool(server, definition) {
           evaluationFunction: params.evaluationFunction,
           evaluationOutput: params.evaluationOutput,
           directory: params.directory,
-          logDir: params.logDir
+          logDir: params.logDir,
+          qlref: params.qlref
         } : {
           _positional: params._positional || [],
           files: params.files,
@@ -659,7 +660,8 @@ function registerCLITool(server, definition) {
           evaluationFunction: params.evaluationFunction,
           evaluationOutput: params.evaluationOutput,
           directory: params.directory,
-          logDir: params.logDir
+          logDir: params.logDir,
+          qlref: params.qlref
         };
         const {
           _positional = [],
@@ -680,7 +682,8 @@ function registerCLITool(server, definition) {
           evaluationFunction: _evaluationFunction,
           evaluationOutput: _evaluationOutput,
           directory,
-          logDir: customLogDir
+          logDir: customLogDir,
+          qlref
         } = extractedParams;
         const options = { ...params };
         Object.keys(extractedParams).forEach((key) => delete options[key]);
@@ -690,6 +693,30 @@ function registerCLITool(server, definition) {
         }
         if (file && name.startsWith("codeql_bqrs_")) {
           positionalArgs = [...positionalArgs, file];
+        }
+        if (qlref && name === "codeql_resolve_qlref") {
+          positionalArgs = [...positionalArgs, qlref];
+        }
+        if (options.database && name === "codeql_resolve_database") {
+          positionalArgs = [...positionalArgs, options.database];
+          delete options.database;
+        }
+        if (options.database && name === "codeql_database_create") {
+          positionalArgs = [...positionalArgs, options.database];
+          delete options.database;
+        }
+        if (name === "codeql_database_analyze") {
+          if (options.database) {
+            positionalArgs = [...positionalArgs, options.database];
+            delete options.database;
+          }
+          if (options.queries) {
+            positionalArgs = [...positionalArgs, options.queries];
+            delete options.queries;
+          }
+        }
+        if (query && name === "codeql_generate_query-help") {
+          positionalArgs = [...positionalArgs, query];
         }
         if (dir && name === "codeql_pack_ls") {
           positionalArgs = [...positionalArgs, dir];
@@ -1278,6 +1305,7 @@ var codeqlDatabaseCreateTool = {
     threads: z6.number().optional().describe("Number of threads to use"),
     ram: z6.number().optional().describe("Amount of RAM to use (MB)"),
     verbose: z6.boolean().optional().describe("Enable verbose output"),
+    overwrite: z6.boolean().optional().describe("Overwrite existing database if it exists"),
     "no-cleanup": z6.boolean().optional().describe("Skip database cleanup after finalization"),
     additionalArgs: z6.array(z6.string()).optional().describe("Additional command-line arguments")
   },
@@ -1360,10 +1388,15 @@ async function findPredicatePosition(filepath, predicateName) {
   try {
     const content = await readFile2(filepath, "utf-8");
     const lines = content.split("\n");
+    const escapedName = predicateName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const predicateNameRegex = new RegExp(`\\bpredicate\\s+(${predicateName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})\\s*\\(`);
-      const match = predicateNameRegex.exec(line);
+      const predicateKeywordRegex = new RegExp(`\\bpredicate\\s+(${escapedName})\\s*\\(`);
+      let match = predicateKeywordRegex.exec(line);
+      if (!match) {
+        const returnTypeRegex = new RegExp(`(?:^|\\s)(?:abstract\\s+)?(?:cached\\s+)?(?:private\\s+)?(?:deprecated\\s+)?(?:\\w+)\\s+(${escapedName})\\s*\\(`);
+        match = returnTypeRegex.exec(line);
+      }
       if (match) {
         const start_line = i + 1;
         const predicateNameStart = match.index + match[0].indexOf(match[1]);
@@ -5230,15 +5263,35 @@ async function registerDatabase(dbPath) {
   try {
     const resolvedPath = resolve6(dbPath);
     await access(resolvedPath, constants.F_OK);
+    const dbYmlPath = resolve6(resolvedPath, "codeql-database.yml");
+    await access(dbYmlPath, constants.F_OK);
     const srcZipPath = resolve6(resolvedPath, "src.zip");
-    await access(srcZipPath, constants.F_OK);
-    return `Database registered: ${dbPath}`;
+    const srcDirPath = resolve6(resolvedPath, "src");
+    let hasSrcZip = false;
+    let hasSrcDir = false;
+    try {
+      await access(srcZipPath, constants.F_OK);
+      hasSrcZip = true;
+    } catch {
+    }
+    if (!hasSrcZip) {
+      try {
+        await access(srcDirPath, constants.F_OK);
+        hasSrcDir = true;
+      } catch {
+      }
+    }
+    if (!hasSrcZip && !hasSrcDir) {
+      throw new Error(`Missing required source archive (src.zip) or source directory (src/) in: ${dbPath}`);
+    }
+    const sourceType = hasSrcZip ? "src.zip" : "src/";
+    return `Database registered: ${dbPath} (source: ${sourceType})`;
   } catch (error) {
     if (error instanceof Error) {
       const errorCode = error.code;
       if (errorCode === "ENOENT") {
-        if (error.message.includes("src.zip")) {
-          throw new Error(`Missing required src.zip in: ${dbPath}`);
+        if (error.message.includes("codeql-database.yml")) {
+          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`);
         }
         throw new Error(`Database path does not exist: ${dbPath}`);
       }

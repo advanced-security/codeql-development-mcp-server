@@ -23,6 +23,7 @@ export interface DatabaseRegistration {
 /**
  * Register a CodeQL database given a local path to the database directory.
  * Validates that the database exists and has required structure.
+ * Supports both full databases (with src.zip) and test databases (with src/ folder).
  */
 export async function registerDatabase(dbPath: string): Promise<string> {
   try {
@@ -31,19 +32,47 @@ export async function registerDatabase(dbPath: string): Promise<string> {
     // Check if database directory exists
     await access(resolvedPath, constants.F_OK);
     
-    // Check if src.zip exists (required for CodeQL databases)
+    // Check for codeql-database.yml (required for all CodeQL databases)
+    const dbYmlPath = resolve(resolvedPath, 'codeql-database.yml');
+    await access(dbYmlPath, constants.F_OK);
+    
+    // Check if src.zip exists (for full databases) OR src/ directory exists (for test databases)
     const srcZipPath = resolve(resolvedPath, 'src.zip');
-    await access(srcZipPath, constants.F_OK);
+    const srcDirPath = resolve(resolvedPath, 'src');
+    
+    let hasSrcZip = false;
+    let hasSrcDir = false;
+    
+    try {
+      await access(srcZipPath, constants.F_OK);
+      hasSrcZip = true;
+    } catch {
+      // src.zip not found, check for src/ directory
+    }
+    
+    if (!hasSrcZip) {
+      try {
+        await access(srcDirPath, constants.F_OK);
+        hasSrcDir = true;
+      } catch {
+        // src directory not found either
+      }
+    }
+    
+    if (!hasSrcZip && !hasSrcDir) {
+      throw new Error(`Missing required source archive (src.zip) or source directory (src/) in: ${dbPath}`);
+    }
     
     // For now, we just validate and return success message
     // In a full implementation, this would register with a query server
-    return `Database registered: ${dbPath}`;
+    const sourceType = hasSrcZip ? 'src.zip' : 'src/';
+    return `Database registered: ${dbPath} (source: ${sourceType})`;
   } catch (error) {
     if (error instanceof Error) {
       const errorCode = (error as { code?: string }).code;
       if (errorCode === 'ENOENT') {
-        if (error.message.includes('src.zip')) {
-          throw new Error(`Missing required src.zip in: ${dbPath}`);
+        if (error.message.includes('codeql-database.yml')) {
+          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`);
         }
         throw new Error(`Database path does not exist: ${dbPath}`);
       }

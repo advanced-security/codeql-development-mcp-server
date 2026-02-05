@@ -1,0 +1,14 @@
+{
+  "sessions": [
+    {
+      "id": "integration_test_session",
+      "calls": [
+        {
+          "tool": "codeql_generate_query-help",
+          "timestamp": "2025-09-25T16:06:00.000Z",
+          "status": "success"
+        }
+      ]
+    }
+  ]
+}

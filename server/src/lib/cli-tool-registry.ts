@@ -93,89 +93,126 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Separate positional arguments from named options
         // Extract tool-specific parameters that should not be passed to CLI
         // Note: format is extracted for tools that use it internally but not on CLI
-        // For codeql_bqrs_interpret and similar tools, format should be passed to CLI
-        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode';
+        // For codeql_bqrs_interpret, codeql_bqrs_decode, codeql_generate_query-help, and codeql_database_analyze, format should be passed to CLI
+        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze';
         
-        const extractedParams = formatShouldBePassedToCLI 
-          ? { 
-              _positional: params._positional || [], 
-              files: params.files, 
-              file: params.file, 
-              dir: params.dir, 
-              packDir: params.packDir, 
-              tests: params.tests, 
-              query: params.query, 
-              queryName: params.queryName, 
-              queryLanguage: params.queryLanguage, 
-              queryPack: params.queryPack, 
-              sourceFiles: params.sourceFiles, 
-              sourceFunction: params.sourceFunction, 
-              targetFunction: params.targetFunction, 
+        const extractedParams = formatShouldBePassedToCLI
+          ? {
+              _positional: params._positional || [],
+              files: params.files,
+              file: params.file,
+              dir: params.dir,
+              packDir: params.packDir,
+              tests: params.tests,
+              query: params.query,
+              queryName: params.queryName,
+              queryLanguage: params.queryLanguage,
+              queryPack: params.queryPack,
+              sourceFiles: params.sourceFiles,
+              sourceFunction: params.sourceFunction,
+              targetFunction: params.targetFunction,
               interpretedOutput: params.interpretedOutput,
-              evaluationFunction: params.evaluationFunction, 
-              evaluationOutput: params.evaluationOutput, 
+              evaluationFunction: params.evaluationFunction,
+              evaluationOutput: params.evaluationOutput,
               directory: params.directory,
-              logDir: params.logDir
+              logDir: params.logDir,
+              qlref: params.qlref
             }
           : {
-              _positional: params._positional || [], 
-              files: params.files, 
-              file: params.file, 
-              dir: params.dir, 
-              packDir: params.packDir, 
-              tests: params.tests, 
-              query: params.query, 
-              queryName: params.queryName, 
-              queryLanguage: params.queryLanguage, 
+              _positional: params._positional || [],
+              files: params.files,
+              file: params.file,
+              dir: params.dir,
+              packDir: params.packDir,
+              tests: params.tests,
+              query: params.query,
+              queryName: params.queryName,
+              queryLanguage: params.queryLanguage,
               queryPack: params.queryPack, 
-              sourceFiles: params.sourceFiles, 
-              sourceFunction: params.sourceFunction, 
-              targetFunction: params.targetFunction, 
+              sourceFiles: params.sourceFiles,
+              sourceFunction: params.sourceFunction,
+              targetFunction: params.targetFunction,
               format: params.format,
               interpretedOutput: params.interpretedOutput,
-              evaluationFunction: params.evaluationFunction, 
-              evaluationOutput: params.evaluationOutput, 
+              evaluationFunction: params.evaluationFunction,
+              evaluationOutput: params.evaluationOutput,
               directory: params.directory,
-              logDir: params.logDir
+              logDir: params.logDir,
+              qlref: params.qlref
             };
-        
-        const { 
-          _positional = [], 
-          files, 
-          file, 
-          dir, 
-          packDir, 
-          tests, 
-          query, 
-          queryName, 
-          queryLanguage: _queryLanguage, 
-          queryPack: _queryPack, 
-          sourceFiles, 
-          sourceFunction, 
-          targetFunction, 
+
+        const {
+          _positional = [],
+          files,
+          file,
+          dir,
+          packDir,
+          tests,
+          query,
+          queryName,
+          queryLanguage: _queryLanguage,
+          queryPack: _queryPack,
+          sourceFiles,
+          sourceFunction,
+          targetFunction,
           format: _format,
           interpretedOutput: _interpretedOutput,
-          evaluationFunction: _evaluationFunction, 
-          evaluationOutput: _evaluationOutput, 
+          evaluationFunction: _evaluationFunction,
+          evaluationOutput: _evaluationOutput,
           directory,
           logDir: customLogDir,
+          qlref,
         } = extractedParams;
-        
+
         // Get remaining options (everything not extracted above)
         const options = {...params};
         Object.keys(extractedParams).forEach(key => delete options[key]);
         let positionalArgs = Array.isArray(_positional) ? _positional as string[] : [_positional as string];
-        
+
         // Handle files parameter as positional arguments for certain tools
         if (files && Array.isArray(files)) {
           positionalArgs = [...positionalArgs, ...files as string[]];
         }
-        
+
         // Handle file parameter as positional argument for BQRS tools
         if (file && name.startsWith('codeql_bqrs_')) {
           positionalArgs = [...positionalArgs, file as string];
         }
-        
+
+        // Handle qlref parameter as positional argument for resolve qlref tool
+        if (qlref && name === 'codeql_resolve_qlref') {
+          positionalArgs = [...positionalArgs, qlref as string];
+        }
+
+        // Handle database parameter as positional argument for resolve database tool
+        if (options.database && name === 'codeql_resolve_database') {
+          positionalArgs = [...positionalArgs, options.database as string];
+          delete options.database;
+        }
+
+        // Handle database parameter as positional argument for database create tool
+        if (options.database && name === 'codeql_database_create') {
+          positionalArgs = [...positionalArgs, options.database as string];
+          delete options.database;
+        }
+
+        // Handle database and queries parameters as positional arguments for database analyze tool
+        if (name === 'codeql_database_analyze') {
+          if (options.database) {
+            positionalArgs = [...positionalArgs, options.database as string];
+            delete options.database;
+          }
+          if (options.queries) {
+            positionalArgs = [...positionalArgs, options.queries as string];
+            delete options.queries;
+          }
+        }
+
+        // Handle query parameter as positional argument for generate query-help tool
+        if (query && name === 'codeql_generate_query-help') {
+          positionalArgs = [...positionalArgs, query as string];
+        }
+
         // Handle dir parameter as positional argument for pack tools
         if (dir && (name === 'codeql_pack_ls')) {
           positionalArgs = [...positionalArgs, dir as string];

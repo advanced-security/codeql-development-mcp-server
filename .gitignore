@@ -11,6 +11,8 @@ coverage/
 dist/
 node_modules/
 tsconfig.tsbuildinfo
+.ql-mcp-tracking/
+codeql-development-mcp-server.code-workspace
 
 ## Globs to ignore
 *.log

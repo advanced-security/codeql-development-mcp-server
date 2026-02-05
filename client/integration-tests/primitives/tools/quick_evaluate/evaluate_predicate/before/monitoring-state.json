@@ -1,0 +1,8 @@
+{
+  "sessions": [],
+  "parameters": {
+    "file": "server/ql/javascript/tools/src/PrintAST/PrintAST.ql",
+    "db": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj",
+    "symbol": "getSelectedSourceFile"
+  }
+}

@@ -24,6 +24,7 @@ describe('registerDatabase', () => {
     // Arrange
     const tempDir = join(tmpdir(), 'test-db');
     await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     const srcZipPath = join(tempDir, 'src.zip');
     await fs.writeFile(srcZipPath, 'mock zip content');
 
@@ -31,7 +32,7 @@ describe('registerDatabase', () => {
     const result = await registerDatabase(tempDir);
 
     // Assert
-    expect(result).toBe(`Database registered: ${tempDir}`);
+    expect(result).toBe(`Database registered: ${tempDir} (source: src.zip)`);
 
     // Cleanup
     await fs.rm(tempDir, { recursive: true });
@@ -46,15 +47,30 @@ describe('registerDatabase', () => {
       .rejects.toThrow('Database path does not exist:');
   });
 
-  it('should throw error when src.zip is missing', async () => {
+  it('should throw error when codeql-database.yml is missing', async () => {
     // Arrange
-    const tempDir = join(tmpdir(), 'test-db-no-src');
+    const tempDir = join(tmpdir(), 'test-db-no-yml');
     await fs.mkdir(tempDir, { recursive: true });
-    // Note: not creating src.zip file
+    // Note: not creating codeql-database.yml file
 
     // Act & Assert
     await expect(registerDatabase(tempDir))
-      .rejects.toThrow('Missing required src.zip in:');
+      .rejects.toThrow('Missing required codeql-database.yml in:');
+
+    // Cleanup
+    await fs.rm(tempDir, { recursive: true });
+  });
+
+  it('should throw error when src.zip and src/ are missing', async () => {
+    // Arrange
+    const tempDir = join(tmpdir(), 'test-db-no-src');
+    await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
+    // Note: not creating src.zip or src/ folder
+
+    // Act & Assert
+    await expect(registerDatabase(tempDir))
+      .rejects.toThrow('Missing required source archive (src.zip) or source directory (src/) in:');
 
     // Cleanup
     await fs.rm(tempDir, { recursive: true });
@@ -64,6 +80,7 @@ describe('registerDatabase', () => {
     // Arrange
     const tempDir = join(tmpdir(), 'test-db-relative');
     await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     const srcZipPath = join(tempDir, 'src.zip');
     await fs.writeFile(srcZipPath, 'mock zip content');
 
@@ -100,7 +117,25 @@ describe('registerDatabase', () => {
     const result = await registerDatabase(tempDir);
 
     // Assert
-    expect(result).toBe(`Database registered: ${tempDir}`);
+    expect(result).toBe(`Database registered: ${tempDir} (source: src.zip)`);
+
+    // Cleanup
+    await fs.rm(tempDir, { recursive: true });
+  });
+
+  it('should successfully register a database with src/ folder instead of src.zip', async () => {
+    // Arrange - create a test database with src/ directory
+    const tempDir = join(tmpdir(), 'test-db-src-folder');
+    await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
+    await fs.mkdir(join(tempDir, 'src'), { recursive: true });
+    await fs.writeFile(join(tempDir, 'src', 'test.js'), 'const x = 1;');
+
+    // Act
+    const result = await registerDatabase(tempDir);
+
+    // Assert
+    expect(result).toBe(`Database registered: ${tempDir} (source: src/)`);
 
     // Cleanup
     await fs.rm(tempDir, { recursive: true });
@@ -142,9 +177,10 @@ describe('registerRegisterDatabaseTool', () => {
 
     const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
 
-    // Create a temporary database
+    // Create a temporary database with required files
     const tempDir = join(tmpdir(), 'test-handler-db');
     await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     await fs.writeFile(join(tempDir, 'src.zip'), 'mock');
 
     const result = await handler({ db_path: tempDir });

@@ -110,7 +110,8 @@ export class IntegrationTestRunner {
         codeql_test_run: 3,
         codeql_bqrs_decode: 3,
         codeql_bqrs_info: 3,
-        codeql_database_analyze: 3
+        codeql_database_analyze: 3,
+        codeql_resolve_database: 3
 
         // Priority 4: All other tools (default priority)
         // These tools don't have specific database dependencies
@@ -610,9 +611,8 @@ export class IntegrationTestRunner {
           params = monitoringState.parameters;
           this.logger.log(`Using parameters from monitoring-state.json`);
 
-          // For codeql_query_run with database parameter, ensure database is extracted
-          if (toolName === "codeql_query_run" && params.database) {
-            const dbPath = params.database;
+          // Helper function to ensure database is extracted
+          const ensureDatabaseExtracted = async (dbPath) => {
             // Resolve paths relative to repository root (parent of client directory)
             const currentDir = path.dirname(fileURLToPath(import.meta.url));
             const clientDir = path.dirname(path.dirname(currentDir)); // Go up to client/
@@ -647,6 +647,16 @@ export class IntegrationTestRunner {
                 this.logger.log(`Database extracted successfully to ${dbPath}`);
               }
             }
+          };
+
+          // For codeql_query_run with database parameter, ensure database is extracted
+          if (toolName === "codeql_query_run" && params.database) {
+            await ensureDatabaseExtracted(params.database);
+          }
+
+          // For codeql_resolve_database, ensure database is extracted
+          if (toolName === "codeql_resolve_database" && params.database) {
+            await ensureDatabaseExtracted(params.database);
           }
         } else {
           // Fall back to tool-specific parameters

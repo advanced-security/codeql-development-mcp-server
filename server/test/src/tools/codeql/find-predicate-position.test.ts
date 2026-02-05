@@ -160,4 +160,124 @@ class SomeClass {
       });
     });
   });
+
+  it('should find a predicate with a return type', async () => {
+    const testContent = `
+import javascript
+
+string getMessage() {
+  result = "hello"
+}
+
+predicate isSource(Node n) {
+  // body
+}
+`;
+
+    await withTempFile(testContent, 'test-return-type', async (tempFile) => {
+      const position = await findPredicatePosition(tempFile, 'getMessage');
+      
+      expect(position).toEqual({
+        start_line: 4,
+        start_col: 8,
+        end_line: 4,
+        end_col: 17
+      });
+    });
+  });
+
+  it('should find a predicate with an int return type', async () => {
+    const testContent = `int getCount() {
+  result = 42
+}`;
+
+    await withTempFile(testContent, 'test-int-return', async (tempFile) => {
+      const position = await findPredicatePosition(tempFile, 'getCount');
+      
+      expect(position).toEqual({
+        start_line: 1,
+        start_col: 5,
+        end_line: 1,
+        end_col: 12
+      });
+    });
+  });
+
+  it('should find a predicate with a custom type return type', async () => {
+    const testContent = `Node getSource() {
+  result = any(Node n | isSource(n))
+}`;
+
+    await withTempFile(testContent, 'test-custom-return', async (tempFile) => {
+      const position = await findPredicatePosition(tempFile, 'getSource');
+      
+      expect(position).toEqual({
+        start_line: 1,
+        start_col: 6,
+        end_line: 1,
+        end_col: 14
+      });
+    });
+  });
+
+  it('should find a private predicate with return type', async () => {
+    const testContent = `class MyClass {
+  private string getPrivateMessage() {
+    result = "secret"
+  }
+}`;
+
+    await withTempFile(testContent, 'test-private-return', async (tempFile) => {
+      const position = await findPredicatePosition(tempFile, 'getPrivateMessage');
+      
+      expect(position).toEqual({
+        start_line: 2,
+        start_col: 18,
+        end_line: 2,
+        end_col: 34
+      });
+    });
+  });
+
+  it('should find a cached predicate with return type', async () => {
+    const testContent = `cached string getCachedValue() {
+  result = "cached"
+}`;
+
+    await withTempFile(testContent, 'test-cached-return', async (tempFile) => {
+      const position = await findPredicatePosition(tempFile, 'getCachedValue');
+      
+      expect(position).toEqual({
+        start_line: 1,
+        start_col: 15,
+        end_line: 1,
+        end_col: 28
+      });
+    });
+  });
+
+  it('should prefer predicate keyword over return-type pattern', async () => {
+    const testContent = `
+predicate myFunc() {
+  // this is the real predicate
+}
+
+string myFunc() {
+  // this is a function with same name but return type
+  result = "test"
+}
+`;
+
+    await withTempFile(testContent, 'test-predicate-priority', async (tempFile) => {
+      const position = await findPredicatePosition(tempFile, 'myFunc');
+      
+      // Should find the predicate keyword version first (line 2)
+      expect(position).toEqual({
+        start_line: 2,
+        start_col: 11,
+        end_line: 2,
+        end_col: 16
+      });
+    });
+  });
 });

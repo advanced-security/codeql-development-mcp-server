@@ -20,19 +20,33 @@ export interface PredicatePosition {
 
 /**
  * Find the 1-based position of a predicate name in a QL file.
- * Supports: predicate name(...), name(...) (inside class), etc.
+ * Supports: 
+ * - predicate name(...)  - predicates with no return type
+ * - Type name(...)       - predicates with return type (e.g., string foo())
+ * - name(...) (inside class) - member predicates
  * Returns: { start_line, start_col, end_line, end_col }
  */
 export async function findPredicatePosition(filepath: string, predicateName: string): Promise<PredicatePosition> {
   try {
     const content = await readFile(filepath, 'utf-8');
     const lines = content.split('\n');
+    const escapedName = predicateName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      
       // Match predicate definition with the specific predicate name
-      const predicateNameRegex = new RegExp(`\\bpredicate\\s+(${predicateName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\s*\\(`);
-      const match = predicateNameRegex.exec(line);
+      // Pattern 1: predicate name(...)
+      const predicateKeywordRegex = new RegExp(`\\bpredicate\\s+(${escapedName})\\s*\\(`);
+      let match = predicateKeywordRegex.exec(line);
+      
+      // Pattern 2: Type name(...) - predicates with return type
+      // Matches: string foo(), int bar(), MyClass baz(), etc.
+      // Must start at beginning of line (with optional whitespace) or after certain keywords
+      if (!match) {
+        const returnTypeRegex = new RegExp(`(?:^|\\s)(?:abstract\\s+)?(?:cached\\s+)?(?:private\\s+)?(?:deprecated\\s+)?(?:\\w+)\\s+(${escapedName})\\s*\\(`);
+        match = returnTypeRegex.exec(line);
+      }
       
       if (match) {
         const start_line = i + 1; // 1-based line numbering

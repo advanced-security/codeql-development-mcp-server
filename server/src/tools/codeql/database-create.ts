@@ -20,6 +20,7 @@ export const codeqlDatabaseCreateTool: CLIToolDefinition = {
     threads: z.number().optional().describe('Number of threads to use'),
     ram: z.number().optional().describe('Amount of RAM to use (MB)'),
     verbose: z.boolean().optional().describe('Enable verbose output'),
+    overwrite: z.boolean().optional().describe('Overwrite existing database if it exists'),
     'no-cleanup': z.boolean().optional().describe('Skip database cleanup after finalization'),
     additionalArgs: z.array(z.string()).optional().describe('Additional command-line arguments')
   },
