@@ -25,7 +25,7 @@ This agent focuses on defining skills that combine multiple MCP Server tools to 
 
 ## Commands
 
-All command paths are relative to the root of the `github/codeql-development-mcp-server` repository.
+All command paths are relative to the root of the `advanced-security/codeql-development-mcp-server` repository.
 
 ### List QL MCP Server Tools
 

@@ -552,10 +552,6 @@ Before submitting the PR:
 - [ ] All existing tests still pass
 - [ ] New language tests pass
 
-## Reference PRs
-
-- **Swift Support**: [PR #298](https://github.com/github/codeql-development-mcp-server/pull/298) - macOS-required language with dedicated workflow
-
 ## Success Criteria
 
 The new language is successfully integrated when:

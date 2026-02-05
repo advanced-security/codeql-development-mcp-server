@@ -1,13 +1,13 @@
 ---
 applyTo: '**/*.prompt.md'
-description: 'Instructions for managing .prompt.md files throughout the github/codeql-development-mcp-server repository.'
+description: 'Instructions for managing .prompt.md files throughout the advanced-security/codeql-development-mcp-server repository.'
 ---
 
 # Instructions for managing `*.prompt.md` files
 
 ## PURPOSE
 
-The `github/codeql-development-mcp-server` repository contains `*.prompt.md` files in multiple locations. These files are intentionally interlinked in order to promote modularity and reusability of prompt content.
+The `advanced-security/codeql-development-mcp-server` repository contains `*.prompt.md` files in multiple locations. These files are intentionally interlinked in order to promote modularity and reusability of prompt content.
 
 ## ENTRY POINTS
 
