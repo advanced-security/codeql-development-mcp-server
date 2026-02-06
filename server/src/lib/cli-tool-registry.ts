@@ -20,7 +20,7 @@ const __dirname = dirname(__filename);
 // When running from bundle: server/dist/ -> go up 2 levels to repo root
 // The bundled file flattens the structure, so we detect based on path
 // Normalize path separators for cross-platform compatibility (Windows uses '\', Unix uses '/')
-const normalizedDir = __dirname.split(/[\\/]/).join('/');
+const normalizedDir = __dirname.replace(/\\/g, '/');
 const repoRootDir = normalizedDir.includes('src/lib')
   ? resolve(__dirname, '..', '..', '..')  // From source: server/src/lib -> repo root
   : resolve(__dirname, '..', '..');        // From bundle: server/dist -> repo root

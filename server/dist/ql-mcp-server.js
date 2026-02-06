@@ -607,7 +607,7 @@ import { join as join3, dirname as dirname3, resolve as resolve3, basename } fro
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = dirname3(__filename2);
-var normalizedDir2 = __dirname2.split(/[\\/]/).join("/");
+var normalizedDir2 = __dirname2.replace(/\\/g, "/");
 var repoRootDir = normalizedDir2.includes("src/lib") ? resolve3(__dirname2, "..", "..", "..") : resolve3(__dirname2, "..", "..");
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
