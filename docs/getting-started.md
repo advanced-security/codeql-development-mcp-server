@@ -13,7 +13,7 @@ This guide covers installation, configuration, and usage of the CodeQL Developme
 ### From GitHub Releases
 
 1. Download the latest release from [Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
-2. Extract: `tar -xzvf codeql-development-mcp-server-vX.X.X.tar.gz -C /path/to/destination`
+2. Extract: `unzip codeql-development-mcp-server-vX.X.X.zip -d /path/to/destination`
 
 ### From Source
 
