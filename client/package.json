@@ -1,6 +1,6 @@
 {
   "name": "codeql-development-mcp-server_client",
-  "version": "1.0.0",
+  "version": "2.23.9",
   "description": "MCP client for integration testing of the CodeQL development MCP server",
   "main": "src/ql-mcp-client.js",
   "type": "module",
@@ -9,20 +9,22 @@
   },
   "keywords": [
     "codeql",
-    "github",
+    "development",
     "integration-testing",
+    "llm",
     "mcp",
     "model-context-protocol",
     "ql",
     "sast",
     "security",
-    "static-analysis"
+    "static-analysis",
+    "typescript"
   ],
-  "author": "GitHub",
-  "license": "MIT",
+  "author": "@github/ps-codeql",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
-    "node": ">=24.10.0",
-    "npm": ">=11.6.1"
+    "node": ">=25.2.1",
+    "npm": ">=11.6.2"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
