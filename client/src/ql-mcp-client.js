@@ -87,10 +87,12 @@ class CodeQLMCPClient {
       this.logger.log("Checking for CodeQL CLI availability...");
 
       // Try to run 'codeql version' to check if it's available
+      // On Windows, explicitly use bash since the CodeQL stub is a bash script
       const version = execSync("codeql version", {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "pipe"],
-        timeout: 5000
+        timeout: 5000,
+        shell: process.platform === "win32" ? "bash" : undefined
       }).trim();
 
       this.logger.log(`Found CodeQL CLI: ${version.split("\n")[0]}`);
