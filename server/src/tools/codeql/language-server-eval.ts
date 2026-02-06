@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { CodeQLLanguageServer, Diagnostic, LanguageServerOptions } from '../../lib/language-server';
 import { logger } from '../../utils/logger';
 import { getProjectTmpDir } from '../../utils/temp-dir';
-import { resolve } from 'path';
+import { join, resolve } from 'path';
+import { pathToFileURL } from 'url';
 
 // Global language server instance for reuse across evaluations
 let globalLanguageServer: CodeQLLanguageServer | null = null;
@@ -128,7 +129,7 @@ export async function evaluateQLCode({
     const languageServer = await getLanguageServer(serverOptions);
     
     // Generate unique URI for this evaluation
-    const evalUri = `file://${getProjectTmpDir('lsp-eval')}/eval_${Date.now()}.ql`;
+    const evalUri = pathToFileURL(join(getProjectTmpDir('lsp-eval'), `eval_${Date.now()}.ql`)).href;
     
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     

@@ -6,12 +6,14 @@
  * directory (CWE-377 / CWE-378).
  */
 
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'fs';
-import { join, resolve } from 'path';
+import { mkdirSync, mkdtempSync, rmSync } from 'fs';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 
 /**
  * Repository root – from `server/test/utils/` go up 3 levels.
  */
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..', '..');
 
 /**
@@ -23,9 +25,7 @@ const TEST_TMP_BASE = join(repoRoot, '.tmp', 'test-data');
  * Return the test temp base directory, creating it if needed.
  */
 export function getTestTmpBase(): string {
-  if (!existsSync(TEST_TMP_BASE)) {
-    mkdirSync(TEST_TMP_BASE, { recursive: true });
-  }
+  mkdirSync(TEST_TMP_BASE, { recursive: true });
   return TEST_TMP_BASE;
 }
 
@@ -47,7 +47,5 @@ export function createTestTempDir(prefix: string): string {
  * Convenience wrapper used in `afterEach` / `afterAll` hooks.
  */
 export function cleanupTestTempDir(dir: string): void {
-  if (existsSync(dir)) {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  rmSync(dir, { recursive: true, force: true });
 }

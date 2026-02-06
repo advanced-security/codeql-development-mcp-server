@@ -7,7 +7,7 @@
  * CWE-377 / CWE-378 (js/insecure-temporary-file).
  */
 
-import { existsSync, mkdirSync, mkdtempSync } from 'fs';
+import { mkdirSync, mkdtempSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -20,7 +20,8 @@ const __dirname = dirname(__filename);
  * - From source  (`server/src/utils/`)  → 3 levels up
  * - From bundle  (`server/dist/`)       → 2 levels up
  */
-const repoRoot: string = __dirname.includes('src/utils')
+const normalizedDir = __dirname.split(/[\\/]/).join('/');
+const repoRoot: string = normalizedDir.includes('src/utils')
   ? resolve(__dirname, '..', '..', '..')
   : resolve(__dirname, '..', '..');
 
@@ -34,9 +35,7 @@ const PROJECT_TMP_BASE = join(repoRoot, '.tmp');
  * Return the project-local `.tmp` base directory, creating it if needed.
  */
 export function getProjectTmpBase(): string {
-  if (!existsSync(PROJECT_TMP_BASE)) {
-    mkdirSync(PROJECT_TMP_BASE, { recursive: true });
-  }
+  mkdirSync(PROJECT_TMP_BASE, { recursive: true });
   return PROJECT_TMP_BASE;
 }
 
@@ -65,8 +64,6 @@ export function createProjectTempDir(prefix: string): string {
  */
 export function getProjectTmpDir(name: string): string {
   const dir = join(getProjectTmpBase(), name);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
+  mkdirSync(dir, { recursive: true });
   return dir;
 }

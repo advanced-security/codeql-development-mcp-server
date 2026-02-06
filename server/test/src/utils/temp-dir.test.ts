@@ -4,7 +4,8 @@
 
 import { describe, it, expect, afterAll } from 'vitest';
 import { existsSync, rmSync, statSync } from 'fs';
-import { resolve, sep } from 'path';
+import { dirname, resolve, sep } from 'path';
+import { fileURLToPath } from 'url';
 import {
   createProjectTempDir,
   getProjectTmpBase,
@@ -12,6 +13,7 @@ import {
 } from '../../../src/utils/temp-dir';
 
 // Compute expected base from repo root (server/test/src/utils -> 4 levels up, then .tmp)
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..', '..', '..');
 const expectedBase = resolve(repoRoot, '.tmp');
 

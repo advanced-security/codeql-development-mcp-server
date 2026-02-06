@@ -5,7 +5,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { registerDatabase, registerRegisterDatabaseTool } from '../../../../src/tools/codeql/register-database';
 import { createTestTempDir } from '../../../utils/temp-dir';
 
@@ -84,7 +84,7 @@ describe('registerDatabase', () => {
     const originalCwd = process.cwd();
     const parentDir = join(tempDir, '..');
     process.chdir(parentDir);
-    const relativePath = './' + tempDir.split('/').pop();
+    const relativePath = './' + basename(tempDir);
 
     // Act
     const result = await registerDatabase(relativePath);

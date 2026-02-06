@@ -6,6 +6,8 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { setTimeout, clearTimeout } from 'timers';
+import { pathToFileURL } from 'url';
+import { join } from 'path';
 import { logger } from '../utils/logger';
 import { getProjectTmpDir } from '../utils/temp-dir';
 
@@ -263,7 +265,7 @@ export class CodeQLLanguageServer extends EventEmitter {
     }
 
     // Default to a project-local virtual URI rather than /tmp
-    const documentUri = uri || `file://${getProjectTmpDir('lsp-eval')}/eval.ql`;
+    const documentUri = uri || pathToFileURL(join(getProjectTmpDir('lsp-eval'), 'eval.ql')).href;
 
     return new Promise((resolve, reject) => {
       let diagnosticsReceived = false;

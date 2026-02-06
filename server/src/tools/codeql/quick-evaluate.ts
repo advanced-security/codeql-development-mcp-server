@@ -8,7 +8,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { resolve } from 'path';
+import { join, resolve } from 'path';
 import { findClassPosition } from './find-class-position';
 import { findPredicatePosition } from './find-predicate-position';
 import { logger } from '../../utils/logger';
@@ -43,7 +43,7 @@ export async function quickEvaluate({
       }
     }
     
-    const resolvedOutput = resolve(output_path || getProjectTmpDir('quickeval') + '/quickeval.bqrs');
+    const resolvedOutput = resolve(output_path || join(getProjectTmpDir('quickeval'), 'quickeval.bqrs'));
     
     // For now, return the resolved output path
     // In a full implementation, this would use the CodeQL CLI or query server

@@ -545,22 +545,21 @@ async function evaluateWithCustomScript(_bqrsPath, _queryPath, _scriptPath, _out
 }
 
 // src/lib/log-directory-manager.ts
-import { mkdirSync as mkdirSync3, existsSync as existsSync2 } from "fs";
+import { mkdirSync as mkdirSync3, existsSync } from "fs";
 import { join as join2, resolve as resolve2 } from "path";
 import { randomBytes } from "crypto";
 
 // src/utils/temp-dir.ts
-import { existsSync, mkdirSync as mkdirSync2, mkdtempSync } from "fs";
+import { mkdirSync as mkdirSync2, mkdtempSync } from "fs";
 import { dirname as dirname2, join, resolve } from "path";
 import { fileURLToPath } from "url";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname2(__filename);
-var repoRoot = __dirname.includes("src/utils") ? resolve(__dirname, "..", "..", "..") : resolve(__dirname, "..", "..");
+var normalizedDir = __dirname.split(/[\\/]/).join("/");
+var repoRoot = normalizedDir.includes("src/utils") ? resolve(__dirname, "..", "..", "..") : resolve(__dirname, "..", "..");
 var PROJECT_TMP_BASE = join(repoRoot, ".tmp");
 function getProjectTmpBase() {
-  if (!existsSync(PROJECT_TMP_BASE)) {
-    mkdirSync2(PROJECT_TMP_BASE, { recursive: true });
-  }
+  mkdirSync2(PROJECT_TMP_BASE, { recursive: true });
   return PROJECT_TMP_BASE;
 }
 function createProjectTempDir(prefix) {
@@ -569,9 +568,7 @@ function createProjectTempDir(prefix) {
 }
 function getProjectTmpDir(name) {
   const dir = join(getProjectTmpBase(), name);
-  if (!existsSync(dir)) {
-    mkdirSync2(dir, { recursive: true });
-  }
+  mkdirSync2(dir, { recursive: true });
   return dir;
 }
 
@@ -588,12 +585,12 @@ function getOrCreateLogDirectory(logDir) {
   const baseLogDir = process.env.CODEQL_QUERY_LOG_DIR || getProjectTmpDir("query-logs");
   if (logDir) {
     const absLogDir = ensurePathWithinBase(baseLogDir, logDir);
-    if (!existsSync2(absLogDir)) {
+    if (!existsSync(absLogDir)) {
       mkdirSync3(absLogDir, { recursive: true });
     }
     return absLogDir;
   }
-  if (!existsSync2(baseLogDir)) {
+  if (!existsSync(baseLogDir)) {
     mkdirSync3(baseLogDir, { recursive: true });
   }
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
@@ -604,7 +601,7 @@ function getOrCreateLogDirectory(logDir) {
 }
 
 // src/lib/cli-tool-registry.ts
-import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync3, mkdirSync as mkdirSync4 } from "fs";
+import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync2, mkdirSync as mkdirSync4 } from "fs";
 import { join as join3, dirname as dirname3, resolve as resolve3 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
@@ -885,7 +882,7 @@ function registerCLITool(server, definition) {
         if (name === "codeql_query_run" && result.success && queryLogDir) {
           const bqrsPath = options.output;
           const sarifPath = join3(queryLogDir, "results.sarif");
-          if (existsSync3(bqrsPath)) {
+          if (existsSync2(bqrsPath)) {
             try {
               const sarifResult = await executeCodeQLCommand(
                 "bqrs interpret",
@@ -4405,6 +4402,8 @@ init_logger();
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
 import { setTimeout as setTimeout2, clearTimeout } from "timers";
+import { pathToFileURL } from "url";
+import { join as join5 } from "path";
 var CodeQLLanguageServer = class extends EventEmitter {
   constructor(_options = {}) {
     super();
@@ -4584,7 +4583,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
     if (!this.isInitialized) {
       throw new Error("Language server is not initialized");
     }
-    const documentUri = uri || `file://${getProjectTmpDir("lsp-eval")}/eval.ql`;
+    const documentUri = uri || pathToFileURL(join5(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
     return new Promise((resolve9, reject) => {
       let diagnosticsReceived = false;
       const timeout = setTimeout2(() => {
@@ -4640,7 +4639,8 @@ var CodeQLLanguageServer = class extends EventEmitter {
 
 // src/tools/codeql/language-server-eval.ts
 init_logger();
-import { resolve as resolve5 } from "path";
+import { join as join6, resolve as resolve5 } from "path";
+import { pathToFileURL as pathToFileURL2 } from "url";
 var globalLanguageServer = null;
 function formatDiagnostics(diagnostics) {
   if (diagnostics.length === 0) {
@@ -4727,7 +4727,7 @@ async function evaluateQLCode({
   try {
     logger.info("Evaluating QL code via Language Server...");
     const languageServer = await getLanguageServer(serverOptions);
-    const evalUri = `file://${getProjectTmpDir("lsp-eval")}/eval_${Date.now()}.ql`;
+    const evalUri = pathToFileURL2(join6(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     const summary = {
       errorCount: diagnostics.filter((d) => d.severity === 1).length,
@@ -4872,8 +4872,8 @@ var codeqlPackLsTool = {
 init_cli_executor();
 init_logger();
 import { z as z15 } from "zod";
-import { writeFileSync as writeFileSync3, readFileSync as readFileSync3, existsSync as existsSync5 } from "fs";
-import { join as join5, dirname as dirname5, basename as basename2 } from "path";
+import { writeFileSync as writeFileSync3, readFileSync as readFileSync3, existsSync as existsSync4 } from "fs";
+import { join as join7, dirname as dirname5, basename as basename2 } from "path";
 import { mkdirSync as mkdirSync5 } from "fs";
 function parseEvaluatorLog(logPath) {
   const logContent = readFileSync3(logPath, "utf-8");
@@ -5010,11 +5010,11 @@ function registerProfileCodeQLQueryTool(server) {
         let sarifPath;
         if (!logPath) {
           logger.info("No evaluator log provided, running query to generate one");
-          const defaultOutputDir = outputDir || join5(dirname5(query), "profile-output");
+          const defaultOutputDir = outputDir || join7(dirname5(query), "profile-output");
           mkdirSync5(defaultOutputDir, { recursive: true });
-          logPath = join5(defaultOutputDir, "evaluator-log.jsonl");
-          bqrsPath = join5(defaultOutputDir, "query-results.bqrs");
-          sarifPath = join5(defaultOutputDir, "query-results.sarif");
+          logPath = join7(defaultOutputDir, "evaluator-log.jsonl");
+          bqrsPath = join7(defaultOutputDir, "query-results.bqrs");
+          sarifPath = join7(defaultOutputDir, "query-results.sarif");
           const queryResult = await executeCodeQLCommand(
             "query run",
             {
@@ -5037,7 +5037,7 @@ function registerProfileCodeQLQueryTool(server) {
               isError: true
             };
           }
-          if (existsSync5(bqrsPath)) {
+          if (existsSync4(bqrsPath)) {
             try {
               const sarifResult = await executeCodeQLCommand(
                 "bqrs interpret",
@@ -5052,7 +5052,7 @@ function registerProfileCodeQLQueryTool(server) {
             }
           }
         }
-        if (!existsSync5(logPath)) {
+        if (!existsSync4(logPath)) {
           return {
             content: [
               {
@@ -5067,11 +5067,11 @@ function registerProfileCodeQLQueryTool(server) {
         const profile = parseEvaluatorLog(logPath);
         const profileOutputDir = outputDir || dirname5(logPath);
         mkdirSync5(profileOutputDir, { recursive: true });
-        const jsonPath = join5(profileOutputDir, "query-evaluation-profile.json");
+        const jsonPath = join7(profileOutputDir, "query-evaluation-profile.json");
         const jsonContent = formatAsJson(profile);
         writeFileSync3(jsonPath, jsonContent);
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join5(profileOutputDir, "query-evaluation-profile.md");
+        const mdPath = join7(profileOutputDir, "query-evaluation-profile.md");
         const mdContent = formatAsMermaid(profile);
         writeFileSync3(mdPath, mdContent);
         logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
@@ -5083,7 +5083,7 @@ function registerProfileCodeQLQueryTool(server) {
         if (bqrsPath) {
           outputFiles.push(`Query Results (BQRS): ${bqrsPath}`);
         }
-        if (sarifPath && existsSync5(sarifPath)) {
+        if (sarifPath && existsSync4(sarifPath)) {
           outputFiles.push(`Query Results (SARIF): ${sarifPath}`);
         }
         const responseText = [
@@ -5226,7 +5226,7 @@ var codeqlQueryRunTool = {
 
 // src/tools/codeql/quick-evaluate.ts
 import { z as z19 } from "zod";
-import { resolve as resolve6 } from "path";
+import { join as join8, resolve as resolve6 } from "path";
 init_logger();
 async function quickEvaluate({
   file,
@@ -5244,7 +5244,7 @@ async function quickEvaluate({
         throw new Error(`Symbol '${symbol}' not found as class or predicate in file: ${file}`);
       }
     }
-    const resolvedOutput = resolve6(output_path || getProjectTmpDir("quickeval") + "/quickeval.bqrs");
+    const resolvedOutput = resolve6(output_path || join8(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error) {
     throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -5826,34 +5826,34 @@ function registerCodeQLTools(server) {
 
 // src/lib/resources.ts
 import { readFileSync as readFileSync4 } from "fs";
-import { join as join7, dirname as dirname6 } from "path";
+import { join as join10, dirname as dirname6 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 var __filename3 = fileURLToPath3(import.meta.url);
 var __dirname3 = dirname6(__filename3);
 function getGettingStartedGuide() {
   try {
-    return readFileSync4(join7(__dirname3, "../resources/getting-started.md"), "utf-8");
+    return readFileSync4(join10(__dirname3, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync4(join7(__dirname3, "../resources/query-basics.md"), "utf-8");
+    return readFileSync4(join10(__dirname3, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync4(join7(__dirname3, "../resources/security-templates.md"), "utf-8");
+    return readFileSync4(join10(__dirname3, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync4(join7(__dirname3, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync4(join10(__dirname3, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -5940,8 +5940,8 @@ function registerCodeQLResources(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync5, existsSync as existsSync6 } from "fs";
-import { join as join8 } from "path";
+import { readFileSync as readFileSync5, existsSync as existsSync5 } from "fs";
+import { join as join11 } from "path";
 
 // src/types/language-types.ts
 var LANGUAGE_RESOURCES = [
@@ -5996,12 +5996,12 @@ var LANGUAGE_RESOURCES = [
 // src/resources/language-resources.ts
 init_logger();
 function getQLBasePath() {
-  return join8(process.cwd(), "..");
+  return join11(process.cwd(), "..");
 }
 function loadResourceContent(relativePath) {
   try {
-    const fullPath = join8(getQLBasePath(), relativePath);
-    if (!existsSync6(fullPath)) {
+    const fullPath = join11(getQLBasePath(), relativePath);
+    if (!existsSync5(fullPath)) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
@@ -6131,13 +6131,13 @@ import { z as z32 } from "zod";
 
 // src/prompts/prompt-loader.ts
 import { readFileSync as readFileSync6 } from "fs";
-import { join as join9, dirname as dirname7 } from "path";
+import { join as join12, dirname as dirname7 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 var __filename4 = fileURLToPath4(import.meta.url);
 var __dirname4 = dirname7(__filename4);
 function loadPromptTemplate(promptFileName) {
   try {
-    const promptPath = join9(__dirname4, promptFileName);
+    const promptPath = join12(__dirname4, promptFileName);
     return readFileSync6(promptPath, "utf-8");
   } catch (error) {
     return `Prompt template '${promptFileName}' not available: ${error instanceof Error ? error.message : "Unknown error"}`;
@@ -6644,7 +6644,7 @@ var JSONFileSync = class extends DataFileSync {
 
 // src/lib/session-data-manager.ts
 import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync6 } from "fs";
-import { join as join10 } from "path";
+import { join as join13 } from "path";
 import { randomUUID } from "crypto";
 
 // src/types/monitoring.ts
@@ -6789,7 +6789,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join10(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join13(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -6821,9 +6821,9 @@ var SessionDataManager = class {
       mkdirSync7(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync7(join10(this.storageDir, subdir), { recursive: true });
+        mkdirSync7(join13(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join10(this.storageDir, "config.json");
+      const configPath = join13(this.storageDir, "config.json");
       try {
         writeFileSync6(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
@@ -7002,9 +7002,9 @@ var SessionDataManager = class {
       if (!session) return;
       const date = new Date(session.endTime || session.startTime);
       const monthDir = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join10(this.storageDir, "sessions-archive", monthDir);
+      const archiveDir = join13(this.storageDir, "sessions-archive", monthDir);
       mkdirSync7(archiveDir, { recursive: true });
-      const archiveFile = join10(archiveDir, `${sessionId}.json`);
+      const archiveFile = join13(archiveDir, `${sessionId}.json`);
       writeFileSync6(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
@@ -7056,7 +7056,7 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join10(this.storageDir, "config.json");
+    const configPath = join13(this.storageDir, "config.json");
     writeFileSync6(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
