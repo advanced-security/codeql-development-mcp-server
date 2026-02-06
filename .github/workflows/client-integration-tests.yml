@@ -6,8 +6,8 @@ on:
     paths:
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/client-integration-tests.yml'
-      - '.node-version'
       - '.codeql-version'
+      - '.node-version'
       - 'client/**'
       - 'server/**'
   pull_request:
@@ -15,8 +15,8 @@ on:
     paths:
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/client-integration-tests.yml'
-      - '.node-version'
       - '.codeql-version'
+      - '.node-version'
       - 'client/**'
       - 'server/**'
   workflow_dispatch:
@@ -76,30 +76,39 @@ jobs:
         shell: bash
         run: ./server/scripts/extract-test-databases.sh
 
+      ## Configure npm to use bash for running scripts on Windows, since the
+      ## integration test scripts are bash scripts that cmd.exe cannot execute.
+      - name: MCP Integration Tests - Configure npm script shell (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: npm config set script-shell "$(which bash)"
+
       ## Run integration tests. This script builds the server bundle and runs tests.
       ## We do NOT use 'npm run build-and-test' as it runs query unit tests which
       ## have a dedicated workflow (query-unit-tests.yml).
       - name: MCP Integration Tests - Run integration tests
+        shell: bash
         run: npm run test:integration --workspace=client
 
-      - name: MCP Integration Tests - Stop the background MCP server process (Unix)
-        if: always() && runner.os != 'Windows'
+      - name: MCP Integration Tests - Stop the background MCP server process
+        if: always()
+        shell: bash
         run: |
           if [ -f server.pid ]; then
             PID=$(cat server.pid)
             echo "Stopping server with PID $PID"
-            if kill -0 $PID 2>/dev/null; then
-              kill $PID || true
+            if kill -0 "$PID" 2>/dev/null; then
+              kill "$PID" || true
               sleep 2
               # Force kill if still running
-              if kill -0 $PID 2>/dev/null; then
+              if kill -0 "$PID" 2>/dev/null; then
                 echo "Force killing server process"
-                kill -9 $PID || true
+                kill -9 "$PID" || true
               fi
             else
               echo "Server process was not running"
             fi
-            rm server.pid
+            rm -f server.pid
           else
             echo "No server.pid file found"
           fi
@@ -107,37 +116,8 @@ jobs:
           # Clean up log files
           if [ -f server.log ]; then
             echo "Removing server.log"
-            rm server.log
+            rm -f server.log
           fi
-
-      - name: MCP Integration Tests - Stop the background MCP server process (Windows)
-        if: always() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          if (Test-Path server.pid) {
-            $PID = Get-Content server.pid
-            Write-Host "Stopping server with PID $PID"
-            try {
-              $process = Get-Process -Id $PID -ErrorAction SilentlyContinue
-              if ($process) {
-                Stop-Process -Id $PID -Force -ErrorAction SilentlyContinue
-                Start-Sleep -Seconds 2
-              } else {
-                Write-Host "Server process was not running"
-              }
-            } catch {
-              Write-Host "Server process was not running or already stopped"
-            }
-            Remove-Item server.pid -Force -ErrorAction SilentlyContinue
-          } else {
-            Write-Host "No server.pid file found"
-          }
-
-          # Clean up log files
-          if (Test-Path server.log) {
-            Write-Host "Removing server.log"
-            Remove-Item server.log -Force -ErrorAction SilentlyContinue
-          }
 
       - name: MCP Integration Tests - Summary
         shell: bash
