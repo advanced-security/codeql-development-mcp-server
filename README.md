@@ -61,7 +61,7 @@ Please note that this project is released with a [Contributor Code of Conduct](C
 2. Extract the archive:
 
 ```bash
-unzip codeql-development-mcp-server-vX.X.X.zip -C /path/to/destination
+unzip codeql-development-mcp-server-vX.X.X.zip -d /path/to/destination
 ```
 
 ### VS Code Configuration
