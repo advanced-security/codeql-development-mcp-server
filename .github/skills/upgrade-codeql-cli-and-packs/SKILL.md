@@ -22,11 +22,12 @@ This skill guides you through upgrading the CodeQL CLI version used by the MCP s
 
 ### Version Alignment Strategy
 
-This repository uses a **CLI-aligned versioning strategy** for `ql-mcp-*` packs:
+This repository uses a **CLI-aligned versioning strategy** across all version-bearing files:
 
 1. **`.codeql-version`**: Contains the target CLI version (e.g., `v2.23.9`)
-2. **`ql-mcp-*` pack versions**: Use the CLI version number without the "v" prefix (e.g., `2.23.9`)
-3. **`codeql/*-all` dependencies**: Must have `cliVersion <= target CLI version`
+2. **`package.json` versions**: All `package.json` files (root, client, server) use the CLI version number without the "v" prefix (e.g., `2.23.9`)
+3. **`ql-mcp-*` pack versions**: Use the CLI version number without the "v" prefix (e.g., `2.23.9`)
+4. **`codeql/*-all` dependencies**: Must have `cliVersion <= target CLI version`
 
 ### Why Database Compatibility Matters
 
@@ -66,6 +67,24 @@ vX.XX.Y
 ```bash
 gh codeql set-version vX.XX.Y
 codeql version  # Verify installation
+```
+
+#### 1.3 Update package.json Versions
+
+All `package.json` files must have their `version` field set to match the CLI version (without the "v" prefix):
+
+| File                  | Field to Update |
+| --------------------- | --------------- |
+| `package.json`        | `version`       |
+| `client/package.json` | `version`       |
+| `server/package.json` | `version`       |
+
+Example: If `.codeql-version` is `v2.23.9`, set all `package.json` versions to `"version": "2.23.9"`.
+
+After updating, regenerate the lock file:
+
+```bash
+npm install
 ```
 
 ### Phase 2: Identify Compatible Pack Versions

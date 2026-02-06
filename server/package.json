@@ -1,6 +1,6 @@
 {
-  "name": "codeql-development-mcp-server_server",
-  "version": "1.0.0",
+  "name": "codeql-development-mcp-server",
+  "version": "2.23.9",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
   "main": "dist/ql-mcp-server.js",
   "types": "dist/ql-mcp-server.d.ts",
@@ -10,8 +10,8 @@
   },
   "keywords": [
     "codeql",
-    "github",
-    "integration-testing",
+    "development",
+    "llm",
     "mcp",
     "model-context-protocol",
     "ql",
@@ -20,11 +20,11 @@
     "static-analysis",
     "typescript"
   ],
-  "author": "GitHub",
+  "author": "@github/ps-codeql",
   "license": "MIT",
   "engines": {
-    "node": ">=24.10.0",
-    "npm": ">=11.6.1"
+    "node": ">=25.2.1",
+    "npm": ">=11.6.2"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -58,9 +58,9 @@
     "clean": "rm -rf dist",
     "dev:stdio": "npm run build && TRANSPORT_MODE=stdio node dist/ql-mcp-server.js",
     "dev:http": "npm run build && TRANSPORT_MODE=http node dist/ql-mcp-server.js",
+    "format": "prettier --write 'src/**/*.ts'",
     "lint": "eslint src test --ext .ts",
     "lint:fix": "eslint src test --ext .ts --fix",
-    "format": "prettier --write 'src/**/*.ts'",
     "start": "npm run build && node dist/ql-mcp-server.js",
     "test": "npm run build && npm run test:ts:coverage",
     "test:coverage": "npm run test:ts:coverage",
