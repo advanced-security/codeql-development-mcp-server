@@ -5,9 +5,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { promises as fs } from 'fs';
-import { tmpdir } from 'os';
 import { join } from 'path';
 import { quickEvaluate, registerQuickEvaluateTool } from '../../../../src/tools/codeql/quick-evaluate';
+import { createTestTempDir } from '../../../utils/temp-dir';
 
 // Mock the logger to suppress expected error output
 vi.mock('../../../../src/utils/logger', () => ({
@@ -22,7 +22,8 @@ vi.mock('../../../../src/utils/logger', () => ({
 // Helper function to create unique temp files and ensure cleanup
 // eslint-disable-next-line no-unused-vars
 async function withTempFile<T>(content: string, testName: string, fn: (filePath: string) => Promise<T>): Promise<T> {
-  const tempFile = join(tmpdir(), `${testName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ql`);
+  const tempDir = createTestTempDir('quick-eval');
+  const tempFile = join(tempDir, `${testName}.ql`);
   try {
     await fs.writeFile(tempFile, content);
     return await fn(tempFile);

@@ -5,9 +5,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { promises as fs } from 'fs';
-import { tmpdir } from 'os';
 import { join } from 'path';
 import { registerDatabase, registerRegisterDatabaseTool } from '../../../../src/tools/codeql/register-database';
+import { createTestTempDir } from '../../../utils/temp-dir';
 
 // Mock the logger to suppress expected error output
 vi.mock('../../../../src/utils/logger', () => ({
@@ -22,8 +22,7 @@ vi.mock('../../../../src/utils/logger', () => ({
 describe('registerDatabase', () => {
   it('should successfully register a valid database', async () => {
     // Arrange
-    const tempDir = join(tmpdir(), 'test-db');
-    await fs.mkdir(tempDir, { recursive: true });
+    const tempDir = createTestTempDir('test-db');
     await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     const srcZipPath = join(tempDir, 'src.zip');
     await fs.writeFile(srcZipPath, 'mock zip content');
@@ -49,8 +48,7 @@ describe('registerDatabase', () => {
 
   it('should throw error when codeql-database.yml is missing', async () => {
     // Arrange
-    const tempDir = join(tmpdir(), 'test-db-no-yml');
-    await fs.mkdir(tempDir, { recursive: true });
+    const tempDir = createTestTempDir('test-db-no-yml');
     // Note: not creating codeql-database.yml file
 
     // Act & Assert
@@ -63,8 +61,7 @@ describe('registerDatabase', () => {
 
   it('should throw error when src.zip and src/ are missing', async () => {
     // Arrange
-    const tempDir = join(tmpdir(), 'test-db-no-src');
-    await fs.mkdir(tempDir, { recursive: true });
+    const tempDir = createTestTempDir('test-db-no-src');
     await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     // Note: not creating src.zip or src/ folder
 
@@ -78,16 +75,16 @@ describe('registerDatabase', () => {
 
   it('should resolve relative paths correctly', async () => {
     // Arrange
-    const tempDir = join(tmpdir(), 'test-db-relative');
-    await fs.mkdir(tempDir, { recursive: true });
+    const tempDir = createTestTempDir('test-db-relative');
     await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     const srcZipPath = join(tempDir, 'src.zip');
     await fs.writeFile(srcZipPath, 'mock zip content');
 
     // Change to parent directory and use relative path
     const originalCwd = process.cwd();
-    process.chdir(tmpdir());
-    const relativePath = './test-db-relative';
+    const parentDir = join(tempDir, '..');
+    process.chdir(parentDir);
+    const relativePath = './' + tempDir.split('/').pop();
 
     // Act
     const result = await registerDatabase(relativePath);
@@ -103,8 +100,7 @@ describe('registerDatabase', () => {
 
   it('should handle database with additional files', async () => {
     // Arrange
-    const tempDir = join(tmpdir(), 'test-db-extra-files');
-    await fs.mkdir(tempDir, { recursive: true });
+    const tempDir = createTestTempDir('test-db-extra-files');
     const srcZipPath = join(tempDir, 'src.zip');
     await fs.writeFile(srcZipPath, 'mock zip content');
     
@@ -125,8 +121,7 @@ describe('registerDatabase', () => {
 
   it('should successfully register a database with src/ folder instead of src.zip', async () => {
     // Arrange - create a test database with src/ directory
-    const tempDir = join(tmpdir(), 'test-db-src-folder');
-    await fs.mkdir(tempDir, { recursive: true });
+    const tempDir = createTestTempDir('test-db-src-folder');
     await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     await fs.mkdir(join(tempDir, 'src'), { recursive: true });
     await fs.writeFile(join(tempDir, 'src', 'test.js'), 'const x = 1;');
@@ -178,8 +173,7 @@ describe('registerRegisterDatabaseTool', () => {
     const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
 
     // Create a temporary database with required files
-    const tempDir = join(tmpdir(), 'test-handler-db');
-    await fs.mkdir(tempDir, { recursive: true });
+    const tempDir = createTestTempDir('test-handler-db');
     await fs.writeFile(join(tempDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
     await fs.writeFile(join(tempDir, 'src.zip'), 'mock');
 

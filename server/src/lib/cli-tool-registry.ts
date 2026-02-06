@@ -8,9 +8,9 @@ import { executeCodeQLCommand, executeQLTCommand, CLIExecutionResult } from './c
 import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
-import { writeFileSync, mkdtempSync, rmSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname, resolve } from 'path';
-import { tmpdir } from 'os';
+import { createProjectTempDir } from '../utils/temp-dir';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -253,7 +253,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               let tempDir: string;
               let csvPath: string;
               try {
-                tempDir = mkdtempSync(join(tmpdir(), 'codeql-external-'));
+                tempDir = createProjectTempDir('codeql-external-');
                 tempDirsToCleanup.push(tempDir); // Track for cleanup
                 csvPath = join(tempDir, 'selectedSourceFiles.csv');
 
@@ -281,7 +281,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               let tempDir: string;
               let csvPath: string;
               try {
-                tempDir = mkdtempSync(join(tmpdir(), 'codeql-external-'));
+                tempDir = createProjectTempDir('codeql-external-');
                 tempDirsToCleanup.push(tempDir);
                 csvPath = join(tempDir, 'sourceFunction.csv');
 
@@ -309,7 +309,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               let tempDir: string;
               let csvPath: string;
               try {
-                tempDir = mkdtempSync(join(tmpdir(), 'codeql-external-'));
+                tempDir = createProjectTempDir('codeql-external-');
                 tempDirsToCleanup.push(tempDir);
                 csvPath = join(tempDir, 'targetFunction.csv');
 

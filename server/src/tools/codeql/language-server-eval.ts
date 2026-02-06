@@ -7,6 +7,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { CodeQLLanguageServer, Diagnostic, LanguageServerOptions } from '../../lib/language-server';
 import { logger } from '../../utils/logger';
+import { getProjectTmpDir } from '../../utils/temp-dir';
 import { resolve } from 'path';
 
 // Global language server instance for reuse across evaluations
@@ -127,7 +128,7 @@ export async function evaluateQLCode({
     const languageServer = await getLanguageServer(serverOptions);
     
     // Generate unique URI for this evaluation
-    const evalUri = `file:///tmp/eval_${Date.now()}.ql`;
+    const evalUri = `file://${getProjectTmpDir('lsp-eval')}/eval_${Date.now()}.ql`;
     
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     

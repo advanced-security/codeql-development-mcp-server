@@ -19,7 +19,7 @@ export const codeqlTestRunTool: CLIToolDefinition = {
     'learn': z.boolean().optional()
       .describe('Accept current output as expected for failing tests'),
     logDir: z.string().optional()
-      .describe('Custom directory for test execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to /tmp/codeql-development-mcp-server/query-logs/<unique-id>'),
+      .describe('Custom directory for test execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>'),
     threads: createCodeQLSchemas.threads(),
     ram: createCodeQLSchemas.ram(),
     verbose: createCodeQLSchemas.verbose(),

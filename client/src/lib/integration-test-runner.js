@@ -454,20 +454,40 @@ export class IntegrationTestRunner {
    */
   validateCodeQLQueryRunOutput(interpretedOutput, expectedOutputPath, toolName, testCase) {
     try {
-      // Check if expected output exists
-      if (!fs.existsSync(expectedOutputPath)) {
-        // Expected output doesn't exist - validate non-empty content only
-        this.logger.log(
-          `   Note: No expected output found at ${expectedOutputPath}, validating non-empty content only`
-        );
-        return this.validateNonEmptyOutput(interpretedOutput, toolName, testCase);
+      // Read both paths directly to avoid TOCTOU race (CWE-367).
+      // If a path is a directory, readFileSync throws EISDIR.
+      // If a path doesn't exist, readFileSync throws ENOENT.
+      let actualContent, expectedContent;
+      let actualIsDir = false,
+        expectedIsDir = false;
+
+      try {
+        actualContent = fs.readFileSync(interpretedOutput, "utf8");
+      } catch (readErr) {
+        if (readErr.code === "EISDIR") {
+          actualIsDir = true;
+        } else {
+          throw readErr;
+        }
       }
 
-      // Compare actual output against expected output
-      const actualStats = fs.statSync(interpretedOutput);
-      const expectedStats = fs.statSync(expectedOutputPath);
+      try {
+        expectedContent = fs.readFileSync(expectedOutputPath, "utf8");
+      } catch (readErr) {
+        if (readErr.code === "EISDIR") {
+          expectedIsDir = true;
+        } else if (readErr.code === "ENOENT") {
+          // Expected output doesn't exist - validate non-empty content only
+          this.logger.log(
+            `   Note: No expected output found at ${expectedOutputPath}, validating non-empty content only`
+          );
+          return this.validateNonEmptyOutput(interpretedOutput, toolName, testCase);
+        } else {
+          throw readErr;
+        }
+      }
 
-      if (actualStats.isDirectory() && expectedStats.isDirectory()) {
+      if (actualIsDir && expectedIsDir) {
         // Compare directory structures
         const comparisonResult = compareDirectories(interpretedOutput, expectedOutputPath);
         if (!comparisonResult) {
@@ -479,11 +499,8 @@ export class IntegrationTestRunner {
           this.logger.log(`   ✓ Output files match expected output`);
           return true;
         }
-      } else if (actualStats.isFile() && expectedStats.isFile()) {
-        // Compare file contents
-        const actualContent = fs.readFileSync(interpretedOutput, "utf8");
-        const expectedContent = fs.readFileSync(expectedOutputPath, "utf8");
-
+      } else if (!actualIsDir && !expectedIsDir) {
+        // Compare file contents (already read above)
         if (actualContent !== expectedContent) {
           this.logger.log(
             `   Validation Failed: Output content does not match expected content for ${toolName}/${testCase}`
@@ -519,52 +536,55 @@ export class IntegrationTestRunner {
    */
   validateNonEmptyOutput(outputPath, toolName, testCase) {
     try {
-      const stats = fs.statSync(outputPath);
-
-      if (stats.isDirectory()) {
-        // Find all output files in the directory using getDirectoryFiles
-        const allFiles = getDirectoryFiles(outputPath);
-
-        // Filter for relevant output file extensions
-        const outputExtensions = [".txt", ".dgml", ".dot", ".sarif", ".csv", ".json"];
-        const outputFiles = allFiles.filter((file) =>
-          outputExtensions.some((ext) => file.endsWith(ext))
-        );
-
-        if (outputFiles.length === 0) {
-          this.logger.log(
-            `   Validation Failed: No output files found in ${outputPath} for ${toolName}/${testCase}`
-          );
-          return false;
-        }
-
-        // Check that at least one file has non-empty content
-        let hasNonEmptyContent = false;
-        for (const file of outputFiles) {
-          const content = fs.readFileSync(file, "utf8");
-          if (content.trim().length > 0) {
-            hasNonEmptyContent = true;
-            break;
-          }
-        }
-
-        if (!hasNonEmptyContent) {
-          this.logger.log(
-            `   Validation Failed: All output files are empty for ${toolName}/${testCase}`
-          );
-          return false;
-        }
-
-        return true;
-      } else {
-        // File - check if non-empty
+      // Try reading as a file first to avoid TOCTOU race (CWE-367).
+      // If the path is a directory, readFileSync throws EISDIR.
+      try {
         const content = fs.readFileSync(outputPath, "utf8");
         if (content.trim().length === 0) {
           this.logger.log(`   Validation Failed: Output file is empty for ${toolName}/${testCase}`);
           return false;
         }
         return true;
+      } catch (readErr) {
+        if (readErr.code !== "EISDIR") {
+          throw readErr;
+        }
       }
+
+      // Path is a directory - find and check output files
+      const allFiles = getDirectoryFiles(outputPath);
+
+      // Filter for relevant output file extensions
+      const outputExtensions = [".txt", ".dgml", ".dot", ".sarif", ".csv", ".json"];
+      const outputFiles = allFiles.filter((file) =>
+        outputExtensions.some((ext) => file.endsWith(ext))
+      );
+
+      if (outputFiles.length === 0) {
+        this.logger.log(
+          `   Validation Failed: No output files found in ${outputPath} for ${toolName}/${testCase}`
+        );
+        return false;
+      }
+
+      // Check that at least one file has non-empty content
+      let hasNonEmptyContent = false;
+      for (const file of outputFiles) {
+        const content = fs.readFileSync(file, "utf8");
+        if (content.trim().length > 0) {
+          hasNonEmptyContent = true;
+          break;
+        }
+      }
+
+      if (!hasNonEmptyContent) {
+        this.logger.log(
+          `   Validation Failed: All output files are empty for ${toolName}/${testCase}`
+        );
+        return false;
+      }
+
+      return true;
     } catch (error) {
       this.logger.log(
         `   Validation Error: Failed to check output at ${outputPath} for ${toolName}/${testCase}: ${error.message}`

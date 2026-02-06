@@ -5,6 +5,7 @@
 import { mkdirSync, existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { randomBytes } from 'crypto';
+import { getProjectTmpDir } from '../utils/temp-dir';
 
 /**
  * Ensure that a given path is within a base directory.
@@ -27,7 +28,7 @@ function ensurePathWithinBase(baseDir: string, targetPath: string): string {
  */
 export function getOrCreateLogDirectory(logDir?: string): string {
   // Use CODEQL_QUERY_LOG_DIR env var or default base
-  const baseLogDir = process.env.CODEQL_QUERY_LOG_DIR || '/tmp/codeql-development-mcp-server/query-logs';
+  const baseLogDir = process.env.CODEQL_QUERY_LOG_DIR || getProjectTmpDir('query-logs');
 
   // If logDir is explicitly provided, validate it is within baseLogDir
   if (logDir) {

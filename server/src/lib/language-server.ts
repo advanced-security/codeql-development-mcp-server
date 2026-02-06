@@ -7,6 +7,7 @@ import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { setTimeout, clearTimeout } from 'timers';
 import { logger } from '../utils/logger';
+import { getProjectTmpDir } from '../utils/temp-dir';
 
 export interface LSPMessage {
   jsonrpc: '2.0';
@@ -256,10 +257,13 @@ export class CodeQLLanguageServer extends EventEmitter {
     logger.info('CodeQL Language Server initialized successfully');
   }
 
-  async evaluateQL(qlCode: string, uri = 'file:///tmp/eval.ql'): Promise<Diagnostic[]> {
+  async evaluateQL(qlCode: string, uri?: string): Promise<Diagnostic[]> {
     if (!this.isInitialized) {
       throw new Error('Language server is not initialized');
     }
+
+    // Default to a project-local virtual URI rather than /tmp
+    const documentUri = uri || `file://${getProjectTmpDir('lsp-eval')}/eval.ql`;
 
     return new Promise((resolve, reject) => {
       let diagnosticsReceived = false;
@@ -272,16 +276,16 @@ export class CodeQLLanguageServer extends EventEmitter {
 
       // Listen for diagnostics
       const diagnosticsHandler = (params: PublishDiagnosticsParams) => {
-        if (params.uri === uri) {
+        if (params.uri === documentUri) {
           diagnosticsReceived = true;
           clearTimeout(timeout);
           this.removeListener('diagnostics', diagnosticsHandler);
-          
+
           // Close the document
           this.sendNotification('textDocument/didClose', {
-            textDocument: { uri }
+            textDocument: { uri: documentUri }
           });
-          
+
           resolve(params.diagnostics);
         }
       };
@@ -291,7 +295,7 @@ export class CodeQLLanguageServer extends EventEmitter {
       // Open the document with the QL code
       this.sendNotification('textDocument/didOpen', {
         textDocument: {
-          uri,
+          uri: documentUri,
           languageId: 'ql',
           version: 1,
           text: qlCode

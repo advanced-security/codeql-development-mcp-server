@@ -90,35 +90,38 @@ export function createCodeQLQuery(options: QueryScaffoldingOptions): QueryScaffo
   const filesCreated: string[] = [];
   
   try {
-    // Create source directory
-    if (!fs.existsSync(srcDir)) {
-      fs.mkdirSync(srcDir, { recursive: true });
-    }
+    // Create directories (recursive: true is a no-op if they already exist)
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(testDir, { recursive: true });
     
-    // Create test directory
-    if (!fs.existsSync(testDir)) {
-      fs.mkdirSync(testDir, { recursive: true });
-    }
-    
-    // Create query file
-    if (!fs.existsSync(queryPath)) {
+    // Create files atomically using 'wx' flag (exclusive create) to avoid
+    // TOCTOU race between existsSync check and writeFileSync (CWE-367).
+    // The 'wx' flag fails with EEXIST if the file already exists.
+    try {
       const queryContent = generateQueryTemplate(queryName, language, description, queryId);
-      fs.writeFileSync(queryPath, queryContent, 'utf8');
+      fs.writeFileSync(queryPath, queryContent, { encoding: 'utf8', flag: 'wx' });
       filesCreated.push(queryPath);
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err.code !== 'EEXIST') throw e;
     }
     
-    // Create .qlref file with relative path
-    if (!fs.existsSync(qlrefPath)) {
+    try {
       const qlrefContent = `${queryName}/${queryName}.ql\n`;
-      fs.writeFileSync(qlrefPath, qlrefContent, 'utf8');
+      fs.writeFileSync(qlrefPath, qlrefContent, { encoding: 'utf8', flag: 'wx' });
       filesCreated.push(qlrefPath);
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err.code !== 'EEXIST') throw e;
     }
     
-    // Create test code file stub
-    if (!fs.existsSync(testCodePath)) {
+    try {
       const testCodeContent = `// Test code for ${queryName}\n// TODO: Add test cases\n`;
-      fs.writeFileSync(testCodePath, testCodeContent, 'utf8');
+      fs.writeFileSync(testCodePath, testCodeContent, { encoding: 'utf8', flag: 'wx' });
       filesCreated.push(testCodePath);
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err.code !== 'EEXIST') throw e;
     }
     
     return {

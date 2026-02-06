@@ -12,6 +12,7 @@ import { resolve } from 'path';
 import { findClassPosition } from './find-class-position';
 import { findPredicatePosition } from './find-predicate-position';
 import { logger } from '../../utils/logger';
+import { getProjectTmpDir } from '../../utils/temp-dir';
 
 export interface QuickEvaluateParams {
   file: string;
@@ -28,7 +29,7 @@ export async function quickEvaluate({
   file,
   db: _db,
   symbol,
-  output_path = '/tmp/quickeval.bqrs'
+  output_path
 }: QuickEvaluateParams): Promise<string> {
   try {
     // Try to find as a class first, then as a predicate
@@ -42,7 +43,7 @@ export async function quickEvaluate({
       }
     }
     
-    const resolvedOutput = resolve(output_path);
+    const resolvedOutput = resolve(output_path || getProjectTmpDir('quickeval') + '/quickeval.bqrs');
     
     // For now, return the resolved output path
     // In a full implementation, this would use the CodeQL CLI or query server
@@ -64,7 +65,7 @@ export function registerQuickEvaluateTool(server: McpServer): void {
       file: z.string().describe('Path to the .ql file containing the symbol'),
       db: z.string().describe('Path to the CodeQL database'),
       symbol: z.string().describe('Name of the class or predicate to evaluate'),
-      output_path: z.string().optional().default('/tmp/quickeval.bqrs').describe('Output path for results'),
+      output_path: z.string().optional().describe('Output path for results (defaults to project-local .tmp/quickeval/)'),
     },
     async ({ file, db, symbol, output_path }) => {
       try {

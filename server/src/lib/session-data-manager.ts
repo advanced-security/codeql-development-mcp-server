@@ -5,7 +5,7 @@
 
 import { Low } from 'lowdb';
 import { JSONFileSync } from 'lowdb/node';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import {
@@ -78,23 +78,23 @@ export class SessionDataManager {
    */
   private ensureStorageDirectory(): void {
     try {
-      if (!existsSync(this.storageDir)) {
-        mkdirSync(this.storageDir, { recursive: true });
-      }
+      // mkdirSync with recursive: true is a no-op if directories already exist
+      mkdirSync(this.storageDir, { recursive: true });
 
       // Create subdirectories
       const subdirs = ['sessions-archive', 'exports'];
       for (const subdir of subdirs) {
-        const subdirPath = join(this.storageDir, subdir);
-        if (!existsSync(subdirPath)) {
-          mkdirSync(subdirPath, { recursive: true });
-        }
+        mkdirSync(join(this.storageDir, subdir), { recursive: true });
       }
 
-      // Create config.json if it doesn't exist
+      // Use 'wx' flag (exclusive create) to atomically create config only
+      // if it doesn't exist, avoiding TOCTOU race (CWE-367).
       const configPath = join(this.storageDir, 'config.json');
-      if (!existsSync(configPath)) {
-        writeFileSync(configPath, JSON.stringify(this.config, null, 2));
+      try {
+        writeFileSync(configPath, JSON.stringify(this.config, null, 2), { flag: 'wx' });
+      } catch (e: unknown) {
+        const err = e as { code?: string };
+        if (err.code !== 'EEXIST') throw e;
       }
 
       logger.debug(`Storage directory initialized: ${this.storageDir}`);
@@ -319,9 +319,7 @@ export class SessionDataManager {
       const monthDir = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const archiveDir = join(this.storageDir, 'sessions-archive', monthDir);
 
-      if (!existsSync(archiveDir)) {
-        mkdirSync(archiveDir, { recursive: true });
-      }
+      mkdirSync(archiveDir, { recursive: true });
 
       const archiveFile = join(archiveDir, `${sessionId}.json`);
       writeFileSync(archiveFile, JSON.stringify(session, null, 2));
