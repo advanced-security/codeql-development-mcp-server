@@ -275,6 +275,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/codeql/bqrs-decode.ts
 import { z as z2 } from "zod";
@@ -602,11 +603,12 @@ function getOrCreateLogDirectory(logDir) {
 
 // src/lib/cli-tool-registry.ts
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync2, mkdirSync as mkdirSync4 } from "fs";
-import { join as join3, dirname as dirname3, resolve as resolve3 } from "path";
+import { join as join3, dirname as dirname3, resolve as resolve3, basename } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = dirname3(__filename2);
-var repoRootDir = __dirname2.includes("src/lib") ? resolve3(__dirname2, "..", "..", "..") : resolve3(__dirname2, "..", "..");
+var normalizedDir2 = __dirname2.split(/[\\/]/).join("/");
+var repoRootDir = normalizedDir2.includes("src/lib") ? resolve3(__dirname2, "..", "..", "..") : resolve3(__dirname2, "..", "..");
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -1019,11 +1021,11 @@ async function resolveQueryPath(params, logger2) {
       throw new Error("Failed to parse resolve queries output");
     }
     const matchingQuery = resolvedQueries.find((queryPath) => {
-      const fileName = queryPath.split("/").pop();
+      const fileName = basename(queryPath);
       return fileName === `${queryName}.ql`;
     });
     if (!matchingQuery) {
-      logger2.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map((q) => q.split("/").pop()));
+      logger2.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map((q) => basename(q)));
       throw new Error(`Query "${queryName}.ql" not found in pack "${packPath}"`);
     }
     logger2.info(`Resolved query "${queryName}" to: ${matchingQuery}`);
@@ -4709,7 +4711,7 @@ async function getLanguageServer(options = {}) {
   globalLanguageServer = new CodeQLLanguageServer(defaultOptions);
   try {
     await globalLanguageServer.start();
-    const workspaceUri = `file://${resolve5(process.cwd(), "ql")}`;
+    const workspaceUri = pathToFileURL2(resolve5(process.cwd(), "ql")).href;
     await globalLanguageServer.initialize(workspaceUri);
     logger.info("CodeQL Language Server started and initialized successfully");
     return globalLanguageServer;
@@ -4873,7 +4875,7 @@ init_cli_executor();
 init_logger();
 import { z as z15 } from "zod";
 import { writeFileSync as writeFileSync3, readFileSync as readFileSync3, existsSync as existsSync4 } from "fs";
-import { join as join7, dirname as dirname5, basename as basename2 } from "path";
+import { join as join7, dirname as dirname5, basename as basename3 } from "path";
 import { mkdirSync as mkdirSync5 } from "fs";
 function parseEvaluatorLog(logPath) {
   const logContent = readFileSync3(logPath, "utf-8");
@@ -4962,7 +4964,7 @@ function formatAsMermaid(profile) {
   lines.push("```mermaid");
   lines.push("graph TD");
   lines.push("");
-  lines.push(`  QUERY["${basename2(profile.queryName)}<br/>Total: ${profile.totalDuration.toFixed(2)}ms"]`);
+  lines.push(`  QUERY["${basename3(profile.queryName)}<br/>Total: ${profile.totalDuration.toFixed(2)}ms"]`);
   lines.push("");
   profile.pipelines.forEach((pipeline) => {
     const nodeId = `P${pipeline.eventId}`;
@@ -5093,7 +5095,7 @@ function registerProfileCodeQLQueryTool(server) {
           ...outputFiles.map((f) => `  - ${f}`),
           "",
           "Profile Summary:",
-          `  - Query: ${basename2(profile.queryName)}`,
+          `  - Query: ${basename3(profile.queryName)}`,
           `  - Total Duration: ${profile.totalDuration.toFixed(2)} ms`,
           `  - Total Pipelines: ${profile.pipelines.length}`,
           `  - Total Events: ${profile.totalEvents}`,
@@ -6128,6 +6130,7 @@ function registerLanguageResources(server) {
 
 // src/prompts/workflow-prompts.ts
 import { z as z32 } from "zod";
+import { basename as basename4 } from "path";
 
 // src/prompts/prompt-loader.ts
 import { readFileSync as readFileSync6 } from "fs";
@@ -6260,7 +6263,7 @@ ${content}`
     workshopCreationWorkflowSchema.shape,
     async ({ queryPath, language, workshopName, numStages }) => {
       const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
-      const derivedName = workshopName || queryPath.split("/").pop()?.replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
+      const derivedName = workshopName || basename4(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
       const contextSection = buildWorkshopContext(
         queryPath,
         language,
@@ -8021,7 +8024,7 @@ async function main() {
     process.exit(1);
   }
 }
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL3(process.argv[1]).href) {
   main();
 }
 export {

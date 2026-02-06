@@ -103,7 +103,7 @@ async function getLanguageServer(options: LanguageServerOptions = {}): Promise<C
     await globalLanguageServer.start();
     
     // Use provided workspace URI or default to ql directory
-    const workspaceUri = `file://${resolve(process.cwd(), 'ql')}`;
+    const workspaceUri = pathToFileURL(resolve(process.cwd(), 'ql')).href;
     await globalLanguageServer.initialize(workspaceUri);
     
     logger.info('CodeQL Language Server started and initialized successfully');

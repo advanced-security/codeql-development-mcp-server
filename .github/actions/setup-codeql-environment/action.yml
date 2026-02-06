@@ -75,13 +75,26 @@ runs:
         echo "  CodeQL Version: $CODEQL_VERSION"
         echo "  Cache Key: $CODEQL_CACHE_KEY"
 
-    - name: Cache `gh-codeql` extension and CodeQL packages
-      id: cache-codeql
+    - name: Cache `gh-codeql` extension and CodeQL packages (Unix)
+      id: cache-codeql-unix
+      if: runner.os != 'Windows'
       uses: actions/cache@v4
       with:
         path: |
           ~/.local/share/gh-codeql
           ~/.codeql/packages
+        key: ${{ steps.codeql-version.outputs.codeql-cache-key }}
+        restore-keys: |
+          gh-codeql-${{ runner.os }}-${{ steps.codeql-version.outputs.codeql-version }}-
+
+    - name: Cache `gh-codeql` extension and CodeQL packages (Windows)
+      id: cache-codeql-windows
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~\AppData\Local\GitHub\gh-codeql
+          ~\.codeql\packages
         key: ${{ steps.codeql-version.outputs.codeql-cache-key }}
         restore-keys: |
           gh-codeql-${{ runner.os }}-${{ steps.codeql-version.outputs.codeql-version }}-

@@ -26,7 +26,13 @@ permissions:
 
 jobs:
   integration-tests:
-    runs-on: ubuntu-latest
+    name: Integration Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     env:
       HTTP_HOST: 'localhost'
@@ -44,8 +50,13 @@ jobs:
           cache: 'npm'
           node-version-file: '.node-version'
 
-      - name: MCP Integration Tests - Install OS dependencies
+      - name: MCP Integration Tests - Install OS dependencies (Ubuntu)
+        if: runner.os == 'Linux'
         run: sudo apt-get install -y jq
+
+      - name: MCP Integration Tests - Install OS dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install jq -y
 
       - name: MCP Integration Tests - Install node dependencies for client and server workspaces
         run: npm ci --workspace=client && npm ci --workspace=server
@@ -57,10 +68,12 @@ jobs:
 
       ## Install packs used in the integration tests.
       - name: MCP Integration Tests - Install CodeQL packs
+        shell: bash
         run: ./server/scripts/install-packs.sh
 
       ## Extract test databases used in the integration tests.
       - name: MCP Integration Tests - Extract test databases
+        shell: bash
         run: ./server/scripts/extract-test-databases.sh
 
       ## Run integration tests. This script builds the server bundle and runs tests.
@@ -69,8 +82,8 @@ jobs:
       - name: MCP Integration Tests - Run integration tests
         run: npm run test:integration --workspace=client
 
-      - name: MCP Integration Tests - Stop the background MCP server process
-        if: always()
+      - name: MCP Integration Tests - Stop the background MCP server process (Unix)
+        if: always() && runner.os != 'Windows'
         run: |
           if [ -f server.pid ]; then
             PID=$(cat server.pid)
@@ -96,3 +109,38 @@ jobs:
             echo "Removing server.log"
             rm server.log
           fi
+
+      - name: MCP Integration Tests - Stop the background MCP server process (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path server.pid) {
+            $PID = Get-Content server.pid
+            Write-Host "Stopping server with PID $PID"
+            try {
+              $process = Get-Process -Id $PID -ErrorAction SilentlyContinue
+              if ($process) {
+                Stop-Process -Id $PID -Force -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 2
+              } else {
+                Write-Host "Server process was not running"
+              }
+            } catch {
+              Write-Host "Server process was not running or already stopped"
+            }
+            Remove-Item server.pid -Force -ErrorAction SilentlyContinue
+          } else {
+            Write-Host "No server.pid file found"
+          }
+
+          # Clean up log files
+          if (Test-Path server.log) {
+            Write-Host "Removing server.log"
+            Remove-Item server.log -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: MCP Integration Tests - Summary
+        shell: bash
+        run: |
+          echo "## Integration Tests Summary (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
+          echo "✅ MCP server integration tests passed on ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY

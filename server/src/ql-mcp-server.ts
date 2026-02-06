@@ -9,6 +9,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { pathToFileURL } from 'url';
 import { registerCodeQLTools, registerCodeQLResources } from './tools';
 import { registerLanguageResources } from './resources/language-resources';
 import { registerWorkflowPrompts } from './prompts/workflow-prompts';
@@ -140,6 +141,6 @@ async function main(): Promise<void> {
 }
 
 // Start the server if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

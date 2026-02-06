@@ -7,6 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { basename } from 'path';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { logger } from '../utils/logger';
 
@@ -154,10 +155,8 @@ export function registerWorkflowPrompts(server: McpServer): void {
       // Derive workshop name from query path if not provided
       const derivedName =
         workshopName ||
-        queryPath
-          .split('/')
-          .pop()
-          ?.replace(/\.(ql|qlref)$/, '')
+        basename(queryPath)
+          .replace(/\.(ql|qlref)$/, '')
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-') ||
         'codeql-workshop';
