@@ -122,7 +122,7 @@ npm install && npm run build
 
 ## License
 
-This project is licensed under the terms of the GitHub CodeQL Terms and Conditions. Please refer to [LICENSE.md](LICENSE.md) for the full terms.
+This project is licensed under the terms of the GitHub CodeQL Terms and Conditions. Please refer to [LICENSE](LICENSE) for the full terms.
 
 ## Maintainers
 
