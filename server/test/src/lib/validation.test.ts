@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { validateCodeQLSyntax, validateFilePath } from '../../../src/lib/validation.js';
-import { tmpdir } from 'os';
-import { mkdirSync, writeFileSync, rmSync } from 'fs';
+import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
+import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 describe('CodeQL Validation', () => {
@@ -57,14 +57,11 @@ describe('File Path Validation', () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `path-validation-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = createTestTempDir('path-validation-test');
   });
 
   afterEach(() => {
-    if (testDir) {
-      rmSync(testDir, { recursive: true, force: true });
-    }
+    cleanupTestTempDir(testDir);
   });
 
   test('should accept valid relative path', () => {
@@ -90,7 +87,7 @@ describe('File Path Validation', () => {
   });
 
   test('should reject path outside workspace root', () => {
-    const outsidePath = join(tmpdir(), 'outside.txt');
+    const outsidePath = join(testDir, '..', '..', 'outside.txt');
     
     expect(() => {
       validateFilePath(outsidePath, testDir);

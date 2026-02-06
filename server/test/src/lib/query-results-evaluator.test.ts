@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
+import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 
 // Mock the logger to suppress expected error output
 vi.mock('../../../src/utils/logger', () => ({
@@ -36,7 +36,7 @@ import { executeCodeQLCommand } from '../../../src/lib/cli-executor';
 const mockExecuteCodeQLCommand = vi.mocked(executeCodeQLCommand);
 
 describe('Query Results Evaluator', () => {
-  const testDir = join(tmpdir(), 'query-evaluator-test-' + Date.now());
+  const testDir = createTestTempDir('query-evaluator-test');
   const testBqrsPath = join(testDir, 'test-results.bqrs');
   const testQueryPath = join(testDir, 'TestQuery.ql');
   
@@ -57,9 +57,7 @@ describe('Query Results Evaluator', () => {
   
   afterEach(() => {
     // Clean up test directory
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true, force: true });
-    }
+    cleanupTestTempDir(testDir);
   });
 
   describe('extractQueryMetadata', () => {

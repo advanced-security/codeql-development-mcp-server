@@ -4,15 +4,16 @@
 
 import { describe, expect, it } from 'vitest';
 import { promises as fs } from 'fs';
-import { tmpdir } from 'os';
 import { join } from 'path';
 import { findPredicatePosition } from '../../../../src/tools/codeql/find-predicate-position';
 import { safeUnlink } from '../../../utils/file-cleanup';
+import { createTestTempDir } from '../../../utils/temp-dir';
 
 // Helper function to create unique temp files and ensure cleanup
 // eslint-disable-next-line no-unused-vars
 async function withTempFile<T>(content: string, testName: string, fn: (filePath: string) => Promise<T>): Promise<T> {
-  const tempFile = join(tmpdir(), `${testName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ql`);
+  const tempDir = createTestTempDir('find-pred-pos');
+  const tempFile = join(tempDir, `${testName}.ql`);
   try {
     await fs.writeFile(tempFile, content);
     return await fn(tempFile);

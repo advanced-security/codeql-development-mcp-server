@@ -6,10 +6,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getOrCreateLogDirectory } from '../../../src/lib/log-directory-manager';
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
+import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 
 describe('Log Directory Manager', () => {
-  const testBaseDir = join(tmpdir(), 'test-log-dir-manager');
+  const testBaseDir = createTestTempDir('test-log-dir-manager');
 
   beforeEach(() => {
     // Clean up test directory before each test
@@ -22,9 +22,7 @@ describe('Log Directory Manager', () => {
 
   afterEach(() => {
     // Clean up after tests
-    if (existsSync(testBaseDir)) {
-      rmSync(testBaseDir, { recursive: true, force: true });
-    }
+    cleanupTestTempDir(testBaseDir);
     // Reset environment variable
     delete process.env.CODEQL_QUERY_LOG_DIR;
   });
@@ -84,7 +82,7 @@ describe('Log Directory Manager', () => {
     });
 
     it('should throw error if logDir is outside base directory', () => {
-      const outsideDir = '/tmp/outside-base-dir';
+      const outsideDir = join(testBaseDir, '..', '..', 'outside-base-dir');
 
       expect(() => getOrCreateLogDirectory(outsideDir)).toThrow(
         /Provided log directory is outside the allowed base directory/
@@ -104,7 +102,8 @@ describe('Log Directory Manager', () => {
 
       const result = getOrCreateLogDirectory();
 
-      expect(result).toContain('/tmp/codeql-development-mcp-server/query-logs');
+      // Default now goes to project-local .tmp/query-logs/
+      expect(result).toContain('.tmp/query-logs');
 
       // Clean up
       rmSync(result, { recursive: true, force: true });

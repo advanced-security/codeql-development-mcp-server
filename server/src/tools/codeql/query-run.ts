@@ -24,7 +24,7 @@ export const codeqlQueryRunTool: CLIToolDefinition = {
       .describe('External predicate data: predicate=file.csv'),
     timeout: createCodeQLSchemas.timeout(),
     logDir: z.string().optional()
-      .describe('Custom directory for query execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to /tmp/codeql-development-mcp-server/query-logs/<unique-id>'),
+      .describe('Custom directory for query execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>'),
     'evaluator-log': z.string().optional().describe('Path to save evaluator log (deprecated: use logDir instead)'),
     'evaluator-log-minify': z.boolean().optional()
       .describe('Minimize evaluator log for smaller size'),

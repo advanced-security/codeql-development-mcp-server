@@ -2,6 +2,9 @@
 .DS_Store
 .cache/
 .env
+
+# Project-local temporary data (never use OS tmpdir)
+.tmp/
 .env.*
 !.env.example*
 .idea/

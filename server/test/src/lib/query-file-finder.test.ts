@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { tmpdir } from 'os';
+import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import { findCodeQLQueryFiles } from '../../../src/lib/query-file-finder.js';
 
 describe('Query File Finder', () => {
@@ -13,15 +13,12 @@ describe('Query File Finder', () => {
 
   beforeEach(() => {
     // Create a temporary test directory
-    testDir = path.join(tmpdir(), `test-query-finder-${Date.now()}`);
-    fs.mkdirSync(testDir, { recursive: true });
+    testDir = createTestTempDir('test-query-finder');
   });
 
   afterEach(() => {
     // Clean up test directory
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
+    cleanupTestTempDir(testDir);
   });
 
   describe('findCodeQLQueryFiles', () => {

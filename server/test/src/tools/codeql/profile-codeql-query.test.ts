@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
+import { createTestTempDir, cleanupTestTempDir } from '../../../utils/temp-dir';
 import { registerProfileCodeQLQueryTool } from '../../../../src/tools/codeql/profile-codeql-query';
 
 // Mock the logger to suppress expected error output
@@ -22,7 +22,7 @@ vi.mock('../../../../src/utils/logger', () => ({
 // We'll test the parsing and formatting functions by importing them
 // Since they're not exported, we'll need to test via the file output
 describe('Profile CodeQL Query Tool', () => {
-  const testDir = join(tmpdir(), 'profile-test-' + Date.now());
+  const testDir = createTestTempDir('profile-test');
   
   beforeEach(() => {
     if (existsSync(testDir)) {
@@ -32,9 +32,7 @@ describe('Profile CodeQL Query Tool', () => {
   });
 
   afterEach(() => {
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true });
-    }
+    cleanupTestTempDir(testDir);
   });
 
   describe('Evaluator Log Parsing', () => {

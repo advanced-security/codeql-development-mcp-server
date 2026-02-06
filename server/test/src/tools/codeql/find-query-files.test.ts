@@ -8,22 +8,19 @@ import { registerFindCodeQLQueryFilesTool } from '../../../../src/tools/codeql/f
 import { findCodeQLQueryFiles } from '../../../../src/lib/query-file-finder';
 import * as fs from 'fs';
 import * as path from 'path';
-import { tmpdir } from 'os';
+import { createTestTempDir, cleanupTestTempDir } from '../../../utils/temp-dir';
 
 describe('Find Query Files Tool', () => {
   let testDir: string;
 
   beforeEach(() => {
     // Create a temporary test directory
-    testDir = path.join(tmpdir(), `test-find-tool-${Date.now()}`);
-    fs.mkdirSync(testDir, { recursive: true });
+    testDir = createTestTempDir('test-find-tool');
   });
 
   afterEach(() => {
     // Clean up test directory
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
+    cleanupTestTempDir(testDir);
   });
 
   describe('registerFindCodeQLQueryFilesTool', () => {
