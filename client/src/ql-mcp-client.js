@@ -809,7 +809,8 @@ async function main() {
 }
 
 // Run if called directly
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+const cliPath = process.argv[1] ? path.resolve(process.argv[1]) : undefined;
+if (cliPath && import.meta.url === pathToFileURL(cliPath).href) {
   main().catch((error) => {
     console.error("Fatal error:", error);
     process.exit(1);

@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname, resolve, basename } from 'path';
+import { basename, dirname, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
 import { fileURLToPath } from 'url';
 

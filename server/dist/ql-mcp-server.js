@@ -275,6 +275,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { resolve as resolve9 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/codeql/bqrs-decode.ts
@@ -603,7 +604,7 @@ function getOrCreateLogDirectory(logDir) {
 
 // src/lib/cli-tool-registry.ts
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync2, mkdirSync as mkdirSync4 } from "fs";
-import { join as join3, dirname as dirname3, resolve as resolve3, basename } from "path";
+import { basename, dirname as dirname3, join as join3, resolve as resolve3 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = dirname3(__filename2);
@@ -4460,7 +4461,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       this.isInitialized = false;
       this.emit("exit", code);
     });
-    await new Promise((resolve9) => setTimeout2(resolve9, 2e3));
+    await new Promise((resolve10) => setTimeout2(resolve10, 2e3));
   }
   handleStdout(data) {
     this.messageBuffer += data.toString();
@@ -4529,8 +4530,8 @@ var CodeQLLanguageServer = class extends EventEmitter {
       method,
       params
     };
-    return new Promise((resolve9, reject) => {
-      this.pendingResponses.set(id, { resolve: resolve9, reject });
+    return new Promise((resolve10, reject) => {
+      this.pendingResponses.set(id, { resolve: resolve10, reject });
       this.sendMessage(message);
       setTimeout2(() => {
         if (this.pendingResponses.has(id)) {
@@ -4586,7 +4587,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       throw new Error("Language server is not initialized");
     }
     const documentUri = uri || pathToFileURL(join5(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve10, reject) => {
       let diagnosticsReceived = false;
       const timeout = setTimeout2(() => {
         if (!diagnosticsReceived) {
@@ -4602,7 +4603,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
           this.sendNotification("textDocument/didClose", {
             textDocument: { uri: documentUri }
           });
-          resolve9(params.diagnostics);
+          resolve10(params.diagnostics);
         }
       };
       this.on("diagnostics", diagnosticsHandler);
@@ -7985,10 +7986,10 @@ async function startServer(mode = "stdio") {
     });
     const host = process.env.HTTP_HOST || "localhost";
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve10, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve9();
+        resolve10();
       });
       httpServer.on("error", (error) => {
         logger.error("HTTP server error:", error);
@@ -8024,7 +8025,8 @@ async function main() {
     process.exit(1);
   }
 }
-if (import.meta.url === pathToFileURL3(process.argv[1]).href) {
+var scriptPath = process.argv[1] ? resolve9(process.argv[1]) : void 0;
+if (scriptPath && import.meta.url === pathToFileURL3(scriptPath).href) {
   main();
 }
 export {
