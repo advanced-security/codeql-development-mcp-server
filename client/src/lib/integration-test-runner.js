@@ -463,6 +463,9 @@ export class IntegrationTestRunner {
       // Copy before files to temp directory
       copyDirectory(beforeDir, tempDir);
 
+      // Resolve {{tmpdir}} placeholders in arguments
+      resolvePathPlaceholders(testConfig.arguments, this.logger);
+
       // Run the tool with custom arguments
       const result = await this.client.callTool({
         name: toolName,
