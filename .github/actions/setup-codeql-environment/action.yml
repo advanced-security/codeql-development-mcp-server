@@ -149,6 +149,23 @@ runs:
 
         echo "✅ GitHub CLI CodeQL extension installed successfully"
 
+    # On Windows, gh codeql install-stub creates a bash script which is not
+    # discoverable by Node.js child_process.spawn(). Create a .cmd wrapper
+    # so that tools using spawn('codeql', ...) can find the CodeQL CLI.
+    - name: Create Windows-compatible CodeQL CLI wrapper
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        CODEQL_STUB_DIR="$HOME/.local/bin"
+
+        cat > "$CODEQL_STUB_DIR/codeql.cmd" << 'WRAPPER'
+        @echo off
+        gh codeql %*
+        exit /b %errorlevel%
+        WRAPPER
+
+        echo "✅ Created Windows-compatible CodeQL CLI wrapper at $CODEQL_STUB_DIR/codeql.cmd"
+
     - name: Setup CodeQL environment variables
       id: setup-codeql-env
       shell: bash
