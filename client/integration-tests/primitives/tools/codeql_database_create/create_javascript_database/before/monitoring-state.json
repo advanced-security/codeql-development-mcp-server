@@ -1,7 +1,7 @@
 {
   "sessions": [],
   "parameters": {
-    "database": "/tmp/codeql-integration-test-db",
+    "database": "{{tmpdir}}/codeql-integration-test-db",
     "language": "javascript",
     "source-root": "server/ql/javascript/examples/test/ExampleQuery1",
     "overwrite": true

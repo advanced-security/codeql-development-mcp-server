@@ -35,3 +35,4 @@ This file contains instructions for working with TypeScript test files in the `s
 - NEVER write tests that depend on external resources or network calls without proper mocking.
 - NEVER write overly complex tests that test multiple concerns in a single test case.
 - NEVER skip writing tests for new functionality or bug fixes.
+- **NEVER use `os.tmpdir()`, `/tmp`, or any OS-level temporary directory** in test code or test fixtures. The OS temp directory is world-readable and triggers CWE-377/CWE-378 vulnerabilities. Instead, ALWAYS use the project-local `.tmp/` directory via `getProjectTmpDir()`, `createProjectTempDir()`, or `getProjectTmpBase()` from `server/src/utils/temp-dir.ts`. For integration test fixtures, use the `{{tmpdir}}` placeholder which resolves at runtime to `<repoRoot>/.tmp/`.
