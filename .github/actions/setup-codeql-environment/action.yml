@@ -150,21 +150,44 @@ runs:
         echo "✅ GitHub CLI CodeQL extension installed successfully"
 
     # On Windows, gh codeql install-stub creates a bash script which is not
-    # discoverable by Node.js child_process.spawn(). Create a .cmd wrapper
-    # so that tools using spawn('codeql', ...) can find the CodeQL CLI.
-    - name: Create Windows-compatible CodeQL CLI wrapper
+    # discoverable by Node.js child_process.spawn() or execFile(), since
+    # these functions only resolve real executables (.exe), not scripts.
+    # Find the actual codeql.exe binary from the gh-codeql distribution
+    # and add its directory to PATH so that spawn('codeql', ...) works.
+    # This workaround can be removed once github/gh-codeql#21 is merged,
+    # which adds native Windows support to install-stub.
+    - name: Add CodeQL binary directory to PATH (Windows)
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        CODEQL_STUB_DIR="$HOME/.local/bin"
+        echo "🔧 Locating actual codeql.exe binary for Windows compatibility..."
 
-        cat > "$CODEQL_STUB_DIR/codeql.cmd" << 'WRAPPER'
-        @echo off
-        gh codeql %*
-        exit /b %errorlevel%
-        WRAPPER
+        # Determine the gh-codeql data directory
+        GH_CODEQL_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}/GitHub/gh-codeql"
 
-        echo "✅ Created Windows-compatible CodeQL CLI wrapper at $CODEQL_STUB_DIR/codeql.cmd"
+        if [ ! -d "$GH_CODEQL_DIR" ]; then
+          echo "❌ Error: gh-codeql data directory not found at $GH_CODEQL_DIR"
+          exit 1
+        fi
+
+        # Find the codeql.exe binary in the gh-codeql distribution
+        CODEQL_EXE=$(find "$GH_CODEQL_DIR" -name "codeql.exe" -type f 2>/dev/null | head -1)
+
+        if [ -z "$CODEQL_EXE" ]; then
+          echo "❌ Error: codeql.exe not found in $GH_CODEQL_DIR"
+          echo "Directory contents:"
+          find "$GH_CODEQL_DIR" -maxdepth 3 -type f | head -20
+          exit 1
+        fi
+
+        CODEQL_BIN_DIR=$(dirname "$CODEQL_EXE")
+        echo "Found codeql.exe at: $CODEQL_EXE"
+        echo "Adding $CODEQL_BIN_DIR to PATH"
+
+        # Prepend the directory containing codeql.exe to PATH
+        echo "$CODEQL_BIN_DIR" >> "$GITHUB_PATH"
+
+        echo "✅ Added CodeQL binary directory to PATH for Windows"
 
     - name: Setup CodeQL environment variables
       id: setup-codeql-env

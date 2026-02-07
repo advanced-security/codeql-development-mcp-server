@@ -66,6 +66,25 @@ jobs:
         with:
           install-language-runtimes: false
 
+      ## Verify that the CodeQL CLI is spawnable from Node.js, not just from
+      ## bash. On Windows, Node.js spawn()/execFile() require a real .exe
+      ## binary on PATH, not a bash stub or .cmd wrapper. Fail fast here
+      ## instead of waiting for integration tests to time out.
+      - name: MCP Integration Tests - Verify CodeQL CLI is spawnable from Node.js
+        shell: bash
+        run: |
+          node -e "
+            const { execFile } = require('child_process');
+            execFile('codeql', ['version', '--format=terse'], (err, stdout) => {
+              if (err) {
+                console.error('❌ CodeQL CLI is not spawnable from Node.js:', err.message);
+                console.error('This typically means codeql.exe is not on PATH (Windows).');
+                process.exit(1);
+              }
+              console.log('✅ CodeQL CLI is spawnable from Node.js, version:', stdout.trim());
+            });
+          "
+
       ## Install packs used in the integration tests.
       - name: MCP Integration Tests - Install CodeQL packs
         shell: bash
