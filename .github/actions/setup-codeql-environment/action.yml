@@ -162,21 +162,24 @@ runs:
       run: |
         echo "🔧 Locating actual codeql.exe binary for Windows compatibility..."
 
-        # Determine the gh-codeql data directory
-        GH_CODEQL_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}/GitHub/gh-codeql"
+        # The gh-codeql extension stores the CodeQL CLI binary under the
+        # GitHub CLI extensions directory. On Windows runners this is:
+        #   $LOCALAPPDATA/GitHub CLI/extensions/gh-codeql/dist/release/<version>/
+        GH_EXTENSIONS_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}/GitHub CLI/extensions/gh-codeql"
 
-        if [ ! -d "$GH_CODEQL_DIR" ]; then
-          echo "❌ Error: gh-codeql data directory not found at $GH_CODEQL_DIR"
-          exit 1
+        if [ ! -d "$GH_EXTENSIONS_DIR" ]; then
+          echo "⚠️ gh-codeql extensions directory not found at: $GH_EXTENSIONS_DIR"
+          echo "Searching more broadly under LOCALAPPDATA..."
+          GH_EXTENSIONS_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}"
         fi
 
         # Find the codeql.exe binary in the gh-codeql distribution
-        CODEQL_EXE=$(find "$GH_CODEQL_DIR" -name "codeql.exe" -type f 2>/dev/null | head -1)
+        CODEQL_EXE=$(find "$GH_EXTENSIONS_DIR" -name "codeql.exe" -type f 2>/dev/null | head -1)
 
         if [ -z "$CODEQL_EXE" ]; then
-          echo "❌ Error: codeql.exe not found in $GH_CODEQL_DIR"
-          echo "Directory contents:"
-          find "$GH_CODEQL_DIR" -maxdepth 3 -type f | head -20
+          echo "❌ Error: codeql.exe not found under $GH_EXTENSIONS_DIR"
+          echo "Directory listing (top 30 files):"
+          find "$GH_EXTENSIONS_DIR" -maxdepth 5 -type f 2>/dev/null | head -30
           exit 1
         fi
 
