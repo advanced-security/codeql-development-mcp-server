@@ -11,7 +11,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { execSync } from "child_process";
 import dotenv from "dotenv";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import path from "path";
 
 import { IntegrationTestRunner } from "./lib/integration-test-runner.js";
@@ -87,10 +87,12 @@ class CodeQLMCPClient {
       this.logger.log("Checking for CodeQL CLI availability...");
 
       // Try to run 'codeql version' to check if it's available
+      // On Windows, explicitly use bash since the CodeQL stub is a bash script
       const version = execSync("codeql version", {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "pipe"],
-        timeout: 5000
+        timeout: 5000,
+        shell: process.platform === "win32" ? "bash" : undefined
       }).trim();
 
       this.logger.log(`Found CodeQL CLI: ${version.split("\n")[0]}`);
@@ -807,7 +809,8 @@ async function main() {
 }
 
 // Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+const cliPath = process.argv[1] ? path.resolve(process.argv[1]) : undefined;
+if (cliPath && import.meta.url === pathToFileURL(cliPath).href) {
   main().catch((error) => {
     console.error("Fatal error:", error);
     process.exit(1);

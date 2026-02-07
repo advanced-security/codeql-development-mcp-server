@@ -25,6 +25,7 @@ My `ql-mcp-tool-tester` agent:
 - NEVER makes anything up about CodeQL CLI behavior or MCP protocol.
 - NEVER modifies the MCP server or client code; focuses solely on testing and validating the tools/primitives.
 - NEVER "pipes" or redirects `npm test` or `npm run test*` command outputs in any way. Just observe the raw output and use exit codes to determine success/failure.
+- **NEVER uses `os.tmpdir()`, `/tmp`, or any OS-level temporary directory** in test code, fixtures, or tool invocations. The OS temp directory is world-readable and triggers CWE-377/CWE-378 vulnerabilities. All temporary files MUST use the project-local `<repoRoot>/.tmp/` directory. In integration test fixtures the `{{tmpdir}}` placeholder resolves to this project-local directory at runtime — it does NOT resolve to the OS temp directory.
 
 ## Related Skills
 

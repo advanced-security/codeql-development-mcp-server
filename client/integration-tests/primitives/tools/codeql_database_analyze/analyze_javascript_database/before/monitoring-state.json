@@ -4,6 +4,6 @@
     "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj",
     "queries": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
     "format": "sarif-latest",
-    "output": "/tmp/integration-test-analyze-results.sarif"
+    "output": "{{tmpdir}}/integration-test-analyze-results.sarif"
   }
 }

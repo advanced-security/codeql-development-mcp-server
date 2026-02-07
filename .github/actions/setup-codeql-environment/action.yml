@@ -75,13 +75,26 @@ runs:
         echo "  CodeQL Version: $CODEQL_VERSION"
         echo "  Cache Key: $CODEQL_CACHE_KEY"
 
-    - name: Cache `gh-codeql` extension and CodeQL packages
-      id: cache-codeql
+    - name: Cache `gh-codeql` extension and CodeQL packages (Unix)
+      id: cache-codeql-unix
+      if: runner.os != 'Windows'
       uses: actions/cache@v4
       with:
         path: |
           ~/.local/share/gh-codeql
           ~/.codeql/packages
+        key: ${{ steps.codeql-version.outputs.codeql-cache-key }}
+        restore-keys: |
+          gh-codeql-${{ runner.os }}-${{ steps.codeql-version.outputs.codeql-version }}-
+
+    - name: Cache `gh-codeql` extension and CodeQL packages (Windows)
+      id: cache-codeql-windows
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~\AppData\Local\GitHub\gh-codeql
+          ~\.codeql\packages
         key: ${{ steps.codeql-version.outputs.codeql-cache-key }}
         restore-keys: |
           gh-codeql-${{ runner.os }}-${{ steps.codeql-version.outputs.codeql-version }}-
@@ -135,6 +148,49 @@ runs:
         echo "PATH=$PATH" >> "$GITHUB_ENV"
 
         echo "✅ GitHub CLI CodeQL extension installed successfully"
+
+    # On Windows, gh codeql install-stub creates a bash script which is not
+    # discoverable by Node.js child_process.spawn() or execFile(), since
+    # these functions only resolve real executables (.exe), not scripts.
+    # Find the actual codeql.exe binary from the gh-codeql distribution
+    # and add its directory to PATH so that spawn('codeql', ...) works.
+    # This workaround can be removed once github/gh-codeql#21 is merged,
+    # which adds native Windows support to install-stub.
+    - name: Add CodeQL binary directory to PATH (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        echo "🔧 Locating actual codeql.exe binary for Windows compatibility..."
+
+        # The gh-codeql extension stores the CodeQL CLI binary under the
+        # GitHub CLI extensions directory. On Windows runners this is:
+        #   $LOCALAPPDATA/GitHub CLI/extensions/gh-codeql/dist/release/<version>/
+        GH_EXTENSIONS_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}/GitHub CLI/extensions/gh-codeql"
+
+        if [ ! -d "$GH_EXTENSIONS_DIR" ]; then
+          echo "⚠️ gh-codeql extensions directory not found at: $GH_EXTENSIONS_DIR"
+          echo "Searching more broadly under LOCALAPPDATA..."
+          GH_EXTENSIONS_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}"
+        fi
+
+        # Find the codeql.exe binary in the gh-codeql distribution
+        CODEQL_EXE=$(find "$GH_EXTENSIONS_DIR" -name "codeql.exe" -type f 2>/dev/null | head -1)
+
+        if [ -z "$CODEQL_EXE" ]; then
+          echo "❌ Error: codeql.exe not found under $GH_EXTENSIONS_DIR"
+          echo "Directory listing (top 30 files):"
+          find "$GH_EXTENSIONS_DIR" -maxdepth 5 -type f 2>/dev/null | head -30
+          exit 1
+        fi
+
+        CODEQL_BIN_DIR=$(dirname "$CODEQL_EXE")
+        echo "Found codeql.exe at: $CODEQL_EXE"
+        echo "Adding $CODEQL_BIN_DIR to PATH"
+
+        # Prepend the directory containing codeql.exe to PATH
+        echo "$CODEQL_BIN_DIR" >> "$GITHUB_PATH"
+
+        echo "✅ Added CodeQL binary directory to PATH for Windows"
 
     - name: Setup CodeQL environment variables
       id: setup-codeql-env

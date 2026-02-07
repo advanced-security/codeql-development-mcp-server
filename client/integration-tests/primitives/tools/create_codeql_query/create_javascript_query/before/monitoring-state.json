@@ -1,7 +1,7 @@
 {
   "sessions": [],
   "parameters": {
-    "basePath": "/tmp/codeql-test-query",
+    "basePath": "{{tmpdir}}/codeql-test-query",
     "queryName": "TestQuery",
     "language": "javascript",
     "description": "Integration test query"

@@ -3,7 +3,6 @@
  */
 
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
@@ -12,6 +11,44 @@ import {
   getDirectoryFiles,
   removeDirectory
 } from "./file-utils.js";
+
+/**
+ * Repository root, calculated once at module load.
+ * Mirrors `server/src/utils/temp-dir.ts`.
+ */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, "..", "..", "..");
+
+/**
+ * Project-local temporary directory (`<repoRoot>/.tmp`).
+ * All temporary files are kept here instead of the OS temp directory
+ * to avoid CWE-377/CWE-378 (world-readable temp files).
+ */
+const PROJECT_TMP_BASE = path.join(repoRoot, ".tmp");
+
+/**
+ * Resolve `{{tmpdir}}` placeholders in string values of a parameters object.
+ * Test fixtures use `{{tmpdir}}` as a cross-platform placeholder for the
+ * project-local temporary directory (`<repoRoot>/.tmp`), which avoids
+ * writing to the world-readable OS temp directory (CWE-377 / CWE-378).
+ *
+ * @param {Record<string, unknown>} params - Tool parameters object (mutated in place)
+ * @param {object} [logger] - Optional logger for diagnostics
+ * @returns {Record<string, unknown>} The same object, with placeholders resolved
+ */
+export function resolvePathPlaceholders(params, logger) {
+  fs.mkdirSync(PROJECT_TMP_BASE, { recursive: true });
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value.includes("{{tmpdir}}")) {
+      params[key] = value.replace(/\{\{tmpdir\}\}/g, PROJECT_TMP_BASE);
+      if (logger) {
+        logger.log(`  Resolved ${key}: {{tmpdir}} → ${params[key]}`);
+      }
+    }
+  }
+  return params;
+}
 
 /**
  * Integration test runner class
@@ -208,8 +245,11 @@ export class IntegrationTestRunner {
         return;
       }
 
-      // Create temp directory for test execution
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `mcp-test-${toolName}-${testCase}-`));
+      // Create temp directory for test execution under project .tmp/
+      fs.mkdirSync(PROJECT_TMP_BASE, { recursive: true });
+      const tempDir = fs.mkdtempSync(
+        path.join(PROJECT_TMP_BASE, `mcp-test-${toolName}-${testCase}-`)
+      );
 
       try {
         // Copy before files to temp directory
@@ -414,11 +454,17 @@ export class IntegrationTestRunner {
    * Run a file-based test with custom configuration
    */
   async runFileBasedConfigurableTest(toolName, testCase, testConfig, beforeDir, afterDir) {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `mcp-test-${toolName}-${testCase}-`));
+    fs.mkdirSync(PROJECT_TMP_BASE, { recursive: true });
+    const tempDir = fs.mkdtempSync(
+      path.join(PROJECT_TMP_BASE, `mcp-test-${toolName}-${testCase}-`)
+    );
 
     try {
       // Copy before files to temp directory
       copyDirectory(beforeDir, tempDir);
+
+      // Resolve {{tmpdir}} placeholders in arguments
+      resolvePathPlaceholders(testConfig.arguments, this.logger);
 
       // Run the tool with custom arguments
       const result = await this.client.callTool({
@@ -630,6 +676,7 @@ export class IntegrationTestRunner {
         if (monitoringState.parameters) {
           params = monitoringState.parameters;
           this.logger.log(`Using parameters from monitoring-state.json`);
+          resolvePathPlaceholders(params, this.logger);
 
           // Helper function to ensure database is extracted
           const ensureDatabaseExtracted = async (dbPath) => {

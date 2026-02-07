@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { basename, dirname, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
 import { fileURLToPath } from 'url';
 
@@ -17,9 +17,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // Calculate the repository root directory
 // When running from source: server/src/lib/ -> go up 3 levels to repo root
-// When running from bundle: server/dist/ -> go up 2 levels to repo root  
+// When running from bundle: server/dist/ -> go up 2 levels to repo root
 // The bundled file flattens the structure, so we detect based on path
-const repoRootDir = __dirname.includes('src/lib') 
+// Normalize path separators for cross-platform compatibility (Windows uses '\', Unix uses '/')
+const normalizedDir = __dirname.replace(/\\/g, '/');
+const repoRootDir = normalizedDir.includes('src/lib')
   ? resolve(__dirname, '..', '..', '..')  // From source: server/src/lib -> repo root
   : resolve(__dirname, '..', '..');        // From bundle: server/dist -> repo root
 
@@ -637,13 +639,13 @@ async function resolveQueryPath(
     
     // Find the query that matches the requested name exactly
     const matchingQuery = resolvedQueries.find(queryPath => {
-      const fileName = queryPath.split('/').pop();
+      const fileName = basename(queryPath);
       // Match exact query name: "PrintAST" should match "PrintAST.ql" only
       return fileName === `${queryName}.ql`;
     });
-    
+
     if (!matchingQuery) {
-      logger.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map(q => q.split('/').pop()));
+      logger.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map(q => basename(q)));
       throw new Error(`Query "${queryName}.ql" not found in pack "${packPath}"`);
     }
     

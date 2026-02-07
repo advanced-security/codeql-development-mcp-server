@@ -10,8 +10,8 @@
           "arguments": {
             "query": "client/integration-tests/static/javascript/src/ExampleQuery1/ExampleQuery1.ql",
             "database": "client/integration-tests/static/javascript/test/ExampleQuery1/ExampleQuery1.testproj",
-            "output": "/tmp/test-query-results.bqrs",
-            "evaluator-log": "/tmp/test-evaluator-log.json",
+            "output": "{{tmpdir}}/test-query-results.bqrs",
+            "evaluator-log": "{{tmpdir}}/test-evaluator-log.json",
             "evaluator-log-level": 5,
             "tuple-counting": true
           },
@@ -19,8 +19,8 @@
             "stdout": "Evaluation completed successfully",
             "stderr": "WARNING: Ignoring local version because local version support is off.",
             "filesGenerated": [
-              "/tmp/test-query-results.bqrs",
-              "/tmp/test-evaluator-log.json"
+              "{{tmpdir}}/test-query-results.bqrs",
+              "{{tmpdir}}/test-evaluator-log.json"
             ]
           }
         }

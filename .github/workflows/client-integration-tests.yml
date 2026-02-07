@@ -6,8 +6,8 @@ on:
     paths:
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/client-integration-tests.yml'
-      - '.node-version'
       - '.codeql-version'
+      - '.node-version'
       - 'client/**'
       - 'server/**'
   pull_request:
@@ -15,8 +15,8 @@ on:
     paths:
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/client-integration-tests.yml'
-      - '.node-version'
       - '.codeql-version'
+      - '.node-version'
       - 'client/**'
       - 'server/**'
   workflow_dispatch:
@@ -26,7 +26,13 @@ permissions:
 
 jobs:
   integration-tests:
-    runs-on: ubuntu-latest
+    name: Integration Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     env:
       HTTP_HOST: 'localhost'
@@ -44,8 +50,13 @@ jobs:
           cache: 'npm'
           node-version-file: '.node-version'
 
-      - name: MCP Integration Tests - Install OS dependencies
+      - name: MCP Integration Tests - Install OS dependencies (Ubuntu)
+        if: runner.os == 'Linux'
         run: sudo apt-get install -y jq
+
+      - name: MCP Integration Tests - Install OS dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install jq -y
 
       - name: MCP Integration Tests - Install node dependencies for client and server workspaces
         run: npm ci --workspace=client && npm ci --workspace=server
@@ -55,38 +66,68 @@ jobs:
         with:
           install-language-runtimes: false
 
+      ## Verify that the CodeQL CLI is spawnable from Node.js, not just from
+      ## bash. On Windows, Node.js spawn()/execFile() require a real .exe
+      ## binary on PATH, not a bash stub or .cmd wrapper. Fail fast here
+      ## instead of waiting for integration tests to time out.
+      - name: MCP Integration Tests - Verify CodeQL CLI is spawnable from Node.js
+        shell: bash
+        run: |
+          node -e "
+            const { execFile } = require('child_process');
+            execFile('codeql', ['version', '--format=terse'], (err, stdout) => {
+              if (err) {
+                console.error('❌ CodeQL CLI is not spawnable from Node.js:', err.message);
+                console.error('This typically means codeql.exe is not on PATH (Windows).');
+                process.exit(1);
+              }
+              console.log('✅ CodeQL CLI is spawnable from Node.js, version:', stdout.trim());
+            });
+          "
+
       ## Install packs used in the integration tests.
       - name: MCP Integration Tests - Install CodeQL packs
+        shell: bash
         run: ./server/scripts/install-packs.sh
 
       ## Extract test databases used in the integration tests.
       - name: MCP Integration Tests - Extract test databases
+        shell: bash
         run: ./server/scripts/extract-test-databases.sh
+
+      ## Configure npm to use bash for running scripts on Windows, since the
+      ## integration test scripts are bash scripts that cmd.exe cannot execute.
+      - name: MCP Integration Tests - Configure npm script shell (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: npm config set script-shell "$(which bash)"
 
       ## Run integration tests. This script builds the server bundle and runs tests.
       ## We do NOT use 'npm run build-and-test' as it runs query unit tests which
       ## have a dedicated workflow (query-unit-tests.yml).
       - name: MCP Integration Tests - Run integration tests
+        shell: bash
         run: npm run test:integration --workspace=client
 
       - name: MCP Integration Tests - Stop the background MCP server process
         if: always()
+        shell: bash
         run: |
           if [ -f server.pid ]; then
             PID=$(cat server.pid)
             echo "Stopping server with PID $PID"
-            if kill -0 $PID 2>/dev/null; then
-              kill $PID || true
+            if kill -0 "$PID" 2>/dev/null; then
+              kill "$PID" || true
               sleep 2
               # Force kill if still running
-              if kill -0 $PID 2>/dev/null; then
+              if kill -0 "$PID" 2>/dev/null; then
                 echo "Force killing server process"
-                kill -9 $PID || true
+                kill -9 "$PID" || true
               fi
             else
               echo "Server process was not running"
             fi
-            rm server.pid
+            rm -f server.pid
           else
             echo "No server.pid file found"
           fi
@@ -94,5 +135,11 @@ jobs:
           # Clean up log files
           if [ -f server.log ]; then
             echo "Removing server.log"
-            rm server.log
+            rm -f server.log
           fi
+
+      - name: MCP Integration Tests - Summary
+        shell: bash
+        run: |
+          echo "## Integration Tests Summary (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
+          echo "✅ MCP server integration tests passed on ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY

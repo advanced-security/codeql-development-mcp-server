@@ -38,7 +38,7 @@ Common mistakes to avoid:
 - ❌ **DO NOT** commit files like `evaluator-log.json`, `query-results.bqrs`, `*.bqrs` files to the repository root
 - ❌ **DO NOT** commit temporary files created during integration test development to the repository root
 - ✅ **DO** place all test output files in the appropriate `client/integration-tests/primitives/tools/<tool_name>/<test_name>/after/` directory
-- ✅ **DO** use `/tmp/` paths for temporary files during development and testing
+- ✅ **DO** use `{{tmpdir}}` as a placeholder for the project-local temporary directory in test fixture paths (resolved at runtime to `<repoRoot>/.tmp/`)
 
 **File generation best practices:**
 
@@ -46,7 +46,7 @@ Common mistakes to avoid:
    - Run the actual tool command to generate authentic files
    - Copy the generated files from their temporary location to the correct `after/` directory
    - Never fabricate or "make up" binary file contents
-2. **Use proper paths**: Always use absolute paths or `/tmp/` paths when running commands that generate files during development
+2. **Use proper paths**: Always use `{{tmpdir}}/` as a placeholder for the project-local temp directory in test fixture JSON files (e.g., `"output": "{{tmpdir}}/results.sarif"`). This resolves at runtime to `<repoRoot>/.tmp/`, **not** the OS temp directory, to avoid CWE-377/CWE-378 (world-readable temp files).
 3. **Verify placement**: Before committing, verify that generated files are in the correct `after/` directory, not in the repository root
 
 The `.gitignore` file has been updated to help prevent accidental commits of common integration test output files in the root directory.
