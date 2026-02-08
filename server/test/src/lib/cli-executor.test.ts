@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync, chmodSync } from 'fs';
+import { execFileSync } from 'child_process';
 import { join } from 'path';
 import {
   buildCodeQLArgs,
@@ -720,6 +721,15 @@ describe('CODEQL_PATH - PATH prepend integration', () => {
   });
 });
 
+// Check if codeql is available on PATH (may not be in CI environments like build-server)
+let codeqlOnPath = false;
+try {
+  execFileSync('codeql', ['version', '--format=terse'], { timeout: 5000 });
+  codeqlOnPath = true;
+} catch {
+  codeqlOnPath = false;
+}
+
 describe('validateCodeQLBinaryReachable', () => {
   const originalEnv = process.env.CODEQL_PATH;
 
@@ -732,7 +742,7 @@ describe('validateCodeQLBinaryReachable', () => {
     resetResolvedCodeQLBinary();
   });
 
-  it('should return a version string when codeql is on PATH', async () => {
+  it.skipIf(!codeqlOnPath)('should return a version string when codeql is on PATH', async () => {
     // Use the default PATH-based resolution (codeql must be on PATH for tests)
     delete process.env.CODEQL_PATH;
     resolveCodeQLBinary();
