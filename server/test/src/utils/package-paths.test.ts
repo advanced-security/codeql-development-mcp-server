@@ -154,15 +154,11 @@ describe('getUserWorkspaceDir', () => {
     expect(result).toBe(workspaceRootDir);
   });
 
-  it('should fall back to process.cwd() in npm-installed layout', () => {
-    delete process.env.CODEQL_MCP_WORKSPACE;
-    // To test npm-installed behavior we'd need to mock workspaceRootDir === packageRootDir
-    // which is difficult since they're module-level constants. This test documents
-    // the expected behavior instead.
-    const result = getUserWorkspaceDir();
-    expect(result).toBeTruthy();
-    expect(typeof result).toBe('string');
-  });
+  // NOTE: Testing npm-installed layout behavior (process.cwd() fallback) requires
+  // mocking workspaceRootDir === packageRootDir, which is difficult since they're
+  // module-level constants computed at import time. The npm-installed behavior is
+  // instead validated through integration tests where the package is actually
+  // installed via npm in a non-monorepo layout.
 });
 
 describe('Pre-computed exports', () => {
