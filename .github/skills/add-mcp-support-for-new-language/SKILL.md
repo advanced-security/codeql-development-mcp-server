@@ -37,24 +37,27 @@ This skill includes automation scripts to accelerate implementation:
 
 ## Quick Reference: Files to Modify
 
-| Category          | File Path                                                      | Change                                  |
-| ----------------- | -------------------------------------------------------------- | --------------------------------------- |
-| **TypeScript**    | `server/src/prompts/workflow-prompts.ts`                       | Add to `SUPPORTED_LANGUAGES`            |
-|                   | `server/src/lib/query-file-finder.ts`                          | Add to `LANGUAGE_EXTENSIONS`            |
-|                   | `server/src/lib/cli-tool-registry.ts`                          | Update error message strings            |
-| **Query Packs**   | `server/ql/{language}/tools/src/`                              | Create 4 tool queries                   |
-|                   | `server/ql/{language}/tools/test/`                             | Create test cases                       |
-| **Scripts**       | `server/scripts/install-packs.sh`                              | Add to `VALID_LANGUAGES` + install call |
-|                   | `server/scripts/extract-test-databases.sh`                     | Add to `VALID_LANGUAGES`                |
-|                   | `server/scripts/run-query-unit-tests.sh`                       | Add to `VALID_LANGUAGES`                |
-| **Documentation** | `server/ql/README.md`                                          | Add language to list                    |
-|                   | `server/src/prompts/tools-query-workflow.prompt.md`            | Add to supported languages              |
-|                   | `server/src/prompts/explain-codeql-query.prompt.md`            | Add to language list                    |
-|                   | `server/src/prompts/document-codeql-query.prompt.md`           | Add to language list                    |
-| **Skills**        | `.github/skills/create-codeql-query-tdd-generic/SKILL.md`      | Add to supported languages              |
-|                   | `.github/skills/validate-ql-mcp-server-tools-queries/SKILL.md` | Add to language table                   |
-| **CI/CD**         | `.github/workflows/query-unit-tests.yml`                       | Add to matrix (standard)                |
-|                   | `.github/workflows/query-unit-tests-{lang}.yml`                | Create if special OS needed             |
+| Category          | File Path                                                      | Change                                          |
+| ----------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| **TypeScript**    | `server/src/prompts/workflow-prompts.ts`                       | Add to `SUPPORTED_LANGUAGES`                    |
+|                   | `server/src/lib/query-file-finder.ts`                          | Add to `LANGUAGE_EXTENSIONS`                    |
+|                   | `server/src/lib/cli-tool-registry.ts`                          | Update error message strings                    |
+| **Query Packs**   | `server/ql/{language}/tools/src/`                              | Create 4 tool queries                           |
+|                   | `server/ql/{language}/tools/test/`                             | Create test cases                               |
+| **npm Package**   | `server/package.json`                                          | Add `ql/{language}/tools/src/` to `files` array |
+| **Scripts**       | `server/scripts/install-packs.sh`                              | Add to `VALID_LANGUAGES` + install call         |
+|                   | `server/scripts/extract-test-databases.sh`                     | Add to `VALID_LANGUAGES`                        |
+|                   | `server/scripts/run-query-unit-tests.sh`                       | Add to `VALID_LANGUAGES`                        |
+| **Documentation** | `server/ql/README.md`                                          | Add language to list                            |
+|                   | `server/src/prompts/tools-query-workflow.prompt.md`            | Add to supported languages                      |
+|                   | `server/src/prompts/explain-codeql-query.prompt.md`            | Add to language list                            |
+|                   | `server/src/prompts/document-codeql-query.prompt.md`           | Add to language list                            |
+|                   | `docs/public.md`                                               | Add to Supported Languages table                |
+| **Skills**        | `.github/skills/create-codeql-query-tdd-generic/SKILL.md`      | Add to supported languages                      |
+|                   | `.github/skills/validate-ql-mcp-server-tools-queries/SKILL.md` | Add to language table                           |
+| **CI/CD**         | `.github/workflows/query-unit-tests.yml`                       | Add to matrix (standard)                        |
+|                   | `.github/workflows/query-unit-tests-{lang}.yml`                | Create if special OS needed                     |
+|                   | `.github/workflows/release.yml`                                | Add to `LANGUAGES` list in pack publish step    |
 
 ## Phase 1: Create Query Pack Structure
 
@@ -97,7 +100,7 @@ server/ql/{language}/tools/
 Create `server/ql/{language}/tools/src/codeql-pack.yml`:
 
 ```yaml
-name: ql-mcp-{language}-tools-src
+name: advanced-security/ql-mcp-{language}-tools-src
 version: 0.0.1
 library: false
 dependencies:
@@ -109,11 +112,11 @@ dependencies:
 Create `server/ql/{language}/tools/test/codeql-pack.yml`:
 
 ```yaml
-name: ql-mcp-{language}-tools-test
+name: advanced-security/ql-mcp-{language}-tools-test
 version: 0.0.1
 dependencies:
   codeql/{language}-queries: '*'
-  ql-mcp-{language}-tools-src: '*'
+  advanced-security/ql-mcp-{language}-tools-src: ${workspace}
 extractor: { language }
 ```
 
@@ -545,12 +548,16 @@ Before submitting the PR:
 - [ ] Pack lock files generated (`codeql-pack.lock.yml`)
 - [ ] TypeScript source updated and builds successfully
 - [ ] All scripts updated with new language
+- [ ] `server/package.json` `files` array includes `ql/{language}/tools/src/`
+- [ ] `.github/workflows/release.yml` `LANGUAGES` list includes new language
+- [ ] `docs/public.md` Supported Languages table updated
 - [ ] Documentation updated (4+ files)
 - [ ] Skills updated (2+ files)
 - [ ] CI workflow configured (matrix or dedicated)
-- [ ] Server bundle rebuilt (`server/dist/ql-mcp-server.js`)
+- [ ] Server bundle rebuilt (`server/dist/codeql-development-mcp-server.js`)
 - [ ] All existing tests still pass
 - [ ] New language tests pass
+- [ ] `npm pack --dry-run` (from `server/`) includes the new language's `.ql`, `.md`, and `codeql-pack.yml` files
 
 ## Success Criteria
 

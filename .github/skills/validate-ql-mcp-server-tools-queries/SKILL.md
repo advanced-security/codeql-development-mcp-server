@@ -320,6 +320,24 @@ This skill exercises the following MCP server tools:
 | `codeql_pack_install`   | Install pack dependencies           |
 | `codeql_pack_ls`        | List available packs                |
 
+## Important Implementation Notes
+
+### Server Logger Output Goes to stderr
+
+All `logger.info/warn/error/debug` methods write to **stderr** (`console.error`), not stdout. This is required because in stdio transport mode, stdout is reserved exclusively for the MCP JSON-RPC protocol wire format. When validating server startup logs (e.g., confirming `CODEQL_PATH` resolution), always check stderr.
+
+### CODEQL_PATH Environment Variable
+
+The MCP server resolves the CodeQL CLI binary at startup via `resolveCodeQLBinary()` in `server/src/lib/cli-executor.ts`. When `CODEQL_PATH` is set to an absolute path pointing to a valid `codeql` binary, the server uses that binary for all CodeQL CLI operations instead of searching `PATH`. This is validated per-OS in `.github/workflows/client-integration-tests.yml` (`codeql-path-tests` job).
+
+### STDIO Transport and stdin EOF
+
+When the STDIO transport receives an immediate EOF on stdin (e.g., via `</dev/null`), the server exits cleanly with code 0. To keep the server alive for testing, use a named pipe (`mkfifo`) with a persistent background writer (`sleep 300 > fifo &`).
+
+### npm Package Includes Tool Query Source Packs
+
+The published npm package (`@advanced-security/codeql-development-mcp-server`) bundles all tool query source packs under `ql/*/tools/src/`. These are the same `.ql`, `.qll`, `.md`, `codeql-pack.yml`, and `codeql-pack.lock.yml` files — but **never** compiled `.qlx` bytecode (excluded by `server/.npmignore`).
+
 ## Success Criteria
 
 Validation passes when **ALL** of the following are true:

@@ -68,7 +68,7 @@ export async function startServer(options = {}) {
     env.HTTP_SCHEME = scheme;
   }
 
-  const serverPath = join(ROOT_DIR, "server", "dist", "ql-mcp-server.js");
+  const serverPath = join(ROOT_DIR, "server", "dist", "codeql-development-mcp-server.js");
 
   // Start server as detached process
   const serverProcess = spawn("node", [serverPath], {

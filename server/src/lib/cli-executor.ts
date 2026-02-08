@@ -3,6 +3,8 @@
  */
 
 import { execFile } from 'child_process';
+import { existsSync } from 'fs';
+import { basename, delimiter, dirname, isAbsolute } from 'path';
 import { promisify } from 'util';
 import { logger } from '../utils/logger';
 
@@ -103,6 +105,121 @@ function isCommandAllowed(command: string): boolean {
   return ALLOWED_COMMANDS.has(command) || (testCommands !== null && testCommands.has(command));
 }
 
+// Resolved CodeQL binary directory from CODEQL_PATH.
+// When set, this directory is prepended to PATH for all child processes
+// so that `execFile('codeql', ...)` finds the correct binary via execvp().
+// Using PATH lookup (rather than an absolute path) is essential because
+// execvp() handles shell-script shebangs correctly, whereas passing an
+// absolute path to execFile() can fail with ENOENT for shell scripts.
+let resolvedCodeQLDir: string | null = null;
+
+// Cached result from resolveCodeQLBinary(). `undefined` means not yet resolved.
+let resolvedBinaryResult: string | undefined;
+
+/**
+ * Resolve the CodeQL CLI binary path.
+ *
+ * Resolution order:
+ * 1. `CODEQL_PATH` environment variable — must point to an existing file whose
+ *    basename is `codeql` (or `codeql.exe` / `codeql.cmd` on Windows).
+ *    The parent directory is prepended to PATH for child processes.
+ * 2. Falls back to the bare `codeql` command (resolved via PATH at exec time).
+ *
+ * The resolved value is cached for the lifetime of the process. Call this once
+ * at startup; subsequent calls are a no-op and return the cached value.
+ */
+export function resolveCodeQLBinary(): string {
+  // Short-circuit if already resolved
+  if (resolvedBinaryResult !== undefined) {
+    return resolvedBinaryResult;
+  }
+
+  const envPath = process.env.CODEQL_PATH;
+
+  if (!envPath) {
+    resolvedCodeQLDir = null;
+    resolvedBinaryResult = 'codeql';
+    return resolvedBinaryResult;
+  }
+
+  // Validate the path points to a plausible CodeQL binary
+  const base = basename(envPath).toLowerCase();
+  const validBaseNames = ['codeql', 'codeql.exe', 'codeql.cmd'];
+  if (!validBaseNames.includes(base)) {
+    throw new Error(
+      `CODEQL_PATH must point to a CodeQL CLI binary (expected basename: codeql), got: ${base}`
+    );
+  }
+
+  // Require an absolute path to avoid ambiguity
+  if (!isAbsolute(envPath)) {
+    throw new Error(
+      `CODEQL_PATH must be an absolute path, got: ${envPath}`
+    );
+  }
+
+  // Verify the file exists
+  if (!existsSync(envPath)) {
+    throw new Error(
+      `CODEQL_PATH points to a file that does not exist: ${envPath}`
+    );
+  }
+
+  resolvedCodeQLDir = dirname(envPath);
+  resolvedBinaryResult = 'codeql';
+  logger.info(`CodeQL CLI resolved via CODEQL_PATH: ${envPath} (dir: ${resolvedCodeQLDir})`);
+  return resolvedBinaryResult;
+}
+
+/**
+ * Get the currently resolved CodeQL binary directory, or null if using PATH.
+ */
+export function getResolvedCodeQLDir(): string | null {
+  return resolvedCodeQLDir;
+}
+
+/**
+ * Reset the resolved CodeQL binary to the default (for testing only).
+ */
+export function resetResolvedCodeQLBinary(): void {
+  resolvedCodeQLDir = null;
+  resolvedBinaryResult = undefined;
+}
+
+/**
+ * Validate that the resolved CodeQL binary is actually callable.
+ *
+ * Runs `codeql version --format=terse` and verifies the process exits
+ * successfully. This catches the case where `CODEQL_PATH` is unset and
+ * `codeql` is not on PATH — the server would otherwise start normally
+ * but every tool invocation would fail.
+ *
+ * @returns The version string reported by the CodeQL CLI.
+ * @throws Error if the binary is not reachable or returns a non-zero exit code.
+ */
+export async function validateCodeQLBinaryReachable(): Promise<string> {
+  const binary = resolvedBinaryResult ?? 'codeql';
+  const env = { ...process.env };
+  if (resolvedCodeQLDir) {
+    env.PATH = resolvedCodeQLDir + delimiter + (env.PATH || '');
+  }
+
+  try {
+    const { stdout } = await execFileAsync(binary, ['version', '--format=terse'], {
+      env,
+      timeout: 15_000,
+    });
+    return stdout.trim();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `CodeQL CLI is not reachable (binary: ${binary}). ` +
+      `Ensure codeql is on PATH or set the CODEQL_PATH environment variable ` +
+      `to the absolute path of the CodeQL CLI binary. Details: ${message}`
+    );
+  }
+}
+
 /**
  * Sanitize a CLI argument to prevent potential issues with special characters.
  * 
@@ -161,6 +278,17 @@ function getSafeEnvironment(additionalEnv?: Record<string, string>): Record<stri
     if (value !== undefined && SAFE_ENV_PREFIXES.some(prefix => key.startsWith(prefix))) {
       safeEnv[key] = value;
     }
+  }
+  
+  // When CODEQL_PATH was set, prepend the resolved directory to PATH so that
+  // `execFile('codeql', ...)` finds the user-specified binary via execvp().
+  // This approach (PATH manipulation + bare command name) is essential because
+  // execvp() handles shell-script shebangs correctly, whereas passing an
+  // absolute path to execFile() fails with ENOENT for shell-script launchers.
+  if (resolvedCodeQLDir && safeEnv.PATH) {
+    safeEnv.PATH = `${resolvedCodeQLDir}${delimiter}${safeEnv.PATH}`;
+  } else if (resolvedCodeQLDir) {
+    safeEnv.PATH = resolvedCodeQLDir;
   }
   
   // Merge with explicitly provided environment variables
@@ -315,7 +443,10 @@ export function buildQLTArgs(subcommand: string, options: Record<string, unknown
 }
 
 /**
- * Execute a CodeQL command
+ * Execute a CodeQL command.
+ * Always uses the bare `codeql` command name so that execvp() PATH lookup
+ * handles shell-script shebangs correctly. When CODEQL_PATH is set, the
+ * resolved directory is prepended to PATH via getSafeEnvironment().
  */
 export async function executeCodeQLCommand(
   subcommand: string, 
@@ -365,7 +496,7 @@ export async function getCommandHelp(command: string, subcommand?: string): Prom
 }
 
 /**
- * Validate that a command exists on the system
+ * Validate that a command exists on the system.
  */
 export async function validateCommandExists(command: string): Promise<boolean> {
   try {

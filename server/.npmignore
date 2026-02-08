@@ -1,0 +1,3 @@
+# Exclude compiled CodeQL query bytecode files.
+# These are OS/architecture-specific and must be generated locally by `codeql pack install`.
+*.qlx

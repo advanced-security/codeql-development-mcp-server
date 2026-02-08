@@ -4,16 +4,35 @@ This guide covers installation, configuration, and usage of the CodeQL Developme
 
 ## Prerequisites
 
-- **Node.js** v25.2.1 or later ([nodejs.org](https://nodejs.org/))
+- **Node.js** v24.13.0 or later ([nodejs.org](https://nodejs.org/))
 - **CodeQL CLI** ([github.com/github/codeql-cli-binaries](https://github.com/github/codeql-cli-binaries/releases))
 - **VS Code** with GitHub Copilot extension
 
 ## Installation
 
+### From npm (recommended)
+
+The package is published to [GitHub Packages](https://github.com/advanced-security/codeql-development-mcp-server/pkgs/npm/codeql-development-mcp-server). Configure npm once, then install:
+
+```bash
+# One-time: route @advanced-security scope to GitHub Packages and authenticate
+npm config set @advanced-security:registry https://npm.pkg.github.com
+npm login --registry=https://npm.pkg.github.com
+
+# Install globally
+npm install -g @advanced-security/codeql-development-mcp-server
+```
+
+Or use `npx` to run without a global install:
+
+```bash
+npx -y @advanced-security/codeql-development-mcp-server
+```
+
 ### From GitHub Releases
 
 1. Download the latest release from [Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
-2. Extract: `unzip codeql-development-mcp-server-vX.X.X.zip -d /path/to/destination`
+2. Extract: `tar -xzf codeql-development-mcp-server-vX.X.X.tar.gz -C /path/to/destination`
 
 ### From Source
 
@@ -33,12 +52,28 @@ Add to your `mcp.json` file:
 | Windows | `%APPDATA%\Code\User\mcp.json`                     |
 | Linux   | `~/.config/Code/User/mcp.json`                     |
 
+### Using npx (recommended)
+
 ```json
 {
   "servers": {
-    "codeql-dev-mcp-server": {
+    "ql-mcp": {
+      "command": "npx",
+      "args": ["-y", "@advanced-security/codeql-development-mcp-server"],
+      "type": "stdio"
+    }
+  }
+}
+```
+
+### Using a local path (from source or release archive)
+
+```json
+{
+  "servers": {
+    "ql-mcp": {
       "command": "node",
-      "args": ["/path/to/destination/server/dist/ql-mcp-server.js"],
+      "args": ["/path/to/destination/server/dist/codeql-development-mcp-server.js"],
       "type": "stdio"
     }
   }
@@ -47,19 +82,19 @@ Add to your `mcp.json` file:
 
 ## Environment Variables
 
-| Variable         | Description          | Default |
-| ---------------- | -------------------- | ------- |
-| `TRANSPORT_MODE` | `stdio` or `http`    | `stdio` |
-| `PORT`           | HTTP port            | `3000`  |
-| `DEBUG`          | Enable debug logging | `false` |
-| `CODEQL_PATH`    | Path to CodeQL CLI   | (PATH)  |
+| Variable         | Description                            | Default  |
+| ---------------- | -------------------------------------- | -------- |
+| `CODEQL_PATH`    | Absolute path to the CodeQL CLI binary | `codeql` |
+| `TRANSPORT_MODE` | `stdio` or `http`                      | `stdio`  |
+| `HTTP_PORT`      | HTTP port                              | `3000`   |
+| `DEBUG`          | Enable debug logging                   | `false`  |
 
 ## Verification
 
 1. Restart VS Code
 2. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 3. Run "GitHub Copilot: List MCP Servers"
-4. Confirm `codeql-dev-mcp-server` appears
+4. Confirm `ql-mcp` appears
 
 ## Troubleshooting
 

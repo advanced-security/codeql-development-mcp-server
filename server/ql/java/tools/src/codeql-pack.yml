@@ -1,5 +1,6 @@
-name: ql-mcp-java-tools-src
+name: advanced-security/ql-mcp-java-tools-src
 version: 2.23.9
+description: 'Queries for codeql-development-mcp-server tools for java language'
 library: false
 dependencies:
   codeql/java-all: 7.8.3

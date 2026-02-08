@@ -38,7 +38,8 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Build Server - Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
+        working-directory: .
 
       - name: Build Server - Clean previous build
         run: npm run clean

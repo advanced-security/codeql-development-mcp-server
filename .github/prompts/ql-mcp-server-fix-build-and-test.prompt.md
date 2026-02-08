@@ -2,8 +2,7 @@
 name: ql-mcp-server-fix-build-and-test
 description: A prompt for fixing build issues for the QL MCP Server and ensuring extensive testing of the server functionality.
 agent: ql-mcp-tool-developer
-model: Claude Opus 4.5 (copilot)
-tools: [agent, edit, execute, memory, read, search, todo, 'codeql-dev-mcp-server/*']
+model: Claude Opus 4.6 (copilot)
 ---
 
 # `ql-mcp-server-fix-build-and-test` Prompt

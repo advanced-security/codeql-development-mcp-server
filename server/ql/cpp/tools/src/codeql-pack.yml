@@ -1,5 +1,6 @@
-name: ql-mcp-cpp-tools-src
+name: advanced-security/ql-mcp-cpp-tools-src
 version: 2.23.9
+description: 'Queries for codeql-development-mcp-server tools for cpp language'
 library: false
 dependencies:
   codeql/cpp-all: 6.1.4

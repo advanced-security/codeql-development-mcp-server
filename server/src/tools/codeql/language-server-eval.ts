@@ -90,9 +90,11 @@ async function getLanguageServer(options: LanguageServerOptions = {}): Promise<C
     return globalLanguageServer;
   }
 
-  // Set default options
+  // Set default options — use packageRootDir instead of process.cwd()
+  // so the QL search path works regardless of where the server is launched.
+  const { packageRootDir: pkgRoot } = await import('../../utils/package-paths');
   const defaultOptions: LanguageServerOptions = {
-    searchPath: resolve(process.cwd(), 'ql'),
+    searchPath: resolve(pkgRoot, 'ql'),
     loglevel: 'WARN',
     ...options
   };
@@ -102,8 +104,8 @@ async function getLanguageServer(options: LanguageServerOptions = {}): Promise<C
   try {
     await globalLanguageServer.start();
     
-    // Use provided workspace URI or default to ql directory
-    const workspaceUri = pathToFileURL(resolve(process.cwd(), 'ql')).href;
+    // Use provided workspace URI or default to ql directory under package root
+    const workspaceUri = pathToFileURL(resolve(pkgRoot, 'ql')).href;
     await globalLanguageServer.initialize(workspaceUri);
     
     logger.info('CodeQL Language Server started and initialized successfully');

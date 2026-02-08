@@ -3,8 +3,8 @@ import { chmod, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 
 const distDir = 'dist';
-const entryFile = 'src/ql-mcp-server.ts';
-const outFile = 'dist/ql-mcp-server.js';
+const entryFile = 'src/codeql-development-mcp-server.ts';
+const outFile = 'dist/codeql-development-mcp-server.js';
 
 // Ensure dist directory exists
 if (!existsSync(distDir)) {
@@ -17,7 +17,7 @@ const config = {
   outfile: outFile,
   format: 'esm',
   platform: 'node',
-  target: 'node18',
+  target: 'node24',
   sourcemap: true,
   external: [
     '@modelcontextprotocol/sdk',

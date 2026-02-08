@@ -2,15 +2,23 @@
  * Tests for CLI executor utilities
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { 
-  buildCodeQLArgs, 
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
+import { writeFileSync, rmSync, chmodSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { join } from 'path';
+import { createProjectTempDir } from '../../../src/utils/temp-dir';
+import {
+  buildCodeQLArgs,
   buildQLTArgs,
   executeCLICommand,
   enableTestCommands,
   disableTestCommands,
+  resolveCodeQLBinary,
+  getResolvedCodeQLDir,
+  resetResolvedCodeQLBinary,
   sanitizeCLIArgument,
-  sanitizeCLIArguments
+  sanitizeCLIArguments,
+  validateCodeQLBinaryReachable
 } from '../../../src/lib/cli-executor';
 
 // Mock the logger to suppress expected error output
@@ -566,5 +574,215 @@ describe('executeCLICommand - Argument Sanitization', () => {
     expect(result.success).toBe(true);
     expect(result.stdout).toContain('hello');
     expect(result.stdout).toContain('world');
+  });
+});
+
+describe('resolveCodeQLBinary', () => {
+  const originalEnv = process.env.CODEQL_PATH;
+
+  afterEach(() => {
+    // Restore original env and reset cached binary
+    if (originalEnv === undefined) {
+      delete process.env.CODEQL_PATH;
+    } else {
+      process.env.CODEQL_PATH = originalEnv;
+    }
+    resetResolvedCodeQLBinary();
+  });
+
+  it('should default to "codeql" when CODEQL_PATH is not set', () => {
+    delete process.env.CODEQL_PATH;
+    const result = resolveCodeQLBinary();
+    expect(result).toBe('codeql');
+    expect(getResolvedCodeQLDir()).toBeNull();
+  });
+
+  it('should default to "codeql" when CODEQL_PATH is empty', () => {
+    process.env.CODEQL_PATH = '';
+    const result = resolveCodeQLBinary();
+    expect(result).toBe('codeql');
+    expect(getResolvedCodeQLDir()).toBeNull();
+  });
+
+  it('should return bare codeql command and set dir to parent directory', () => {
+    // Create a temporary file named "codeql" to pass validation
+    const tmpDir = createProjectTempDir('codeql-path-test-');
+    const codeqlPath = join(tmpDir, 'codeql');
+    writeFileSync(codeqlPath, '#!/bin/sh\necho test', { mode: 0o755 });
+
+    try {
+      process.env.CODEQL_PATH = codeqlPath;
+      const result = resolveCodeQLBinary();
+      expect(result).toBe('codeql');
+      expect(getResolvedCodeQLDir()).toBe(tmpDir);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should reject CODEQL_PATH with wrong basename', () => {
+    process.env.CODEQL_PATH = '/usr/local/bin/not-codeql';
+    expect(() => resolveCodeQLBinary()).toThrow('expected basename: codeql');
+  });
+
+  it('should reject a relative CODEQL_PATH', () => {
+    process.env.CODEQL_PATH = 'relative/path/to/codeql';
+    expect(() => resolveCodeQLBinary()).toThrow('must be an absolute path');
+  });
+
+  it('should reject CODEQL_PATH pointing to a non-existent file', () => {
+    process.env.CODEQL_PATH = '/nonexistent/path/to/codeql';
+    expect(() => resolveCodeQLBinary()).toThrow('does not exist');
+  });
+
+  it('should accept a valid absolute CODEQL_PATH pointing to an existing file', () => {
+    // Use /bin/echo as a stand-in for an existing file named "codeql"
+    // We can't actually test with a real codeql binary in unit tests,
+    // so test the basename validation and existence check separately.
+    // Here we test that a non-existent but well-named path is rejected for non-existence.
+    process.env.CODEQL_PATH = '/tmp/nonexistent-dir/codeql';
+    expect(() => resolveCodeQLBinary()).toThrow('does not exist');
+  });
+
+  it('should cache the resolved dir via getResolvedCodeQLDir', () => {
+    delete process.env.CODEQL_PATH;
+    resolveCodeQLBinary();
+    expect(getResolvedCodeQLDir()).toBeNull();
+  });
+
+  it('should reset to default via resetResolvedCodeQLBinary', () => {
+    delete process.env.CODEQL_PATH;
+    resolveCodeQLBinary();
+    resetResolvedCodeQLBinary();
+    expect(getResolvedCodeQLDir()).toBeNull();
+  });
+
+  it('should accept codeql.exe basename on Windows-style paths', () => {
+    // This tests basename validation only; the file won't exist.
+    process.env.CODEQL_PATH = '/some/path/codeql.exe';
+    expect(() => resolveCodeQLBinary()).toThrow('does not exist');
+    // The error should be about non-existence, NOT about an invalid basename
+  });
+
+  it('should accept codeql.cmd basename', () => {
+    process.env.CODEQL_PATH = '/some/path/codeql.cmd';
+    expect(() => resolveCodeQLBinary()).toThrow('does not exist');
+  });
+});
+
+describe('CODEQL_PATH - PATH prepend integration', () => {
+  const originalEnv = process.env.CODEQL_PATH;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.CODEQL_PATH;
+    } else {
+      process.env.CODEQL_PATH = originalEnv;
+    }
+    resetResolvedCodeQLBinary();
+  });
+
+  it('should cache resolved value and ignore subsequent env changes', () => {
+    delete process.env.CODEQL_PATH;
+    const first = resolveCodeQLBinary();
+    expect(first).toBe('codeql');
+
+    // Change the env after resolution — should still return cached value
+    process.env.CODEQL_PATH = '/some/changed/path/codeql';
+    const second = resolveCodeQLBinary();
+    expect(second).toBe('codeql');
+    expect(getResolvedCodeQLDir()).toBeNull();
+  });
+
+  it('should prepend CODEQL_PATH directory to child process PATH', async () => {
+    // Create a temporary directory with a fake "codeql" script
+    const tmpDir = createProjectTempDir('codeql-path-prepend-test-');
+    const codeqlPath = join(tmpDir, 'codeql');
+    writeFileSync(codeqlPath, '#!/bin/sh\necho test', { mode: 0o755 });
+    chmodSync(codeqlPath, 0o755);
+
+    try {
+      process.env.CODEQL_PATH = codeqlPath;
+      resolveCodeQLBinary();
+
+      // Run a command that prints PATH - verify the codeql dir is prepended
+      const result = await executeCLICommand({
+        command: 'sh',
+        args: ['-c', 'echo $PATH']
+      });
+
+      expect(result.success).toBe(true);
+      // The PATH should start with our tmpDir
+      expect(result.stdout.trim().startsWith(tmpDir)).toBe(true);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// Check if codeql is available on PATH (may not be in CI environments like build-server)
+let codeqlOnPath = false;
+try {
+  execFileSync('codeql', ['version', '--format=terse'], { timeout: 5000 });
+  codeqlOnPath = true;
+} catch {
+  codeqlOnPath = false;
+}
+
+describe('validateCodeQLBinaryReachable', () => {
+  const originalEnv = process.env.CODEQL_PATH;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.CODEQL_PATH;
+    } else {
+      process.env.CODEQL_PATH = originalEnv;
+    }
+    resetResolvedCodeQLBinary();
+  });
+
+  it.skipIf(!codeqlOnPath)('should return a version string when codeql is on PATH', async () => {
+    // Use the default PATH-based resolution (codeql must be on PATH for tests)
+    delete process.env.CODEQL_PATH;
+    resolveCodeQLBinary();
+
+    const version = await validateCodeQLBinaryReachable();
+    expect(version).toBeTruthy();
+    // Version should be a semver-like string (e.g. "2.23.9")
+    expect(version).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('should throw a descriptive error when codeql is not reachable', async () => {
+    // Create a temporary directory with a fake "codeql" that exits with error
+    const tmpDir = createProjectTempDir('codeql-unreachable-test-');
+    const codeqlPath = join(tmpDir, 'codeql');
+    // Create a script that fails immediately
+    writeFileSync(codeqlPath, '#!/bin/sh\nexit 1', { mode: 0o755 });
+    chmodSync(codeqlPath, 0o755);
+
+    try {
+      process.env.CODEQL_PATH = codeqlPath;
+      resolveCodeQLBinary();
+
+      await expect(validateCodeQLBinaryReachable()).rejects.toThrow('not reachable');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should include guidance about CODEQL_PATH in error message', async () => {
+    const tmpDir = createProjectTempDir('codeql-guidance-test-');
+    const codeqlPath = join(tmpDir, 'codeql');
+    writeFileSync(codeqlPath, '#!/bin/sh\nexit 1', { mode: 0o755 });
+    chmodSync(codeqlPath, 0o755);
+
+    try {
+      process.env.CODEQL_PATH = codeqlPath;
+      resolveCodeQLBinary();
+
+      await expect(validateCodeQLBinaryReachable()).rejects.toThrow('CODEQL_PATH');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });

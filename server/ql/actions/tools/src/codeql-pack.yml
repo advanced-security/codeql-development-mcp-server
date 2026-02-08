@@ -1,5 +1,6 @@
-name: ql-mcp-actions-tools-src
+name: advanced-security/ql-mcp-actions-tools-src
 version: 2.23.9
+description: 'Queries for codeql-development-mcp-server tools for actions language'
 library: false
 dependencies:
   codeql/actions-all: 0.4.25

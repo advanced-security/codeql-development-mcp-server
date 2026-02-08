@@ -1,5 +1,8 @@
 /**
  * Tests for logger utility
+ *
+ * All logger methods write to stderr (via console.error) because stdout is
+ * reserved for the MCP JSON-RPC protocol in stdio transport mode.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -7,17 +10,12 @@ import { logger } from '../../../src/utils/logger';
 
 describe('Logger', () => {
   const consoleSpy = {
-    log: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn()
+    error: vi.fn()
   };
 
   beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(consoleSpy.log);
+    consoleSpy.error.mockClear();
     vi.spyOn(console, 'error').mockImplementation(consoleSpy.error);
-    vi.spyOn(console, 'warn').mockImplementation(consoleSpy.warn);
-    vi.spyOn(console, 'debug').mockImplementation(consoleSpy.debug);
   });
 
   afterEach(() => {
@@ -25,18 +23,18 @@ describe('Logger', () => {
   });
 
   describe('info', () => {
-    it('should log info messages with timestamp', () => {
+    it('should log info messages to stderr with timestamp', () => {
       logger.info('Test message');
 
-      expect(consoleSpy.log).toHaveBeenCalled();
-      const call = consoleSpy.log.mock.calls[0][0];
+      expect(consoleSpy.error).toHaveBeenCalled();
+      const call = consoleSpy.error.mock.calls[0][0];
       expect(call).toMatch(/\[INFO\] \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z Test message/);
     });
 
     it('should pass additional arguments', () => {
       logger.info('Test', { key: 'value' }, 123);
 
-      expect(consoleSpy.log).toHaveBeenCalledWith(
+      expect(consoleSpy.error).toHaveBeenCalledWith(
         expect.stringContaining('[INFO]'),
         { key: 'value' },
         123
@@ -45,7 +43,7 @@ describe('Logger', () => {
   });
 
   describe('error', () => {
-    it('should log error messages with timestamp', () => {
+    it('should log error messages to stderr with timestamp', () => {
       logger.error('Error message');
 
       expect(consoleSpy.error).toHaveBeenCalled();
@@ -65,11 +63,11 @@ describe('Logger', () => {
   });
 
   describe('warn', () => {
-    it('should log warning messages with timestamp', () => {
+    it('should log warning messages to stderr with timestamp', () => {
       logger.warn('Warning message');
 
-      expect(consoleSpy.warn).toHaveBeenCalled();
-      const call = consoleSpy.warn.mock.calls[0][0];
+      expect(consoleSpy.error).toHaveBeenCalled();
+      const call = consoleSpy.error.mock.calls[0][0];
       expect(call).toMatch(/\[WARN\] \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z Warning message/);
     });
   });
@@ -81,22 +79,31 @@ describe('Logger', () => {
 
       logger.debug('Debug message');
 
-      expect(consoleSpy.debug).not.toHaveBeenCalled();
+      // Only the beforeEach spy call should exist, not any from logger.debug
+      expect(consoleSpy.error).not.toHaveBeenCalled();
 
-      process.env.DEBUG = originalDebug;
+      if (originalDebug === undefined) {
+        delete process.env.DEBUG;
+      } else {
+        process.env.DEBUG = originalDebug;
+      }
     });
 
-    it('should log debug messages when DEBUG is set', () => {
+    it('should log debug messages to stderr when DEBUG is set', () => {
       const originalDebug = process.env.DEBUG;
       process.env.DEBUG = 'true';
 
       logger.debug('Debug message');
 
-      expect(consoleSpy.debug).toHaveBeenCalled();
-      const call = consoleSpy.debug.mock.calls[0][0];
+      expect(consoleSpy.error).toHaveBeenCalled();
+      const call = consoleSpy.error.mock.calls[0][0];
       expect(call).toMatch(/\[DEBUG\] \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z Debug message/);
 
-      process.env.DEBUG = originalDebug;
+      if (originalDebug === undefined) {
+        delete process.env.DEBUG;
+      } else {
+        process.env.DEBUG = originalDebug;
+      }
     });
   });
 });

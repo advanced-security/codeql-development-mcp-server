@@ -1,8 +1,8 @@
 ---
 name: mcp-enabled-ql-query-developer
 description: An agent enabled with QL MCP Server tools for developing CodeQL queries using test-driven development (TDD).
-model: Claude Opus 4.5 (copilot)
-tools: ['agent', 'codeql-dev-mcp-server/*', 'edit', 'read', 'search', 'todo', 'web', 'vscode']
+model: Claude Opus 4.6 (1M context) (copilot)
+tools: ['agent', 'ql-mcp/*', 'edit', 'read', 'search', 'todo', 'web', 'vscode']
 handoffs:
   - agent: ql-mcp-tool-developer
     label: Fix MCP Tool Issue
@@ -18,7 +18,7 @@ handoffs:
 
 My `mcp-enabled-ql-query-developer` agent:
 
-- Uses the QL MCP Server tools (`codeql-dev-mcp-server/*`) to develop, test, and validate CodeQL queries, libraries, and tests.
+- Uses the QL MCP Server tools (`ql-mcp/*`) to develop, test, and validate CodeQL queries, libraries, and tests.
 - Follows test-driven development (TDD) practices: write tests first, then implement queries to pass those tests.
 - Leverages the `codeql` CLI for all CodeQL operations.
 - ALWAYS uses verbose help (`codeql <subcommand> -h -vv`) when learning about `codeql` CLI commands.

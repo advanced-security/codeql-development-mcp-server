@@ -1,5 +1,6 @@
-name: ql-mcp-ruby-tools-src
+name: advanced-security/ql-mcp-ruby-tools-src
 version: 2.23.9
+description: 'Queries for codeql-development-mcp-server tools for ruby language'
 library: false
 dependencies:
   codeql/ruby-all: 5.1.7
