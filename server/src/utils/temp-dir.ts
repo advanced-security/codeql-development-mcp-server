@@ -16,7 +16,7 @@ import { getPackageRootDir } from './package-paths';
 
 /**
  * Base directory for all project-local temporary data.
- * 
+ *
  * Defaults to `<packageRoot>/.tmp` but can be overridden via the
  * `CODEQL_MCP_TMP_DIR` environment variable for npm-installed/global packages
  * where the package root may be read-only.

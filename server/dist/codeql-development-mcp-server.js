@@ -4531,19 +4531,17 @@ import { pathToFileURL } from "url";
 import { delimiter as delimiter2, join as join5 } from "path";
 init_cli_executor();
 init_package_paths();
-var cachedVersion;
 function getServerVersion() {
-  if (cachedVersion) return cachedVersion;
   try {
     const pkgPath = join5(getPackageRootDir(), "package.json");
     const pkg = JSON.parse(readFileSync4(pkgPath, "utf8"));
-    cachedVersion = pkg.version || "0.0.0";
-    return cachedVersion;
+    return pkg.version || "0.0.0";
   } catch (error) {
     logger.error(`Failed to read package version: ${error}`);
     return "0.0.0";
   }
 }
+var SERVER_VERSION = getServerVersion();
 var CodeQLLanguageServer = class extends EventEmitter {
   constructor(_options = {}) {
     super();
@@ -4703,7 +4701,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       processId: process.pid,
       clientInfo: {
         name: "codeql-development-mcp-server",
-        version: getServerVersion()
+        version: SERVER_VERSION
       },
       capabilities: {
         textDocument: {

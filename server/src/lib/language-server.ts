@@ -53,22 +53,21 @@ export interface LanguageServerOptions {
 
 /**
  * Get the server version from package.json.
- * This is cached after the first read to avoid repeated file I/O.
+ * Initialized once at module load time.
  */
-let cachedVersion: string | undefined;
 function getServerVersion(): string {
-  if (cachedVersion) return cachedVersion;
-  
   try {
     const pkgPath = join(getPackageRootDir(), 'package.json');
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-    cachedVersion = pkg.version || '0.0.0';
-    return cachedVersion;
+    return pkg.version || '0.0.0';
   } catch (error) {
     logger.error(`Failed to read package version: ${error}`);
     return '0.0.0';
   }
 }
+
+// Cache version at module load time
+const SERVER_VERSION = getServerVersion();
 
 export class CodeQLLanguageServer extends EventEmitter {
   private server: ChildProcess | null = null;
@@ -264,7 +263,7 @@ export class CodeQLLanguageServer extends EventEmitter {
       processId: process.pid,
       clientInfo: {
         name: 'codeql-development-mcp-server',
-        version: getServerVersion()
+        version: SERVER_VERSION
       },
       capabilities: {
         textDocument: {
