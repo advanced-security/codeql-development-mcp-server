@@ -166,7 +166,7 @@ export function resolveCodeQLBinary(): string {
   }
 
   resolvedCodeQLDir = dirname(envPath);
-  resolvedBinaryResult = envPath;
+  resolvedBinaryResult = 'codeql';
   logger.info(`CodeQL CLI resolved via CODEQL_PATH: ${envPath} (dir: ${resolvedCodeQLDir})`);
   return resolvedBinaryResult;
 }

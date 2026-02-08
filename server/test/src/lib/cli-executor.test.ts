@@ -3,9 +3,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync, chmodSync } from 'fs';
+import { writeFileSync, rmSync, chmodSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
+import { createProjectTempDir } from '../../../src/utils/temp-dir';
 import {
   buildCodeQLArgs,
   buildQLTArgs,
@@ -603,17 +604,16 @@ describe('resolveCodeQLBinary', () => {
     expect(getResolvedCodeQLDir()).toBeNull();
   });
 
-  it('should return the full path and set dir to parent directory', () => {
+  it('should return bare codeql command and set dir to parent directory', () => {
     // Create a temporary file named "codeql" to pass validation
-    const tmpDir = join(process.cwd(), '.tmp', 'codeql-path-test');
+    const tmpDir = createProjectTempDir('codeql-path-test-');
     const codeqlPath = join(tmpDir, 'codeql');
-    mkdirSync(tmpDir, { recursive: true });
     writeFileSync(codeqlPath, '#!/bin/sh\necho test', { mode: 0o755 });
 
     try {
       process.env.CODEQL_PATH = codeqlPath;
       const result = resolveCodeQLBinary();
-      expect(result).toBe(codeqlPath);
+      expect(result).toBe('codeql');
       expect(getResolvedCodeQLDir()).toBe(tmpDir);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -696,9 +696,8 @@ describe('CODEQL_PATH - PATH prepend integration', () => {
 
   it('should prepend CODEQL_PATH directory to child process PATH', async () => {
     // Create a temporary directory with a fake "codeql" script
-    const tmpDir = join(process.cwd(), '.tmp', 'codeql-path-prepend-test');
+    const tmpDir = createProjectTempDir('codeql-path-prepend-test-');
     const codeqlPath = join(tmpDir, 'codeql');
-    mkdirSync(tmpDir, { recursive: true });
     writeFileSync(codeqlPath, '#!/bin/sh\necho test', { mode: 0o755 });
     chmodSync(codeqlPath, 0o755);
 
@@ -755,9 +754,8 @@ describe('validateCodeQLBinaryReachable', () => {
 
   it('should throw a descriptive error when codeql is not reachable', async () => {
     // Create a temporary directory with a fake "codeql" that exits with error
-    const tmpDir = join(process.cwd(), '.tmp', 'codeql-unreachable-test');
+    const tmpDir = createProjectTempDir('codeql-unreachable-test-');
     const codeqlPath = join(tmpDir, 'codeql');
-    mkdirSync(tmpDir, { recursive: true });
     // Create a script that fails immediately
     writeFileSync(codeqlPath, '#!/bin/sh\nexit 1', { mode: 0o755 });
     chmodSync(codeqlPath, 0o755);
@@ -773,9 +771,8 @@ describe('validateCodeQLBinaryReachable', () => {
   });
 
   it('should include guidance about CODEQL_PATH in error message', async () => {
-    const tmpDir = join(process.cwd(), '.tmp', 'codeql-guidance-test');
+    const tmpDir = createProjectTempDir('codeql-guidance-test-');
     const codeqlPath = join(tmpDir, 'codeql');
-    mkdirSync(tmpDir, { recursive: true });
     writeFileSync(codeqlPath, '#!/bin/sh\nexit 1', { mode: 0o755 });
     chmodSync(codeqlPath, 0o755);
 

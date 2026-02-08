@@ -3,7 +3,6 @@
   "version": "2.23.9",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
   "main": "dist/codeql-development-mcp-server.js",
-  "types": "dist/codeql-development-mcp-server.d.ts",
   "type": "module",
   "bin": {
     "codeql-development-mcp-server": "./dist/codeql-development-mcp-server.js"

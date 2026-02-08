@@ -99,7 +99,7 @@ function resolveCodeQLBinary() {
     );
   }
   resolvedCodeQLDir = dirname(envPath);
-  resolvedBinaryResult = envPath;
+  resolvedBinaryResult = "codeql";
   logger.info(`CodeQL CLI resolved via CODEQL_PATH: ${envPath} (dir: ${resolvedCodeQLDir})`);
   return resolvedBinaryResult;
 }
@@ -352,7 +352,7 @@ import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
 import { fileURLToPath } from "url";
 function isRunningFromSource(dir) {
   const normalized = dir.replace(/\\/g, "/");
-  return normalized.includes("/src/");
+  return /\/src(\/[^/]+)?$/.test(normalized);
 }
 function getPackageRootDir(currentDir = __dirname) {
   return isRunningFromSource(currentDir) ? resolve(currentDir, "..", "..") : resolve(currentDir, "..");

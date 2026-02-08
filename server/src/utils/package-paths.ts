@@ -25,10 +25,14 @@ const __dirname = dirname(__filename);
 /**
  * Detect whether the current __dirname looks like source code (`src/lib` or
  * `src/utils`) vs a bundled flat output directory (`dist/`).
+ *
+ * Uses a tail-of-path check so that unrelated `/src/` segments earlier in the
+ * install path (e.g. `~/src/project/node_modules/.../dist`) don't cause a
+ * false positive.
  */
 function isRunningFromSource(dir: string): boolean {
   const normalized = dir.replace(/\\/g, '/');
-  return normalized.includes('/src/');
+  return /\/src(\/[^/]+)?$/.test(normalized);
 }
 
 /**
