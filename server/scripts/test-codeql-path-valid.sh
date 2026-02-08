@@ -111,24 +111,45 @@ echo "  Server PID: ${SERVER_PID}"
 # Give the server time to either start successfully or crash
 sleep 5
 
-if kill -0 "${SERVER_PID}" 2>/dev/null; then
+# Helper: check whether stderr proves the server started successfully and
+# resolved the CodeQL CLI via CODEQL_PATH.
+check_startup_logs() {
   echo ""
   echo "--- startup logs ---"
   cat "${STDERR_FILE}"
 
-  # Verify stderr confirms CODEQL_PATH was used
   if grep -q "CODEQL_PATH" "${STDERR_FILE}"; then
     echo "✅ Server logged CODEQL_PATH resolution"
   else
     echo "⚠️  CODEQL_PATH not mentioned in stderr (non-fatal)"
   fi
 
+  # The definitive success marker logged by the server
+  if grep -q "McpServer started successfully" "${STDERR_FILE}"; then
+    return 0
+  fi
+  return 1
+}
+
+if kill -0 "${SERVER_PID}" 2>/dev/null; then
+  check_startup_logs
   echo ""
   echo "✅ PASS: Server is running after 5 seconds (PID ${SERVER_PID})"
   # Cleanup is handled by the EXIT trap
   exit 0
 else
   wait "${SERVER_PID}" 2>/dev/null && EXIT_CODE=0 || EXIT_CODE=$?
+
+  # On Windows, mkfifo is unavailable and the process-substitution fallback
+  # may not keep stdin open reliably.  When the STDIO transport receives EOF
+  # the server shuts down cleanly (exit 0) even though startup succeeded.
+  # Accept that as a pass when the logs prove the server started correctly.
+  if [[ "${EXIT_CODE}" -eq 0 ]] && check_startup_logs; then
+    echo ""
+    echo "✅ PASS: Server started successfully (exited cleanly after stdin EOF)"
+    exit 0
+  fi
+
   echo ""
   echo "::error::Server exited prematurely with code ${EXIT_CODE}"
   echo "--- stderr ---"
