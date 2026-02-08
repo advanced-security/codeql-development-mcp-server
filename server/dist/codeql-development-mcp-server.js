@@ -342,6 +342,8 @@ var init_cli_executor = __esm({
 var package_paths_exports = {};
 __export(package_paths_exports, {
   getPackageRootDir: () => getPackageRootDir,
+  getPackageVersion: () => getPackageVersion,
+  getUserWorkspaceDir: () => getUserWorkspaceDir,
   getWorkspaceRootDir: () => getWorkspaceRootDir,
   packageRootDir: () => packageRootDir,
   resolveToolQueryPackPath: () => resolveToolQueryPackPath,
@@ -376,7 +378,27 @@ function resolveToolQueryPackPath(language, packageRoot) {
   const pkgRoot = packageRoot ?? getPackageRootDir();
   return resolve(pkgRoot, "ql", language, "tools", "src");
 }
-var __filename, __dirname, packageRootDir, workspaceRootDir;
+function getPackageVersion() {
+  if (_cachedVersion !== void 0) return _cachedVersion;
+  try {
+    const pkgPath = resolve(getPackageRootDir(), "package.json");
+    const pkg = JSON.parse(readFileSync2(pkgPath, "utf8"));
+    _cachedVersion = pkg.version ?? "0.0.0";
+  } catch {
+    _cachedVersion = "0.0.0";
+  }
+  return _cachedVersion;
+}
+function getUserWorkspaceDir() {
+  if (process.env.CODEQL_MCP_WORKSPACE) {
+    return process.env.CODEQL_MCP_WORKSPACE;
+  }
+  if (workspaceRootDir === packageRootDir) {
+    return process.cwd();
+  }
+  return workspaceRootDir;
+}
+var __filename, __dirname, _cachedVersion, packageRootDir, workspaceRootDir;
 var init_package_paths = __esm({
   "src/utils/package-paths.ts"() {
     "use strict";
@@ -674,7 +696,7 @@ import { randomBytes } from "crypto";
 init_package_paths();
 import { mkdirSync as mkdirSync2, mkdtempSync } from "fs";
 import { join } from "path";
-var PROJECT_TMP_BASE = join(getPackageRootDir(), ".tmp");
+var PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR || join(getPackageRootDir(), ".tmp");
 function getProjectTmpBase() {
   mkdirSync2(PROJECT_TMP_BASE, { recursive: true });
   return PROJECT_TMP_BASE;
@@ -865,14 +887,15 @@ function registerCLITool(server, definition) {
           case "codeql_test_run":
           case "codeql_resolve_tests":
             if (tests && Array.isArray(tests)) {
+              const userDir = getUserWorkspaceDir();
               positionalArgs = [...positionalArgs, ...tests.map(
-                (t) => isAbsolute3(t) ? t : resolve3(workspaceRootDir, t)
+                (t) => isAbsolute3(t) ? t : resolve3(userDir, t)
               )];
             }
             break;
           case "codeql_query_run": {
             if (options.database && typeof options.database === "string" && !isAbsolute3(options.database)) {
-              options.database = resolve3(workspaceRootDir, options.database);
+              options.database = resolve3(getUserWorkspaceDir(), options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
             const resolvedQuery = await resolveQueryPath(params, logger);
@@ -981,7 +1004,7 @@ function registerCLITool(server, definition) {
           let cwd;
           if ((name === "codeql_pack_install" || name === "codeql_pack_ls") && (dir || packDir)) {
             const rawCwd = dir || packDir;
-            cwd = isAbsolute3(rawCwd) ? rawCwd : resolve3(workspaceRootDir, rawCwd);
+            cwd = isAbsolute3(rawCwd) ? rawCwd : resolve3(getUserWorkspaceDir(), rawCwd);
           }
           const defaultExamplesPath = resolve3(packageRootDir, "ql", "javascript", "examples");
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
@@ -4523,6 +4546,7 @@ import { setTimeout as setTimeout2, clearTimeout } from "timers";
 import { pathToFileURL } from "url";
 import { delimiter as delimiter2, join as join5 } from "path";
 init_cli_executor();
+init_package_paths();
 var CodeQLLanguageServer = class extends EventEmitter {
   constructor(_options = {}) {
     super();
@@ -4682,7 +4706,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       processId: process.pid,
       clientInfo: {
         name: "codeql-development-mcp-server",
-        version: "2.23.9"
+        version: getPackageVersion()
       },
       capabilities: {
         textDocument: {
@@ -6773,7 +6797,6 @@ var JSONFileSync = class extends DataFileSync {
 };
 
 // src/lib/session-data-manager.ts
-init_package_paths();
 import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync6 } from "fs";
 import { join as join13 } from "path";
 import { randomUUID } from "crypto";
@@ -7197,7 +7220,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getPackageRootDir(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getProjectTmpBase(), "ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 

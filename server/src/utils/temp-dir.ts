@@ -13,9 +13,14 @@ import { getPackageRootDir } from './package-paths';
 
 /**
  * Base directory for all project-local temporary data.
- * Stored under `<packageRoot>/.tmp` and excluded from version control.
+ *
+ * Resolution order:
+ * 1. `CODEQL_MCP_TMP_DIR` environment variable — for read-only package root
+ *    scenarios (e.g., npm global installs where the package directory is not
+ *    writable).
+ * 2. `<packageRoot>/.tmp` — default; excluded from version control.
  */
-const PROJECT_TMP_BASE = join(getPackageRootDir(), '.tmp');
+const PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR || join(getPackageRootDir(), '.tmp');
 
 /**
  * Return the project-local `.tmp` base directory, creating it if needed.

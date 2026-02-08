@@ -11,6 +11,7 @@ import { delimiter, join } from 'path';
 import { logger } from '../utils/logger';
 import { getProjectTmpDir } from '../utils/temp-dir';
 import { getResolvedCodeQLDir } from './cli-executor';
+import { getPackageVersion } from '../utils/package-paths';
 
 export interface LSPMessage {
   jsonrpc: '2.0';
@@ -243,7 +244,7 @@ export class CodeQLLanguageServer extends EventEmitter {
       processId: process.pid,
       clientInfo: {
         name: 'codeql-development-mcp-server',
-        version: '2.23.9'
+        version: getPackageVersion()
       },
       capabilities: {
         textDocument: {
