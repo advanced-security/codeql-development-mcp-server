@@ -9,6 +9,7 @@ import { setTimeout, clearTimeout } from 'timers';
 import { pathToFileURL } from 'url';
 import { delimiter, join } from 'path';
 import { logger } from '../utils/logger';
+import { getPackageVersion } from '../utils/package-paths';
 import { getProjectTmpDir } from '../utils/temp-dir';
 import { getResolvedCodeQLDir } from './cli-executor';
 
@@ -243,7 +244,7 @@ export class CodeQLLanguageServer extends EventEmitter {
       processId: process.pid,
       clientInfo: {
         name: 'codeql-development-mcp-server',
-        version: '2.23.9'
+        version: getPackageVersion()
       },
       capabilities: {
         textDocument: {

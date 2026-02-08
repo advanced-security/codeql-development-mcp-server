@@ -86,6 +86,48 @@ export function resolveToolQueryPackPath(language: string, packageRoot?: string)
   return resolve(pkgRoot, 'ql', language, 'tools', 'src');
 }
 
+/**
+ * Read the package version from the nearest package.json.
+ *
+ * Cached at first call so the file is read at most once per process.
+ */
+let _cachedVersion: string | undefined;
+export function getPackageVersion(): string {
+  if (_cachedVersion !== undefined) return _cachedVersion;
+  try {
+    const pkgPath = resolve(getPackageRootDir(), 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    _cachedVersion = pkg.version ?? '0.0.0';
+  } catch {
+    _cachedVersion = '0.0.0';
+  }
+  return _cachedVersion as string;
+}
+
+/**
+ * Get the effective workspace directory for resolving user-supplied relative
+ * paths (test directories, database paths, pack dirs, etc.).
+ *
+ * In a monorepo checkout the workspace root is the monorepo parent.  In an
+ * npm-installed layout, `workspaceRootDir` falls back to `packageRootDir`
+ * which may be read-only and is not the user's project.  In that case we
+ * fall back to `process.cwd()` so that relative paths resolve against the
+ * directory the user actually invoked the server from.
+ *
+ * Override with `CODEQL_MCP_WORKSPACE` for deterministic behavior.
+ */
+export function getUserWorkspaceDir(): string {
+  if (process.env.CODEQL_MCP_WORKSPACE) {
+    return process.env.CODEQL_MCP_WORKSPACE;
+  }
+  // When workspaceRootDir === packageRootDir we are NOT in a monorepo
+  // (npm-installed), so fall back to process.cwd().
+  if (workspaceRootDir === packageRootDir) {
+    return process.cwd();
+  }
+  return workspaceRootDir;
+}
+
 // Pre-computed values for use throughout the server
 export const packageRootDir = getPackageRootDir();
 export const workspaceRootDir = getWorkspaceRootDir(packageRootDir);

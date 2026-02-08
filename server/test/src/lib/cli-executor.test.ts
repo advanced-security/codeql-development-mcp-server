@@ -635,11 +635,9 @@ describe('resolveCodeQLBinary', () => {
     expect(() => resolveCodeQLBinary()).toThrow('does not exist');
   });
 
-  it('should accept a valid absolute CODEQL_PATH pointing to an existing file', () => {
-    // Use /bin/echo as a stand-in for an existing file named "codeql"
-    // We can't actually test with a real codeql binary in unit tests,
-    // so test the basename validation and existence check separately.
-    // Here we test that a non-existent but well-named path is rejected for non-existence.
+  it('should reject non-existent CODEQL_PATH even with valid basename', () => {
+    // Verify that a well-named but non-existent path is rejected for non-existence
+    // (the basename 'codeql' passes validation, but the file doesn't exist).
     process.env.CODEQL_PATH = '/tmp/nonexistent-dir/codeql';
     expect(() => resolveCodeQLBinary()).toThrow('does not exist');
   });
@@ -694,8 +692,9 @@ describe('CODEQL_PATH - PATH prepend integration', () => {
     expect(getResolvedCodeQLDir()).toBeNull();
   });
 
-  it('should prepend CODEQL_PATH directory to child process PATH', async () => {
+  it.skipIf(process.platform === 'win32')('should prepend CODEQL_PATH directory to child process PATH', async () => {
     // Create a temporary directory with a fake "codeql" script
+    // Skipped on Windows: uses sh and #!/bin/sh shebang
     const tmpDir = createProjectTempDir('codeql-path-prepend-test-');
     const codeqlPath = join(tmpDir, 'codeql');
     writeFileSync(codeqlPath, '#!/bin/sh\necho test', { mode: 0o755 });

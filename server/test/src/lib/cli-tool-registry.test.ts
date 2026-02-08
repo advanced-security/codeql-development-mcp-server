@@ -571,6 +571,109 @@ describe('registerCLITool handler behavior', () => {
     );
   });
 
+  it('should resolve relative tests parameter against user workspace dir', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_test_run',
+      description: 'Run tests',
+      command: 'codeql',
+      subcommand: 'test run',
+      inputSchema: {
+        tests: z.array(z.string())
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+    
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'All tests passed',
+      stderr: '',
+      success: true
+    });
+
+    // Test with relative paths
+    await handler({ tests: ['relative/test1.ql', '/absolute/test2.ql'] });
+
+    // executeCodeQLCommand signature: (subcommand, options, additionalArgs, cwd)
+    const call = executeCodeQLCommand.mock.calls[0];
+    const positionalArgs = call[2];
+    
+    // First relative path should be resolved to absolute
+    expect(positionalArgs[0]).not.toBe('relative/test1.ql');
+    expect(positionalArgs[0]).toContain('relative/test1.ql');
+    
+    // Second absolute path should remain unchanged
+    expect(positionalArgs[1]).toBe('/absolute/test2.ql');
+  });
+
+  it('should resolve relative database parameter against user workspace dir', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_run',
+      description: 'Run query',
+      command: 'codeql',
+      subcommand: 'query run',
+      inputSchema: {
+        database: z.string(),
+        query: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+    
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: '{"columns":[]}',
+      stderr: '',
+      success: true
+    });
+
+    // Test with relative database path
+    await handler({ database: 'my-database', query: '/path/to/query.ql' });
+
+    // executeCodeQLCommand signature: (subcommand, options, additionalArgs, cwd)
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1];
+    
+    // Relative database path should be resolved to absolute
+    expect(options.database).not.toBe('my-database');
+    expect(options.database).toContain('my-database');
+  });
+
+  it('should resolve relative dir/packDir parameter against user workspace dir', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_pack_install',
+      description: 'Install packs',
+      command: 'codeql',
+      subcommand: 'pack install',
+      inputSchema: {
+        dir: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+    
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Installed successfully',
+      stderr: '',
+      success: true
+    });
+
+    // Test with relative dir path
+    await handler({ dir: 'my-pack-dir' });
+
+    // executeCodeQLCommand signature: (subcommand, options, additionalArgs, cwd)
+    const call = executeCodeQLCommand.mock.calls[0];
+    const cwd = call[3];
+    
+    // Relative dir should be resolved to absolute for cwd
+    expect(cwd).not.toBe('my-pack-dir');
+    expect(cwd).toContain('my-pack-dir');
+  });
+
   it('should handle dir parameter as positional for pack_ls', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_pack_ls',
