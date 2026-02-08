@@ -4,7 +4,7 @@ This guide covers installation, configuration, and usage of the CodeQL Developme
 
 ## Prerequisites
 
-- **Node.js** v25.2.1 or later ([nodejs.org](https://nodejs.org/))
+- **Node.js** v24.13.0 or later ([nodejs.org](https://nodejs.org/))
 - **CodeQL CLI** ([github.com/github/codeql-cli-binaries](https://github.com/github/codeql-cli-binaries/releases))
 - **VS Code** with GitHub Copilot extension
 

@@ -12,14 +12,14 @@ Users install the server via `npm` and the tool query packs via `codeql pack dow
 
 | Dependency                                                                                           | Minimum Version | Purpose                         |
 | ---------------------------------------------------------------------------------------------------- | --------------- | ------------------------------- |
-| [Node.js](https://nodejs.org/)                                                                       | v22.0.0         | Runtime for the MCP server      |
+| [Node.js](https://nodejs.org/)                                                                       | v24.13.0        | Runtime for the MCP server      |
 | [CodeQL CLI](https://github.com/github/codeql-cli-binaries/releases)                                 | Latest          | Query compilation and execution |
 | [VS Code](https://code.visualstudio.com/) with [GitHub Copilot](https://github.com/features/copilot) | Latest          | IDE with MCP support            |
 
 Verify prerequisites:
 
 ```bash
-node --version   # >= v22.0.0
+node --version   # >= v24.13.0
 codeql --version # any recent release
 ```
 

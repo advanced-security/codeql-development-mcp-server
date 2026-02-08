@@ -17,7 +17,7 @@ const config = {
   outfile: outFile,
   format: 'esm',
   platform: 'node',
-  target: 'node22',
+  target: 'node24',
   sourcemap: true,
   external: [
     '@modelcontextprotocol/sdk',

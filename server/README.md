@@ -62,7 +62,7 @@ server/
 
 ### Server Won't Start
 
-1. **Check Node.js version**: The server requires Node.js v22.0.0 or later
+1. **Check Node.js version**: The server requires Node.js v24.13.0 or later
 
    ```bash
    node --version

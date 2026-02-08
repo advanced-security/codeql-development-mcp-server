@@ -46,7 +46,7 @@ Please note that this project is released with a [Contributor Code of Conduct](C
 
 ### Environment
 
-- **Node.js** v25.2.1 or later ([nodejs.org](https://nodejs.org/))
+- **Node.js** v24.13.0 or later ([nodejs.org](https://nodejs.org/))
 - **Some calling LLM** Bring your own LLM, but some LLMs are (much) better than others.
 
 ### External Dependencies

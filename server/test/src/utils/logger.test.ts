@@ -82,7 +82,11 @@ describe('Logger', () => {
       // Only the beforeEach spy call should exist, not any from logger.debug
       expect(consoleSpy.error).not.toHaveBeenCalled();
 
-      process.env.DEBUG = originalDebug;
+      if (originalDebug === undefined) {
+        delete process.env.DEBUG;
+      } else {
+        process.env.DEBUG = originalDebug;
+      }
     });
 
     it('should log debug messages to stderr when DEBUG is set', () => {
@@ -95,7 +99,11 @@ describe('Logger', () => {
       const call = consoleSpy.error.mock.calls[0][0];
       expect(call).toMatch(/\[DEBUG\] \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z Debug message/);
 
-      process.env.DEBUG = originalDebug;
+      if (originalDebug === undefined) {
+        delete process.env.DEBUG;
+      } else {
+        process.env.DEBUG = originalDebug;
+      }
     });
   });
 });

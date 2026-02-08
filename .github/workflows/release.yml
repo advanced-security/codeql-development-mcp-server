@@ -38,6 +38,7 @@ jobs:
           cache: 'npm'
           node-version-file: '.node-version'
           registry-url: 'https://npm.pkg.github.com'
+          scope: '@advanced-security'
 
       - name: Release - Determine version
         id: version

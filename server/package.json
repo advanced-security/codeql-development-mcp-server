@@ -49,8 +49,8 @@
     "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
   },
   "engines": {
-    "node": ">=22.0.0",
-    "npm": ">=10.0.0"
+    "node": ">=24.13.0",
+    "npm": ">=11.6.2"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
