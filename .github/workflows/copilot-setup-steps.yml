@@ -51,7 +51,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Copilot Setup - Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
 
       - name: Copilot Setup - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment
