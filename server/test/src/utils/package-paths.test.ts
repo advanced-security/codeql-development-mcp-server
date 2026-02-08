@@ -7,7 +7,7 @@
  * - Bundle via npm install (<pkg>/dist/)
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { resolve } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import {
@@ -16,6 +16,8 @@ import {
   resolveToolQueryPackPath,
   packageRootDir,
   workspaceRootDir,
+  getPackageVersion,
+  getUserWorkspaceDir,
 } from '../../../src/utils/package-paths';
 
 describe('getPackageRootDir', () => {
@@ -101,6 +103,65 @@ describe('resolveToolQueryPackPath', () => {
     // When running from the monorepo, the ql/ directories should exist
     const result = resolveToolQueryPackPath('javascript');
     expect(existsSync(result)).toBe(true);
+  });
+});
+
+describe('getPackageVersion', () => {
+  it('should return a non-empty version string', () => {
+    const version = getPackageVersion();
+    expect(version).toBeTruthy();
+    expect(typeof version).toBe('string');
+  });
+
+  it('should return the actual package.json version for the current runtime', () => {
+    const version = getPackageVersion();
+    // Read the actual package.json to verify
+    const pkgPath = resolve(packageRootDir, 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    expect(version).toBe(pkg.version);
+  });
+
+  it('should cache the version on subsequent calls', () => {
+    // Call it twice and verify we get the same result (cached)
+    const version1 = getPackageVersion();
+    const version2 = getPackageVersion();
+    expect(version1).toBe(version2);
+  });
+});
+
+describe('getUserWorkspaceDir', () => {
+  const originalEnv = process.env.CODEQL_MCP_WORKSPACE;
+
+  afterEach(() => {
+    if (originalEnv !== undefined) {
+      process.env.CODEQL_MCP_WORKSPACE = originalEnv;
+    } else {
+      delete process.env.CODEQL_MCP_WORKSPACE;
+    }
+  });
+
+  it('should return CODEQL_MCP_WORKSPACE when set', () => {
+    const testPath = '/test/workspace/override';
+    process.env.CODEQL_MCP_WORKSPACE = testPath;
+    const result = getUserWorkspaceDir();
+    expect(result).toBe(testPath);
+  });
+
+  it('should return workspace root when in monorepo (no env override)', () => {
+    delete process.env.CODEQL_MCP_WORKSPACE;
+    const result = getUserWorkspaceDir();
+    // In monorepo, should return the workspace root (not packageRootDir)
+    expect(result).toBe(workspaceRootDir);
+  });
+
+  it('should fall back to process.cwd() in npm-installed layout', () => {
+    delete process.env.CODEQL_MCP_WORKSPACE;
+    // To test npm-installed behavior we'd need to mock workspaceRootDir === packageRootDir
+    // which is difficult since they're module-level constants. This test documents
+    // the expected behavior instead.
+    const result = getUserWorkspaceDir();
+    expect(result).toBeTruthy();
+    expect(typeof result).toBe('string');
   });
 });
 

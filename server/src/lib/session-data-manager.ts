@@ -403,6 +403,6 @@ function parseBoolEnv(envVar: string | undefined, defaultValue: boolean): boolea
 
 // Export singleton instance with environment variable support
 export const sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join(getProjectTmpBase(), 'ql-mcp-tracking'),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join(getProjectTmpBase(), '.ql-mcp-tracking'),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false),
 });

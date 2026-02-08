@@ -9,9 +9,9 @@ import { setTimeout, clearTimeout } from 'timers';
 import { pathToFileURL } from 'url';
 import { delimiter, join } from 'path';
 import { logger } from '../utils/logger';
+import { getPackageVersion } from '../utils/package-paths';
 import { getProjectTmpDir } from '../utils/temp-dir';
 import { getResolvedCodeQLDir } from './cli-executor';
-import { getPackageVersion } from '../utils/package-paths';
 
 export interface LSPMessage {
   jsonrpc: '2.0';

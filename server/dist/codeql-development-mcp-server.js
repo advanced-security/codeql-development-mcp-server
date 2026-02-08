@@ -416,7 +416,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { resolve as resolve9 } from "path";
+import { resolve as resolve10 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/codeql/bqrs-decode.ts
@@ -689,14 +689,14 @@ async function evaluateWithCustomScript(_bqrsPath, _queryPath, _scriptPath, _out
 
 // src/lib/log-directory-manager.ts
 import { mkdirSync as mkdirSync3, existsSync as existsSync3 } from "fs";
-import { join as join2, resolve as resolve2 } from "path";
+import { join as join2, resolve as resolve3 } from "path";
 import { randomBytes } from "crypto";
 
 // src/utils/temp-dir.ts
 init_package_paths();
 import { mkdirSync as mkdirSync2, mkdtempSync } from "fs";
-import { join } from "path";
-var PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR || join(getPackageRootDir(), ".tmp");
+import { isAbsolute as isAbsolute3, join, resolve as resolve2 } from "path";
+var PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR ? isAbsolute3(process.env.CODEQL_MCP_TMP_DIR) ? process.env.CODEQL_MCP_TMP_DIR : resolve2(process.cwd(), process.env.CODEQL_MCP_TMP_DIR) : join(getPackageRootDir(), ".tmp");
 function getProjectTmpBase() {
   mkdirSync2(PROJECT_TMP_BASE, { recursive: true });
   return PROJECT_TMP_BASE;
@@ -713,8 +713,8 @@ function getProjectTmpDir(name) {
 
 // src/lib/log-directory-manager.ts
 function ensurePathWithinBase(baseDir, targetPath) {
-  const absBase = resolve2(baseDir);
-  const absTarget = resolve2(targetPath);
+  const absBase = resolve3(baseDir);
+  const absTarget = resolve3(targetPath);
   if (!absTarget.startsWith(absBase + "/") && absTarget !== absBase) {
     throw new Error(`Provided log directory is outside the allowed base directory: ${absBase}`);
   }
@@ -742,7 +742,7 @@ function getOrCreateLogDirectory(logDir) {
 // src/lib/cli-tool-registry.ts
 init_package_paths();
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync4 } from "fs";
-import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute3, join as join3, resolve as resolve3 } from "path";
+import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join3, resolve as resolve4 } from "path";
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -889,13 +889,13 @@ function registerCLITool(server, definition) {
             if (tests && Array.isArray(tests)) {
               const userDir = getUserWorkspaceDir();
               positionalArgs = [...positionalArgs, ...tests.map(
-                (t) => isAbsolute3(t) ? t : resolve3(userDir, t)
+                (t) => isAbsolute4(t) ? t : resolve4(userDir, t)
               )];
             }
             break;
           case "codeql_query_run": {
-            if (options.database && typeof options.database === "string" && !isAbsolute3(options.database)) {
-              options.database = resolve3(getUserWorkspaceDir(), options.database);
+            if (options.database && typeof options.database === "string" && !isAbsolute4(options.database)) {
+              options.database = resolve4(getUserWorkspaceDir(), options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
             const resolvedQuery = await resolveQueryPath(params, logger);
@@ -1004,9 +1004,9 @@ function registerCLITool(server, definition) {
           let cwd;
           if ((name === "codeql_pack_install" || name === "codeql_pack_ls") && (dir || packDir)) {
             const rawCwd = dir || packDir;
-            cwd = isAbsolute3(rawCwd) ? rawCwd : resolve3(getUserWorkspaceDir(), rawCwd);
+            cwd = isAbsolute4(rawCwd) ? rawCwd : resolve4(getUserWorkspaceDir(), rawCwd);
           }
-          const defaultExamplesPath = resolve3(packageRootDir, "ql", "javascript", "examples");
+          const defaultExamplesPath = resolve4(packageRootDir, "ql", "javascript", "examples");
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
           if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile")) {
             options["additional-packs"] = additionalPacksPath;
@@ -4540,13 +4540,13 @@ import { z as z12 } from "zod";
 
 // src/lib/language-server.ts
 init_logger();
+init_package_paths();
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
 import { setTimeout as setTimeout2, clearTimeout } from "timers";
 import { pathToFileURL } from "url";
 import { delimiter as delimiter2, join as join5 } from "path";
 init_cli_executor();
-init_package_paths();
 var CodeQLLanguageServer = class extends EventEmitter {
   constructor(_options = {}) {
     super();
@@ -4609,7 +4609,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       this.isInitialized = false;
       this.emit("exit", code);
     });
-    await new Promise((resolve10) => setTimeout2(resolve10, 2e3));
+    await new Promise((resolve11) => setTimeout2(resolve11, 2e3));
   }
   handleStdout(data) {
     this.messageBuffer += data.toString();
@@ -4678,8 +4678,8 @@ var CodeQLLanguageServer = class extends EventEmitter {
       method,
       params
     };
-    return new Promise((resolve10, reject) => {
-      this.pendingResponses.set(id, { resolve: resolve10, reject });
+    return new Promise((resolve11, reject) => {
+      this.pendingResponses.set(id, { resolve: resolve11, reject });
       this.sendMessage(message);
       setTimeout2(() => {
         if (this.pendingResponses.has(id)) {
@@ -4735,7 +4735,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       throw new Error("Language server is not initialized");
     }
     const documentUri = uri || pathToFileURL(join5(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-    return new Promise((resolve10, reject) => {
+    return new Promise((resolve11, reject) => {
       let diagnosticsReceived = false;
       const timeout = setTimeout2(() => {
         if (!diagnosticsReceived) {
@@ -4751,7 +4751,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
           this.sendNotification("textDocument/didClose", {
             textDocument: { uri: documentUri }
           });
-          resolve10(params.diagnostics);
+          resolve11(params.diagnostics);
         }
       };
       this.on("diagnostics", diagnosticsHandler);
@@ -4790,7 +4790,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
 
 // src/tools/codeql/language-server-eval.ts
 init_logger();
-import { join as join6, resolve as resolve5 } from "path";
+import { join as join6, resolve as resolve6 } from "path";
 import { pathToFileURL as pathToFileURL2 } from "url";
 var globalLanguageServer = null;
 function formatDiagnostics(diagnostics) {
@@ -4854,14 +4854,14 @@ async function getLanguageServer(options = {}) {
   }
   const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
   const defaultOptions = {
-    searchPath: resolve5(pkgRoot, "ql"),
+    searchPath: resolve6(pkgRoot, "ql"),
     loglevel: "WARN",
     ...options
   };
   globalLanguageServer = new CodeQLLanguageServer(defaultOptions);
   try {
     await globalLanguageServer.start();
-    const workspaceUri = pathToFileURL2(resolve5(pkgRoot, "ql")).href;
+    const workspaceUri = pathToFileURL2(resolve6(pkgRoot, "ql")).href;
     await globalLanguageServer.initialize(workspaceUri);
     logger.info("CodeQL Language Server started and initialized successfully");
     return globalLanguageServer;
@@ -5378,7 +5378,7 @@ var codeqlQueryRunTool = {
 
 // src/tools/codeql/quick-evaluate.ts
 import { z as z19 } from "zod";
-import { join as join8, resolve as resolve6 } from "path";
+import { join as join8, resolve as resolve7 } from "path";
 init_logger();
 async function quickEvaluate({
   file,
@@ -5396,7 +5396,7 @@ async function quickEvaluate({
         throw new Error(`Symbol '${symbol}' not found as class or predicate in file: ${file}`);
       }
     }
-    const resolvedOutput = resolve6(output_path || join8(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
+    const resolvedOutput = resolve7(output_path || join8(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error) {
     throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -5438,15 +5438,15 @@ function registerQuickEvaluateTool(server) {
 init_logger();
 import { z as z20 } from "zod";
 import { access, constants } from "fs/promises";
-import { resolve as resolve7 } from "path";
+import { resolve as resolve8 } from "path";
 async function registerDatabase(dbPath) {
   try {
-    const resolvedPath = resolve7(dbPath);
+    const resolvedPath = resolve8(dbPath);
     await access(resolvedPath, constants.F_OK);
-    const dbYmlPath = resolve7(resolvedPath, "codeql-database.yml");
+    const dbYmlPath = resolve8(resolvedPath, "codeql-database.yml");
     await access(dbYmlPath, constants.F_OK);
-    const srcZipPath = resolve7(resolvedPath, "src.zip");
-    const srcDirPath = resolve7(resolvedPath, "src");
+    const srcZipPath = resolve8(resolvedPath, "src.zip");
+    const srcDirPath = resolve8(resolvedPath, "src");
     let hasSrcZip = false;
     let hasSrcDir = false;
     try {
@@ -7220,7 +7220,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getProjectTmpBase(), "ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
@@ -8093,7 +8093,7 @@ function generateListRecommendations(sessions) {
 init_cli_executor();
 init_package_paths();
 init_logger();
-dotenv.config({ path: resolve9(packageRootDir, ".env") });
+dotenv.config({ path: resolve10(packageRootDir, ".env") });
 var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.23.9";
 async function startServer(mode = "stdio") {
@@ -8142,10 +8142,10 @@ async function startServer(mode = "stdio") {
     });
     const host = process.env.HTTP_HOST || "localhost";
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
-    return new Promise((resolve10, reject) => {
+    return new Promise((resolve11, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve10();
+        resolve11();
       });
       httpServer.on("error", (error) => {
         logger.error("HTTP server error:", error);
@@ -8181,7 +8181,7 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? resolve9(process.argv[1]) : void 0;
+var scriptPath = process.argv[1] ? resolve10(process.argv[1]) : void 0;
 if (scriptPath && import.meta.url === pathToFileURL3(scriptPath).href) {
   main();
 }
