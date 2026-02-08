@@ -39,6 +39,7 @@ jobs:
 
       - name: Build Server - Install dependencies
         run: npm ci
+        working-directory: .
 
       - name: Build Server - Clean previous build
         run: npm run clean
