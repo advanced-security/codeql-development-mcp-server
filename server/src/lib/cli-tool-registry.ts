@@ -226,7 +226,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             
           case 'codeql_query_run': {
             // Resolve database path to absolute path if it's relative
-            if (options.database && typeof options.database === 'string' && !options.database.startsWith('/')) {
+            if (options.database && typeof options.database === 'string' && !isAbsolute(options.database)) {
               options.database = resolve(workspaceRootDir, options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
@@ -394,9 +394,14 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             cwd = isAbsolute(rawCwd) ? rawCwd : resolve(workspaceRootDir, rawCwd);
           }
           
-          // Add --additional-packs for commands that need to access local test packs
-          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || resolve(packageRootDir, 'ql', 'javascript', 'examples');
-          if (name === 'codeql_test_run' || name === 'codeql_query_run' || name === 'codeql_query_compile') {
+          // Add --additional-packs for commands that need to access local test packs.
+          // Only set the default examples path when it actually exists on disk
+          // (it may be absent in npm-installed layouts where ql/javascript/examples/
+          // is not included in the published package).
+          const defaultExamplesPath = resolve(packageRootDir, 'ql', 'javascript', 'examples');
+          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS
+            || (existsSync(defaultExamplesPath) ? defaultExamplesPath : undefined);
+          if (additionalPacksPath && (name === 'codeql_test_run' || name === 'codeql_query_run' || name === 'codeql_query_compile')) {
             options['additional-packs'] = additionalPacksPath;
           }
           

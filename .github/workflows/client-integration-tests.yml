@@ -276,87 +276,19 @@ jobs:
       ## to a non-existent file and codeql is not on PATH.
       - name: CODEQL_PATH Tests - Test 1 - Fail with invalid CODEQL_PATH
         shell: bash
-        run: |
-          echo "=== Test 1: Server must fail when CODEQL_PATH is invalid ==="
-          export PATH="$CLEAN_PATH"
-          export CODEQL_PATH="/nonexistent/path/to/codeql"
+        run: ./server/scripts/test-codeql-path-invalid.sh
 
-          # Use a long-running Node process as a stdin source to prevent
-          # immediate EOF (which causes a clean exit instead of a crash).
-          # Cross-platform: works on Linux, macOS, and Windows (no mkfifo).
-          node -e "setTimeout(()=>{},999999)" | \
-            node server/dist/codeql-development-mcp-server.js >stdout.txt 2>stderr.txt &
-          SERVER_PID=$!
-
-          # Wait for the process to exit (it should fail within seconds)
-          sleep 5
-
-          if kill -0 "$SERVER_PID" 2>/dev/null; then
-            echo "::error::Server should have exited but is still running"
-            kill "$SERVER_PID" 2>/dev/null || true
-            wait "$SERVER_PID" 2>/dev/null || true
-            cat stderr.txt
-            exit 1
-          fi
-
-          wait "$SERVER_PID" 2>/dev/null
-          EXIT_CODE=$?
-
-          echo "Exit code: $EXIT_CODE"
-          cat stderr.txt
-
-          if [[ "$EXIT_CODE" -ne 0 ]] && grep -qi "does not exist" stderr.txt; then
-            echo ""
-            echo "✅ PASS: Server failed at startup with expected CODEQL_PATH error"
-          else
-            echo ""
-            echo "::error::Unexpected behavior (exit=$EXIT_CODE)"
-            exit 1
-          fi
-
-      ## Test 2: The server must start without error when CODEQL_PATH points
-      ## to a valid CodeQL binary, even though codeql is not on PATH.
-      - name: CODEQL_PATH Tests - Test 2 - Start with valid CODEQL_PATH
+      ## Test 2: The server must fail at startup when codeql is not on PATH
+      ## and CODEQL_PATH is not set.
+      - name: CODEQL_PATH Tests - Test 2 - Fail when codeql not on PATH and CODEQL_PATH not set
         shell: bash
-        run: |
-          echo "=== Test 2: Server must start when CODEQL_PATH is valid ==="
-          export PATH="$CLEAN_PATH"
-          export CODEQL_PATH="${{ steps.locate-codeql.outputs.codeql-binary }}"
+        run: ./server/scripts/test-codeql-path-missing.sh
 
-          echo "CODEQL_PATH=$CODEQL_PATH"
-          echo "codeql in PATH: $(command -v codeql 2>/dev/null || echo 'not found')"
-
-          # Use a long-running Node process as a stdin source to keep the
-          # STDIO transport alive. Cross-platform (no mkfifo needed).
-          node -e "setTimeout(()=>{},999999)" | \
-            node server/dist/codeql-development-mcp-server.js >stdout.txt 2>stderr.txt &
-          SERVER_PID=$!
-
-          # Give the server time to either start successfully or crash
-          sleep 5
-
-          if kill -0 "$SERVER_PID" 2>/dev/null; then
-            echo "✅ PASS: Server is running after 5 seconds (PID $SERVER_PID)"
-            echo "--- startup logs ---"
-            cat stderr.txt
-
-            # Verify stderr confirms CODEQL_PATH was used
-            if grep -q "CODEQL_PATH" stderr.txt; then
-              echo "✅ Server logged CODEQL_PATH resolution"
-            else
-              echo "⚠️ CODEQL_PATH not found in stderr (non-fatal)"
-            fi
-
-            # Clean up
-            kill "$SERVER_PID" 2>/dev/null || true
-            wait "$SERVER_PID" 2>/dev/null || true
-          else
-            wait "$SERVER_PID" 2>/dev/null
-            EXIT_CODE=$?
-            echo "::error::Server exited prematurely with code $EXIT_CODE"
-            cat stderr.txt
-            exit 1
-          fi
+      ## Test 3: The server must start without error when CODEQL_PATH points
+      ## to a valid CodeQL binary, even though codeql is not on PATH.
+      - name: CODEQL_PATH Tests - Test 3 - Start with valid CODEQL_PATH
+        shell: bash
+        run: ./server/scripts/test-codeql-path-valid.sh "${{ steps.locate-codeql.outputs.codeql-binary }}"
 
       - name: CODEQL_PATH Tests - Summary
         shell: bash
@@ -366,6 +298,7 @@ jobs:
           echo "| Test | Result |" >> $GITHUB_STEP_SUMMARY
           echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
           echo "| Invalid CODEQL_PATH causes startup failure | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Missing codeql (no PATH, no CODEQL_PATH) causes startup failure | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
           echo "| Valid CODEQL_PATH (no PATH) starts server | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY

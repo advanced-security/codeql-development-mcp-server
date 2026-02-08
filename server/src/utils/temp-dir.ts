@@ -13,7 +13,7 @@ import { getPackageRootDir } from './package-paths';
 
 /**
  * Base directory for all project-local temporary data.
- * Stored under `<repoRoot>/.tmp` and excluded from version control.
+ * Stored under `<packageRoot>/.tmp` and excluded from version control.
  */
 const PROJECT_TMP_BASE = join(getPackageRootDir(), '.tmp');
 

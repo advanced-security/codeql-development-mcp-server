@@ -49,6 +49,7 @@ __export(cli_executor_exports, {
   resolveCodeQLBinary: () => resolveCodeQLBinary,
   sanitizeCLIArgument: () => sanitizeCLIArgument,
   sanitizeCLIArguments: () => sanitizeCLIArguments,
+  validateCodeQLBinaryReachable: () => validateCodeQLBinaryReachable,
   validateCommandExists: () => validateCommandExists
 });
 import { execFile } from "child_process";
@@ -71,10 +72,14 @@ function isCommandAllowed(command) {
   return ALLOWED_COMMANDS.has(command) || testCommands !== null && testCommands.has(command);
 }
 function resolveCodeQLBinary() {
+  if (resolvedBinaryResult !== void 0) {
+    return resolvedBinaryResult;
+  }
   const envPath = process.env.CODEQL_PATH;
   if (!envPath) {
     resolvedCodeQLDir = null;
-    return "codeql";
+    resolvedBinaryResult = "codeql";
+    return resolvedBinaryResult;
   }
   const base = basename(envPath).toLowerCase();
   const validBaseNames = ["codeql", "codeql.exe", "codeql.cmd"];
@@ -94,14 +99,35 @@ function resolveCodeQLBinary() {
     );
   }
   resolvedCodeQLDir = dirname(envPath);
+  resolvedBinaryResult = envPath;
   logger.info(`CodeQL CLI resolved via CODEQL_PATH: ${envPath} (dir: ${resolvedCodeQLDir})`);
-  return envPath;
+  return resolvedBinaryResult;
 }
 function getResolvedCodeQLDir() {
   return resolvedCodeQLDir;
 }
 function resetResolvedCodeQLBinary() {
   resolvedCodeQLDir = null;
+  resolvedBinaryResult = void 0;
+}
+async function validateCodeQLBinaryReachable() {
+  const binary2 = resolvedBinaryResult ?? "codeql";
+  const env = { ...process.env };
+  if (resolvedCodeQLDir) {
+    env.PATH = resolvedCodeQLDir + delimiter + (env.PATH || "");
+  }
+  try {
+    const { stdout } = await execFileAsync(binary2, ["version", "--format=terse"], {
+      env,
+      timeout: 15e3
+    });
+    return stdout.trim();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `CodeQL CLI is not reachable (binary: ${binary2}). Ensure codeql is on PATH or set the CODEQL_PATH environment variable to the absolute path of the CodeQL CLI binary. Details: ${message}`
+    );
+  }
 }
 function sanitizeCLIArgument(arg) {
   if (arg.includes("\0")) {
@@ -260,7 +286,7 @@ async function validateCommandExists(command) {
     return false;
   }
 }
-var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir;
+var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult;
 var init_cli_executor = __esm({
   "src/lib/cli-executor.ts"() {
     "use strict";
@@ -845,7 +871,7 @@ function registerCLITool(server, definition) {
             }
             break;
           case "codeql_query_run": {
-            if (options.database && typeof options.database === "string" && !options.database.startsWith("/")) {
+            if (options.database && typeof options.database === "string" && !isAbsolute3(options.database)) {
               options.database = resolve3(workspaceRootDir, options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
@@ -957,8 +983,9 @@ function registerCLITool(server, definition) {
             const rawCwd = dir || packDir;
             cwd = isAbsolute3(rawCwd) ? rawCwd : resolve3(workspaceRootDir, rawCwd);
           }
-          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || resolve3(packageRootDir, "ql", "javascript", "examples");
-          if (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile") {
+          const defaultExamplesPath = resolve3(packageRootDir, "ql", "javascript", "examples");
+          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
+          if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile")) {
             options["additional-packs"] = additionalPacksPath;
           }
           if (name === "codeql_test_run") {
@@ -8050,6 +8077,8 @@ async function startServer(mode = "stdio") {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
   const codeqlBinary = resolveCodeQLBinary();
   logger.info(`CodeQL CLI binary: ${codeqlBinary}`);
+  const codeqlVersion = await validateCodeQLBinaryReachable();
+  logger.info(`CodeQL CLI version: ${codeqlVersion}`);
   const server = new McpServer({
     name: PACKAGE_NAME,
     version: VERSION

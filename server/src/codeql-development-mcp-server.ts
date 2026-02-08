@@ -16,7 +16,7 @@ import { registerLanguageResources } from './resources/language-resources';
 import { registerWorkflowPrompts } from './prompts/workflow-prompts';
 import { registerMonitoringTools } from './tools/monitoring-tools';
 import { sessionDataManager } from './lib/session-data-manager';
-import { resolveCodeQLBinary } from './lib/cli-executor';
+import { resolveCodeQLBinary, validateCodeQLBinaryReachable } from './lib/cli-executor';
 import { packageRootDir } from './utils/package-paths';
 import { logger } from './utils/logger';
 
@@ -39,6 +39,12 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
   // use the user-specified binary.
   const codeqlBinary = resolveCodeQLBinary();
   logger.info(`CodeQL CLI binary: ${codeqlBinary}`);
+
+  // Validate that the resolved binary is actually callable. This catches
+  // misconfigurations early (e.g. codeql not on PATH and CODEQL_PATH unset)
+  // instead of failing silently and producing confusing tool-level errors.
+  const codeqlVersion = await validateCodeQLBinaryReachable();
+  logger.info(`CodeQL CLI version: ${codeqlVersion}`);
 
   const server = new McpServer({
     name: PACKAGE_NAME,

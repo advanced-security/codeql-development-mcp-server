@@ -41,9 +41,13 @@ describe('getPackageRootDir', () => {
   });
 
   it('should handle Windows-style paths with backslashes', () => {
+    if (process.platform !== 'win32') {
+      // path.resolve() treats backslashes as normal characters on POSIX;
+      // this test is only meaningful on Windows where they are separators.
+      return;
+    }
     const winPath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\@advanced-security\\codeql-development-mcp-server\\dist';
     const result = getPackageRootDir(winPath);
-    // On Unix, resolve will still work with forward slashes
     expect(result).toContain('codeql-development-mcp-server');
     expect(result).not.toContain('dist');
   });

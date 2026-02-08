@@ -5,8 +5,8 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync, chmodSync } from 'fs';
 import { join } from 'path';
-import { 
-  buildCodeQLArgs, 
+import {
+  buildCodeQLArgs,
   buildQLTArgs,
   executeCLICommand,
   enableTestCommands,
@@ -15,7 +15,8 @@ import {
   getResolvedCodeQLDir,
   resetResolvedCodeQLBinary,
   sanitizeCLIArgument,
-  sanitizeCLIArguments
+  sanitizeCLIArguments,
+  validateCodeQLBinaryReachable
 } from '../../../src/lib/cli-executor';
 
 // Mock the logger to suppress expected error output
@@ -680,6 +681,18 @@ describe('CODEQL_PATH - PATH prepend integration', () => {
     resetResolvedCodeQLBinary();
   });
 
+  it('should cache resolved value and ignore subsequent env changes', () => {
+    delete process.env.CODEQL_PATH;
+    const first = resolveCodeQLBinary();
+    expect(first).toBe('codeql');
+
+    // Change the env after resolution — should still return cached value
+    process.env.CODEQL_PATH = '/some/changed/path/codeql';
+    const second = resolveCodeQLBinary();
+    expect(second).toBe('codeql');
+    expect(getResolvedCodeQLDir()).toBeNull();
+  });
+
   it('should prepend CODEQL_PATH directory to child process PATH', async () => {
     // Create a temporary directory with a fake "codeql" script
     const tmpDir = join(process.cwd(), '.tmp', 'codeql-path-prepend-test');
@@ -701,6 +714,66 @@ describe('CODEQL_PATH - PATH prepend integration', () => {
       expect(result.success).toBe(true);
       // The PATH should start with our tmpDir
       expect(result.stdout.trim().startsWith(tmpDir)).toBe(true);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('validateCodeQLBinaryReachable', () => {
+  const originalEnv = process.env.CODEQL_PATH;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.CODEQL_PATH;
+    } else {
+      process.env.CODEQL_PATH = originalEnv;
+    }
+    resetResolvedCodeQLBinary();
+  });
+
+  it('should return a version string when codeql is on PATH', async () => {
+    // Use the default PATH-based resolution (codeql must be on PATH for tests)
+    delete process.env.CODEQL_PATH;
+    resolveCodeQLBinary();
+
+    const version = await validateCodeQLBinaryReachable();
+    expect(version).toBeTruthy();
+    // Version should be a semver-like string (e.g. "2.23.9")
+    expect(version).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('should throw a descriptive error when codeql is not reachable', async () => {
+    // Create a temporary directory with a fake "codeql" that exits with error
+    const tmpDir = join(process.cwd(), '.tmp', 'codeql-unreachable-test');
+    const codeqlPath = join(tmpDir, 'codeql');
+    mkdirSync(tmpDir, { recursive: true });
+    // Create a script that fails immediately
+    writeFileSync(codeqlPath, '#!/bin/sh\nexit 1', { mode: 0o755 });
+    chmodSync(codeqlPath, 0o755);
+
+    try {
+      process.env.CODEQL_PATH = codeqlPath;
+      resolveCodeQLBinary();
+
+      await expect(validateCodeQLBinaryReachable()).rejects.toThrow('not reachable');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should include guidance about CODEQL_PATH in error message', async () => {
+    const tmpDir = join(process.cwd(), '.tmp', 'codeql-guidance-test');
+    const codeqlPath = join(tmpDir, 'codeql');
+    mkdirSync(tmpDir, { recursive: true });
+    writeFileSync(codeqlPath, '#!/bin/sh\nexit 1', { mode: 0o755 });
+    chmodSync(codeqlPath, 0o755);
+
+    try {
+      process.env.CODEQL_PATH = codeqlPath;
+      resolveCodeQLBinary();
+
+      await expect(validateCodeQLBinaryReachable()).rejects.toThrow('CODEQL_PATH');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }

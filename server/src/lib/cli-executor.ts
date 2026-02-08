@@ -113,6 +113,9 @@ function isCommandAllowed(command: string): boolean {
 // absolute path to execFile() can fail with ENOENT for shell scripts.
 let resolvedCodeQLDir: string | null = null;
 
+// Cached result from resolveCodeQLBinary(). `undefined` means not yet resolved.
+let resolvedBinaryResult: string | undefined;
+
 /**
  * Resolve the CodeQL CLI binary path.
  *
@@ -126,11 +129,17 @@ let resolvedCodeQLDir: string | null = null;
  * at startup; subsequent calls are a no-op and return the cached value.
  */
 export function resolveCodeQLBinary(): string {
+  // Short-circuit if already resolved
+  if (resolvedBinaryResult !== undefined) {
+    return resolvedBinaryResult;
+  }
+
   const envPath = process.env.CODEQL_PATH;
 
   if (!envPath) {
     resolvedCodeQLDir = null;
-    return 'codeql';
+    resolvedBinaryResult = 'codeql';
+    return resolvedBinaryResult;
   }
 
   // Validate the path points to a plausible CodeQL binary
@@ -157,8 +166,9 @@ export function resolveCodeQLBinary(): string {
   }
 
   resolvedCodeQLDir = dirname(envPath);
+  resolvedBinaryResult = envPath;
   logger.info(`CodeQL CLI resolved via CODEQL_PATH: ${envPath} (dir: ${resolvedCodeQLDir})`);
-  return envPath;
+  return resolvedBinaryResult;
 }
 
 /**
@@ -173,6 +183,41 @@ export function getResolvedCodeQLDir(): string | null {
  */
 export function resetResolvedCodeQLBinary(): void {
   resolvedCodeQLDir = null;
+  resolvedBinaryResult = undefined;
+}
+
+/**
+ * Validate that the resolved CodeQL binary is actually callable.
+ *
+ * Runs `codeql version --format=terse` and verifies the process exits
+ * successfully. This catches the case where `CODEQL_PATH` is unset and
+ * `codeql` is not on PATH — the server would otherwise start normally
+ * but every tool invocation would fail.
+ *
+ * @returns The version string reported by the CodeQL CLI.
+ * @throws Error if the binary is not reachable or returns a non-zero exit code.
+ */
+export async function validateCodeQLBinaryReachable(): Promise<string> {
+  const binary = resolvedBinaryResult ?? 'codeql';
+  const env = { ...process.env };
+  if (resolvedCodeQLDir) {
+    env.PATH = resolvedCodeQLDir + delimiter + (env.PATH || '');
+  }
+
+  try {
+    const { stdout } = await execFileAsync(binary, ['version', '--format=terse'], {
+      env,
+      timeout: 15_000,
+    });
+    return stdout.trim();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `CodeQL CLI is not reachable (binary: ${binary}). ` +
+      `Ensure codeql is on PATH or set the CODEQL_PATH environment variable ` +
+      `to the absolute path of the CodeQL CLI binary. Details: ${message}`
+    );
+  }
 }
 
 /**
