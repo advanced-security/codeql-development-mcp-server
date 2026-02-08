@@ -86,7 +86,7 @@ jobs:
           fi
 
       - name: Release - Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
 
       - name: Release - Build server
         run: npm run build -w server
@@ -152,7 +152,7 @@ jobs:
 
       - name: Release - Install production dependencies
         working-directory: dist-package/server
-        run: npm ci --omit=dev
+        run: npm ci --omit=dev --include=optional
 
       - name: Release - Create archive
         run: |
