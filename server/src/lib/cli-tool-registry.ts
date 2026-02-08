@@ -8,12 +8,25 @@ import { executeCodeQLCommand, executeQLTCommand, CLIExecutionResult } from './c
 import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
-import { packageRootDir, resolveToolQueryPackPath, workspaceRootDir } from '../utils/package-paths';
+import { packageRootDir, resolveToolQueryPackPath } from '../utils/package-paths';
 import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
+
+/**
+ * Get the base directory for resolving user-specified relative paths.
+ * 
+ * Uses `CODEQL_MCP_WORKSPACE` if set; otherwise uses process.cwd() to resolve
+ * paths relative to where the user invoked the MCP server. This ensures that
+ * in npm-installed scenarios, user-provided relative paths (e.g., test dirs,
+ * database paths) resolve against their working directory, not the package
+ * installation directory.
+ */
+function getUserWorkspaceDir(): string {
+  return process.env.CODEQL_MCP_WORKSPACE || process.cwd();
+}
 
 export interface CLIToolDefinition {
   name: string;
@@ -215,11 +228,12 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           case 'codeql_test_run':
           case 'codeql_resolve_tests':
             // Handle tests parameter as positional arguments for test tools.
-            // Resolve relative paths against workspaceRootDir since the MCP
-            // server's cwd may not be the repo root.
+            // Resolve relative paths against user workspace (which can be overridden
+            // via CODEQL_MCP_WORKSPACE for npm-installed scenarios).
             if (tests && Array.isArray(tests)) {
+              const userWorkspace = getUserWorkspaceDir();
               positionalArgs = [...positionalArgs, ...(tests as string[]).map(
-                t => isAbsolute(t) ? t : resolve(workspaceRootDir, t)
+                t => isAbsolute(t) ? t : resolve(userWorkspace, t)
               )];
             }
             break;
@@ -227,7 +241,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           case 'codeql_query_run': {
             // Resolve database path to absolute path if it's relative
             if (options.database && typeof options.database === 'string' && !isAbsolute(options.database)) {
-              options.database = resolve(workspaceRootDir, options.database);
+              const userWorkspace = getUserWorkspaceDir();
+              options.database = resolve(userWorkspace, options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
             
@@ -389,9 +404,10 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           let cwd: string | undefined;
           if ((name === 'codeql_pack_install' || name === 'codeql_pack_ls') && (dir || packDir)) {
             const rawCwd = (dir || packDir) as string;
-            // Resolve relative paths against the workspace root, not process.cwd(),
+            // Resolve relative paths against user workspace, not process.cwd(),
             // since the MCP server's cwd may differ (especially in VS Code).
-            cwd = isAbsolute(rawCwd) ? rawCwd : resolve(workspaceRootDir, rawCwd);
+            const userWorkspace = getUserWorkspaceDir();
+            cwd = isAbsolute(rawCwd) ? rawCwd : resolve(userWorkspace, rawCwd);
           }
           
           // Add --additional-packs for commands that need to access local test packs.

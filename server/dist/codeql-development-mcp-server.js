@@ -674,7 +674,7 @@ import { randomBytes } from "crypto";
 init_package_paths();
 import { mkdirSync as mkdirSync2, mkdtempSync } from "fs";
 import { join } from "path";
-var PROJECT_TMP_BASE = join(getPackageRootDir(), ".tmp");
+var PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR || join(getPackageRootDir(), ".tmp");
 function getProjectTmpBase() {
   mkdirSync2(PROJECT_TMP_BASE, { recursive: true });
   return PROJECT_TMP_BASE;
@@ -721,6 +721,9 @@ function getOrCreateLogDirectory(logDir) {
 init_package_paths();
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync4 } from "fs";
 import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute3, join as join3, resolve as resolve3 } from "path";
+function getUserWorkspaceDir() {
+  return process.env.CODEQL_MCP_WORKSPACE || process.cwd();
+}
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -865,14 +868,16 @@ function registerCLITool(server, definition) {
           case "codeql_test_run":
           case "codeql_resolve_tests":
             if (tests && Array.isArray(tests)) {
+              const userWorkspace = getUserWorkspaceDir();
               positionalArgs = [...positionalArgs, ...tests.map(
-                (t) => isAbsolute3(t) ? t : resolve3(workspaceRootDir, t)
+                (t) => isAbsolute3(t) ? t : resolve3(userWorkspace, t)
               )];
             }
             break;
           case "codeql_query_run": {
             if (options.database && typeof options.database === "string" && !isAbsolute3(options.database)) {
-              options.database = resolve3(workspaceRootDir, options.database);
+              const userWorkspace = getUserWorkspaceDir();
+              options.database = resolve3(userWorkspace, options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
             const resolvedQuery = await resolveQueryPath(params, logger);
@@ -981,7 +986,8 @@ function registerCLITool(server, definition) {
           let cwd;
           if ((name === "codeql_pack_install" || name === "codeql_pack_ls") && (dir || packDir)) {
             const rawCwd = dir || packDir;
-            cwd = isAbsolute3(rawCwd) ? rawCwd : resolve3(workspaceRootDir, rawCwd);
+            const userWorkspace = getUserWorkspaceDir();
+            cwd = isAbsolute3(rawCwd) ? rawCwd : resolve3(userWorkspace, rawCwd);
           }
           const defaultExamplesPath = resolve3(packageRootDir, "ql", "javascript", "examples");
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
@@ -4519,10 +4525,25 @@ import { z as z12 } from "zod";
 init_logger();
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
+import { readFileSync as readFileSync4 } from "fs";
 import { setTimeout as setTimeout2, clearTimeout } from "timers";
 import { pathToFileURL } from "url";
 import { delimiter as delimiter2, join as join5 } from "path";
 init_cli_executor();
+init_package_paths();
+var cachedVersion;
+function getServerVersion() {
+  if (cachedVersion) return cachedVersion;
+  try {
+    const pkgPath = join5(getPackageRootDir(), "package.json");
+    const pkg = JSON.parse(readFileSync4(pkgPath, "utf8"));
+    cachedVersion = pkg.version || "0.0.0";
+    return cachedVersion;
+  } catch (error) {
+    logger.error(`Failed to read package version: ${error}`);
+    return "0.0.0";
+  }
+}
 var CodeQLLanguageServer = class extends EventEmitter {
   constructor(_options = {}) {
     super();
@@ -4682,7 +4703,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       processId: process.pid,
       clientInfo: {
         name: "codeql-development-mcp-server",
-        version: "2.23.9"
+        version: getServerVersion()
       },
       capabilities: {
         textDocument: {
@@ -5000,11 +5021,11 @@ var codeqlPackLsTool = {
 init_cli_executor();
 init_logger();
 import { z as z15 } from "zod";
-import { writeFileSync as writeFileSync3, readFileSync as readFileSync4, existsSync as existsSync6 } from "fs";
+import { writeFileSync as writeFileSync3, readFileSync as readFileSync5, existsSync as existsSync6 } from "fs";
 import { join as join7, dirname as dirname6, basename as basename4 } from "path";
 import { mkdirSync as mkdirSync5 } from "fs";
 function parseEvaluatorLog(logPath) {
-  const logContent = readFileSync4(logPath, "utf-8");
+  const logContent = readFileSync5(logPath, "utf-8");
   const jsonObjects = logContent.split("\n\n").filter((s) => s.trim());
   const events = jsonObjects.map((obj) => {
     try {
@@ -5953,35 +5974,35 @@ function registerCodeQLTools(server) {
 }
 
 // src/lib/resources.ts
-import { readFileSync as readFileSync5 } from "fs";
+import { readFileSync as readFileSync6 } from "fs";
 import { join as join10, dirname as dirname7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = dirname7(__filename2);
 function getGettingStartedGuide() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/getting-started.md"), "utf-8");
+    return readFileSync6(join10(__dirname2, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/query-basics.md"), "utf-8");
+    return readFileSync6(join10(__dirname2, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/security-templates.md"), "utf-8");
+    return readFileSync6(join10(__dirname2, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync6(join10(__dirname2, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -6068,7 +6089,7 @@ function registerCodeQLResources(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync6, existsSync as existsSync7 } from "fs";
+import { readFileSync as readFileSync7, existsSync as existsSync7 } from "fs";
 import { join as join11 } from "path";
 
 // src/types/language-types.ts
@@ -6134,7 +6155,7 @@ function loadResourceContent(relativePath) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync6(fullPath, "utf-8");
+    return readFileSync7(fullPath, "utf-8");
   } catch (error) {
     logger.error(`Error loading resource file ${relativePath}:`, error);
     return null;
@@ -6260,7 +6281,7 @@ import { z as z32 } from "zod";
 import { basename as basename5 } from "path";
 
 // src/prompts/prompt-loader.ts
-import { readFileSync as readFileSync7 } from "fs";
+import { readFileSync as readFileSync8 } from "fs";
 import { join as join12, dirname as dirname8 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 var __filename3 = fileURLToPath3(import.meta.url);
@@ -6268,7 +6289,7 @@ var __dirname3 = dirname8(__filename3);
 function loadPromptTemplate(promptFileName) {
   try {
     const promptPath = join12(__dirname3, promptFileName);
-    return readFileSync7(promptPath, "utf-8");
+    return readFileSync8(promptPath, "utf-8");
   } catch (error) {
     return `Prompt template '${promptFileName}' not available: ${error instanceof Error ? error.message : "Unknown error"}`;
   }
@@ -6711,7 +6732,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync8, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { readFileSync as readFileSync9, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -6724,7 +6745,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync8(this.#filename, "utf-8");
+      data = readFileSync9(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -6773,7 +6794,6 @@ var JSONFileSync = class extends DataFileSync {
 };
 
 // src/lib/session-data-manager.ts
-init_package_paths();
 import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync6 } from "fs";
 import { join as join13 } from "path";
 import { randomUUID } from "crypto";
@@ -7197,7 +7217,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getPackageRootDir(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 

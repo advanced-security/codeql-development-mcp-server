@@ -5,12 +5,14 @@
 
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { readFileSync } from 'fs';
 import { setTimeout, clearTimeout } from 'timers';
 import { pathToFileURL } from 'url';
 import { delimiter, join } from 'path';
 import { logger } from '../utils/logger';
 import { getProjectTmpDir } from '../utils/temp-dir';
 import { getResolvedCodeQLDir } from './cli-executor';
+import { getPackageRootDir } from '../utils/package-paths';
 
 export interface LSPMessage {
   jsonrpc: '2.0';
@@ -47,6 +49,25 @@ export interface LanguageServerOptions {
   loglevel?: 'OFF' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE' | 'ALL';
   synchronous?: boolean;
   verbosity?: 'errors' | 'warnings' | 'progress' | 'progress+' | 'progress++' | 'progress+++';
+}
+
+/**
+ * Get the server version from package.json.
+ * This is cached after the first read to avoid repeated file I/O.
+ */
+let cachedVersion: string | undefined;
+function getServerVersion(): string {
+  if (cachedVersion) return cachedVersion;
+  
+  try {
+    const pkgPath = join(getPackageRootDir(), 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    cachedVersion = pkg.version || '0.0.0';
+    return cachedVersion;
+  } catch (error) {
+    logger.error(`Failed to read package version: ${error}`);
+    return '0.0.0';
+  }
 }
 
 export class CodeQLLanguageServer extends EventEmitter {
@@ -243,7 +264,7 @@ export class CodeQLLanguageServer extends EventEmitter {
       processId: process.pid,
       clientInfo: {
         name: 'codeql-development-mcp-server',
-        version: '2.23.9'
+        version: getServerVersion()
       },
       capabilities: {
         textDocument: {

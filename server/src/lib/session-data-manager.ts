@@ -8,7 +8,7 @@ import { JSONFileSync } from 'lowdb/node';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import { getPackageRootDir } from '../utils/package-paths';
+import { getProjectTmpBase } from '../utils/temp-dir';
 import {
   QueryDevelopmentSession,
   QueryState,
@@ -402,7 +402,8 @@ function parseBoolEnv(envVar: string | undefined, defaultValue: boolean): boolea
 }
 
 // Export singleton instance with environment variable support
+// Defaults to <tmpBase>/.ql-mcp-tracking to avoid writing into npm install dirs
 export const sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join(getPackageRootDir(), '.ql-mcp-tracking'),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join(getProjectTmpBase(), '.ql-mcp-tracking'),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false),
 });

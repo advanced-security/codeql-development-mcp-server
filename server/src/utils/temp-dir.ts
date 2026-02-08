@@ -1,10 +1,13 @@
 /**
  * Secure project-local temporary directory utilities.
  *
- * All temporary files are created under `<packageRoot>/.tmp/` which is
- * `.gitignore`d.  This avoids writing to the OS temp directory
- * (`os.tmpdir()` / `/tmp`), which is world-readable and triggers
- * CWE-377 / CWE-378 (js/insecure-temporary-file).
+ * All temporary files are created under `<packageRoot>/.tmp/` (or a location
+ * specified by `CODEQL_MCP_TMP_DIR`) which is `.gitignore`d. This avoids
+ * writing to the OS temp directory (`os.tmpdir()` / `/tmp`), which is
+ * world-readable and triggers CWE-377 / CWE-378 (js/insecure-temporary-file).
+ *
+ * For npm-installed packages where the package root may be read-only, set
+ * `CODEQL_MCP_TMP_DIR` to a writable location (e.g., user home directory).
  */
 
 import { mkdirSync, mkdtempSync } from 'fs';
@@ -13,9 +16,12 @@ import { getPackageRootDir } from './package-paths';
 
 /**
  * Base directory for all project-local temporary data.
- * Stored under `<packageRoot>/.tmp` and excluded from version control.
+ * 
+ * Defaults to `<packageRoot>/.tmp` but can be overridden via the
+ * `CODEQL_MCP_TMP_DIR` environment variable for npm-installed/global packages
+ * where the package root may be read-only.
  */
-const PROJECT_TMP_BASE = join(getPackageRootDir(), '.tmp');
+const PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR || join(getPackageRootDir(), '.tmp');
 
 /**
  * Return the project-local `.tmp` base directory, creating it if needed.
