@@ -2,7 +2,7 @@
 name: ql-mcp-tool-developer
 description: An agent for developing new tools and/or improving existing tools for the QL MCP Server.
 argument-hint: 'Provide the name(s) of the CodeQL Development MCP Server tool(s) to be created or improved, along with specific requirements where available.'
-model: Claude Opus 4.5 (copilot)
+model: Claude Opus 4.6 (1M context) (copilot)
 handoffs:
   - label: Test the CodeQL MCP Server tools via workshop
     agent: ql-mcp-tool-tester
@@ -38,7 +38,7 @@ My `ql-mcp-tool-developer` agent:
   - Runs unit tests: `npm test --workspace=server`.
   - Runs integration tests: `client/scripts/run-integration-tests.sh`.
   - Manually validates tools using: `client/src/ql-mcp-client.js`.
-  - Verifies server startup/shutdown: `server/dist/ql-mcp-server.js`.
+  - Verifies server startup/shutdown: `server/dist/codeql-development-mcp-server.js`.
 - Maintains server documentation:
   - Keeps `server/QL-MCP-SERVER.md` synchronized with tool changes.
   - Updates the mermaid architecture diagram for structural changes.

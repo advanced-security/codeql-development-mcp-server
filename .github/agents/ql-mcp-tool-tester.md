@@ -2,7 +2,7 @@
 name: ql-mcp-tool-tester
 description: An agent for testing and validating tools for the latest QL Development MCP Server.
 argument-hint: 'Provide the name(s) of the CodeQL Development MCP Server tool(s) to be tested and validated, along with specific testing requirements, where available.'
-model: Claude Opus 4.5 (copilot)
+model: Claude Opus 4.6 (1M context) (copilot)
 ---
 
 # `ql-mcp-tool-tester` Agent

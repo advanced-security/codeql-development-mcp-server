@@ -55,13 +55,23 @@ Please note that this project is released with a [Contributor Code of Conduct](C
 
 ## Quick Start
 
-### Download and Install
+### Install via npm (recommended)
 
-1. Download the latest release from [GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
-2. Extract the archive:
+No repository clone needed — install from [GitHub Packages](https://github.com/advanced-security/codeql-development-mcp-server/pkgs/npm/codeql-development-mcp-server):
 
 ```bash
-unzip codeql-development-mcp-server-vX.X.X.zip -d /path/to/destination
+# One-time: route @advanced-security scope to GitHub Packages and authenticate
+npm config set @advanced-security:registry https://npm.pkg.github.com
+npm login --registry=https://npm.pkg.github.com
+
+# Install globally
+npm install -g @advanced-security/codeql-development-mcp-server
+```
+
+Or run on-demand without installing globally:
+
+```bash
+npx -y @advanced-security/codeql-development-mcp-server
 ```
 
 ### VS Code Configuration
@@ -77,13 +87,22 @@ Add to your `mcp.json` file:
 ```json
 {
   "servers": {
-    "codeql-dev-mcp-server": {
-      "command": "node",
-      "args": ["/path/to/destination/server/dist/ql-mcp-server.js"],
+    "ql-mcp": {
+      "command": "npx",
+      "args": ["-y", "@advanced-security/codeql-development-mcp-server"],
       "type": "stdio"
     }
   }
 }
+```
+
+### Install from GitHub Release archive
+
+1. Download the latest release from [GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
+2. Extract the archive:
+
+```bash
+tar -xzf codeql-development-mcp-server-vX.X.X.tar.gz -C /path/to/destination
 ```
 
 ### Installing from Source
@@ -99,7 +118,7 @@ npm install && npm run build
 1. Restart VS Code
 2. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 3. Run "GitHub Copilot: List MCP Servers"
-4. Confirm `codeql-dev-mcp-server` appears
+4. Confirm `ql-mcp` appears
 
 ## Supported Languages
 
@@ -117,6 +136,7 @@ npm install && npm run build
 
 ## Documentation
 
+- [Public Installation Guide](docs/public.md) - Install and run without cloning the repository
 - [Getting Started Guide](docs/getting-started.md) - Detailed installation and setup instructions
 - [Tools Reference](docs/tools-reference.md) - Complete list of available MCP tools and usage examples
 

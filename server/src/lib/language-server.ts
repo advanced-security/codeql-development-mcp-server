@@ -7,9 +7,10 @@ import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { setTimeout, clearTimeout } from 'timers';
 import { pathToFileURL } from 'url';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import { logger } from '../utils/logger';
 import { getProjectTmpDir } from '../utils/temp-dir';
+import { getResolvedCodeQLDir } from './cli-executor';
 
 export interface LSPMessage {
   jsonrpc: '2.0';
@@ -88,8 +89,19 @@ export class CodeQLLanguageServer extends EventEmitter {
       args.push(`--verbosity=${this._options.verbosity}`);
     }
 
+    // Build environment with CODEQL_PATH directory prepended to PATH
+    // (mirrors the approach in cli-executor.ts getSafeEnvironment).
+    const spawnEnv = { ...process.env };
+    const codeqlDir = getResolvedCodeQLDir();
+    if (codeqlDir && spawnEnv.PATH) {
+      spawnEnv.PATH = `${codeqlDir}${delimiter}${spawnEnv.PATH}`;
+    } else if (codeqlDir) {
+      spawnEnv.PATH = codeqlDir;
+    }
+
     this.server = spawn('codeql', args, {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: spawnEnv
     });
 
     this.server.stderr?.on('data', (data) => {
@@ -230,8 +242,8 @@ export class CodeQLLanguageServer extends EventEmitter {
     const initParams = {
       processId: process.pid,
       clientInfo: {
-        name: 'codeql-mcp-server',
-        version: '1.0.0'
+        name: 'codeql-development-mcp-server',
+        version: '2.23.9'
       },
       capabilities: {
         textDocument: {

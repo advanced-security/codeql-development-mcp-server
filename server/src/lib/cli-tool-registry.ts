@@ -8,22 +8,10 @@ import { executeCodeQLCommand, executeQLTCommand, CLIExecutionResult } from './c
 import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
+import { packageRootDir, resolveToolQueryPackPath, workspaceRootDir } from '../utils/package-paths';
 import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
-import { basename, dirname, join, resolve } from 'path';
+import { basename, dirname, isAbsolute, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// Calculate the repository root directory
-// When running from source: server/src/lib/ -> go up 3 levels to repo root
-// When running from bundle: server/dist/ -> go up 2 levels to repo root
-// The bundled file flattens the structure, so we detect based on path
-// Normalize path separators for cross-platform compatibility (Windows uses '\', Unix uses '/')
-const normalizedDir = __dirname.replace(/\\/g, '/');
-const repoRootDir = normalizedDir.includes('src/lib')
-  ? resolve(__dirname, '..', '..', '..')  // From source: server/src/lib -> repo root
-  : resolve(__dirname, '..', '..');        // From bundle: server/dist -> repo root
 
 export type { CLIExecutionResult } from './cli-executor';
 
@@ -226,16 +214,20 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           case 'codeql_test_extract':
           case 'codeql_test_run':
           case 'codeql_resolve_tests':
-            // Handle tests parameter as positional arguments for test tools
+            // Handle tests parameter as positional arguments for test tools.
+            // Resolve relative paths against workspaceRootDir since the MCP
+            // server's cwd may not be the repo root.
             if (tests && Array.isArray(tests)) {
-              positionalArgs = [...positionalArgs, ...tests as string[]];
+              positionalArgs = [...positionalArgs, ...(tests as string[]).map(
+                t => isAbsolute(t) ? t : resolve(workspaceRootDir, t)
+              )];
             }
             break;
             
           case 'codeql_query_run': {
             // Resolve database path to absolute path if it's relative
             if (options.database && typeof options.database === 'string' && !options.database.startsWith('/')) {
-              options.database = resolve(repoRootDir, options.database);
+              options.database = resolve(workspaceRootDir, options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
             
@@ -391,14 +383,19 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         let result: CLIExecutionResult;
         
         if (command === 'codeql') {
-          // For pack commands, set the working directory to where qlpack.yml is located
+          // For pack commands, set the working directory to where qlpack.yml is located.
+          // Resolve to absolute path since the MCP server's cwd may differ from
+          // the workspace root (especially when launched by VS Code).
           let cwd: string | undefined;
           if ((name === 'codeql_pack_install' || name === 'codeql_pack_ls') && (dir || packDir)) {
-            cwd = (dir || packDir) as string;
+            const rawCwd = (dir || packDir) as string;
+            // Resolve relative paths against the workspace root, not process.cwd(),
+            // since the MCP server's cwd may differ (especially in VS Code).
+            cwd = isAbsolute(rawCwd) ? rawCwd : resolve(workspaceRootDir, rawCwd);
           }
           
           // Add --additional-packs for commands that need to access local test packs
-          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || 'server/ql/javascript/examples/';
+          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || resolve(packageRootDir, 'ql', 'javascript', 'examples');
           if (name === 'codeql_test_run' || name === 'codeql_query_run' || name === 'codeql_query_compile') {
             options['additional-packs'] = additionalPacksPath;
           }
@@ -610,7 +607,7 @@ async function resolveQueryPath(
   
   try {
     // Determine the query pack path - use absolute path to ensure it works regardless of cwd
-    const defaultPackPath = resolve(repoRootDir, 'server', 'ql', queryLanguage as string, 'tools', 'src');
+    const defaultPackPath = resolveToolQueryPackPath(queryLanguage as string);
     const packPath = queryPack as string || defaultPackPath;
     
     logger.info(`Resolving query: ${queryName} for language: ${queryLanguage} in pack: ${packPath}`);

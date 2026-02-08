@@ -14,24 +14,25 @@ The server can run in two modes:
 **STDIO Mode (recommended for VS Code):**
 
 ```bash
-node dist/ql-mcp-server.js
+node dist/codeql-development-mcp-server.js
 ```
 
 **HTTP Mode (for debugging):**
 
 ```bash
-TRANSPORT_MODE=http node dist/ql-mcp-server.js
+TRANSPORT_MODE=http node dist/codeql-development-mcp-server.js
 ```
 
 ### Configuration
 
 Configure the server using environment variables:
 
-| Variable         | Description                      | Default |
-| ---------------- | -------------------------------- | ------- |
-| `TRANSPORT_MODE` | `stdio` or `http`                | `stdio` |
-| `PORT`           | HTTP port (when using HTTP mode) | `3000`  |
-| `DEBUG`          | Enable debug logging             | `false` |
+| Variable         | Description                            | Default  |
+| ---------------- | -------------------------------------- | -------- |
+| `CODEQL_PATH`    | Absolute path to the CodeQL CLI binary | `codeql` |
+| `TRANSPORT_MODE` | `stdio` or `http`                      | `stdio`  |
+| `HTTP_PORT`      | HTTP port (when using HTTP mode)       | `3000`   |
+| `DEBUG`          | Enable debug logging                   | `false`  |
 
 ## Subproject Structure
 
@@ -40,30 +41,28 @@ The `server` subproject is structured as follows:
 ```text
 server/
 ├── dist/                    # Base directory for compiled output
-│   ├── ql-mcp-server.js     # Compiled, bundled MCP server entry point
-│   └── ql-mcp-server.js.map # Source map for the bundled MCP server
+│   ├── codeql-development-mcp-server.js     # Compiled, bundled MCP server entry point
+│   └── codeql-development-mcp-server.js.map # Source map for the bundled MCP server
 ├── src/                     # TypeScript source library code
-│   ├── ql-mcp-server.ts     # MCP server entry point
+│   ├── codeql-development-mcp-server.ts     # MCP server entry point
 │   ├── lib/                 # Core library code
 │   ├── tools/               # Implementation of MCP tools
 ├── test/                    # Base directory for tests
 │   ├── src/                 # Base directory for test source files
 │   │   ├── lib/             # Test files for core library code
 │   │   ├── tools/           # Test files for MCP tools
-├── .eslintrc.json           # ESLint configuration
-├── .prettierrc              # Prettier configuration
-├── esbuild.config.mjs       # esbuild configuration for bundling
+├── eslint.config.mjs        # ESLint configuration
+├── esbuild.config.js        # esbuild configuration for bundling
 ├── package.json             # NPM package configuration
 ├── tsconfig.json            # TypeScript configuration
-├── README.md                # This README file
-└── QL-MCP-SERVER.md         # Documentation of MCP server primitives
+└── README.md                # This README file
 ```
 
 ## Troubleshooting
 
 ### Server Won't Start
 
-1. **Check Node.js version**: The server requires Node.js v25.2.1 or later
+1. **Check Node.js version**: The server requires Node.js v22.0.0 or later
 
    ```bash
    node --version
@@ -72,7 +71,7 @@ server/
 2. **Verify the entry point exists**:
 
    ```bash
-   ls dist/ql-mcp-server.js
+   ls dist/codeql-development-mcp-server.js
    ```
 
 3. **Check for missing dependencies**: If using the distributed package, ensure `node_modules` is present
@@ -85,7 +84,7 @@ server/
    codeql --version
    ```
 
-2. **Check CodeQL is in PATH**: The server expects `codeql` to be available in the system PATH
+2. **Check CodeQL is in PATH**: The server expects `codeql` to be available in the system PATH, or set `CODEQL_PATH` to the absolute path of the CodeQL CLI binary
 
 3. **Ensure you have a valid database**: Most query tools require a CodeQL database
 
@@ -100,7 +99,7 @@ server/
 2. **Try a different port**:
 
    ```bash
-   TRANSPORT_MODE=http PORT=8080 node dist/ql-mcp-server.js
+   TRANSPORT_MODE=http HTTP_PORT=8080 node dist/codeql-development-mcp-server.js
    ```
 
 ### VS Code Integration Issues

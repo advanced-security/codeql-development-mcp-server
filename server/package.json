@@ -1,12 +1,30 @@
 {
-  "name": "codeql-development-mcp-server",
+  "name": "@advanced-security/codeql-development-mcp-server",
   "version": "2.23.9",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
-  "main": "dist/ql-mcp-server.js",
-  "types": "dist/ql-mcp-server.d.ts",
+  "main": "dist/codeql-development-mcp-server.js",
+  "types": "dist/codeql-development-mcp-server.d.ts",
   "type": "module",
   "bin": {
-    "codeql-mcp-server": "./dist/ql-mcp-server.js"
+    "codeql-development-mcp-server": "./dist/codeql-development-mcp-server.js"
+  },
+  "files": [
+    "dist/",
+    "ql/actions/tools/src/",
+    "ql/cpp/tools/src/",
+    "ql/csharp/tools/src/",
+    "ql/go/tools/src/",
+    "ql/java/tools/src/",
+    "ql/javascript/tools/src/",
+    "ql/python/tools/src/",
+    "ql/ruby/tools/src/",
+    "ql/swift/tools/src/",
+    "package.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "codeql",
@@ -22,9 +40,18 @@
   ],
   "author": "@github/ps-codeql",
   "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/advanced-security/codeql-development-mcp-server.git",
+    "directory": "server"
+  },
+  "homepage": "https://github.com/advanced-security/codeql-development-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
+  },
   "engines": {
-    "node": ">=25.2.1",
-    "npm": ">=11.6.2"
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -56,12 +83,12 @@
     "build:all": "npm run build && npm run test:ql:fail-fast",
     "bundle": "node esbuild.config.js",
     "clean": "rm -rf dist",
-    "dev:stdio": "npm run build && TRANSPORT_MODE=stdio node dist/ql-mcp-server.js",
-    "dev:http": "npm run build && TRANSPORT_MODE=http node dist/ql-mcp-server.js",
+    "dev:stdio": "npm run build && TRANSPORT_MODE=stdio node dist/codeql-development-mcp-server.js",
+    "dev:http": "npm run build && TRANSPORT_MODE=http node dist/codeql-development-mcp-server.js",
     "format": "prettier --write 'src/**/*.ts'",
     "lint": "eslint src test --ext .ts",
     "lint:fix": "eslint src test --ext .ts --fix",
-    "start": "npm run build && node dist/ql-mcp-server.js",
+    "start": "npm run build && node dist/codeql-development-mcp-server.js",
     "test": "npm run build && npm run test:ts:coverage",
     "test:coverage": "npm run test:ts:coverage",
     "test:ql": "./scripts/run-query-unit-tests.sh",

@@ -16,19 +16,29 @@ import { registerLanguageResources } from './resources/language-resources';
 import { registerWorkflowPrompts } from './prompts/workflow-prompts';
 import { registerMonitoringTools } from './tools/monitoring-tools';
 import { sessionDataManager } from './lib/session-data-manager';
+import { resolveCodeQLBinary } from './lib/cli-executor';
+import { packageRootDir } from './utils/package-paths';
 import { logger } from './utils/logger';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from a .env file co-located with the package root.
+// Uses the package directory (not CWD) so that npm-installed users don't
+// accidentally inherit a .env from their project.
+dotenv.config({ path: resolve(packageRootDir, '.env') });
 
 const PACKAGE_NAME = 'codeql-development-mcp-server';
-const VERSION = '1.0.0';
+const VERSION = '2.23.9';
 
 /**
  * Start the MCP server
  */
 export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<McpServer> {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
+
+  // Resolve the CodeQL CLI binary path (honors CODEQL_PATH env var).
+  // This must happen before any tool registration so that all CodeQL commands
+  // use the user-specified binary.
+  const codeqlBinary = resolveCodeQLBinary();
+  logger.info(`CodeQL CLI binary: ${codeqlBinary}`);
 
   const server = new McpServer({
     name: PACKAGE_NAME,

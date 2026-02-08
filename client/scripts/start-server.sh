@@ -41,7 +41,7 @@ HTTP_HOST="$HTTP_HOST" \
 HTTP_PORT="$HTTP_PORT" \
 TRANSPORT_MODE="$TRANSPORT_MODE" \
 ENABLE_MONITORING_TOOLS="$ENABLE_MONITORING_TOOLS" \
-node server/dist/ql-mcp-server.js > "$CLIENT_DIR/server.log" 2>&1 &
+node server/dist/codeql-development-mcp-server.js > "$CLIENT_DIR/server.log" 2>&1 &
 
 SERVER_PID=$!
 echo $SERVER_PID > "$CLIENT_DIR/server.pid"

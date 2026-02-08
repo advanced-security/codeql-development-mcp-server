@@ -4,18 +4,16 @@
 
 import { describe, it, expect, afterAll } from 'vitest';
 import { existsSync, rmSync, statSync } from 'fs';
-import { dirname, resolve, sep } from 'path';
-import { fileURLToPath } from 'url';
+import { resolve, sep } from 'path';
 import {
   createProjectTempDir,
   getProjectTmpBase,
   getProjectTmpDir,
 } from '../../../src/utils/temp-dir';
+import { getPackageRootDir } from '../../../src/utils/package-paths';
 
-// Compute expected base from repo root (server/test/src/utils -> 4 levels up, then .tmp)
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(__dirname, '..', '..', '..', '..');
-const expectedBase = resolve(repoRoot, '.tmp');
+// Expected base: <packageRoot>/.tmp (packageRoot = server/ in monorepo)
+const expectedBase = resolve(getPackageRootDir(), '.tmp');
 
 // Collect directories created during tests for cleanup
 const dirsToCleanup: string[] = [];

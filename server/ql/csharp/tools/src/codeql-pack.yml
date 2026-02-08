@@ -1,5 +1,6 @@
-name: ql-mcp-csharp-tools-src
+name: advanced-security/ql-mcp-csharp-tools-src
 version: 2.23.9
+description: 'Queries for codeql-development-mcp-server tools for csharp language'
 library: false
 dependencies:
   codeql/csharp-all: 5.4.4

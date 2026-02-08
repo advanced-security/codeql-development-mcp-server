@@ -19,7 +19,7 @@ body:
 
         1. **Repository Context**: Begin by reading these critical reference files:
            - **Repository Structure**: `README.md` - Overview of MCP server architecture and capabilities
-           - **Server Implementation**: `server/src/ql-mcp-server.ts` - Main server implementation
+           - **Server Implementation**: `server/src/codeql-development-mcp-server.ts` - Main server implementation
            - **Existing Tools**: `server/src/tools/codeql-tools.ts` - Current tool implementations
            - **Existing Resources**: `server/src/tools/codeql-resources.ts` - Current resource implementations
 

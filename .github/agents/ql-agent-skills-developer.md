@@ -2,7 +2,7 @@
 name: ql-agent-skills-developer
 description: Develops and improves Agent Skills for the CodeQL Development MCP Server.
 argument-hint: 'Provide the name(s) of the Agent Skill(s) to be created or improved under the .github/skills/ directory, along with specific requirements where available.'
-model: Claude Opus 4.5 (copilot)
+model: Claude Opus 4.6 (1M context) (copilot)
 handoffs:
   - label: Validate a newly created workshop
     agent: ql-mcp-tool-tester

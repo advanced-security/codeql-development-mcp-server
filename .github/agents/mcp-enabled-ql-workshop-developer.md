@@ -1,7 +1,7 @@
 ---
 name: mcp-enabled-ql-workshop-developer
 description: An agent that creates CodeQL query development workshops from production queries using the QL MCP Server tools. Use this agent to generate guided learning materials that teach developers how to build CodeQL queries incrementally.
-model: Claude Opus 4.5 (copilot)
+model: Claude Opus 4.6 (1M context) (copilot)
 handoffs:
   - agent: ql-mcp-tool-tester
     label: Validate Solution Stage
@@ -35,7 +35,7 @@ My `mcp-enabled-ql-workshop-developer` agent:
 
 ## Core Capabilities
 
-- Uses the QL MCP Server tools (`codeql-dev-mcp-server/*`) to create comprehensive CodeQL query development workshops.
+- Uses the QL MCP Server tools (`ql-mcp/*`) to create comprehensive CodeQL query development workshops.
 - Follows the [`create-codeql-query-development-workshop`](../skills/create-codeql-query-development-workshop/SKILL.md) skill to generate workshops from production-grade queries.
 - Validates AST/CFG tools queries using the [`validate-ql-mcp-server-tools-queries`](../skills/validate-ql-mcp-server-tools-queries/SKILL.md) skill to ensure non-empty output.
 - Leverages the `codeql` CLI for all CodeQL operations.

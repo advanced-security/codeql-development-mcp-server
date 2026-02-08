@@ -16,17 +16,17 @@ var init_logger = __esm({
     "use strict";
     logger = {
       info: (message, ...args) => {
-        console.log(`[INFO] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
+        console.error(`[INFO] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
       },
       error: (message, ...args) => {
         console.error(`[ERROR] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
       },
       warn: (message, ...args) => {
-        console.warn(`[WARN] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
+        console.error(`[WARN] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
       },
       debug: (message, ...args) => {
         if (process.env.DEBUG) {
-          console.debug(`[DEBUG] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
+          console.error(`[DEBUG] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
         }
       }
     };
@@ -44,11 +44,16 @@ __export(cli_executor_exports, {
   executeCodeQLCommand: () => executeCodeQLCommand,
   executeQLTCommand: () => executeQLTCommand,
   getCommandHelp: () => getCommandHelp,
+  getResolvedCodeQLDir: () => getResolvedCodeQLDir,
+  resetResolvedCodeQLBinary: () => resetResolvedCodeQLBinary,
+  resolveCodeQLBinary: () => resolveCodeQLBinary,
   sanitizeCLIArgument: () => sanitizeCLIArgument,
   sanitizeCLIArguments: () => sanitizeCLIArguments,
   validateCommandExists: () => validateCommandExists
 });
 import { execFile } from "child_process";
+import { existsSync } from "fs";
+import { basename, delimiter, dirname, isAbsolute } from "path";
 import { promisify } from "util";
 function enableTestCommands() {
   testCommands = /* @__PURE__ */ new Set([
@@ -64,6 +69,39 @@ function disableTestCommands() {
 }
 function isCommandAllowed(command) {
   return ALLOWED_COMMANDS.has(command) || testCommands !== null && testCommands.has(command);
+}
+function resolveCodeQLBinary() {
+  const envPath = process.env.CODEQL_PATH;
+  if (!envPath) {
+    resolvedCodeQLDir = null;
+    return "codeql";
+  }
+  const base = basename(envPath).toLowerCase();
+  const validBaseNames = ["codeql", "codeql.exe", "codeql.cmd"];
+  if (!validBaseNames.includes(base)) {
+    throw new Error(
+      `CODEQL_PATH must point to a CodeQL CLI binary (expected basename: codeql), got: ${base}`
+    );
+  }
+  if (!isAbsolute(envPath)) {
+    throw new Error(
+      `CODEQL_PATH must be an absolute path, got: ${envPath}`
+    );
+  }
+  if (!existsSync(envPath)) {
+    throw new Error(
+      `CODEQL_PATH points to a file that does not exist: ${envPath}`
+    );
+  }
+  resolvedCodeQLDir = dirname(envPath);
+  logger.info(`CodeQL CLI resolved via CODEQL_PATH: ${envPath} (dir: ${resolvedCodeQLDir})`);
+  return envPath;
+}
+function getResolvedCodeQLDir() {
+  return resolvedCodeQLDir;
+}
+function resetResolvedCodeQLBinary() {
+  resolvedCodeQLDir = null;
 }
 function sanitizeCLIArgument(arg) {
   if (arg.includes("\0")) {
@@ -88,6 +126,11 @@ function getSafeEnvironment(additionalEnv) {
     if (value !== void 0 && SAFE_ENV_PREFIXES.some((prefix) => key.startsWith(prefix))) {
       safeEnv[key] = value;
     }
+  }
+  if (resolvedCodeQLDir && safeEnv.PATH) {
+    safeEnv.PATH = `${resolvedCodeQLDir}${delimiter}${safeEnv.PATH}`;
+  } else if (resolvedCodeQLDir) {
+    safeEnv.PATH = resolvedCodeQLDir;
   }
   if (additionalEnv) {
     Object.assign(safeEnv, additionalEnv);
@@ -217,7 +260,7 @@ async function validateCommandExists(command) {
     return false;
   }
 }
-var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS;
+var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir;
 var init_cli_executor = __esm({
   "src/lib/cli-executor.ts"() {
     "use strict";
@@ -265,10 +308,60 @@ var init_cli_executor = __esm({
       // Node.js-specific variables (for npm, etc.)
     ];
     DANGEROUS_CONTROL_CHARS = /[\x01-\x08\x0B\x0C\x0E-\x1F]/;
+    resolvedCodeQLDir = null;
   }
 });
 
-// src/ql-mcp-server.ts
+// src/utils/package-paths.ts
+var package_paths_exports = {};
+__export(package_paths_exports, {
+  getPackageRootDir: () => getPackageRootDir,
+  getWorkspaceRootDir: () => getWorkspaceRootDir,
+  packageRootDir: () => packageRootDir,
+  resolveToolQueryPackPath: () => resolveToolQueryPackPath,
+  workspaceRootDir: () => workspaceRootDir
+});
+import { dirname as dirname3, resolve } from "path";
+import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
+import { fileURLToPath } from "url";
+function isRunningFromSource(dir) {
+  const normalized = dir.replace(/\\/g, "/");
+  return normalized.includes("/src/");
+}
+function getPackageRootDir(currentDir = __dirname) {
+  return isRunningFromSource(currentDir) ? resolve(currentDir, "..", "..") : resolve(currentDir, "..");
+}
+function getWorkspaceRootDir(packageRoot) {
+  const pkgRoot = packageRoot ?? getPackageRootDir();
+  const parentDir = resolve(pkgRoot, "..");
+  try {
+    const parentPkgPath = resolve(parentDir, "package.json");
+    if (existsSync2(parentPkgPath)) {
+      const parentPkg = JSON.parse(readFileSync2(parentPkgPath, "utf8"));
+      if (parentPkg.workspaces) {
+        return parentDir;
+      }
+    }
+  } catch {
+  }
+  return pkgRoot;
+}
+function resolveToolQueryPackPath(language, packageRoot) {
+  const pkgRoot = packageRoot ?? getPackageRootDir();
+  return resolve(pkgRoot, "ql", language, "tools", "src");
+}
+var __filename, __dirname, packageRootDir, workspaceRootDir;
+var init_package_paths = __esm({
+  "src/utils/package-paths.ts"() {
+    "use strict";
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = dirname3(__filename);
+    packageRootDir = getPackageRootDir();
+    workspaceRootDir = getWorkspaceRootDir(packageRootDir);
+  }
+});
+
+// src/codeql-development-mcp-server.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -290,7 +383,7 @@ import { z } from "zod";
 init_cli_executor();
 init_logger();
 import { writeFileSync, readFileSync } from "fs";
-import { dirname, isAbsolute } from "path";
+import { dirname as dirname2, isAbsolute as isAbsolute2 } from "path";
 import { mkdirSync } from "fs";
 var BUILT_IN_EVALUATORS = {
   "json-decode": "JSON format decoder for query results",
@@ -333,7 +426,7 @@ async function evaluateWithJsonDecoder(bqrsPath, outputPath) {
       };
     }
     const defaultOutputPath = outputPath || bqrsPath.replace(".bqrs", ".json");
-    mkdirSync(dirname(defaultOutputPath), { recursive: true });
+    mkdirSync(dirname2(defaultOutputPath), { recursive: true });
     writeFileSync(defaultOutputPath, result.stdout);
     return {
       success: true,
@@ -361,7 +454,7 @@ async function evaluateWithCsvDecoder(bqrsPath, outputPath) {
       };
     }
     const defaultOutputPath = outputPath || bqrsPath.replace(".bqrs", ".csv");
-    mkdirSync(dirname(defaultOutputPath), { recursive: true });
+    mkdirSync(dirname2(defaultOutputPath), { recursive: true });
     writeFileSync(defaultOutputPath, result.stdout);
     return {
       success: true,
@@ -407,7 +500,7 @@ async function evaluateWithMermaidGraph(bqrsPath, queryPath, outputPath) {
     }
     const mermaidContent = generateMermaidFromGraphResults(queryResults, metadata);
     const defaultOutputPath = outputPath || bqrsPath.replace(".bqrs", ".md");
-    mkdirSync(dirname(defaultOutputPath), { recursive: true });
+    mkdirSync(dirname2(defaultOutputPath), { recursive: true });
     writeFileSync(defaultOutputPath, mermaidContent);
     return {
       success: true,
@@ -523,7 +616,7 @@ async function evaluateQueryResults(bqrsPath, queryPath, evaluationFunction, out
       case "mermaid-graph":
         return await evaluateWithMermaidGraph(bqrsPath, queryPath, outputPath);
       default:
-        if (isAbsolute(evalFunc)) {
+        if (isAbsolute2(evalFunc)) {
           return await evaluateWithCustomScript(bqrsPath, queryPath, evalFunc, outputPath);
         } else {
           return {
@@ -547,19 +640,15 @@ async function evaluateWithCustomScript(_bqrsPath, _queryPath, _scriptPath, _out
 }
 
 // src/lib/log-directory-manager.ts
-import { mkdirSync as mkdirSync3, existsSync } from "fs";
+import { mkdirSync as mkdirSync3, existsSync as existsSync3 } from "fs";
 import { join as join2, resolve as resolve2 } from "path";
 import { randomBytes } from "crypto";
 
 // src/utils/temp-dir.ts
+init_package_paths();
 import { mkdirSync as mkdirSync2, mkdtempSync } from "fs";
-import { dirname as dirname2, join, resolve } from "path";
-import { fileURLToPath } from "url";
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = dirname2(__filename);
-var normalizedDir = __dirname.split(/[\\/]/).join("/");
-var repoRoot = normalizedDir.includes("src/utils") ? resolve(__dirname, "..", "..", "..") : resolve(__dirname, "..", "..");
-var PROJECT_TMP_BASE = join(repoRoot, ".tmp");
+import { join } from "path";
+var PROJECT_TMP_BASE = join(getPackageRootDir(), ".tmp");
 function getProjectTmpBase() {
   mkdirSync2(PROJECT_TMP_BASE, { recursive: true });
   return PROJECT_TMP_BASE;
@@ -587,12 +676,12 @@ function getOrCreateLogDirectory(logDir) {
   const baseLogDir = process.env.CODEQL_QUERY_LOG_DIR || getProjectTmpDir("query-logs");
   if (logDir) {
     const absLogDir = ensurePathWithinBase(baseLogDir, logDir);
-    if (!existsSync(absLogDir)) {
+    if (!existsSync3(absLogDir)) {
       mkdirSync3(absLogDir, { recursive: true });
     }
     return absLogDir;
   }
-  if (!existsSync(baseLogDir)) {
+  if (!existsSync3(baseLogDir)) {
     mkdirSync3(baseLogDir, { recursive: true });
   }
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
@@ -603,13 +692,9 @@ function getOrCreateLogDirectory(logDir) {
 }
 
 // src/lib/cli-tool-registry.ts
-import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync2, mkdirSync as mkdirSync4 } from "fs";
-import { basename, dirname as dirname3, join as join3, resolve as resolve3 } from "path";
-import { fileURLToPath as fileURLToPath2 } from "url";
-var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname2 = dirname3(__filename2);
-var normalizedDir2 = __dirname2.replace(/\\/g, "/");
-var repoRootDir = normalizedDir2.includes("src/lib") ? resolve3(__dirname2, "..", "..", "..") : resolve3(__dirname2, "..", "..");
+init_package_paths();
+import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync4 } from "fs";
+import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute3, join as join3, resolve as resolve3 } from "path";
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -754,12 +839,14 @@ function registerCLITool(server, definition) {
           case "codeql_test_run":
           case "codeql_resolve_tests":
             if (tests && Array.isArray(tests)) {
-              positionalArgs = [...positionalArgs, ...tests];
+              positionalArgs = [...positionalArgs, ...tests.map(
+                (t) => isAbsolute3(t) ? t : resolve3(workspaceRootDir, t)
+              )];
             }
             break;
           case "codeql_query_run": {
             if (options.database && typeof options.database === "string" && !options.database.startsWith("/")) {
-              options.database = resolve3(repoRootDir, options.database);
+              options.database = resolve3(workspaceRootDir, options.database);
               logger.info(`Resolved database path to: ${options.database}`);
             }
             const resolvedQuery = await resolveQueryPath(params, logger);
@@ -867,9 +954,10 @@ function registerCLITool(server, definition) {
         if (command === "codeql") {
           let cwd;
           if ((name === "codeql_pack_install" || name === "codeql_pack_ls") && (dir || packDir)) {
-            cwd = dir || packDir;
+            const rawCwd = dir || packDir;
+            cwd = isAbsolute3(rawCwd) ? rawCwd : resolve3(workspaceRootDir, rawCwd);
           }
-          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || "server/ql/javascript/examples/";
+          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || resolve3(packageRootDir, "ql", "javascript", "examples");
           if (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile") {
             options["additional-packs"] = additionalPacksPath;
           }
@@ -885,7 +973,7 @@ function registerCLITool(server, definition) {
         if (name === "codeql_query_run" && result.success && queryLogDir) {
           const bqrsPath = options.output;
           const sarifPath = join3(queryLogDir, "results.sarif");
-          if (existsSync2(bqrsPath)) {
+          if (existsSync4(bqrsPath)) {
             try {
               const sarifResult = await executeCodeQLCommand(
                 "bqrs interpret",
@@ -1001,7 +1089,7 @@ async function resolveQueryPath(params, logger2) {
     throw new Error("queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift");
   }
   try {
-    const defaultPackPath = resolve3(repoRootDir, "server", "ql", queryLanguage, "tools", "src");
+    const defaultPackPath = resolveToolQueryPackPath(queryLanguage);
     const packPath = queryPack || defaultPackPath;
     logger2.info(`Resolving query: ${queryName} for language: ${queryLanguage} in pack: ${packPath}`);
     const { executeCodeQLCommand: executeCodeQLCommand2 } = await Promise.resolve().then(() => (init_cli_executor(), cli_executor_exports));
@@ -1022,11 +1110,11 @@ async function resolveQueryPath(params, logger2) {
       throw new Error("Failed to parse resolve queries output");
     }
     const matchingQuery = resolvedQueries.find((queryPath) => {
-      const fileName = basename(queryPath);
+      const fileName = basename2(queryPath);
       return fileName === `${queryName}.ql`;
     });
     if (!matchingQuery) {
-      logger2.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map((q) => basename(q)));
+      logger2.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map((q) => basename2(q)));
       throw new Error(`Query "${queryName}.ql" not found in pack "${packPath}"`);
     }
     logger2.info(`Resolved query "${queryName}" to: ${matchingQuery}`);
@@ -1063,7 +1151,7 @@ async function interpretBQRSFile(bqrsPath, queryPath, format, outputPath, logger
         error: `Format '${format}' is only compatible with @kind graph queries, but this query has @kind ${metadata.kind}`
       };
     }
-    mkdirSync4(dirname3(outputPath), { recursive: true });
+    mkdirSync4(dirname4(outputPath), { recursive: true });
     const params = {
       format,
       output: outputPath,
@@ -4406,7 +4494,8 @@ import { spawn } from "child_process";
 import { EventEmitter } from "events";
 import { setTimeout as setTimeout2, clearTimeout } from "timers";
 import { pathToFileURL } from "url";
-import { join as join5 } from "path";
+import { delimiter as delimiter2, join as join5 } from "path";
+init_cli_executor();
 var CodeQLLanguageServer = class extends EventEmitter {
   constructor(_options = {}) {
     super();
@@ -4442,8 +4531,16 @@ var CodeQLLanguageServer = class extends EventEmitter {
     if (this._options.verbosity) {
       args.push(`--verbosity=${this._options.verbosity}`);
     }
+    const spawnEnv = { ...process.env };
+    const codeqlDir = getResolvedCodeQLDir();
+    if (codeqlDir && spawnEnv.PATH) {
+      spawnEnv.PATH = `${codeqlDir}${delimiter2}${spawnEnv.PATH}`;
+    } else if (codeqlDir) {
+      spawnEnv.PATH = codeqlDir;
+    }
     this.server = spawn("codeql", args, {
-      stdio: ["pipe", "pipe", "pipe"]
+      stdio: ["pipe", "pipe", "pipe"],
+      env: spawnEnv
     });
     this.server.stderr?.on("data", (data) => {
       logger.debug("CodeQL LS stderr:", data.toString());
@@ -4557,8 +4654,8 @@ var CodeQLLanguageServer = class extends EventEmitter {
     const initParams = {
       processId: process.pid,
       clientInfo: {
-        name: "codeql-mcp-server",
-        version: "1.0.0"
+        name: "codeql-development-mcp-server",
+        version: "2.23.9"
       },
       capabilities: {
         textDocument: {
@@ -4704,15 +4801,16 @@ async function getLanguageServer(options = {}) {
   if (globalLanguageServer && globalLanguageServer.isRunning()) {
     return globalLanguageServer;
   }
+  const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
   const defaultOptions = {
-    searchPath: resolve5(process.cwd(), "ql"),
+    searchPath: resolve5(pkgRoot, "ql"),
     loglevel: "WARN",
     ...options
   };
   globalLanguageServer = new CodeQLLanguageServer(defaultOptions);
   try {
     await globalLanguageServer.start();
-    const workspaceUri = pathToFileURL2(resolve5(process.cwd(), "ql")).href;
+    const workspaceUri = pathToFileURL2(resolve5(pkgRoot, "ql")).href;
     await globalLanguageServer.initialize(workspaceUri);
     logger.info("CodeQL Language Server started and initialized successfully");
     return globalLanguageServer;
@@ -4875,11 +4973,11 @@ var codeqlPackLsTool = {
 init_cli_executor();
 init_logger();
 import { z as z15 } from "zod";
-import { writeFileSync as writeFileSync3, readFileSync as readFileSync3, existsSync as existsSync4 } from "fs";
-import { join as join7, dirname as dirname5, basename as basename3 } from "path";
+import { writeFileSync as writeFileSync3, readFileSync as readFileSync4, existsSync as existsSync6 } from "fs";
+import { join as join7, dirname as dirname6, basename as basename4 } from "path";
 import { mkdirSync as mkdirSync5 } from "fs";
 function parseEvaluatorLog(logPath) {
-  const logContent = readFileSync3(logPath, "utf-8");
+  const logContent = readFileSync4(logPath, "utf-8");
   const jsonObjects = logContent.split("\n\n").filter((s) => s.trim());
   const events = jsonObjects.map((obj) => {
     try {
@@ -4965,7 +5063,7 @@ function formatAsMermaid(profile) {
   lines.push("```mermaid");
   lines.push("graph TD");
   lines.push("");
-  lines.push(`  QUERY["${basename3(profile.queryName)}<br/>Total: ${profile.totalDuration.toFixed(2)}ms"]`);
+  lines.push(`  QUERY["${basename4(profile.queryName)}<br/>Total: ${profile.totalDuration.toFixed(2)}ms"]`);
   lines.push("");
   profile.pipelines.forEach((pipeline) => {
     const nodeId = `P${pipeline.eventId}`;
@@ -5013,7 +5111,7 @@ function registerProfileCodeQLQueryTool(server) {
         let sarifPath;
         if (!logPath) {
           logger.info("No evaluator log provided, running query to generate one");
-          const defaultOutputDir = outputDir || join7(dirname5(query), "profile-output");
+          const defaultOutputDir = outputDir || join7(dirname6(query), "profile-output");
           mkdirSync5(defaultOutputDir, { recursive: true });
           logPath = join7(defaultOutputDir, "evaluator-log.jsonl");
           bqrsPath = join7(defaultOutputDir, "query-results.bqrs");
@@ -5040,7 +5138,7 @@ function registerProfileCodeQLQueryTool(server) {
               isError: true
             };
           }
-          if (existsSync4(bqrsPath)) {
+          if (existsSync6(bqrsPath)) {
             try {
               const sarifResult = await executeCodeQLCommand(
                 "bqrs interpret",
@@ -5055,7 +5153,7 @@ function registerProfileCodeQLQueryTool(server) {
             }
           }
         }
-        if (!existsSync4(logPath)) {
+        if (!existsSync6(logPath)) {
           return {
             content: [
               {
@@ -5068,7 +5166,7 @@ function registerProfileCodeQLQueryTool(server) {
         }
         logger.info(`Parsing evaluator log from: ${logPath}`);
         const profile = parseEvaluatorLog(logPath);
-        const profileOutputDir = outputDir || dirname5(logPath);
+        const profileOutputDir = outputDir || dirname6(logPath);
         mkdirSync5(profileOutputDir, { recursive: true });
         const jsonPath = join7(profileOutputDir, "query-evaluation-profile.json");
         const jsonContent = formatAsJson(profile);
@@ -5086,7 +5184,7 @@ function registerProfileCodeQLQueryTool(server) {
         if (bqrsPath) {
           outputFiles.push(`Query Results (BQRS): ${bqrsPath}`);
         }
-        if (sarifPath && existsSync4(sarifPath)) {
+        if (sarifPath && existsSync6(sarifPath)) {
           outputFiles.push(`Query Results (SARIF): ${sarifPath}`);
         }
         const responseText = [
@@ -5096,7 +5194,7 @@ function registerProfileCodeQLQueryTool(server) {
           ...outputFiles.map((f) => `  - ${f}`),
           "",
           "Profile Summary:",
-          `  - Query: ${basename3(profile.queryName)}`,
+          `  - Query: ${basename4(profile.queryName)}`,
           `  - Total Duration: ${profile.totalDuration.toFixed(2)} ms`,
           `  - Total Pipelines: ${profile.pipelines.length}`,
           `  - Total Events: ${profile.totalEvents}`,
@@ -5828,35 +5926,35 @@ function registerCodeQLTools(server) {
 }
 
 // src/lib/resources.ts
-import { readFileSync as readFileSync4 } from "fs";
-import { join as join10, dirname as dirname6 } from "path";
-import { fileURLToPath as fileURLToPath3 } from "url";
-var __filename3 = fileURLToPath3(import.meta.url);
-var __dirname3 = dirname6(__filename3);
+import { readFileSync as readFileSync5 } from "fs";
+import { join as join10, dirname as dirname7 } from "path";
+import { fileURLToPath as fileURLToPath2 } from "url";
+var __filename2 = fileURLToPath2(import.meta.url);
+var __dirname2 = dirname7(__filename2);
 function getGettingStartedGuide() {
   try {
-    return readFileSync4(join10(__dirname3, "../resources/getting-started.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync4(join10(__dirname3, "../resources/query-basics.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync4(join10(__dirname3, "../resources/security-templates.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync4(join10(__dirname3, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -5943,7 +6041,7 @@ function registerCodeQLResources(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync5, existsSync as existsSync5 } from "fs";
+import { readFileSync as readFileSync6, existsSync as existsSync7 } from "fs";
 import { join as join11 } from "path";
 
 // src/types/language-types.ts
@@ -5997,18 +6095,19 @@ var LANGUAGE_RESOURCES = [
 ];
 
 // src/resources/language-resources.ts
+init_package_paths();
 init_logger();
 function getQLBasePath() {
-  return join11(process.cwd(), "..");
+  return workspaceRootDir;
 }
 function loadResourceContent(relativePath) {
   try {
     const fullPath = join11(getQLBasePath(), relativePath);
-    if (!existsSync5(fullPath)) {
+    if (!existsSync7(fullPath)) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync5(fullPath, "utf-8");
+    return readFileSync6(fullPath, "utf-8");
   } catch (error) {
     logger.error(`Error loading resource file ${relativePath}:`, error);
     return null;
@@ -6131,18 +6230,18 @@ function registerLanguageResources(server) {
 
 // src/prompts/workflow-prompts.ts
 import { z as z32 } from "zod";
-import { basename as basename4 } from "path";
+import { basename as basename5 } from "path";
 
 // src/prompts/prompt-loader.ts
-import { readFileSync as readFileSync6 } from "fs";
-import { join as join12, dirname as dirname7 } from "path";
-import { fileURLToPath as fileURLToPath4 } from "url";
-var __filename4 = fileURLToPath4(import.meta.url);
-var __dirname4 = dirname7(__filename4);
+import { readFileSync as readFileSync7 } from "fs";
+import { join as join12, dirname as dirname8 } from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
+var __filename3 = fileURLToPath3(import.meta.url);
+var __dirname3 = dirname8(__filename3);
 function loadPromptTemplate(promptFileName) {
   try {
-    const promptPath = join12(__dirname4, promptFileName);
-    return readFileSync6(promptPath, "utf-8");
+    const promptPath = join12(__dirname3, promptFileName);
+    return readFileSync7(promptPath, "utf-8");
   } catch (error) {
     return `Prompt template '${promptFileName}' not available: ${error instanceof Error ? error.message : "Unknown error"}`;
   }
@@ -6264,7 +6363,7 @@ ${content}`
     workshopCreationWorkflowSchema.shape,
     async ({ queryPath, language, workshopName, numStages }) => {
       const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
-      const derivedName = workshopName || basename4(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
+      const derivedName = workshopName || basename5(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
       const contextSection = buildWorkshopContext(
         queryPath,
         language,
@@ -6585,7 +6684,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync7, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { readFileSync as readFileSync8, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -6598,7 +6697,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync7(this.#filename, "utf-8");
+      data = readFileSync8(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -6647,6 +6746,7 @@ var JSONFileSync = class extends DataFileSync {
 };
 
 // src/lib/session-data-manager.ts
+init_package_paths();
 import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync6 } from "fs";
 import { join as join13 } from "path";
 import { randomUUID } from "crypto";
@@ -7070,7 +7170,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || ".ql-mcp-tracking/",
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getPackageRootDir(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
@@ -7939,13 +8039,17 @@ function generateListRecommendations(sessions) {
   return recommendations;
 }
 
-// src/ql-mcp-server.ts
+// src/codeql-development-mcp-server.ts
+init_cli_executor();
+init_package_paths();
 init_logger();
-dotenv.config();
+dotenv.config({ path: resolve9(packageRootDir, ".env") });
 var PACKAGE_NAME = "codeql-development-mcp-server";
-var VERSION = "1.0.0";
+var VERSION = "2.23.9";
 async function startServer(mode = "stdio") {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
+  const codeqlBinary = resolveCodeQLBinary();
+  logger.info(`CodeQL CLI binary: ${codeqlBinary}`);
   const server = new McpServer({
     name: PACKAGE_NAME,
     version: VERSION
@@ -8037,4 +8141,4 @@ export {
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT *)
 */
-//# sourceMappingURL=ql-mcp-server.js.map
+//# sourceMappingURL=codeql-development-mcp-server.js.map

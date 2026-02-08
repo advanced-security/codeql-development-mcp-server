@@ -143,3 +143,233 @@ jobs:
         run: |
           echo "## Integration Tests Summary (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
           echo "✅ MCP server integration tests passed on ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
+
+  codeql-path-tests:
+    name: CODEQL_PATH Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: CODEQL_PATH Tests - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: CODEQL_PATH Tests - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: CODEQL_PATH Tests - Install server dependencies
+        run: npm ci --workspace=server
+
+      - name: CODEQL_PATH Tests - Build server bundle
+        run: npm run bundle -w server
+
+      - name: CODEQL_PATH Tests - Cache gh-codeql extension (Unix)
+        if: runner.os != 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/gh-codeql
+          key: codeql-path-tests-${{ runner.os }}-${{ hashFiles('.codeql-version') }}
+
+      - name: CODEQL_PATH Tests - Cache gh-codeql extension (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\GitHub\gh-codeql
+          key: codeql-path-tests-${{ runner.os }}-${{ hashFiles('.codeql-version') }}
+
+      - name: CODEQL_PATH Tests - Install CodeQL CLI via gh codeql
+        id: install-codeql
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CODEQL_VERSION=$(tr -d '[:space:]' < .codeql-version | sed 's/^v//')
+          echo "Installing CodeQL CLI version: $CODEQL_VERSION"
+
+          gh extension install github/gh-codeql 2>/dev/null || true
+          gh codeql set-version "$CODEQL_VERSION"
+
+          INSTALLED=$(gh codeql version --format=terse)
+          if [[ "$INSTALLED" != "$CODEQL_VERSION" ]]; then
+            echo "::error::Version mismatch: installed=$INSTALLED expected=$CODEQL_VERSION"
+            exit 1
+          fi
+
+          echo "✅ CodeQL CLI $INSTALLED installed via gh-codeql"
+          echo "codeql-version=$CODEQL_VERSION" >> "$GITHUB_OUTPUT"
+
+      ## Locate the real CodeQL binary (not the gh-codeql bash stub).
+      ## The stub delegates to `gh codeql` and works from bash, but Node.js
+      ## execFile() on Windows cannot execute bash scripts — it needs a real
+      ## .exe. We search the gh-codeql distribution directory for the binary.
+      - name: CODEQL_PATH Tests - Locate CodeQL binary
+        id: locate-codeql
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            SEARCH_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}"
+            CODEQL_BINARY=$(find "$SEARCH_DIR" -path "*gh-codeql*release*" -name "codeql.exe" 2>/dev/null | head -1)
+            # Convert MSYS path to Windows mixed-mode path for Node.js
+            if [[ -n "$CODEQL_BINARY" ]]; then
+              CODEQL_BINARY=$(cygpath -m "$CODEQL_BINARY")
+            fi
+          else
+            for search_dir in "$HOME/.local" "$HOME/Library"; do
+              if [[ -d "$search_dir" ]]; then
+                CODEQL_BINARY=$(find "$search_dir" -path "*gh-codeql*release*" -name "codeql" -type f 2>/dev/null | head -1)
+                if [[ -n "$CODEQL_BINARY" ]]; then
+                  break
+                fi
+              fi
+            done
+          fi
+
+          if [[ -z "$CODEQL_BINARY" ]]; then
+            echo "::error::Could not locate CodeQL binary in gh-codeql distribution"
+            exit 1
+          fi
+
+          # Verify the binary works and reports the expected version
+          ACTUAL=$("$CODEQL_BINARY" version --format=terse 2>/dev/null)
+          EXPECTED="${{ steps.install-codeql.outputs.codeql-version }}"
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "::error::Binary version mismatch: got '$ACTUAL', expected '$EXPECTED'"
+            exit 1
+          fi
+
+          echo "✅ CodeQL binary verified: $CODEQL_BINARY (version $ACTUAL)"
+          echo "codeql-binary=$CODEQL_BINARY" >> "$GITHUB_OUTPUT"
+
+      ## Build a PATH that excludes every directory containing 'codeql'.
+      ## This simulates an environment where the CodeQL CLI is not installed
+      ## globally, forcing the server to rely solely on CODEQL_PATH.
+      - name: CODEQL_PATH Tests - Build clean PATH without CodeQL
+        shell: bash
+        run: |
+          CLEAN_PATH=""
+          IFS=':' read -ra PARTS <<< "$PATH"
+          for part in "${PARTS[@]}"; do
+            case "$part" in
+              *codeql*|*gh-codeql*) ;;
+              *)
+                CLEAN_PATH="${CLEAN_PATH:+$CLEAN_PATH:}$part"
+                ;;
+            esac
+          done
+
+          # Verify codeql is NOT findable on the clean PATH
+          if PATH="$CLEAN_PATH" command -v codeql >/dev/null 2>&1; then
+            echo "::error::codeql is still discoverable after PATH cleanup"
+            exit 1
+          fi
+
+          echo "✅ codeql is not on the clean PATH"
+          echo "CLEAN_PATH=$CLEAN_PATH" >> "$GITHUB_ENV"
+
+      ## Test 1: The server must fail early at startup when CODEQL_PATH points
+      ## to a non-existent file and codeql is not on PATH.
+      - name: CODEQL_PATH Tests - Test 1 - Fail with invalid CODEQL_PATH
+        shell: bash
+        run: |
+          echo "=== Test 1: Server must fail when CODEQL_PATH is invalid ==="
+          export PATH="$CLEAN_PATH"
+          export CODEQL_PATH="/nonexistent/path/to/codeql"
+
+          # Use a long-running Node process as a stdin source to prevent
+          # immediate EOF (which causes a clean exit instead of a crash).
+          # Cross-platform: works on Linux, macOS, and Windows (no mkfifo).
+          node -e "setTimeout(()=>{},999999)" | \
+            node server/dist/codeql-development-mcp-server.js >stdout.txt 2>stderr.txt &
+          SERVER_PID=$!
+
+          # Wait for the process to exit (it should fail within seconds)
+          sleep 5
+
+          if kill -0 "$SERVER_PID" 2>/dev/null; then
+            echo "::error::Server should have exited but is still running"
+            kill "$SERVER_PID" 2>/dev/null || true
+            wait "$SERVER_PID" 2>/dev/null || true
+            cat stderr.txt
+            exit 1
+          fi
+
+          wait "$SERVER_PID" 2>/dev/null
+          EXIT_CODE=$?
+
+          echo "Exit code: $EXIT_CODE"
+          cat stderr.txt
+
+          if [[ "$EXIT_CODE" -ne 0 ]] && grep -qi "does not exist" stderr.txt; then
+            echo ""
+            echo "✅ PASS: Server failed at startup with expected CODEQL_PATH error"
+          else
+            echo ""
+            echo "::error::Unexpected behavior (exit=$EXIT_CODE)"
+            exit 1
+          fi
+
+      ## Test 2: The server must start without error when CODEQL_PATH points
+      ## to a valid CodeQL binary, even though codeql is not on PATH.
+      - name: CODEQL_PATH Tests - Test 2 - Start with valid CODEQL_PATH
+        shell: bash
+        run: |
+          echo "=== Test 2: Server must start when CODEQL_PATH is valid ==="
+          export PATH="$CLEAN_PATH"
+          export CODEQL_PATH="${{ steps.locate-codeql.outputs.codeql-binary }}"
+
+          echo "CODEQL_PATH=$CODEQL_PATH"
+          echo "codeql in PATH: $(command -v codeql 2>/dev/null || echo 'not found')"
+
+          # Use a long-running Node process as a stdin source to keep the
+          # STDIO transport alive. Cross-platform (no mkfifo needed).
+          node -e "setTimeout(()=>{},999999)" | \
+            node server/dist/codeql-development-mcp-server.js >stdout.txt 2>stderr.txt &
+          SERVER_PID=$!
+
+          # Give the server time to either start successfully or crash
+          sleep 5
+
+          if kill -0 "$SERVER_PID" 2>/dev/null; then
+            echo "✅ PASS: Server is running after 5 seconds (PID $SERVER_PID)"
+            echo "--- startup logs ---"
+            cat stderr.txt
+
+            # Verify stderr confirms CODEQL_PATH was used
+            if grep -q "CODEQL_PATH" stderr.txt; then
+              echo "✅ Server logged CODEQL_PATH resolution"
+            else
+              echo "⚠️ CODEQL_PATH not found in stderr (non-fatal)"
+            fi
+
+            # Clean up
+            kill "$SERVER_PID" 2>/dev/null || true
+            wait "$SERVER_PID" 2>/dev/null || true
+          else
+            wait "$SERVER_PID" 2>/dev/null
+            EXIT_CODE=$?
+            echo "::error::Server exited prematurely with code $EXIT_CODE"
+            cat stderr.txt
+            exit 1
+          fi
+
+      - name: CODEQL_PATH Tests - Summary
+        shell: bash
+        run: |
+          echo "## CODEQL_PATH Tests (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Invalid CODEQL_PATH causes startup failure | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Valid CODEQL_PATH (no PATH) starts server | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| ------ | ----- |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Version | ${{ steps.install-codeql.outputs.codeql-version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Binary | \`${{ steps.locate-codeql.outputs.codeql-binary }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| OS | ${{ matrix.os }} |" >> $GITHUB_STEP_SUMMARY

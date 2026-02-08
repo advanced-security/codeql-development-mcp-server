@@ -129,15 +129,15 @@ Then re-verify the `cliVersion` is compatible.
 
 All `codeql-pack.yml` files under `server/ql/*/tools/`:
 
-| Pack Type | Location                                      | Fields to Update                     |
-| --------- | --------------------------------------------- | ------------------------------------ |
-| Source    | `server/ql/{lang}/tools/src/codeql-pack.yml`  | `version`, `codeql/{lang}-all`       |
-| Test      | `server/ql/{lang}/tools/test/codeql-pack.yml` | `version`, `ql-mcp-{lang}-tools-src` |
+| Pack Type | Location                                      | Fields to Update                                       |
+| --------- | --------------------------------------------- | ------------------------------------------------------ |
+| Source    | `server/ql/{lang}/tools/src/codeql-pack.yml`  | `version`, `codeql/{lang}-all`                         |
+| Test      | `server/ql/{lang}/tools/test/codeql-pack.yml` | `version`, `advanced-security/ql-mcp-{lang}-tools-src` |
 
 #### 3.2 Source Pack Template
 
 ```yaml
-name: ql-mcp-{language}-tools-src
+name: advanced-security/ql-mcp-{language}-tools-src
 version: X.XX.Y # CLI version without 'v' prefix
 library: false
 dependencies:
@@ -147,10 +147,10 @@ dependencies:
 #### 3.3 Test Pack Template
 
 ```yaml
-name: ql-mcp-{language}-tools-test
+name: advanced-security/ql-mcp-{language}-tools-test
 version: X.XX.Y # CLI version without 'v' prefix
 dependencies:
-  ql-mcp-{language}-tools-src: X.XX.Y # Same as version field
+  advanced-security/ql-mcp-{language}-tools-src: ${workspace}
 extractor: { language }
 ```
 
@@ -194,17 +194,17 @@ Some library version upgrades cause non-deterministic output ordering changes. I
 
 ## Quick Reference: Languages and Pack Names
 
-| Language   | Source Pack                 | Library Dependency    |
-| ---------- | --------------------------- | --------------------- |
-| actions    | ql-mcp-actions-tools-src    | codeql/actions-all    |
-| cpp        | ql-mcp-cpp-tools-src        | codeql/cpp-all        |
-| csharp     | ql-mcp-csharp-tools-src     | codeql/csharp-all     |
-| go         | ql-mcp-go-tools-src         | codeql/go-all         |
-| java       | ql-mcp-java-tools-src       | codeql/java-all       |
-| javascript | ql-mcp-javascript-tools-src | codeql/javascript-all |
-| python     | ql-mcp-python-tools-src     | codeql/python-all     |
-| ruby       | ql-mcp-ruby-tools-src       | codeql/ruby-all       |
-| swift      | ql-mcp-swift-tools-src      | codeql/swift-all      |
+| Language   | Source Pack                                   | Library Dependency    |
+| ---------- | --------------------------------------------- | --------------------- |
+| actions    | advanced-security/ql-mcp-actions-tools-src    | codeql/actions-all    |
+| cpp        | advanced-security/ql-mcp-cpp-tools-src        | codeql/cpp-all        |
+| csharp     | advanced-security/ql-mcp-csharp-tools-src     | codeql/csharp-all     |
+| go         | advanced-security/ql-mcp-go-tools-src         | codeql/go-all         |
+| java       | advanced-security/ql-mcp-java-tools-src       | codeql/java-all       |
+| javascript | advanced-security/ql-mcp-javascript-tools-src | codeql/javascript-all |
+| python     | advanced-security/ql-mcp-python-tools-src     | codeql/python-all     |
+| ruby       | advanced-security/ql-mcp-ruby-tools-src       | codeql/ruby-all       |
+| swift      | advanced-security/ql-mcp-swift-tools-src      | codeql/swift-all      |
 
 ## Lessons Learned
 
@@ -231,6 +231,45 @@ dependencies:
 ### Test Output Changes
 
 Library upgrades can cause non-deterministic ordering changes in query output. These are cosmetic differences - update `.expected` files when the logic is unchanged but output order differs.
+
+### npm Package `files` Field Limitations
+
+npm's `files` field does **not** support intermediate wildcard patterns like `ql/*/tools/src/`. Each language directory must be listed explicitly:
+
+```json
+"files": [
+  "dist/",
+  "ql/actions/tools/src/",
+  "ql/cpp/tools/src/",
+  "ql/csharp/tools/src/",
+  ...
+]
+```
+
+When adding a new language, add its `ql/{language}/tools/src/` entry to `server/package.json` `files`.
+
+### Exclude `.qlx` Files from npm
+
+`server/.npmignore` must contain `*.qlx` to prevent compiled CodeQL query bytecode (which is OS/architecture-specific) from being included in the npm package.
+
+### Server Logger Writes to stderr Only
+
+All `logger.info/warn/error/debug` methods write to `stderr` via `console.error`. This is **required** because in stdio transport mode, stdout is reserved exclusively for the MCP JSON-RPC protocol. Any non-protocol bytes on stdout corrupt the message stream.
+
+### CODEQL_PATH Environment Variable
+
+The server resolves the CodeQL CLI binary at startup via `resolveCodeQLBinary()` in `cli-executor.ts`. The `CODEQL_PATH` env var takes an **absolute path** to the `codeql` binary, bypassing PATH lookup. This is critical for users who have multiple CodeQL CLI versions installed.
+
+### Publishing: `codeql pack publish`
+
+- Use `--threads=-1` (leave 1 core unused) for parallel compilation
+- `GITHUB_TOKEN` env var is recognized automatically — no need for `--github-auth-stdin`
+- Precompilation is enabled by default (only `--no-precompile` opt-out exists)
+- The `codeql pack install` subcommand does **not** have a `--threads` flag
+
+### LICENSE File Name
+
+The actual license file is `LICENSE` (no `.md` extension). Workflow steps and documentation must reference `LICENSE`, not `LICENSE.md`.
 
 ## Helper Script
 

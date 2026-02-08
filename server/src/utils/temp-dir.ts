@@ -1,35 +1,21 @@
 /**
  * Secure project-local temporary directory utilities.
  *
- * All temporary files are created under `<repoRoot>/.tmp/` which is
+ * All temporary files are created under `<packageRoot>/.tmp/` which is
  * `.gitignore`d.  This avoids writing to the OS temp directory
  * (`os.tmpdir()` / `/tmp`), which is world-readable and triggers
  * CWE-377 / CWE-378 (js/insecure-temporary-file).
  */
 
 import { mkdirSync, mkdtempSync } from 'fs';
-import { dirname, join, resolve } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-/**
- * Repository root, calculated once at module load.
- *
- * - From source  (`server/src/utils/`)  → 3 levels up
- * - From bundle  (`server/dist/`)       → 2 levels up
- */
-const normalizedDir = __dirname.split(/[\\/]/).join('/');
-const repoRoot: string = normalizedDir.includes('src/utils')
-  ? resolve(__dirname, '..', '..', '..')
-  : resolve(__dirname, '..', '..');
+import { join } from 'path';
+import { getPackageRootDir } from './package-paths';
 
 /**
  * Base directory for all project-local temporary data.
  * Stored under `<repoRoot>/.tmp` and excluded from version control.
  */
-const PROJECT_TMP_BASE = join(repoRoot, '.tmp');
+const PROJECT_TMP_BASE = join(getPackageRootDir(), '.tmp');
 
 /**
  * Return the project-local `.tmp` base directory, creating it if needed.

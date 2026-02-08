@@ -46,6 +46,8 @@ codeql-development-mcp-server.code-workspace
 /query-results.sarif
 /*.bqrs
 /evaluator-*.json
+/stderr.txt
+/stdout.txt
 
 # Ignore test scaffolding directory created by query-scaffolding tests
 .test-query-scaffolding
