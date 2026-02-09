@@ -151,7 +151,9 @@ export async function executeSourceRootValidateCommand(_client, _options = {}) {
       // Write file with UTF-8 encoding
       await writeFile(outputFile, output, "utf-8");
     } catch (error) {
-      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`);
+      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`, {
+        cause: error
+      });
     }
   }
 
