@@ -208,7 +208,7 @@ jobs:
 
           # Verify the binary works and reports the expected version
           ACTUAL=$("$CODEQL_BINARY" version --format=terse 2>/dev/null)
-          EXPECTED=$(codeql version --format=terse 2>/dev/null)
+          EXPECTED=$(gh codeql version --format=terse 2>/dev/null)
           if [[ "$ACTUAL" != "$EXPECTED" ]]; then
             echo "::error::Binary version mismatch: got '$ACTUAL', expected '$EXPECTED'"
             exit 1
