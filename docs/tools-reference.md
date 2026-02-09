@@ -181,14 +181,14 @@ Get code completions at a cursor position in a CodeQL file.
 
 **Parameters:**
 
-| Parameter       | Type   | Required | Description                                   |
-| --------------- | ------ | -------- | --------------------------------------------- |
-| `file_path`     | string | Yes      | Absolute path to the `.ql`/`.qll` file        |
-| `line`          | number | Yes      | 0-based line number                           |
-| `character`     | number | Yes      | 0-based character offset                      |
-| `file_content`  | string | No       | File content override (reads disk if omitted) |
-| `search_path`   | string | No       | Search path for CodeQL libraries              |
-| `workspace_uri` | string | No       | Workspace URI for context                     |
+| Parameter       | Type   | Required | Description                                                                    |
+| --------------- | ------ | -------- | ------------------------------------------------------------------------------ |
+| `file_path`     | string | Yes      | Path to the `.ql`/`.qll` file (relative paths resolved against user workspace) |
+| `line`          | number | Yes      | 0-based line number                                                            |
+| `character`     | number | Yes      | 0-based character offset                                                       |
+| `file_content`  | string | No       | File content override (reads disk if omitted)                                  |
+| `search_path`   | string | No       | Search path for CodeQL libraries                                               |
+| `workspace_uri` | string | No       | Workspace URI for context                                                      |
 
 ### codeql_lsp_definition
 
@@ -196,14 +196,14 @@ Go to the definition of a CodeQL symbol at a given position.
 
 **Parameters:**
 
-| Parameter       | Type   | Required | Description                                   |
-| --------------- | ------ | -------- | --------------------------------------------- |
-| `file_path`     | string | Yes      | Absolute path to the `.ql`/`.qll` file        |
-| `line`          | number | Yes      | 0-based line number                           |
-| `character`     | number | Yes      | 0-based character offset                      |
-| `file_content`  | string | No       | File content override (reads disk if omitted) |
-| `search_path`   | string | No       | Search path for CodeQL libraries              |
-| `workspace_uri` | string | No       | Workspace URI for context                     |
+| Parameter       | Type   | Required | Description                                                                    |
+| --------------- | ------ | -------- | ------------------------------------------------------------------------------ |
+| `file_path`     | string | Yes      | Path to the `.ql`/`.qll` file (relative paths resolved against user workspace) |
+| `line`          | number | Yes      | 0-based line number                                                            |
+| `character`     | number | Yes      | 0-based character offset                                                       |
+| `file_content`  | string | No       | File content override (reads disk if omitted)                                  |
+| `search_path`   | string | No       | Search path for CodeQL libraries                                               |
+| `workspace_uri` | string | No       | Workspace URI for context                                                      |
 
 ### codeql_lsp_references
 
@@ -211,14 +211,14 @@ Find all references to a CodeQL symbol at a given position.
 
 **Parameters:**
 
-| Parameter       | Type   | Required | Description                                   |
-| --------------- | ------ | -------- | --------------------------------------------- |
-| `file_path`     | string | Yes      | Absolute path to the `.ql`/`.qll` file        |
-| `line`          | number | Yes      | 0-based line number                           |
-| `character`     | number | Yes      | 0-based character offset                      |
-| `file_content`  | string | No       | File content override (reads disk if omitted) |
-| `search_path`   | string | No       | Search path for CodeQL libraries              |
-| `workspace_uri` | string | No       | Workspace URI for context                     |
+| Parameter       | Type   | Required | Description                                                                    |
+| --------------- | ------ | -------- | ------------------------------------------------------------------------------ |
+| `file_path`     | string | Yes      | Path to the `.ql`/`.qll` file (relative paths resolved against user workspace) |
+| `line`          | number | Yes      | 0-based line number                                                            |
+| `character`     | number | Yes      | 0-based character offset                                                       |
+| `file_content`  | string | No       | File content override (reads disk if omitted)                                  |
+| `search_path`   | string | No       | Search path for CodeQL libraries                                               |
+| `workspace_uri` | string | No       | Workspace URI for context                                                      |
 
 ## Testing Tools
 

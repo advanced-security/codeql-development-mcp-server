@@ -24,7 +24,7 @@ import { logger } from '../../utils/logger';
 const lspParamsSchema = {
   character: z.number().int().min(0).describe('0-based character offset within the line'),
   file_content: z.string().optional().describe('Optional file content override (reads from disk if omitted)'),
-  file_path: z.string().describe('Absolute path to the CodeQL (.ql/.qll) file'),
+  file_path: z.string().describe('Path to the CodeQL (.ql/.qll) file. Relative paths are resolved against the user workspace directory (see CODEQL_MCP_WORKSPACE).'),
   line: z.number().int().min(0).describe('0-based line number in the document'),
   search_path: z.string().optional().describe('Optional search path for CodeQL libraries'),
   workspace_uri: z.string().optional().describe('Optional workspace URI for context (defaults to ./ql directory)'),

@@ -29,6 +29,7 @@ vi.mock('../../../../src/lib/server-manager', () => ({
 
 vi.mock('../../../../src/utils/package-paths', () => ({
   getPackageRootDir: vi.fn(() => '/mock/pkg'),
+  getUserWorkspaceDir: vi.fn(() => '/mock/workspace'),
   packageRootDir: '/mock/pkg',
 }));
 
@@ -217,7 +218,7 @@ describe('lsp-handlers', () => {
 
       await lspCompletion(baseParams);
 
-      // readFileSync is mocked to return 'import ql\nselect 1'
+      // readFile from fs/promises is mocked to return 'import ql\nselect 1'
       expect(mockOpenDocument).toHaveBeenCalledWith(
         expect.any(String),
         'import ql\nselect 1',

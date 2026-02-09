@@ -267,13 +267,13 @@ export class CodeQLLanguageServer extends EventEmitter {
       this.pendingResponses.set(id, { resolve, reject });
       this.sendMessage(message);
       
-      // Add timeout
+      // Add timeout — CI environments may need longer for initial JVM warm-up
       setTimeout(() => {
         if (this.pendingResponses.has(id)) {
           this.pendingResponses.delete(id);
           reject(new Error(`LSP request timeout for method: ${method}`));
         }
-      }, 10000); // 10 second timeout
+      }, 30_000); // 30 second timeout
     });
   }
 
@@ -385,7 +385,7 @@ export class CodeQLLanguageServer extends EventEmitter {
           this.removeAllListeners('diagnostics');
           reject(new Error('Timeout waiting for diagnostics'));
         }
-      }, 5000);
+      }, 30_000); // 30s — CI environments need longer for JVM warm-up
 
       // Listen for diagnostics
       const diagnosticsHandler = (params: PublishDiagnosticsParams) => {

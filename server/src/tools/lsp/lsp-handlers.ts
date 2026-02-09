@@ -6,17 +6,19 @@
  * opens the requested document, sends the LSP request, and returns the result.
  */
 
-import { LanguageServerConfig } from '../../lib/server-config';
-import { getServerManager } from '../../lib/server-manager';
+import { readFile } from 'fs/promises';
+import { isAbsolute, resolve } from 'path';
+import { pathToFileURL } from 'url';
+
 import {
   CompletionItem,
   LSPLocation,
   TextDocumentPositionParams,
 } from '../../lib/language-server';
+import { LanguageServerConfig } from '../../lib/server-config';
+import { getServerManager } from '../../lib/server-manager';
 import { logger } from '../../utils/logger';
-import { readFile } from 'fs/promises';
-import { pathToFileURL } from 'url';
-import { isAbsolute, resolve } from 'path';
+import { getUserWorkspaceDir } from '../../utils/package-paths';
 
 /**
  * Common parameters for LSP tool invocations.
@@ -51,12 +53,14 @@ async function getInitializedServer(params: LSPToolParams) {
   const manager = getServerManager();
   const server = await manager.getLanguageServer(config);
 
-  // Resolve workspace URI: convert relative paths to absolute file:// URIs
+  // Resolve workspace URI: convert relative paths to absolute file:// URIs.
+  // Relative paths resolve against getUserWorkspaceDir() so that
+  // CODEQL_MCP_WORKSPACE is respected and behaviour is consistent across tools.
   let effectiveUri = params.workspaceUri;
   if (effectiveUri && !effectiveUri.startsWith('file://')) {
     const absWorkspace = isAbsolute(effectiveUri)
       ? effectiveUri
-      : resolve(process.cwd(), effectiveUri);
+      : resolve(getUserWorkspaceDir(), effectiveUri);
     effectiveUri = pathToFileURL(absWorkspace).href;
   }
   effectiveUri = effectiveUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
@@ -71,8 +75,11 @@ async function getInitializedServer(params: LSPToolParams) {
 function prepareDocumentPosition(
   params: LSPToolParams,
 ): { absPath: string; docUri: string } {
-  // Resolve relative paths against CWD (supports integration test fixtures)
-  const absPath = isAbsolute(params.filePath) ? params.filePath : resolve(process.cwd(), params.filePath);
+  // Resolve relative paths against getUserWorkspaceDir() so that
+  // CODEQL_MCP_WORKSPACE is respected and behaviour is consistent across tools.
+  const absPath = isAbsolute(params.filePath)
+    ? params.filePath
+    : resolve(getUserWorkspaceDir(), params.filePath);
   const docUri = pathToFileURL(absPath).href;
 
   return { absPath, docUri };

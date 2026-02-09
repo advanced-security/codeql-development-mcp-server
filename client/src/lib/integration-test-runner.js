@@ -832,7 +832,16 @@ export class IntegrationTestRunner {
 
       if (success) {
         this.logger.log(`✅ ${toolName}/${testCase} - Tool executed successfully`);
-        this.logger.log(`   Result: ${result.content?.[0]?.text || "No content"}`);
+        // Truncate long results to avoid excessive CI log output
+        const resultText = result.content?.[0]?.text || "No content";
+        const MAX_LOG_LENGTH = 500;
+        if (resultText.length > MAX_LOG_LENGTH) {
+          this.logger.log(
+            `   Result: ${resultText.substring(0, MAX_LOG_LENGTH)}... (truncated, ${resultText.length} chars total)`
+          );
+        } else {
+          this.logger.log(`   Result: ${resultText}`);
+        }
       } else {
         this.logger.log(`❌ ${toolName}/${testCase} - Tool execution failed`);
         const errorText = result.content?.[0]?.text || "Unknown error";

@@ -13,7 +13,7 @@ import { LanguageServerConfig } from '../../lib/server-config';
 import { getServerManager } from '../../lib/server-manager';
 import { logger } from '../../utils/logger';
 import { getProjectTmpDir } from '../../utils/temp-dir';
-import { join, resolve } from 'path';
+import { join, isAbsolute, resolve } from 'path';
 import { pathToFileURL } from 'url';
 
 export interface LspDiagnosticsParams {
@@ -108,7 +108,17 @@ async function getLanguageServer(
   const manager = getServerManager();
   const languageServer = await manager.getLanguageServer(config);
 
-  const effectiveUri = workspaceUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
+  // Normalize workspace URI: resolve relative / bare directory paths to
+  // file:// URIs against getUserWorkspaceDir() (respects CODEQL_MCP_WORKSPACE).
+  let effectiveUri = workspaceUri;
+  if (effectiveUri && !effectiveUri.startsWith('file://')) {
+    const { getUserWorkspaceDir } = await import('../../utils/package-paths');
+    const absWorkspace = isAbsolute(effectiveUri)
+      ? effectiveUri
+      : resolve(getUserWorkspaceDir(), effectiveUri);
+    effectiveUri = pathToFileURL(absWorkspace).href;
+  }
+  effectiveUri = effectiveUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
   await languageServer.initialize(effectiveUri);
 
   return languageServer;

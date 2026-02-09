@@ -330,8 +330,7 @@ export class MonitoringIntegrationTestRunner {
     const params = {};
 
     if (toolName === "codeql_lsp_diagnostics") {
-      params.query = "from DataFlow::Configuration cfg select cfg";
-      params.language = "javascript";
+      params.ql_code = "from DataFlow::Configuration cfg select cfg";
     } else if (toolName === "codeql_query_format") {
       // Look for .ql files in the before directory
       const beforeDir = path.join(testCaseDir, "before");

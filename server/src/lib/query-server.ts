@@ -114,7 +114,15 @@ export class CodeQLQueryServer extends EventEmitter {
 
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { reject, resolve });
-      this.sendRaw(message);
+
+      try {
+        this.sendRaw(message);
+      } catch (error) {
+        // Clean up immediately — sendRaw() failed so no response will arrive.
+        this.pendingRequests.delete(id);
+        reject(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
 
       const timer = setTimeout(() => {
         if (this.pendingRequests.has(id)) {

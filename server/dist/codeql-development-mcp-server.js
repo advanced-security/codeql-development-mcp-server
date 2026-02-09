@@ -5926,7 +5926,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
           this.pendingResponses.delete(id);
           reject(new Error(`LSP request timeout for method: ${method}`));
         }
-      }, 1e4);
+      }, 3e4);
     });
   }
   sendNotification(method, params) {
@@ -6019,7 +6019,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
           this.removeAllListeners("diagnostics");
           reject(new Error("Timeout waiting for diagnostics"));
         }
-      }, 5e3);
+      }, 3e4);
       const diagnosticsHandler = (params) => {
         if (params.uri === documentUri) {
           diagnosticsReceived = true;
@@ -6242,7 +6242,13 @@ var CodeQLQueryServer = class extends EventEmitter2 {
     };
     return new Promise((resolve12, reject) => {
       this.pendingRequests.set(id, { reject, resolve: resolve12 });
-      this.sendRaw(message);
+      try {
+        this.sendRaw(message);
+      } catch (error) {
+        this.pendingRequests.delete(id);
+        reject(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
       const timer = setTimeout4(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
@@ -6751,7 +6757,7 @@ async function shutdownServerManager() {
 
 // src/tools/lsp/lsp-diagnostics.ts
 init_logger();
-import { join as join11, resolve as resolve9 } from "path";
+import { join as join11, isAbsolute as isAbsolute5, resolve as resolve9 } from "path";
 import { pathToFileURL as pathToFileURL2 } from "url";
 function formatDiagnostics(diagnostics) {
   if (diagnostics.length === 0) {
@@ -6819,7 +6825,13 @@ async function getLanguageServer(options = {}, workspaceUri) {
   };
   const manager = getServerManager();
   const languageServer = await manager.getLanguageServer(config);
-  const effectiveUri = workspaceUri ?? pathToFileURL2(resolve9(pkgRoot, "ql")).href;
+  let effectiveUri = workspaceUri;
+  if (effectiveUri && !effectiveUri.startsWith("file://")) {
+    const { getUserWorkspaceDir: getUserWorkspaceDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
+    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve9(getUserWorkspaceDir2(), effectiveUri);
+    effectiveUri = pathToFileURL2(absWorkspace).href;
+  }
+  effectiveUri = effectiveUri ?? pathToFileURL2(resolve9(pkgRoot, "ql")).href;
   await languageServer.initialize(effectiveUri);
   return languageServer;
 }
@@ -6917,10 +6929,11 @@ function registerLspDiagnosticsTool(server) {
 }
 
 // src/tools/lsp/lsp-handlers.ts
-init_logger();
 import { readFile as readFile3 } from "fs/promises";
+import { isAbsolute as isAbsolute6, resolve as resolve10 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
-import { isAbsolute as isAbsolute5, resolve as resolve10 } from "path";
+init_logger();
+init_package_paths();
 async function getInitializedServer(params) {
   const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
   const config = {
@@ -6932,7 +6945,7 @@ async function getInitializedServer(params) {
   const server = await manager.getLanguageServer(config);
   let effectiveUri = params.workspaceUri;
   if (effectiveUri && !effectiveUri.startsWith("file://")) {
-    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve10(process.cwd(), effectiveUri);
+    const absWorkspace = isAbsolute6(effectiveUri) ? effectiveUri : resolve10(getUserWorkspaceDir(), effectiveUri);
     effectiveUri = pathToFileURL3(absWorkspace).href;
   }
   effectiveUri = effectiveUri ?? pathToFileURL3(resolve10(pkgRoot, "ql")).href;
@@ -6940,7 +6953,7 @@ async function getInitializedServer(params) {
   return server;
 }
 function prepareDocumentPosition(params) {
-  const absPath = isAbsolute5(params.filePath) ? params.filePath : resolve10(process.cwd(), params.filePath);
+  const absPath = isAbsolute6(params.filePath) ? params.filePath : resolve10(getUserWorkspaceDir(), params.filePath);
   const docUri = pathToFileURL3(absPath).href;
   return { absPath, docUri };
 }
@@ -7004,7 +7017,7 @@ init_logger();
 var lspParamsSchema = {
   character: z32.number().int().min(0).describe("0-based character offset within the line"),
   file_content: z32.string().optional().describe("Optional file content override (reads from disk if omitted)"),
-  file_path: z32.string().describe("Absolute path to the CodeQL (.ql/.qll) file"),
+  file_path: z32.string().describe("Path to the CodeQL (.ql/.qll) file. Relative paths are resolved against the user workspace directory (see CODEQL_MCP_WORKSPACE)."),
   line: z32.number().int().min(0).describe("0-based line number in the document"),
   search_path: z32.string().optional().describe("Optional search path for CodeQL libraries"),
   workspace_uri: z32.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)")
