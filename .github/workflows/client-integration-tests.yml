@@ -192,7 +192,20 @@ jobs:
           CODEQL_VERSION=$(tr -d '[:space:]' < .codeql-version | sed 's/^v//')
           echo "Installing CodeQL CLI version: $CODEQL_VERSION"
 
-          gh extension install github/gh-codeql 2>/dev/null || true
+          # Check if the gh-codeql extension is already installed
+          if ! gh extension list | grep -q "github/gh-codeql"; then
+            echo "Installing gh-codeql extension..."
+            gh extension install github/gh-codeql
+          else
+            echo "gh-codeql extension is already installed"
+          fi
+
+          # Verify the extension is available before using it
+          if ! gh codeql version &>/dev/null; then
+            echo "::error::gh codeql extension is not working properly"
+            exit 1
+          fi
+
           gh codeql set-version "$CODEQL_VERSION"
 
           INSTALLED=$(gh codeql version --format=terse)
