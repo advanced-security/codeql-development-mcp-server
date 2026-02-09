@@ -2,6 +2,10 @@ name: 'Setup CodeQL Environment with Languages'
 description: 'Install and configure CodeQL CLI via GitHub CLI extension and language-specific tools with optimized caching'
 
 inputs:
+  add-to-path:
+    description: 'Whether to install the CodeQL stub to PATH and set CODEQL_HOME/CODEQL_PATH environment variables. Set to false when you need only the gh-codeql extension installed (e.g. for CODEQL_PATH tests that manage PATH themselves).'
+    required: false
+    default: 'true'
   install-language-runtimes:
     description: 'Whether to install language-specific runtimes and build tools'
     required: false
@@ -136,7 +140,13 @@ runs:
           exit 1
         fi
 
-        # Create a directory for the CodeQL stub and install it there
+        echo "✅ GitHub CLI CodeQL extension installed successfully"
+
+    # Install the CodeQL stub to PATH (skipped when add-to-path is false)
+    - name: Install CodeQL stub to PATH
+      if: inputs.add-to-path == 'true'
+      shell: bash
+      run: |
         CODEQL_STUB_DIR="$HOME/.local/bin"
         mkdir -p "$CODEQL_STUB_DIR"
 
@@ -147,7 +157,7 @@ runs:
         export PATH="$CODEQL_STUB_DIR:$PATH"
         echo "PATH=$PATH" >> "$GITHUB_ENV"
 
-        echo "✅ GitHub CLI CodeQL extension installed successfully"
+        echo "✅ CodeQL stub installed to PATH"
 
     # On Windows, gh codeql install-stub creates a bash script which is not
     # discoverable by Node.js child_process.spawn() or execFile(), since
@@ -157,7 +167,7 @@ runs:
     # This workaround can be removed once github/gh-codeql#21 is merged,
     # which adds native Windows support to install-stub.
     - name: Add CodeQL binary directory to PATH (Windows)
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && inputs.add-to-path == 'true'
       shell: bash
       run: |
         echo "🔧 Locating actual codeql.exe binary for Windows compatibility..."
@@ -193,6 +203,7 @@ runs:
         echo "✅ Added CodeQL binary directory to PATH for Windows"
 
     - name: Setup CodeQL environment variables
+      if: inputs.add-to-path == 'true'
       id: setup-codeql-env
       shell: bash
       run: |
@@ -243,6 +254,7 @@ runs:
 
     # Verify CodeQL installation
     - name: Verify `codeql` CLI installation
+      if: inputs.add-to-path == 'true'
       shell: bash
       run: |
         echo "=== CodeQL Installation Verification ==="

@@ -1,4 +1,13 @@
 Example1.cs:
+#    6| enter Main
+#-----|  -> {...}
+
+#   27| enter ComplexMethod
+#-----|  -> {...}
+
+#    4| enter Example1
+#-----|  -> this access
+
 #    7| {...}
 #-----|  -> ... ...;
 
@@ -194,17 +203,14 @@ Example1.cs:
 #    4| {...}
 #-----|  -> exit Example1 (normal)
 
+#    4| call to method <object initializer>
+#-----|  -> call to constructor Object
+
+#    4| this access
+#-----|  -> call to method <object initializer>
+
 #    4| call to constructor Object
 #-----|  -> {...}
-
-#    6| enter Main
-#-----|  -> {...}
-
-#   27| enter ComplexMethod
-#-----|  -> {...}
-
-#    4| enter Example1
-#-----|  -> call to constructor Object
 
 #    6| exit Main (normal)
 #-----|  -> exit Main

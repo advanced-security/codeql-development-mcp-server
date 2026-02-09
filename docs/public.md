@@ -69,7 +69,7 @@ codeql pack download advanced-security/ql-mcp-swift-tools-src
 To pin a version, append `@<version>`:
 
 ```bash
-codeql pack download advanced-security/ql-mcp-javascript-tools-src@2.23.9
+codeql pack download advanced-security/ql-mcp-javascript-tools-src@2.24.0
 ```
 
 Each tool query pack provides AST printing, control-flow graph printing, and call-graph queries used by the MCP server to give AI assistants structural insight into CodeQL databases.
@@ -236,10 +236,10 @@ Published to the GitHub Container Registry under the `advanced-security` scope. 
 ```yaml
 # Example: server/ql/javascript/tools/src/codeql-pack.yml
 name: advanced-security/ql-mcp-javascript-tools-src
-version: 2.23.9
+version: 2.24.0
 library: false
 dependencies:
-  codeql/javascript-all: 2.6.19
+  codeql/javascript-all: 2.6.20
 ```
 
 ## Troubleshooting
