@@ -26,12 +26,12 @@ Unit tests verify the TypeScript implementation of the MCP server.
 Integration tests exercise individual MCP tools against a live server instance using the custom MCP client.
 
 - **Client**: `client/src/ql-mcp-client.js` — starts the MCP server, invokes tools, and validates results.
-- **Test data**: `client/integration-tests/primitives/tools/` — each test has `before/` and `after/` directories capturing expected state.
+- **Test data**: `client/integration-tests/primitives/tools/` — each test has `before/` and `after/` directories that define the initial fixture state and, for file-based tests, the expected final state.
 - **Run command**: `npm run test:integration:default -w client` (or `npm run test:client` from the repo root).
 - **Key properties**:
   - Tests are deterministic and repeatable.
   - No mocks — tests use real CodeQL databases and queries bundled under `server/ql/`.
-  - The `before/monitoring-state.json` file supplies tool arguments; the `after/` directory captures expected output files.
+  - The `before/monitoring-state.json` file supplies tool arguments. For file-based tests, the integration-test runner diffs filesystem state from `before/` to `after/`; for monitoring-based tests, `after/` artifacts are generally not diffed and are only interpreted for specific validations (for example, `codeql_query_run` interpreted output).
 
 ## Layer 3 — Agentic Validation
 
