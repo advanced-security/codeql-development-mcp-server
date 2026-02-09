@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-python-tools-test
-version: 2.24.0
+version: 2.24.1
 dependencies:
   advanced-security/ql-mcp-python-tools-src: ${workspace}
 extractor: python

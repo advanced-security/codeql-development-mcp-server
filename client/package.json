@@ -1,6 +1,6 @@
 {
   "name": "codeql-development-mcp-server_client",
-  "version": "2.24.0",
+  "version": "2.24.1",
   "description": "MCP client for integration testing of the CodeQL development MCP server",
   "main": "src/ql-mcp-client.js",
   "type": "module",

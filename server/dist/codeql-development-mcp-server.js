@@ -9364,7 +9364,7 @@ init_package_paths();
 init_logger();
 dotenv.config({ path: resolve11(packageRootDir, ".env") });
 var PACKAGE_NAME = "codeql-development-mcp-server";
-var VERSION = "2.24.0";
+var VERSION = "2.24.1";
 async function startServer(mode = "stdio") {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
   const codeqlBinary = resolveCodeQLBinary();
