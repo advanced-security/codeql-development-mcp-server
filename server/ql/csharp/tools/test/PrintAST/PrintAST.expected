@@ -1,23 +1,23 @@
 Example1.cs:
 #    4| [Class] Example1
-#    7|   6: [Field] Greetings
+#    7|   7: [Field] Greetings
 #    7|     -1: [TypeMention] String[]
 #    7|       1: [TypeMention] string
 #    7|     1: [ArrayCreation] array creation of type String[]
 #    7|       -1: [ArrayInitializer] { ..., ... }
 #    7|         0: [StringLiteralUtf16] "Hello"
 #    7|         1: [StringLiteralUtf16] "Hi"
-#    8|   7: [Field] counter
+#    8|   8: [Field] counter
 #    8|     -1: [TypeMention] int
 #    8|     1: [IntLiteral] 0
-#   11|   8: [Property] Name
+#   11|   9: [Property] Name
 #   11|     -1: [TypeMention] string
 #   11|     2: [StringLiteralUtf16] "World"
 #   11|     3: [Getter] get_Name
 #   11|     4: [Setter] set_Name
 #-----|       2: (Parameters)
 #   11|         0: [Parameter] value
-#   13|   9: [Method] Main
+#   13|   10: [Method] Main
 #   13|     -1: [TypeMention] Void
 #-----|     2: (Parameters)
 #   13|       0: [Parameter] args
@@ -194,7 +194,7 @@ Example1.cs:
 #   75|                   0: [StringLiteralUtf16] "Error: "
 #   75|                   1: [PropertyCall] access to property Message
 #   75|                     -1: [LocalVariableAccess] access to local variable ex
-#   80|   10: [Method] DemoLoops
+#   80|   11: [Method] DemoLoops
 #   80|     -1: [TypeMention] Void
 #   81|     4: [BlockStmt] {...}
 #   82|       0: [LocalVariableDeclStmt] ... ...;
