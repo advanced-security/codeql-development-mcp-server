@@ -138,7 +138,10 @@ npm install && npm run build
 
 - [Public Installation Guide](docs/public.md) - Install and run without cloning the repository
 - [Getting Started Guide](docs/getting-started.md) - Detailed installation and setup instructions
-- [Tools Reference](docs/tools-reference.md) - Complete list of available MCP tools and usage examples
+- [Tools Reference](docs/ql-mcp/tools.md) - Complete list of available MCP tools
+- [Prompts Reference](docs/ql-mcp/prompts.md) - MCP prompts for CodeQL development workflows
+- [Resources Reference](docs/ql-mcp/resources.md) - MCP resources for CodeQL learning and reference
+- [Testing Strategy](docs/testing.md) - Multi-layer testing approach
 
 ## License
 

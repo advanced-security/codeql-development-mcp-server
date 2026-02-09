@@ -104,4 +104,6 @@ Add to your `mcp.json` file:
 
 ## Next Steps
 
-- [Tools Reference](./tools-reference.md) - Available MCP tools and usage
+- [Tools Reference](./ql-mcp/tools.md) - Available MCP tools
+- [Prompts Reference](./ql-mcp/prompts.md) - MCP prompts for CodeQL workflows
+- [Resources Reference](./ql-mcp/resources.md) - MCP resources for CodeQL learning

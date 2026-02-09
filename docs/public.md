@@ -255,7 +255,9 @@ dependencies:
 
 ## Further Reading
 
-- [Tools Reference](./tools-reference.md) — Complete list of MCP tools and usage examples
+- [Tools Reference](./ql-mcp/tools.md) — Complete list of MCP tools
+- [Prompts Reference](./ql-mcp/prompts.md) — MCP prompts for CodeQL development workflows
+- [Resources Reference](./ql-mcp/resources.md) — MCP resources for CodeQL learning and reference
 - [Getting Started (developer)](./getting-started.md) — Building from source and advanced configuration
 - [VS Code MCP Server Documentation](https://code.visualstudio.com/docs/copilot/customization/mcp-servers) — Configuring MCP servers in VS Code
 - [Publishing and Using CodeQL Packs](https://docs.github.com/en/code-security/tutorials/customize-code-scanning/publishing-and-using-codeql-packs) — Managing CodeQL packs with the CodeQL CLI
