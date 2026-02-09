@@ -16,6 +16,7 @@ import { clearTimeout, setTimeout } from 'timers';
 import { buildQueryServerArgs, QueryServerConfig } from './server-config';
 import { getResolvedCodeQLDir } from './cli-executor';
 import { logger } from '../utils/logger';
+import { waitForProcessReady } from '../utils/process-ready';
 
 /**
  * A pending request awaiting a response from the query server.
@@ -89,8 +90,8 @@ export class CodeQLQueryServer extends EventEmitter {
       this.emit('exit', code);
     });
 
-    // Wait briefly for the server to become ready
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Wait for the JVM to initialise (resolves on first stderr/stdout output)
+    await waitForProcessReady(this.process, 'CodeQL Query Server');
     logger.info('CodeQL Query Server started');
   }
 
@@ -150,12 +151,26 @@ export class CodeQLQueryServer extends EventEmitter {
     }
 
     // Force kill if process lingers
-    setTimeout(() => {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        if (this.process) {
+          this.process.kill('SIGTERM');
+          this.process = null;
+        }
+        resolve();
+      }, 2000);
+
       if (this.process) {
-        this.process.kill('SIGTERM');
-        this.process = null;
+        this.process.once('exit', () => {
+          clearTimeout(timer);
+          this.process = null;
+          resolve();
+        });
+      } else {
+        clearTimeout(timer);
+        resolve();
       }
-    }, 2000);
+    });
   }
 
   /**

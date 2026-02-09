@@ -158,12 +158,11 @@ export function buildQueryServerArgs(config: QueryServerConfig): string[] {
   if (config.evaluatorLog) {
     args.push(`--evaluator-log=${config.evaluatorLog}`);
   }
-  if (config.tupleCounting) {
+  if (config.tupleCounting || config.debug) {
     args.push('--tuple-counting');
   }
   if (config.debug) {
     args.push('--debug');
-    args.push('--tuple-counting');
   }
 
   return args;

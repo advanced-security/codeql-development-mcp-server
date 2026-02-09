@@ -7,9 +7,15 @@ import { EventEmitter } from 'events';
 import { ChildProcess, spawn } from 'child_process';
 import { CodeQLCLIServer } from '../../../src/lib/cli-server';
 
+// Mock waitForProcessReady so start() resolves immediately in tests
+vi.mock('../../../src/utils/process-ready', () => ({
+  waitForProcessReady: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Shared mock process factory
 function createMockProcess() {
   const proc = new EventEmitter() as EventEmitter & {
+    exitCode: number | null;
     killed: boolean;
     kill: ReturnType<typeof vi.fn>;
     pid: number;
@@ -21,6 +27,7 @@ function createMockProcess() {
   proc.stdout = new EventEmitter();
   proc.stderr = new EventEmitter();
   proc.killed = false;
+  proc.exitCode = null;
   proc.kill = vi.fn(() => { (proc as { killed: boolean }).killed = true; });
   proc.pid = 88888;
   return proc;

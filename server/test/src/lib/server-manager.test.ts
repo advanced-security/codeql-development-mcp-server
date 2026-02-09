@@ -13,6 +13,11 @@ import {
   shutdownServerManager,
 } from '../../../src/lib/server-manager';
 
+// Mock waitForProcessReady so server start() resolves immediately in tests
+vi.mock('../../../src/utils/process-ready', () => ({
+  waitForProcessReady: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock child_process.spawn to avoid starting real CodeQL processes
 vi.mock('child_process', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>;
@@ -23,6 +28,7 @@ vi.mock('child_process', async (importOriginal) => {
         stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
         stdout: EventEmitter;
         stderr: EventEmitter;
+        exitCode: number | null;
         killed: boolean;
         kill: ReturnType<typeof vi.fn>;
         pid: number;
@@ -30,6 +36,7 @@ vi.mock('child_process', async (importOriginal) => {
       proc.stdin = { write: vi.fn(), end: vi.fn() };
       proc.stdout = new EventEmitter();
       proc.stderr = new EventEmitter();
+      proc.exitCode = null;
       proc.killed = false;
       proc.kill = vi.fn(() => { (proc as { killed: boolean }).killed = true; });
       proc.pid = 12345;

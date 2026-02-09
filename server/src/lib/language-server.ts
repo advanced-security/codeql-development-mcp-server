@@ -12,6 +12,7 @@ import { logger } from '../utils/logger';
 import { getPackageVersion } from '../utils/package-paths';
 import { getProjectTmpDir } from '../utils/temp-dir';
 import { getResolvedCodeQLDir } from './cli-executor';
+import { waitForProcessReady } from '../utils/process-ready';
 
 export interface LSPMessage {
   jsonrpc: '2.0';
@@ -177,8 +178,8 @@ export class CodeQLLanguageServer extends EventEmitter {
       this.emit('exit', code);
     });
 
-    // Wait for server to be ready
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Wait for the JVM to initialise (resolves on first stderr/stdout output)
+    await waitForProcessReady(this.server, 'CodeQL Language Server');
   }
 
   private handleStdout(data: Buffer): void {
@@ -520,11 +521,25 @@ export class CodeQLLanguageServer extends EventEmitter {
     }
 
     // Force kill if needed
-    setTimeout(() => {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        if (this.server) {
+          this.server.kill('SIGTERM');
+        }
+        resolve();
+      }, 1000);
+
       if (this.server) {
-        this.server.kill('SIGTERM');
+        this.server.once('exit', () => {
+          clearTimeout(timer);
+          this.server = null;
+          resolve();
+        });
+      } else {
+        clearTimeout(timer);
+        resolve();
       }
-    }, 1000);
+    });
 
     this.isInitialized = false;
   }

@@ -235,11 +235,8 @@ export function registerLspDiagnosticsTool(server: McpServer): void {
     }
   );
 
-  // Register cleanup on server shutdown
-  process.on('SIGINT', async () => {
-    await shutdownDiagnosticsServer();
-  });
-  process.on('SIGTERM', async () => {
-    await shutdownDiagnosticsServer();
-  });
+  // NOTE: Cleanup is handled centrally by shutdownServerManager() in
+  // codeql-development-mcp-server.ts (setupGracefulShutdown). Registering
+  // additional process.on('SIGINT'/'SIGTERM') handlers here would
+  // accumulate on repeated calls and is unnecessary.
 }

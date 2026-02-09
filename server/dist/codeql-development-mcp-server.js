@@ -5698,12 +5698,11 @@ function buildQueryServerArgs(config) {
   if (config.evaluatorLog) {
     args.push(`--evaluator-log=${config.evaluatorLog}`);
   }
-  if (config.tupleCounting) {
+  if (config.tupleCounting || config.debug) {
     args.push("--tuple-counting");
   }
   if (config.debug) {
     args.push("--debug");
-    args.push("--tuple-counting");
   }
   return args;
 }
@@ -5726,10 +5725,67 @@ init_logger();
 init_package_paths();
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
-import { setTimeout as setTimeout2, clearTimeout } from "timers";
+import { setTimeout as setTimeout3, clearTimeout as clearTimeout2 } from "timers";
 import { pathToFileURL } from "url";
 import { delimiter as delimiter2, join as join9 } from "path";
 init_cli_executor();
+
+// src/utils/process-ready.ts
+init_logger();
+import { clearTimeout, setTimeout as setTimeout2 } from "timers";
+var DEFAULT_READY_TIMEOUT_MS = 3e4;
+function waitForProcessReady(child, name, opts) {
+  const timeoutMs = opts?.timeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
+  return new Promise((resolve12, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      settled = true;
+      child.stderr?.removeListener("data", onStderr);
+      child.stdout?.removeListener("data", onStdout);
+      child.removeListener("error", onError);
+      child.removeListener("exit", onExit);
+      clearTimeout(timer);
+    };
+    const onStderr = () => {
+      if (settled) return;
+      logger.debug(`${name}: ready (stderr output detected)`);
+      cleanup();
+      resolve12();
+    };
+    const onStdout = () => {
+      if (settled) return;
+      logger.debug(`${name}: ready (stdout output detected)`);
+      cleanup();
+      resolve12();
+    };
+    const onError = (error) => {
+      if (settled) return;
+      cleanup();
+      reject(new Error(`${name} failed to start: ${error.message}`));
+    };
+    const onExit = (code) => {
+      if (settled) return;
+      cleanup();
+      reject(new Error(`${name} exited before becoming ready (code: ${code})`));
+    };
+    const timer = setTimeout2(() => {
+      if (settled) return;
+      logger.warn(`${name}: readiness timeout (${timeoutMs} ms) \u2014 proceeding anyway`);
+      cleanup();
+      resolve12();
+    }, timeoutMs);
+    child.stderr?.on("data", onStderr);
+    child.stdout?.on("data", onStdout);
+    child.on("error", onError);
+    child.on("exit", onExit);
+    if (child.killed || child.exitCode !== null) {
+      cleanup();
+      reject(new Error(`${name} is not running (exitCode: ${child.exitCode})`));
+    }
+  });
+}
+
+// src/lib/language-server.ts
 var CodeQLLanguageServer = class extends EventEmitter {
   constructor(_options = {}) {
     super();
@@ -5793,7 +5849,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       this.isInitialized = false;
       this.emit("exit", code);
     });
-    await new Promise((resolve12) => setTimeout2(resolve12, 2e3));
+    await waitForProcessReady(this.server, "CodeQL Language Server");
   }
   handleStdout(data) {
     this.messageBuffer += data.toString();
@@ -5865,7 +5921,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
     return new Promise((resolve12, reject) => {
       this.pendingResponses.set(id, { resolve: resolve12, reject });
       this.sendMessage(message);
-      setTimeout2(() => {
+      setTimeout3(() => {
         if (this.pendingResponses.has(id)) {
           this.pendingResponses.delete(id);
           reject(new Error(`LSP request timeout for method: ${method}`));
@@ -5958,7 +6014,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
     const documentUri = uri || pathToFileURL(join9(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
     return new Promise((resolve12, reject) => {
       let diagnosticsReceived = false;
-      const timeout = setTimeout2(() => {
+      const timeout = setTimeout3(() => {
         if (!diagnosticsReceived) {
           this.removeAllListeners("diagnostics");
           reject(new Error("Timeout waiting for diagnostics"));
@@ -5967,7 +6023,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
       const diagnosticsHandler = (params) => {
         if (params.uri === documentUri) {
           diagnosticsReceived = true;
-          clearTimeout(timeout);
+          clearTimeout2(timeout);
           this.removeListener("diagnostics", diagnosticsHandler);
           this.sendNotification("textDocument/didClose", {
             textDocument: { uri: documentUri }
@@ -6076,11 +6132,24 @@ var CodeQLLanguageServer = class extends EventEmitter {
     } catch (error) {
       logger.warn("Error during graceful shutdown:", error);
     }
-    setTimeout2(() => {
+    await new Promise((resolve12) => {
+      const timer = setTimeout3(() => {
+        if (this.server) {
+          this.server.kill("SIGTERM");
+        }
+        resolve12();
+      }, 1e3);
       if (this.server) {
-        this.server.kill("SIGTERM");
+        this.server.once("exit", () => {
+          clearTimeout2(timer);
+          this.server = null;
+          resolve12();
+        });
+      } else {
+        clearTimeout2(timer);
+        resolve12();
       }
-    }, 1e3);
+    });
     this.isInitialized = false;
   }
   isRunning() {
@@ -6092,7 +6161,7 @@ var CodeQLLanguageServer = class extends EventEmitter {
 import { spawn as spawn2 } from "child_process";
 import { delimiter as delimiter3 } from "path";
 import { EventEmitter as EventEmitter2 } from "events";
-import { clearTimeout as clearTimeout2, setTimeout as setTimeout3 } from "timers";
+import { clearTimeout as clearTimeout3, setTimeout as setTimeout4 } from "timers";
 init_cli_executor();
 init_logger();
 var CodeQLQueryServer = class extends EventEmitter2 {
@@ -6141,7 +6210,7 @@ var CodeQLQueryServer = class extends EventEmitter2 {
       this.process = null;
       this.emit("exit", code);
     });
-    await new Promise((resolve12) => setTimeout3(resolve12, 2e3));
+    await waitForProcessReady(this.process, "CodeQL Query Server");
     logger.info("CodeQL Query Server started");
   }
   /**
@@ -6163,7 +6232,7 @@ var CodeQLQueryServer = class extends EventEmitter2 {
     return new Promise((resolve12, reject) => {
       this.pendingRequests.set(id, { reject, resolve: resolve12 });
       this.sendRaw(message);
-      const timer = setTimeout3(() => {
+      const timer = setTimeout4(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
           reject(new Error(`Query server request timeout for method: ${method}`));
@@ -6173,11 +6242,11 @@ var CodeQLQueryServer = class extends EventEmitter2 {
       const originalReject = reject;
       const wrapped = {
         reject: (err) => {
-          clearTimeout2(timer);
+          clearTimeout3(timer);
           originalReject(err);
         },
         resolve: (val) => {
-          clearTimeout2(timer);
+          clearTimeout3(timer);
           originalResolve(val);
         }
       };
@@ -6197,12 +6266,25 @@ var CodeQLQueryServer = class extends EventEmitter2 {
     } catch (error) {
       logger.warn("Error during query server graceful shutdown:", error);
     }
-    setTimeout3(() => {
+    await new Promise((resolve12) => {
+      const timer = setTimeout4(() => {
+        if (this.process) {
+          this.process.kill("SIGTERM");
+          this.process = null;
+        }
+        resolve12();
+      }, 2e3);
       if (this.process) {
-        this.process.kill("SIGTERM");
-        this.process = null;
+        this.process.once("exit", () => {
+          clearTimeout3(timer);
+          this.process = null;
+          resolve12();
+        });
+      } else {
+        clearTimeout3(timer);
+        resolve12();
       }
-    }, 2e3);
+    });
   }
   /**
    * Whether the query server process is running.
@@ -6280,7 +6362,7 @@ ${body}`;
 import { spawn as spawn3 } from "child_process";
 import { delimiter as delimiter4 } from "path";
 import { EventEmitter as EventEmitter3 } from "events";
-import { clearTimeout as clearTimeout3, setTimeout as setTimeout4 } from "timers";
+import { clearTimeout as clearTimeout4, setTimeout as setTimeout5 } from "timers";
 init_cli_executor();
 init_logger();
 var CodeQLCLIServer = class extends EventEmitter3 {
@@ -6341,7 +6423,7 @@ var CodeQLCLIServer = class extends EventEmitter3 {
       this.process = null;
       this.emit("exit", code);
     });
-    await new Promise((resolve12) => setTimeout4(resolve12, 1500));
+    await waitForProcessReady(this.process, "CodeQL CLI Server");
     logger.info("CodeQL CLI Server started");
   }
   /**
@@ -6379,7 +6461,7 @@ var CodeQLCLIServer = class extends EventEmitter3 {
       logger.warn("Error during CLI server shutdown request:", error);
     }
     await new Promise((resolve12) => {
-      const timer = setTimeout4(() => {
+      const timer = setTimeout5(() => {
         if (this.process) {
           this.process.kill("SIGTERM");
           this.process = null;
@@ -6388,12 +6470,12 @@ var CodeQLCLIServer = class extends EventEmitter3 {
       }, 2e3);
       if (this.process) {
         this.process.once("exit", () => {
-          clearTimeout3(timer);
+          clearTimeout4(timer);
           this.process = null;
           resolve12();
         });
       } else {
-        clearTimeout3(timer);
+        clearTimeout4(timer);
         resolve12();
       }
     });
@@ -6760,10 +6842,6 @@ async function lspDiagnostics({
     throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
-async function shutdownDiagnosticsServer() {
-  const manager = getServerManager();
-  await manager.shutdownServer("language");
-}
 function registerLspDiagnosticsTool(server) {
   server.tool(
     "codeql_lsp_diagnostics",
@@ -6825,12 +6903,6 @@ function registerLspDiagnosticsTool(server) {
       }
     }
   );
-  process.on("SIGINT", async () => {
-    await shutdownDiagnosticsServer();
-  });
-  process.on("SIGTERM", async () => {
-    await shutdownDiagnosticsServer();
-  });
 }
 
 // src/tools/lsp/lsp-handlers.ts

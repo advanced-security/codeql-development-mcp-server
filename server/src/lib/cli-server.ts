@@ -15,6 +15,7 @@ import { clearTimeout, setTimeout } from 'timers';
 import { buildCLIServerArgs, CLIServerConfig } from './server-config';
 import { getResolvedCodeQLDir } from './cli-executor';
 import { logger } from '../utils/logger';
+import { waitForProcessReady } from '../utils/process-ready';
 
 /**
  * A queued command waiting to be sent to the CLI server.
@@ -102,8 +103,8 @@ export class CodeQLCLIServer extends EventEmitter {
       this.emit('exit', code);
     });
 
-    // Brief startup delay for JVM init
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Wait for the JVM to initialise (resolves on first stderr/stdout output)
+    await waitForProcessReady(this.process, 'CodeQL CLI Server');
     logger.info('CodeQL CLI Server started');
   }
 

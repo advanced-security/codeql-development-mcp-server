@@ -112,6 +112,15 @@ describe('server-config', () => {
       expect(args).toContain('--tuple-counting');
     });
 
+    it('should not duplicate --tuple-counting when both debug and tupleCounting are set', () => {
+      const config: QueryServerConfig = { debug: true, tupleCounting: true };
+      const args = buildQueryServerArgs(config);
+
+      const tupleCountingOccurrences = args.filter(a => a === '--tuple-counting').length;
+      expect(tupleCountingOccurrences).toBe(1);
+      expect(args).toContain('--debug');
+    });
+
     it('should handle zero threads', () => {
       const config: QueryServerConfig = { threads: 0 };
       const args = buildQueryServerArgs(config);
