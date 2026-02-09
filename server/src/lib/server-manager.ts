@@ -289,6 +289,11 @@ export class CodeQLServerManager {
     try {
       return await work;
     } finally {
+      // Ensure `work` has settled before removing the pendingStarts entry so
+      // that concurrent callers waiting on the same promise see a consistent
+      // map state.  The try/catch avoids re-throwing a rejection that the
+      // outer `try` block already handles.
+      try { await work; } catch { /* already handled */ }
       if (this.pendingStarts.get(type) === work) {
         this.pendingStarts.delete(type);
       }

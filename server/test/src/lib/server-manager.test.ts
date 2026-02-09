@@ -179,6 +179,65 @@ describe('CodeQLServerManager', () => {
       expect(server1).toBe(server2);
       expect(manager.isRunning('language')).toBe(true);
     });
+
+    it('should allow a retry after a failed start', async () => {
+      const { spawn } = await import('child_process');
+      const manager = new CodeQLServerManager({ sessionId: 'ls-fail-retry' });
+      const config = { searchPath: '/ql' };
+
+      // First call: spawn throws so the start rejects
+      (spawn as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+        throw new Error('mock spawn failure');
+      });
+
+      await expect(manager.getLanguageServer(config)).rejects.toThrow('mock spawn failure');
+      expect(manager.isRunning('language')).toBe(false);
+
+      // Second call: spawn works again — should succeed, not hang on a
+      // stale pendingStarts entry.
+      const server = await manager.getLanguageServer(config);
+      expect(server).toBeDefined();
+      expect(server.isRunning()).toBe(true);
+    });
+
+    it('should not leak pendingStarts when concurrent calls race and the first rejects', async () => {
+      const { spawn } = await import('child_process');
+      const manager = new CodeQLServerManager({ sessionId: 'ls-race-reject' });
+      const config = { searchPath: '/ql' };
+
+      let callCount = 0;
+      const originalImpl = (spawn as ReturnType<typeof vi.fn>).getMockImplementation();
+      (spawn as ReturnType<typeof vi.fn>).mockImplementation((...args: unknown[]) => {
+        callCount++;
+        if (callCount === 1) {
+          // First spawn fails — simulates a transient error
+          throw new Error('transient spawn failure');
+        }
+        // Subsequent spawns succeed using the original mock implementation
+        if (originalImpl) return originalImpl(...args);
+        // Fallback: should not happen, but satisfy the type checker
+        throw new Error('no original implementation');
+      });
+
+      // Fire two concurrent requests — first will reject, second should
+      // still succeed because pendingStarts is cleaned up properly.
+      const results = await Promise.allSettled([
+        manager.getLanguageServer(config),
+        manager.getLanguageServer(config),
+      ]);
+
+      // At least one call should have succeeded
+      const fulfilled = results.filter(r => r.status === 'fulfilled');
+      expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+
+      // The manager should have a running language server afterwards
+      expect(manager.isRunning('language')).toBe(true);
+
+      // Restore original mock
+      if (originalImpl) {
+        (spawn as ReturnType<typeof vi.fn>).mockImplementation(originalImpl);
+      }
+    });
   });
 
   describe('getQueryServer', () => {

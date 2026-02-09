@@ -1313,6 +1313,10 @@ var init_server_manager = __esm({
         try {
           return await work;
         } finally {
+          try {
+            await work;
+          } catch {
+          }
           if (this.pendingStarts.get(type2) === work) {
             this.pendingStarts.delete(type2);
           }
