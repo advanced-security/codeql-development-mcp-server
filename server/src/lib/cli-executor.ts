@@ -443,20 +443,111 @@ export function buildQLTArgs(subcommand: string, options: Record<string, unknown
 }
 
 /**
+ * CodeQL subcommands that MUST run as fresh processes.
+ *
+ * These cannot use the cli-server because they:
+ * - Spawn extractors or other long-running child processes (database create, test extract)
+ * - Produce multi-event NUL-delimited streams (test run)
+ * - Are compound orchestration commands (database analyze)
+ *
+ * Everything else is routed through the persistent cli-server JVM for
+ * sub-second execution instead of 2-5 s JVM cold-start per invocation.
+ */
+const FRESH_PROCESS_SUBCOMMANDS = new Set([
+  'database analyze',
+  'database create',
+  'test extract',
+  'test run',
+]);
+
+/**
  * Execute a CodeQL command.
- * Always uses the bare `codeql` command name so that execvp() PATH lookup
- * handles shell-script shebangs correctly. When CODEQL_PATH is set, the
- * resolved directory is prepended to PATH via getSafeEnvironment().
+ *
+ * By default, commands are routed through the persistent `codeql execute
+ * cli-server` process managed by {@link CodeQLServerManager}, eliminating
+ * repeated JVM startup overhead (~2-5 s savings per call).
+ *
+ * Commands listed in {@link FRESH_PROCESS_SUBCOMMANDS} (e.g. `database create`,
+ * `test run`) are always executed as fresh processes because they either spawn
+ * child extractors, produce streaming output, or require a dedicated working
+ * directory.
+ *
+ * If the cli-server is not available (e.g. during early startup before
+ * `initServerManager()` is called), the function falls back transparently to
+ * a fresh process.
  */
 export async function executeCodeQLCommand(
-  subcommand: string, 
-  options: Record<string, unknown>, 
+  subcommand: string,
+  options: Record<string, unknown>,
   additionalArgs: string[] = [],
   cwd?: string
 ): Promise<CLIExecutionResult> {
   const args = buildCodeQLArgs(subcommand, options);
   args.push(...additionalArgs);
-  
+
+  // Determine whether this subcommand can use the persistent cli-server.
+  // Commands that need a specific CWD also must use a fresh process because
+  // the cli-server's CWD is fixed at startup.
+  const canUseCLIServer = !FRESH_PROCESS_SUBCOMMANDS.has(subcommand) && !cwd;
+
+  if (canUseCLIServer) {
+    try {
+      // Lazy-import to avoid circular dependency at module level.
+      // Use getServerManager() (not initServerManager()) — if the manager
+      // hasn't been initialized yet (e.g. during tests or early startup),
+      // this creates one, but we only attempt to *use* the cli-server if
+      // it is already running (warmed up at MCP server startup).  We never
+      // block on starting a new cli-server here — that would add JVM
+      // startup latency to the first fresh-process-fallback call.
+      const { getServerManager } = await import('./server-manager');
+      const manager = getServerManager();
+
+      if (manager.isRunning('cli')) {
+        const cliServer = await manager.getCLIServer({});
+        const sanitizedArgs = sanitizeCLIArguments(args);
+
+        logger.info(`Executing CodeQL command via cli-server: ${subcommand}`, { args: sanitizedArgs });
+
+        const stdout = await cliServer.runCommand(sanitizedArgs);
+
+        return {
+          stdout,
+          stderr: '',
+          success: true,
+          exitCode: 0,
+        };
+      } else {
+        logger.debug(`cli-server not yet running for "${subcommand}", using fresh process`);
+      }
+    } catch (error) {
+      // If the cli-server call fails, check whether it's a command-level
+      // error (the CLI returned non-zero) or a transport/startup error.
+      // For transport errors we fall back to a fresh process; for command
+      // errors we return the failure directly.
+      const message = error instanceof Error ? error.message : String(error);
+
+      // Transport-level errors that warrant a fallback:
+      if (message.includes('CLI server is not running') ||
+          message.includes('CLI server exited') ||
+          message.includes('failed to start')) {
+        logger.warn(`cli-server unavailable for "${subcommand}", falling back to fresh process: ${message}`);
+        // Fall through to fresh-process execution below
+      } else {
+        // Command-level error — return it as a failed result
+        logger.error(`cli-server command failed for "${subcommand}": ${message}`);
+        return {
+          stdout: '',
+          stderr: message,
+          success: false,
+          error: message,
+          exitCode: 1,
+        };
+      }
+    }
+  }
+
+  // Fresh-process execution (for FRESH_PROCESS_SUBCOMMANDS, CWD-specific
+  // calls, or as a fallback when the cli-server is unavailable).
   return executeCLICommand({
     command: 'codeql',
     args,

@@ -9,16 +9,6 @@ import { basename, join } from 'path';
 import { registerDatabase, registerRegisterDatabaseTool } from '../../../../src/tools/codeql/register-database';
 import { createTestTempDir } from '../../../utils/temp-dir';
 
-// Mock the logger to suppress expected error output
-vi.mock('../../../../src/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 describe('registerDatabase', () => {
   it('should successfully register a valid database', async () => {
     // Arrange

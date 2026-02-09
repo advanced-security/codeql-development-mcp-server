@@ -1,0 +1,6 @@
+{
+  "sessions": [],
+  "parameters": {
+    "ql_code": "from UndefinedType x\nwhere x = \"test\"\nselect x, \"semantic error: undefined type\""
+  }
+}

@@ -148,7 +148,12 @@ export class IntegrationTestRunner {
         codeql_bqrs_decode: 3,
         codeql_bqrs_info: 3,
         codeql_database_analyze: 3,
-        codeql_resolve_database: 3
+        codeql_resolve_database: 3,
+
+        // Priority 3.5: LSP diagnostics runs before other LSP tools to warm up
+        // the language server JVM. Subsequent codeql_lsp_* tools reuse the
+        // running server and avoid the cold-start penalty.
+        codeql_lsp_diagnostics: 3.5
 
         // Priority 4: All other tools (default priority)
         // These tools don't have specific database dependencies
@@ -232,8 +237,8 @@ export class IntegrationTestRunner {
         return;
       }
 
-      // Handle special case for codeql_language_server_eval tool
-      if (toolName === "codeql_language_server_eval") {
+      // Handle special case for codeql_lsp_diagnostics tool
+      if (toolName === "codeql_lsp_diagnostics") {
         await this.runLanguageServerEvalTest(toolName, testCase, beforeDir, afterDir);
         return;
       }
@@ -293,7 +298,7 @@ export class IntegrationTestRunner {
   }
 
   /**
-   * Special test runner for codeql_language_server_eval tool
+   * Special test runner for codeql_lsp_diagnostics tool
    * This tool validates QL code and returns diagnostics, rather than modifying files
    */
   async runLanguageServerEvalTest(toolName, testCase, beforeDir, afterDir) {
@@ -331,7 +336,7 @@ export class IntegrationTestRunner {
         // eslint-disable-next-line no-unused-vars
         const _afterContent = fs.readFileSync(afterPath, "utf8");
 
-        // Run the language server eval tool on the before content
+        // Run the codeql_lsp_diagnostics tool on the before content
         const result = await this.client.callTool({
           name: toolName,
           arguments: {
@@ -737,10 +742,14 @@ export class IntegrationTestRunner {
       // Call the tool with appropriate parameters
       // Set extended timeout for long-running operations
       const longRunningTools = [
-        "codeql_query_run",
-        "codeql_test_run",
         "codeql_database_analyze",
-        "codeql_database_create"
+        "codeql_database_create",
+        "codeql_lsp_completion",
+        "codeql_lsp_definition",
+        "codeql_lsp_diagnostics",
+        "codeql_lsp_references",
+        "codeql_query_run",
+        "codeql_test_run"
       ];
 
       const requestOptions = longRunningTools.includes(toolName)
@@ -828,7 +837,16 @@ export class IntegrationTestRunner {
 
       if (success) {
         this.logger.log(`✅ ${toolName}/${testCase} - Tool executed successfully`);
-        this.logger.log(`   Result: ${result.content?.[0]?.text || "No content"}`);
+        // Truncate long results to avoid excessive CI log output
+        const resultText = result.content?.[0]?.text || "No content";
+        const MAX_LOG_LENGTH = 500;
+        if (resultText.length > MAX_LOG_LENGTH) {
+          this.logger.log(
+            `   Result: ${resultText.substring(0, MAX_LOG_LENGTH)}... (truncated, ${resultText.length} chars total)`
+          );
+        } else {
+          this.logger.log(`   Result: ${resultText}`);
+        }
       } else {
         this.logger.log(`❌ ${toolName}/${testCase} - Tool execution failed`);
         const errorText = result.content?.[0]?.text || "Unknown error";
@@ -882,8 +900,8 @@ export class IntegrationTestRunner {
     const beforeDir = path.join(testCaseDir, "before");
     const staticPath = this.getStaticFilesPath();
 
-    if (toolName === "codeql_language_server_eval") {
-      params.ql_code = "from DataFlow::Configuration cfg select cfg";
+    if (toolName === "codeql_lsp_diagnostics") {
+      params.ql_code = 'from UndefinedType x where x = "test" select x, "semantic error"';
       // Skip workspace_uri for now as it's not needed for basic validation
     } else if (toolName === "codeql_bqrs_decode") {
       // Use static BQRS file

@@ -8,16 +8,6 @@ import { registerMonitoringTools } from '../../../src/tools/monitoring-tools';
 import { sessionDataManager } from '../../../src/lib/session-data-manager';
 import { existsSync, rmSync } from 'fs';
 
-// Mock the logger to suppress expected error output
-vi.mock('../../../src/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 describe('Monitoring Tools', () => {
   let mockServer: McpServer;
   const testStorageDir = '.ql-mcp-tracking-test';

@@ -9,16 +9,6 @@ import { join } from 'path';
 import { quickEvaluate, registerQuickEvaluateTool } from '../../../../src/tools/codeql/quick-evaluate';
 import { createTestTempDir } from '../../../utils/temp-dir';
 
-// Mock the logger to suppress expected error output
-vi.mock('../../../../src/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 // Helper function to create unique temp files and ensure cleanup
 // eslint-disable-next-line no-unused-vars
 async function withTempFile<T>(content: string, testName: string, fn: (filePath: string) => Promise<T>): Promise<T> {

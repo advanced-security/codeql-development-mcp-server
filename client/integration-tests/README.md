@@ -127,7 +127,7 @@ Monitoring-based integration tests enable testing of MCP tools that previously c
 ## Example: Tool with Both File-Based and Monitoring Tests
 
 ```text
-client/integration-tests/primitives/tools/codeql_language_server_eval/
+client/integration-tests/primitives/tools/codeql_lsp_diagnostics/
 └── semantic_validation/
     ├── before/
     │   ├── semantic_query.ql          # File-based test input

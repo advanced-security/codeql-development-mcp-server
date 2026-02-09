@@ -1,0 +1,9 @@
+{
+  "sessions": [],
+  "parameters": {
+    "file_path": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+    "line": 14,
+    "character": 4,
+    "workspace_uri": "server/ql/javascript/examples"
+  }
+}

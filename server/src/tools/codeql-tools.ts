@@ -34,7 +34,6 @@ import {
   registerFindClassPositionTool,
   registerFindCodeQLQueryFilesTool,
   registerFindPredicatePositionTool,
-  registerLanguageServerEvalTool,
   registerProfileCodeQLQueryTool,
   registerQuickEvaluateTool,
   registerRegisterDatabaseTool
@@ -50,7 +49,7 @@ export function registerCodeQLTools(server: McpServer): void {
   // Tool: Validate CodeQL Query (heuristic-based)
   server.tool(
     'validate_codeql_query',
-    'Quick heuristic validation for CodeQL query structure - checks for common patterns like from/where/select clauses and metadata presence. Does NOT compile the query. For authoritative validation with actual compilation, use codeql_language_server_eval instead.',
+    'Quick heuristic validation for CodeQL query structure - checks for common patterns like from/where/select clauses and metadata presence. Does NOT compile the query. For authoritative validation with actual compilation, use codeql_lsp_diagnostics instead.',
     {
       query: z.string().describe('The CodeQL query to validate'),
       language: z.string().optional().describe('Target programming language'),
@@ -159,7 +158,6 @@ export function registerCodeQLTools(server: McpServer): void {
   registerFindClassPositionTool(server);
   registerFindCodeQLQueryFilesTool(server);
   registerFindPredicatePositionTool(server);
-  registerLanguageServerEvalTool(server);
   registerProfileCodeQLQueryTool(server);
   registerQuickEvaluateTool(server);
   registerRegisterDatabaseTool(server);

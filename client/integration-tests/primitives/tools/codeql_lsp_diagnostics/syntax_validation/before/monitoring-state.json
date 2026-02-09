@@ -1,0 +1,6 @@
+{
+  "sessions": [],
+  "parameters": {
+    "ql_code": "invalid_type x\nwhere x = \"test\"\nselect x, \"This has syntax errors\""
+  }
+}

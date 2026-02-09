@@ -94,7 +94,39 @@ quick_evaluate: {
 }
 ```
 
-### 3. Query File Discovery with `find_codeql_query_files`
+### 3. LSP-Powered Code Navigation
+
+Use the LSP tools for real-time code exploration during query development:
+
+```typescript
+// Discover available types after `import javascript`
+codeql_lsp_completion: {
+  file_path: "/path/to/Query.ql",
+  line: 5,       // line with `from` clause
+  character: 5,   // cursor position
+  workspace_uri: "file:///path/to/pack-root"  // REQUIRED for dependency resolution
+}
+
+// Navigate to a class definition to see its predicates
+codeql_lsp_definition: {
+  file_path: "/path/to/Query.ql",
+  line: 5,       // line containing the class name
+  character: 10,  // cursor on the class name
+  workspace_uri: "file:///path/to/pack-root"
+}
+
+// Find all usages of a predicate across the pack
+codeql_lsp_references: {
+  file_path: "/path/to/Query.ql",
+  line: 8,
+  character: 5,
+  workspace_uri: "file:///path/to/pack-root"
+}
+```
+
+**Important**: Always set `workspace_uri` to the pack or workspace root. Without it, completions for imported library types will be empty.
+
+### 4. Query File Discovery with `find_codeql_query_files`
 
 Use this tool frequently to understand query dependencies and test structure:
 

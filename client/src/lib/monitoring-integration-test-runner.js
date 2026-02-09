@@ -329,9 +329,8 @@ export class MonitoringIntegrationTestRunner {
   getToolSpecificParams(toolName, _testCase, testCaseDir) {
     const params = {};
 
-    if (toolName === "codeql_language_server_eval") {
-      params.query = "from DataFlow::Configuration cfg select cfg";
-      params.language = "javascript";
+    if (toolName === "codeql_lsp_diagnostics") {
+      params.ql_code = 'from UndefinedType x where x = "test" select x, "semantic error"';
     } else if (toolName === "codeql_query_format") {
       // Look for .ql files in the before directory
       const beforeDir = path.join(testCaseDir, "before");

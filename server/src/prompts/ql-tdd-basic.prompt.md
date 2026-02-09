@@ -51,6 +51,16 @@ For detailed guidance, reference the MCP resource: `codeql://learning/test-drive
   - Use format: "graphtext" for @kind graph queries
   - Review AST structure and identify relevant classes
 
+- [ ] **Explore Available Classes and Predicates**
+  - Tool: `codeql_lsp_completion` at cursor position in `from` clause
+  - Set `workspace_uri` to the pack root for dependency resolution
+  - Browse completions with documentation to discover relevant types
+
+- [ ] **Navigate to Type Definitions**
+  - Tool: `codeql_lsp_definition` on a class or predicate name
+  - Review the definition to understand available member predicates
+  - Tool: `codeql_lsp_references` to find usage examples in the pack
+
 - [ ] **Reference Language Documentation**
   - Resource: `codeql://languages/{language}/ast`
   - Resource: `codeql://languages/{language}/security` (if applicable)
@@ -195,6 +205,7 @@ codeql_test_accept: {
 - ❌ Accepting test results without verification
 - ❌ Skipping compilation step
 - ❌ Not using PrintAST to understand test code
+- ❌ Not using `codeql_lsp_completion` to discover available types
 - ❌ Creating tests that are too complex
 - ❌ Ignoring false positives in results
 - ❌ Not refactoring after tests pass
