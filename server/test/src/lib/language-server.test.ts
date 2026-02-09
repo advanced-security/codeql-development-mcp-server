@@ -157,6 +157,26 @@ describe('CodeQLLanguageServer', () => {
         textDocument: { uri: 'file:///test.ql' },
       })).rejects.toThrow('Language server is not initialized');
     });
+
+    it('should throw if process is not running', async () => {
+      const ls = new CodeQLLanguageServer();
+      await ls.start();
+
+      // Initialize first
+      const initPromise = ls.initialize('file:///workspace');
+      mockProc.stdout.emit('data', Buffer.from(buildLspFrame({
+        id: 1, jsonrpc: '2.0', result: { capabilities: {} },
+      })));
+      await initPromise;
+
+      // Kill the process
+      mockProc.killed = true;
+
+      await expect(ls.getCompletions({
+        position: { character: 0, line: 0 },
+        textDocument: { uri: 'file:///test.ql' },
+      })).rejects.toThrow('Language server process is not running');
+    });
   });
 
   describe('getDefinition', () => {
@@ -169,6 +189,24 @@ describe('CodeQLLanguageServer', () => {
         textDocument: { uri: 'file:///test.ql' },
       })).rejects.toThrow('Language server is not initialized');
     });
+
+    it('should throw if process is not running', async () => {
+      const ls = new CodeQLLanguageServer();
+      await ls.start();
+
+      const initPromise = ls.initialize('file:///workspace');
+      mockProc.stdout.emit('data', Buffer.from(buildLspFrame({
+        id: 1, jsonrpc: '2.0', result: { capabilities: {} },
+      })));
+      await initPromise;
+
+      mockProc.killed = true;
+
+      await expect(ls.getDefinition({
+        position: { character: 0, line: 0 },
+        textDocument: { uri: 'file:///test.ql' },
+      })).rejects.toThrow('Language server process is not running');
+    });
   });
 
   describe('getReferences', () => {
@@ -180,6 +218,24 @@ describe('CodeQLLanguageServer', () => {
         position: { character: 0, line: 0 },
         textDocument: { uri: 'file:///test.ql' },
       })).rejects.toThrow('Language server is not initialized');
+    });
+
+    it('should throw if process is not running', async () => {
+      const ls = new CodeQLLanguageServer();
+      await ls.start();
+
+      const initPromise = ls.initialize('file:///workspace');
+      mockProc.stdout.emit('data', Buffer.from(buildLspFrame({
+        id: 1, jsonrpc: '2.0', result: { capabilities: {} },
+      })));
+      await initPromise;
+
+      mockProc.killed = true;
+
+      await expect(ls.getReferences({
+        position: { character: 0, line: 0 },
+        textDocument: { uri: 'file:///test.ql' },
+      })).rejects.toThrow('Language server process is not running');
     });
   });
 

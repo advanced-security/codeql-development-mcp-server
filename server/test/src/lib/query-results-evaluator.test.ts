@@ -7,16 +7,6 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 
-// Mock the logger to suppress expected error output
-vi.mock('../../../src/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 // Mock CLI executor at the top level
 vi.mock('../../../src/lib/cli-executor', () => ({
   executeCodeQLCommand: vi.fn()

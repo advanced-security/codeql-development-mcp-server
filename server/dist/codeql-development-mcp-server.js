@@ -5698,11 +5698,11 @@ function buildQueryServerArgs(config) {
   if (config.evaluatorLog) {
     args.push(`--evaluator-log=${config.evaluatorLog}`);
   }
-  if (config.tupleCounting || config.debug) {
-    args.push("--tuple-counting");
-  }
   if (config.debug) {
     args.push("--debug");
+    args.push("--tuple-counting");
+  } else if (config.tupleCounting) {
+    args.push("--tuple-counting");
   }
   return args;
 }
@@ -6050,6 +6050,9 @@ var CodeQLLanguageServer = class extends EventEmitter {
     if (!this.isInitialized) {
       throw new Error("Language server is not initialized");
     }
+    if (!this.isRunning()) {
+      throw new Error("Language server process is not running");
+    }
     const result = await this.sendRequest("textDocument/completion", params);
     if (result && typeof result === "object" && "items" in result) {
       return result.items;
@@ -6063,6 +6066,9 @@ var CodeQLLanguageServer = class extends EventEmitter {
     if (!this.isInitialized) {
       throw new Error("Language server is not initialized");
     }
+    if (!this.isRunning()) {
+      throw new Error("Language server process is not running");
+    }
     const result = await this.sendRequest("textDocument/definition", params);
     return this.normalizeLocations(result);
   }
@@ -6072,6 +6078,9 @@ var CodeQLLanguageServer = class extends EventEmitter {
   async getReferences(params) {
     if (!this.isInitialized) {
       throw new Error("Language server is not initialized");
+    }
+    if (!this.isRunning()) {
+      throw new Error("Language server process is not running");
     }
     const result = await this.sendRequest("textDocument/references", {
       ...params,
@@ -6128,7 +6137,9 @@ var CodeQLLanguageServer = class extends EventEmitter {
     logger.info("Shutting down CodeQL Language Server...");
     try {
       await this.sendRequest("shutdown", {});
-      this.sendNotification("exit", {});
+      if (this.server) {
+        this.sendNotification("exit", {});
+      }
     } catch (error) {
       logger.warn("Error during graceful shutdown:", error);
     }
@@ -6907,7 +6918,7 @@ function registerLspDiagnosticsTool(server) {
 
 // src/tools/lsp/lsp-handlers.ts
 init_logger();
-import { readFileSync as readFileSync6 } from "fs";
+import { readFile as readFile3 } from "fs/promises";
 import { pathToFileURL as pathToFileURL3 } from "url";
 import { isAbsolute as isAbsolute5, resolve as resolve10 } from "path";
 async function getInitializedServer(params) {
@@ -6919,34 +6930,42 @@ async function getInitializedServer(params) {
   };
   const manager = getServerManager();
   const server = await manager.getLanguageServer(config);
-  const effectiveUri = params.workspaceUri ?? pathToFileURL3(resolve10(pkgRoot, "ql")).href;
+  let effectiveUri = params.workspaceUri;
+  if (effectiveUri && !effectiveUri.startsWith("file://")) {
+    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve10(process.cwd(), effectiveUri);
+    effectiveUri = pathToFileURL3(absWorkspace).href;
+  }
+  effectiveUri = effectiveUri ?? pathToFileURL3(resolve10(pkgRoot, "ql")).href;
   await server.initialize(effectiveUri);
   return server;
 }
-function prepareDocumentPosition(server, params) {
+function prepareDocumentPosition(params) {
   const absPath = isAbsolute5(params.filePath) ? params.filePath : resolve10(process.cwd(), params.filePath);
   const docUri = pathToFileURL3(absPath).href;
+  return { absPath, docUri };
+}
+async function openDocumentForPosition(server, params, absPath, docUri) {
   let text;
   if (params.fileContent) {
     text = params.fileContent;
   } else {
     try {
-      text = readFileSync6(absPath, "utf-8");
+      text = await readFile3(absPath, "utf-8");
     } catch (error) {
       throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`);
     }
   }
   server.openDocument(docUri, text);
-  const positionParams = {
+  return {
     position: { character: params.character, line: params.line },
     textDocument: { uri: docUri }
   };
-  return { docUri, positionParams };
 }
 async function lspCompletion(params) {
   logger.info(`LSP completion at ${params.filePath}:${params.line}:${params.character}`);
   const server = await getInitializedServer(params);
-  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  const { absPath, docUri } = prepareDocumentPosition(params);
+  const positionParams = await openDocumentForPosition(server, params, absPath, docUri);
   try {
     return await server.getCompletions(positionParams);
   } finally {
@@ -6956,7 +6975,8 @@ async function lspCompletion(params) {
 async function lspDefinition(params) {
   logger.info(`LSP definition at ${params.filePath}:${params.line}:${params.character}`);
   const server = await getInitializedServer(params);
-  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  const { absPath, docUri } = prepareDocumentPosition(params);
+  const positionParams = await openDocumentForPosition(server, params, absPath, docUri);
   try {
     return await server.getDefinition(positionParams);
   } finally {
@@ -6966,7 +6986,8 @@ async function lspDefinition(params) {
 async function lspReferences(params) {
   logger.info(`LSP references at ${params.filePath}:${params.line}:${params.character}`);
   const server = await getInitializedServer(params);
-  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  const { absPath, docUri } = prepareDocumentPosition(params);
+  const positionParams = await openDocumentForPosition(server, params, absPath, docUri);
   try {
     return await server.getReferences({
       ...positionParams,
@@ -7096,7 +7117,7 @@ function registerLSPTools(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync7, existsSync as existsSync7 } from "fs";
+import { readFileSync as readFileSync6, existsSync as existsSync7 } from "fs";
 import { join as join12 } from "path";
 
 // src/types/language-types.ts
@@ -7162,7 +7183,7 @@ function loadResourceContent(relativePath) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync7(fullPath, "utf-8");
+    return readFileSync6(fullPath, "utf-8");
   } catch (error) {
     logger.error(`Error loading resource file ${relativePath}:`, error);
     return null;
@@ -7288,7 +7309,7 @@ import { z as z33 } from "zod";
 import { basename as basename5 } from "path";
 
 // src/prompts/prompt-loader.ts
-import { readFileSync as readFileSync8 } from "fs";
+import { readFileSync as readFileSync7 } from "fs";
 import { join as join13, dirname as dirname8 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 var __filename3 = fileURLToPath3(import.meta.url);
@@ -7296,7 +7317,7 @@ var __dirname3 = dirname8(__filename3);
 function loadPromptTemplate(promptFileName) {
   try {
     const promptPath = join13(__dirname3, promptFileName);
-    return readFileSync8(promptPath, "utf-8");
+    return readFileSync7(promptPath, "utf-8");
   } catch (error) {
     return `Prompt template '${promptFileName}' not available: ${error instanceof Error ? error.message : "Unknown error"}`;
   }
@@ -7791,7 +7812,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync9, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { readFileSync as readFileSync8, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -7804,7 +7825,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync9(this.#filename, "utf-8");
+      data = readFileSync8(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;

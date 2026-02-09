@@ -6,16 +6,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { resolveQueryMetadata } from '../../../src/lib/metadata-resolver.js';
 import * as cliExecutor from '../../../src/lib/cli-executor.js';
 
-// Mock the logger to suppress expected error output
-vi.mock('../../../src/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 // Mock the cli-executor module
 vi.mock('../../../src/lib/cli-executor.js', () => ({
   executeCodeQLCommand: vi.fn()

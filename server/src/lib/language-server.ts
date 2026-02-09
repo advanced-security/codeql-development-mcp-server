@@ -426,6 +426,9 @@ export class CodeQLLanguageServer extends EventEmitter {
     if (!this.isInitialized) {
       throw new Error('Language server is not initialized');
     }
+    if (!this.isRunning()) {
+      throw new Error('Language server process is not running');
+    }
     const result = await this.sendRequest('textDocument/completion', params);
     // The result may be a CompletionList or CompletionItem[]
     if (result && typeof result === 'object' && 'items' in (result as object)) {
@@ -441,6 +444,9 @@ export class CodeQLLanguageServer extends EventEmitter {
     if (!this.isInitialized) {
       throw new Error('Language server is not initialized');
     }
+    if (!this.isRunning()) {
+      throw new Error('Language server process is not running');
+    }
     const result = await this.sendRequest('textDocument/definition', params);
     return this.normalizeLocations(result);
   }
@@ -451,6 +457,9 @@ export class CodeQLLanguageServer extends EventEmitter {
   async getReferences(params: TextDocumentPositionParams & { context?: { includeDeclaration: boolean } }): Promise<LSPLocation[]> {
     if (!this.isInitialized) {
       throw new Error('Language server is not initialized');
+    }
+    if (!this.isRunning()) {
+      throw new Error('Language server process is not running');
     }
     const result = await this.sendRequest('textDocument/references', {
       ...params,
@@ -515,7 +524,9 @@ export class CodeQLLanguageServer extends EventEmitter {
 
     try {
       await this.sendRequest('shutdown', {});
-      this.sendNotification('exit', {});
+      if (this.server) {
+        this.sendNotification('exit', {});
+      }
     } catch (error) {
       logger.warn('Error during graceful shutdown:', error);
     }

@@ -7,16 +7,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-// Mock the logger
-vi.mock('../../../../src/utils/logger', () => ({
-  logger: {
-    debug: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
-
 // Create mock language server instance methods
 const mockEvaluateQL = vi.fn().mockResolvedValue([]);
 const mockInitialize = vi.fn().mockResolvedValue(undefined);

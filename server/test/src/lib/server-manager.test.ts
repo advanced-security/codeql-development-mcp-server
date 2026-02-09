@@ -129,6 +129,66 @@ describe('CodeQLServerManager', () => {
     });
   });
 
+  describe('getLanguageServer', () => {
+    it('should return a running language server', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'ls-test' });
+      const server = await manager.getLanguageServer({ searchPath: '/ql' });
+
+      expect(server).toBeDefined();
+      expect(server.isRunning()).toBe(true);
+      expect(manager.isRunning('language')).toBe(true);
+    });
+
+    it('should reuse the same server for identical config', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'ls-reuse' });
+      const config = { searchPath: '/ql' };
+
+      const server1 = await manager.getLanguageServer(config);
+      const server2 = await manager.getLanguageServer(config);
+
+      expect(server1).toBe(server2);
+    });
+
+    it('should restart server when config changes', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'ls-restart' });
+
+      const server1 = await manager.getLanguageServer({ searchPath: '/ql1' });
+
+      // Spy on shutdown to avoid waiting for the mock process to respond
+      // (the mock process does not implement the JSON-RPC shutdown protocol)
+      vi.spyOn(server1, 'shutdown').mockResolvedValue(undefined);
+
+      const server2 = await manager.getLanguageServer({ searchPath: '/ql2' });
+
+      // Different config means different server instance
+      expect(server1).not.toBe(server2);
+      expect(manager.isRunning('language')).toBe(true);
+      expect(server1.shutdown).toHaveBeenCalled();
+    });
+  });
+
+  describe('getQueryServer', () => {
+    it('should return a running query server', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'qs-test' });
+      const server = await manager.getQueryServer({ threads: 2 });
+
+      expect(server).toBeDefined();
+      expect(server.isRunning()).toBe(true);
+      expect(manager.isRunning('query')).toBe(true);
+    });
+  });
+
+  describe('getCLIServer', () => {
+    it('should return a running CLI server', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'cli-test' });
+      const server = await manager.getCLIServer({});
+
+      expect(server).toBeDefined();
+      expect(server.isRunning()).toBe(true);
+      expect(manager.isRunning('cli')).toBe(true);
+    });
+  });
+
   describe('enrichConfig', () => {
     it('should enrich config with session-specific cache and log dirs', () => {
       const manager = new CodeQLServerManager({ sessionId: 'enrich-test' });

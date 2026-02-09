@@ -737,10 +737,14 @@ export class IntegrationTestRunner {
       // Call the tool with appropriate parameters
       // Set extended timeout for long-running operations
       const longRunningTools = [
-        "codeql_query_run",
-        "codeql_test_run",
         "codeql_database_analyze",
-        "codeql_database_create"
+        "codeql_database_create",
+        "codeql_lsp_completion",
+        "codeql_lsp_definition",
+        "codeql_lsp_diagnostics",
+        "codeql_lsp_references",
+        "codeql_query_run",
+        "codeql_test_run"
       ];
 
       const requestOptions = longRunningTools.includes(toolName)

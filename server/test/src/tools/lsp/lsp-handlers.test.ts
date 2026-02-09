@@ -32,11 +32,11 @@ vi.mock('../../../../src/utils/package-paths', () => ({
   packageRootDir: '/mock/pkg',
 }));
 
-vi.mock('fs', async (importOriginal) => {
+vi.mock('fs/promises', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>;
   return {
     ...actual,
-    readFileSync: vi.fn(() => 'import ql\nselect 1'),
+    readFile: vi.fn(async () => 'import ql\nselect 1'),
   };
 });
 
@@ -253,6 +253,33 @@ describe('lsp-handlers', () => {
           position: { character: 42, line: 10 },
         }),
       );
+    });
+  });
+
+  describe('workspace URI handling', () => {
+    it('should convert relative workspace_uri to file:// URI', async () => {
+      mockGetCompletions.mockResolvedValueOnce([]);
+
+      await lspCompletion({
+        ...baseParams,
+        workspaceUri: 'server/ql/javascript/examples',
+      });
+
+      // The initialize call should receive a file:// URI, not a relative path
+      expect(mockInitialize).toHaveBeenCalledWith(
+        expect.stringMatching(/^file:\/\//),
+      );
+    });
+
+    it('should pass through workspace_uri that is already a file:// URI', async () => {
+      mockGetCompletions.mockResolvedValueOnce([]);
+
+      await lspCompletion({
+        ...baseParams,
+        workspaceUri: 'file:///absolute/workspace',
+      });
+
+      expect(mockInitialize).toHaveBeenCalledWith('file:///absolute/workspace');
     });
   });
 });

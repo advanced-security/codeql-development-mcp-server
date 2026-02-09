@@ -110,6 +110,8 @@ describe('server-config', () => {
 
       expect(args).toContain('--debug');
       expect(args).toContain('--tuple-counting');
+      // --debug should appear before --tuple-counting
+      expect(args.indexOf('--debug')).toBeLessThan(args.indexOf('--tuple-counting'));
     });
 
     it('should not duplicate --tuple-counting when both debug and tupleCounting are set', () => {

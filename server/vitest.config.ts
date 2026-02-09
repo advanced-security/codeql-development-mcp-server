@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['test/**/*.{test,spec}.{js,ts}'],
+    setupFiles: ['test/setup.ts'],
     watch: false, // Disable watch mode by default
     testTimeout: 10000, // 10 second timeout for tests
     // Enhanced test isolation

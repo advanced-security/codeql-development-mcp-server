@@ -1,22 +1,12 @@
 /**
  * Tests for LSP tool registration (lsp-tools.ts).
  *
- * Verifies that registerLSPTools registers all 5 LSP tools with correct
+ * Verifies that registerLSPTools registers all 4 LSP tools with correct
  * names, descriptions, schemas, and handler functions.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-// Mock logger
-vi.mock('../../../../src/utils/logger', () => ({
-  logger: {
-    debug: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
 
 // Mock lsp-diagnostics registration
 vi.mock('../../../../src/tools/lsp/lsp-diagnostics', () => ({

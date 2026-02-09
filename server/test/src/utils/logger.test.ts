@@ -6,6 +6,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Undo the global logger mock from test/setup.ts so we can test the real logger
+vi.unmock('../../../src/utils/logger');
+
 import { logger } from '../../../src/utils/logger';
 
 describe('Logger', () => {

@@ -9,16 +9,6 @@ import { join } from 'path';
 import { createTestTempDir, cleanupTestTempDir } from '../../../utils/temp-dir';
 import { registerProfileCodeQLQueryTool } from '../../../../src/tools/codeql/profile-codeql-query';
 
-// Mock the logger to suppress expected error output
-vi.mock('../../../../src/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 // We'll test the parsing and formatting functions by importing them
 // Since they're not exported, we'll need to test via the file output
 describe('Profile CodeQL Query Tool', () => {

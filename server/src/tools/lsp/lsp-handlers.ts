@@ -14,7 +14,7 @@ import {
   TextDocumentPositionParams,
 } from '../../lib/language-server';
 import { logger } from '../../utils/logger';
-import { readFileSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { pathToFileURL } from 'url';
 import { isAbsolute, resolve } from 'path';
 
@@ -51,30 +51,49 @@ async function getInitializedServer(params: LSPToolParams) {
   const manager = getServerManager();
   const server = await manager.getLanguageServer(config);
 
-  const effectiveUri = params.workspaceUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
+  // Resolve workspace URI: convert relative paths to absolute file:// URIs
+  let effectiveUri = params.workspaceUri;
+  if (effectiveUri && !effectiveUri.startsWith('file://')) {
+    const absWorkspace = isAbsolute(effectiveUri)
+      ? effectiveUri
+      : resolve(process.cwd(), effectiveUri);
+    effectiveUri = pathToFileURL(absWorkspace).href;
+  }
+  effectiveUri = effectiveUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
   await server.initialize(effectiveUri);
 
   return server;
 }
 
 /**
- * Build TextDocumentPositionParams and ensure the document is open.
+ * Resolve the file path to an absolute path and file:// URI.
  */
 function prepareDocumentPosition(
-  server: Awaited<ReturnType<typeof getInitializedServer>>,
   params: LSPToolParams,
-): { docUri: string; positionParams: TextDocumentPositionParams } {
+): { absPath: string; docUri: string } {
   // Resolve relative paths against CWD (supports integration test fixtures)
   const absPath = isAbsolute(params.filePath) ? params.filePath : resolve(process.cwd(), params.filePath);
   const docUri = pathToFileURL(absPath).href;
 
+  return { absPath, docUri };
+}
+
+/**
+ * Read file content and open the document in the language server.
+ */
+async function openDocumentForPosition(
+  server: Awaited<ReturnType<typeof getInitializedServer>>,
+  params: LSPToolParams,
+  absPath: string,
+  docUri: string,
+): Promise<TextDocumentPositionParams> {
   // Read file content from disk or use provided content
   let text: string;
   if (params.fileContent) {
     text = params.fileContent;
   } else {
     try {
-      text = readFileSync(absPath, 'utf-8');
+      text = await readFile(absPath, 'utf-8');
     } catch (error) {
       throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`);
     }
@@ -83,12 +102,10 @@ function prepareDocumentPosition(
   // Open the document so the language server knows about it
   server.openDocument(docUri, text);
 
-  const positionParams: TextDocumentPositionParams = {
+  return {
     position: { character: params.character, line: params.line },
     textDocument: { uri: docUri },
   };
-
-  return { docUri, positionParams };
 }
 
 /**
@@ -97,7 +114,8 @@ function prepareDocumentPosition(
 export async function lspCompletion(params: LSPToolParams): Promise<CompletionItem[]> {
   logger.info(`LSP completion at ${params.filePath}:${params.line}:${params.character}`);
   const server = await getInitializedServer(params);
-  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  const { absPath, docUri } = prepareDocumentPosition(params);
+  const positionParams = await openDocumentForPosition(server, params, absPath, docUri);
 
   try {
     return await server.getCompletions(positionParams);
@@ -112,7 +130,8 @@ export async function lspCompletion(params: LSPToolParams): Promise<CompletionIt
 export async function lspDefinition(params: LSPToolParams): Promise<LSPLocation[]> {
   logger.info(`LSP definition at ${params.filePath}:${params.line}:${params.character}`);
   const server = await getInitializedServer(params);
-  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  const { absPath, docUri } = prepareDocumentPosition(params);
+  const positionParams = await openDocumentForPosition(server, params, absPath, docUri);
 
   try {
     return await server.getDefinition(positionParams);
@@ -127,7 +146,8 @@ export async function lspDefinition(params: LSPToolParams): Promise<LSPLocation[
 export async function lspReferences(params: LSPToolParams): Promise<LSPLocation[]> {
   logger.info(`LSP references at ${params.filePath}:${params.line}:${params.character}`);
   const server = await getInitializedServer(params);
-  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  const { absPath, docUri } = prepareDocumentPosition(params);
+  const positionParams = await openDocumentForPosition(server, params, absPath, docUri);
 
   try {
     return await server.getReferences({

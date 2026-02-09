@@ -2,7 +2,7 @@
  * Tests for CLI executor utilities
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { writeFileSync, rmSync, chmodSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
@@ -21,15 +21,6 @@ import {
   validateCodeQLBinaryReachable
 } from '../../../src/lib/cli-executor';
 
-// Mock the logger to suppress expected error output
-vi.mock('../../../src/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
 
 // Enable test commands for all tests in this file
 beforeAll(() => {

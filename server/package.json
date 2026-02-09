@@ -81,7 +81,7 @@
     "build": "npm run clean && npm run lint && npm run bundle",
     "build:all": "npm run build && npm run test:ql:fail-fast",
     "bundle": "node esbuild.config.js",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist .tmp",
     "dev:stdio": "npm run build && TRANSPORT_MODE=stdio node dist/codeql-development-mcp-server.js",
     "dev:http": "npm run build && TRANSPORT_MODE=http node dist/codeql-development-mcp-server.js",
     "format": "prettier --write 'src/**/*.ts'",

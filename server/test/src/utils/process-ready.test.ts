@@ -5,6 +5,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { EventEmitter } from 'events';
 import { ChildProcess } from 'child_process';
+
 import { waitForProcessReady } from '../../../src/utils/process-ready';
 
 /**
