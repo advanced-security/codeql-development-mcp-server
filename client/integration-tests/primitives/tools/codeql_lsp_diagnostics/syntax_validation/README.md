@@ -11,5 +11,5 @@ Tests that `codeql_lsp_diagnostics` detects syntax errors in invalid QL code.
 ## EXPECTED OUTPUTS
 
 - `isValid` is `false` with one or more error diagnostics.
-- The `test_query.ql` file remains unchanged (identical in before/ and after/).
+- The `before/test_query.ql` contains the erroneous query; `after/test_query.ql` shows the corrected version after addressing the diagnostics.
 - Monitoring state updated to record a successful `codeql_lsp_diagnostics` call.

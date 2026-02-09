@@ -13,5 +13,5 @@ references undefined types (e.g., `UndefinedType`).
 ## EXPECTED OUTPUTS
 
 - `isValid` is `false` with semantic diagnostics about unresolvable types.
-- The `semantic_query.ql` file remains unchanged (identical in before/ and after/).
+- The `before/semantic_query.ql` contains the erroneous query; `after/semantic_query.ql` shows the corrected version after addressing the diagnostics.
 - Monitoring state updated to record a successful `codeql_lsp_diagnostics` call.

@@ -1111,6 +1111,8 @@ var init_server_manager = __esm({
     CodeQLServerManager = class {
       /** Keyed by `CodeQLServerType` — at most one per type at a time. */
       servers = /* @__PURE__ */ new Map();
+      /** In-flight `getOrRestart` promises, keyed by server type, to serialize concurrent calls. */
+      pendingStarts = /* @__PURE__ */ new Map();
       /** The session ID used for cache isolation. */
       sessionId;
       /** Root directory for session-specific caches. */
@@ -1294,8 +1296,32 @@ var init_server_manager = __esm({
       /**
        * Get an existing server if its config matches, otherwise stop the old
        * one and start a new server.
+       *
+       * Concurrent calls for the same server type are serialized via
+       * `pendingStarts` to avoid spawning duplicate server processes.
        */
       async getOrRestart(type2, config, factory) {
+        const inflight = this.pendingStarts.get(type2);
+        if (inflight) {
+          try {
+            await inflight;
+          } catch {
+          }
+        }
+        const work = this.doGetOrRestart(type2, config, factory);
+        this.pendingStarts.set(type2, work);
+        try {
+          return await work;
+        } finally {
+          if (this.pendingStarts.get(type2) === work) {
+            this.pendingStarts.delete(type2);
+          }
+        }
+      }
+      /**
+       * Core logic for getOrRestart, separated to allow serialization.
+       */
+      async doGetOrRestart(type2, config, factory) {
         const hash = computeConfigHash(type2, config);
         const existing = this.servers.get(type2);
         if (existing && existing.configHash === hash && existing.server.isRunning()) {

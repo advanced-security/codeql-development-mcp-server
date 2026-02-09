@@ -58,6 +58,9 @@ export class CodeQLServerManager {
   /** Keyed by `CodeQLServerType` — at most one per type at a time. */
   private servers = new Map<CodeQLServerType, ManagedServer>();
 
+  /** In-flight `getOrRestart` promises, keyed by server type, to serialize concurrent calls. */
+  private pendingStarts = new Map<CodeQLServerType, Promise<CodeQLCLIServer | CodeQLLanguageServer | CodeQLQueryServer>>();
+
   /** The session ID used for cache isolation. */
   private sessionId: string;
 
@@ -264,8 +267,38 @@ export class CodeQLServerManager {
   /**
    * Get an existing server if its config matches, otherwise stop the old
    * one and start a new server.
+   *
+   * Concurrent calls for the same server type are serialized via
+   * `pendingStarts` to avoid spawning duplicate server processes.
    */
   private async getOrRestart(
+    type: CodeQLServerType,
+    config: ServerConfig,
+    factory: () => CodeQLCLIServer | CodeQLLanguageServer | CodeQLQueryServer,
+  ): Promise<CodeQLCLIServer | CodeQLLanguageServer | CodeQLQueryServer> {
+    // If another call is already starting a server of this type, wait for it
+    // to settle (success or failure) and then re-check whether the result is
+    // still usable.
+    const inflight = this.pendingStarts.get(type);
+    if (inflight) {
+      try { await inflight; } catch { /* swallow — original caller handles the rejection */ }
+    }
+
+    const work = this.doGetOrRestart(type, config, factory);
+    this.pendingStarts.set(type, work);
+    try {
+      return await work;
+    } finally {
+      if (this.pendingStarts.get(type) === work) {
+        this.pendingStarts.delete(type);
+      }
+    }
+  }
+
+  /**
+   * Core logic for getOrRestart, separated to allow serialization.
+   */
+  private async doGetOrRestart(
     type: CodeQLServerType,
     config: ServerConfig,
     factory: () => CodeQLCLIServer | CodeQLLanguageServer | CodeQLQueryServer,

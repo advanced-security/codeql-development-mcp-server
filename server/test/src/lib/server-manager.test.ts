@@ -165,6 +165,20 @@ describe('CodeQLServerManager', () => {
       expect(manager.isRunning('language')).toBe(true);
       expect(server1.shutdown).toHaveBeenCalled();
     });
+
+    it('should serialize concurrent calls for the same server type', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'ls-concurrent' });
+      const config = { searchPath: '/ql' };
+
+      // Fire two concurrent requests — both should resolve to the same server
+      const [server1, server2] = await Promise.all([
+        manager.getLanguageServer(config),
+        manager.getLanguageServer(config),
+      ]);
+
+      expect(server1).toBe(server2);
+      expect(manager.isRunning('language')).toBe(true);
+    });
   });
 
   describe('getQueryServer', () => {

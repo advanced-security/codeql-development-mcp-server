@@ -27,7 +27,11 @@ export interface LSPToolParams {
   character: number;
   /** Optional override for the file content (if not reading from disk). */
   fileContent?: string;
-  /** Absolute path to the QL file. */
+  /**
+   * Path to the QL file. May be absolute or relative.
+   * Relative paths are resolved against `getUserWorkspaceDir()`
+   * (respects the `CODEQL_MCP_WORKSPACE` environment variable).
+   */
   filePath: string;
   /** 0-based line number in the document. */
   line: number;
