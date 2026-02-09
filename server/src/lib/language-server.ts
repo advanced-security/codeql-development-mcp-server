@@ -45,9 +45,60 @@ export interface PublishDiagnosticsParams {
 export interface LanguageServerOptions {
   searchPath?: string;
   logdir?: string;
-  loglevel?: 'OFF' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE' | 'ALL';
+  loglevel?: 'ALL' | 'DEBUG' | 'ERROR' | 'INFO' | 'OFF' | 'TRACE' | 'WARN';
   synchronous?: boolean;
-  verbosity?: 'errors' | 'warnings' | 'progress' | 'progress+' | 'progress++' | 'progress+++';
+  verbosity?: 'errors' | 'progress' | 'progress+' | 'progress++' | 'progress+++' | 'warnings';
+}
+
+/**
+ * Position in a text document (0-based line and character).
+ */
+export interface LSPPosition {
+  character: number;
+  line: number;
+}
+
+/**
+ * A range in a text document.
+ */
+export interface LSPRange {
+  end: LSPPosition;
+  start: LSPPosition;
+}
+
+/**
+ * A location in a resource (file URI + range).
+ */
+export interface LSPLocation {
+  range: LSPRange;
+  uri: string;
+}
+
+/**
+ * Identifies a text document by its URI.
+ */
+export interface TextDocumentIdentifier {
+  uri: string;
+}
+
+/**
+ * A text document position (document + position within it).
+ */
+export interface TextDocumentPositionParams {
+  position: LSPPosition;
+  textDocument: TextDocumentIdentifier;
+}
+
+/**
+ * A completion item returned by the language server.
+ */
+export interface CompletionItem {
+  detail?: string;
+  documentation?: string | { kind: string; value: string };
+  insertText?: string;
+  kind?: number;
+  label: string;
+  sortText?: string;
 }
 
 export class CodeQLLanguageServer extends EventEmitter {
@@ -55,6 +106,7 @@ export class CodeQLLanguageServer extends EventEmitter {
   private messageId = 1;
   private pendingResponses = new Map<number, { resolve: (_value: unknown) => void; reject: (_error: Error) => void }>();
   private isInitialized = false;
+  private currentWorkspaceUri: string | undefined;
   private messageBuffer = '';
 
   constructor(private _options: LanguageServerOptions = {}) {
@@ -233,8 +285,19 @@ export class CodeQLLanguageServer extends EventEmitter {
     this.sendMessage(message);
   }
 
+  /**
+   * Initialize the language server with an optional workspace URI.
+   *
+   * If the server is already initialized with a different workspace, a
+   * `workspace/didChangeWorkspaceFolders` notification is sent to update
+   * the workspace context instead of requiring a full restart.
+   */
   async initialize(workspaceUri?: string): Promise<void> {
     if (this.isInitialized) {
+      // If workspace changed, notify the server
+      if (workspaceUri && workspaceUri !== this.currentWorkspaceUri) {
+        await this.updateWorkspace(workspaceUri);
+      }
       return;
     }
 
@@ -248,13 +311,19 @@ export class CodeQLLanguageServer extends EventEmitter {
       },
       capabilities: {
         textDocument: {
+          completion: { completionItem: { snippetSupport: false } },
+          definition: {},
+          publishDiagnostics: {},
+          references: {},
           synchronization: {
-            didOpen: true,
+            didClose: true,
             didChange: true,
-            didClose: true
+            didOpen: true,
           },
-          publishDiagnostics: {}
-        }
+        },
+        workspace: {
+          workspaceFolders: true,
+        },
       }
     };
 
@@ -267,9 +336,37 @@ export class CodeQLLanguageServer extends EventEmitter {
 
     await this.sendRequest('initialize', initParams);
     this.sendNotification('initialized', {});
-    
+
+    this.currentWorkspaceUri = workspaceUri;
     this.isInitialized = true;
     logger.info('CodeQL Language Server initialized successfully');
+  }
+
+  /**
+   * Update the workspace folders on a running, initialized server.
+   */
+  private async updateWorkspace(newUri: string): Promise<void> {
+    logger.info(`Updating workspace from ${this.currentWorkspaceUri} to ${newUri}`);
+
+    const removed = this.currentWorkspaceUri
+      ? [{ uri: this.currentWorkspaceUri, name: 'codeql-workspace' }]
+      : [];
+
+    this.sendNotification('workspace/didChangeWorkspaceFolders', {
+      event: {
+        added: [{ uri: newUri, name: 'codeql-workspace' }],
+        removed,
+      },
+    });
+
+    this.currentWorkspaceUri = newUri;
+  }
+
+  /**
+   * Get the current workspace URI.
+   */
+  getWorkspaceUri(): string | undefined {
+    return this.currentWorkspaceUri;
   }
 
   async evaluateQL(qlCode: string, uri?: string): Promise<Diagnostic[]> {
@@ -317,6 +414,95 @@ export class CodeQLLanguageServer extends EventEmitter {
         }
       });
     });
+  }
+
+  // ---- LSP feature methods (issue #1) ----
+
+  /**
+   * Get code completions at a position in a document.
+   */
+  async getCompletions(params: TextDocumentPositionParams): Promise<CompletionItem[]> {
+    if (!this.isInitialized) {
+      throw new Error('Language server is not initialized');
+    }
+    const result = await this.sendRequest('textDocument/completion', params);
+    // The result may be a CompletionList or CompletionItem[]
+    if (result && typeof result === 'object' && 'items' in (result as object)) {
+      return (result as { items: CompletionItem[] }).items;
+    }
+    return (result as CompletionItem[]) || [];
+  }
+
+  /**
+   * Find the definition(s) of a symbol at a position.
+   */
+  async getDefinition(params: TextDocumentPositionParams): Promise<LSPLocation[]> {
+    if (!this.isInitialized) {
+      throw new Error('Language server is not initialized');
+    }
+    const result = await this.sendRequest('textDocument/definition', params);
+    return this.normalizeLocations(result);
+  }
+
+  /**
+   * Find all references to a symbol at a position.
+   */
+  async getReferences(params: TextDocumentPositionParams & { context?: { includeDeclaration: boolean } }): Promise<LSPLocation[]> {
+    if (!this.isInitialized) {
+      throw new Error('Language server is not initialized');
+    }
+    const result = await this.sendRequest('textDocument/references', {
+      ...params,
+      context: params.context ?? { includeDeclaration: true },
+    });
+    return this.normalizeLocations(result);
+  }
+
+  /**
+   * Open a text document in the language server.
+   * The document must be opened before requesting completions, definitions, etc.
+   */
+  openDocument(uri: string, text: string, languageId = 'ql', version = 1): void {
+    if (!this.isInitialized) {
+      throw new Error('Language server is not initialized');
+    }
+    this.sendNotification('textDocument/didOpen', {
+      textDocument: { uri, languageId, version, text },
+    });
+  }
+
+  /**
+   * Close a text document in the language server.
+   */
+  closeDocument(uri: string): void {
+    if (!this.isInitialized) {
+      throw new Error('Language server is not initialized');
+    }
+    this.sendNotification('textDocument/didClose', {
+      textDocument: { uri },
+    });
+  }
+
+  /**
+   * Normalize a definition/references/implementation result to Location[].
+   * The LSP spec allows Location | Location[] | LocationLink[].
+   */
+  private normalizeLocations(result: unknown): LSPLocation[] {
+    if (!result) return [];
+    if (Array.isArray(result)) {
+      return result.map((item) => {
+        // LocationLink has targetUri/targetRange
+        if ('targetUri' in item) {
+          return { uri: item.targetUri, range: item.targetRange } as LSPLocation;
+        }
+        return item as LSPLocation;
+      });
+    }
+    // Single Location
+    if (typeof result === 'object' && 'uri' in (result as object)) {
+      return [result as LSPLocation];
+    }
+    return [];
   }
 
   async shutdown(): Promise<void> {

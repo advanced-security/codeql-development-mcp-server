@@ -177,10 +177,13 @@ Use the gathered information to inform your query:
 
 ## MCP Tools Reference
 
-| Tool                      | Purpose                               |
-| ------------------------- | ------------------------------------- |
-| `codeql_query_run`        | Execute tools queries with parameters |
-| `codeql_resolve_database` | Validate database before querying     |
-| `codeql_database_create`  | Create database from source code      |
-| `codeql_bqrs_interpret`   | Convert results to different formats  |
-| `codeql_pack_install`     | Install pack dependencies if needed   |
+| Tool                      | Purpose                                              |
+| ------------------------- | ---------------------------------------------------- |
+| `codeql_query_run`        | Execute tools queries with parameters                |
+| `codeql_resolve_database` | Validate database before querying                    |
+| `codeql_database_create`  | Create database from source code                     |
+| `codeql_bqrs_interpret`   | Convert results to different formats                 |
+| `codeql_pack_install`     | Install pack dependencies if needed                  |
+| `codeql_lsp_completion`   | Explore available types after seeing AST class names |
+| `codeql_lsp_definition`   | Navigate to class definitions to see predicates      |
+| `codeql_lsp_references`   | Find usage examples of a class or predicate          |

@@ -416,8 +416,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { resolve as resolve10 } from "path";
-import { pathToFileURL as pathToFileURL3 } from "url";
+import { resolve as resolve11 } from "path";
+import { pathToFileURL as pathToFileURL4 } from "url";
 
 // src/tools/codeql/bqrs-decode.ts
 import { z as z2 } from "zod";
@@ -4535,459 +4535,17 @@ var codeqlGenerateQueryHelpTool = {
   resultProcessor: defaultCLIResultProcessor
 };
 
-// src/tools/codeql/language-server-eval.ts
-import { z as z12 } from "zod";
-
-// src/lib/language-server.ts
-init_logger();
-init_package_paths();
-import { spawn } from "child_process";
-import { EventEmitter } from "events";
-import { setTimeout as setTimeout2, clearTimeout } from "timers";
-import { pathToFileURL } from "url";
-import { delimiter as delimiter2, join as join5 } from "path";
-init_cli_executor();
-var CodeQLLanguageServer = class extends EventEmitter {
-  constructor(_options = {}) {
-    super();
-    this._options = _options;
-  }
-  server = null;
-  messageId = 1;
-  pendingResponses = /* @__PURE__ */ new Map();
-  isInitialized = false;
-  messageBuffer = "";
-  async start() {
-    if (this.server) {
-      throw new Error("Language server is already running");
-    }
-    logger.info("Starting CodeQL Language Server...");
-    const args = [
-      "execute",
-      "language-server",
-      "--check-errors=ON_CHANGE"
-    ];
-    if (this._options.searchPath) {
-      args.push(`--search-path=${this._options.searchPath}`);
-    }
-    if (this._options.logdir) {
-      args.push(`--logdir=${this._options.logdir}`);
-    }
-    if (this._options.loglevel) {
-      args.push(`--loglevel=${this._options.loglevel}`);
-    }
-    if (this._options.synchronous) {
-      args.push("--synchronous");
-    }
-    if (this._options.verbosity) {
-      args.push(`--verbosity=${this._options.verbosity}`);
-    }
-    const spawnEnv = { ...process.env };
-    const codeqlDir = getResolvedCodeQLDir();
-    if (codeqlDir && spawnEnv.PATH) {
-      spawnEnv.PATH = `${codeqlDir}${delimiter2}${spawnEnv.PATH}`;
-    } else if (codeqlDir) {
-      spawnEnv.PATH = codeqlDir;
-    }
-    this.server = spawn("codeql", args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: spawnEnv
-    });
-    this.server.stderr?.on("data", (data) => {
-      logger.debug("CodeQL LS stderr:", data.toString());
-    });
-    this.server.stdout?.on("data", (data) => {
-      this.handleStdout(data);
-    });
-    this.server.on("error", (error) => {
-      logger.error("CodeQL Language Server error:", error);
-      this.emit("error", error);
-    });
-    this.server.on("exit", (code) => {
-      logger.info("CodeQL Language Server exited with code:", code);
-      this.server = null;
-      this.isInitialized = false;
-      this.emit("exit", code);
-    });
-    await new Promise((resolve11) => setTimeout2(resolve11, 2e3));
-  }
-  handleStdout(data) {
-    this.messageBuffer += data.toString();
-    let headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
-    while (headerEnd !== -1) {
-      const header = this.messageBuffer.substring(0, headerEnd);
-      const contentLengthMatch = header.match(/Content-Length: (\d+)/);
-      if (contentLengthMatch) {
-        const contentLength = parseInt(contentLengthMatch[1]);
-        const messageStart = headerEnd + 4;
-        const messageEnd = messageStart + contentLength;
-        if (this.messageBuffer.length >= messageEnd) {
-          const messageContent = this.messageBuffer.substring(messageStart, messageEnd);
-          this.messageBuffer = this.messageBuffer.substring(messageEnd);
-          try {
-            const message = JSON.parse(messageContent);
-            this.handleMessage(message);
-          } catch (error) {
-            logger.error("Failed to parse LSP message:", error, messageContent);
-          }
-          headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
-        } else {
-          break;
-        }
-      } else {
-        logger.error("Invalid LSP header:", header);
-        this.messageBuffer = "";
-        break;
-      }
-    }
-  }
-  handleMessage(message) {
-    logger.debug("Received LSP message:", message);
-    if (message.id !== void 0 && this.pendingResponses.has(Number(message.id))) {
-      const pending = this.pendingResponses.get(Number(message.id));
-      this.pendingResponses.delete(Number(message.id));
-      if (message.error) {
-        pending.reject(new Error(`LSP Error: ${message.error.message}`));
-      } else {
-        pending.resolve(message.result);
-      }
-      return;
-    }
-    if (message.method === "textDocument/publishDiagnostics") {
-      this.emit("diagnostics", message.params);
-    }
-  }
-  sendMessage(message) {
-    if (!this.server?.stdin) {
-      throw new Error("Language server is not running");
-    }
-    const messageStr = JSON.stringify(message);
-    const contentLength = Buffer.byteLength(messageStr, "utf8");
-    const header = `Content-Length: ${contentLength}\r
-\r
-`;
-    const fullMessage = header + messageStr;
-    logger.debug("Sending LSP message:", fullMessage);
-    this.server.stdin.write(fullMessage);
-  }
-  sendRequest(method, params) {
-    const id = this.messageId++;
-    const message = {
-      jsonrpc: "2.0",
-      id,
-      method,
-      params
-    };
-    return new Promise((resolve11, reject) => {
-      this.pendingResponses.set(id, { resolve: resolve11, reject });
-      this.sendMessage(message);
-      setTimeout2(() => {
-        if (this.pendingResponses.has(id)) {
-          this.pendingResponses.delete(id);
-          reject(new Error(`LSP request timeout for method: ${method}`));
-        }
-      }, 1e4);
-    });
-  }
-  sendNotification(method, params) {
-    const message = {
-      jsonrpc: "2.0",
-      method,
-      params
-    };
-    this.sendMessage(message);
-  }
-  async initialize(workspaceUri) {
-    if (this.isInitialized) {
-      return;
-    }
-    logger.info("Initializing CodeQL Language Server...");
-    const initParams = {
-      processId: process.pid,
-      clientInfo: {
-        name: "codeql-development-mcp-server",
-        version: getPackageVersion()
-      },
-      capabilities: {
-        textDocument: {
-          synchronization: {
-            didOpen: true,
-            didChange: true,
-            didClose: true
-          },
-          publishDiagnostics: {}
-        }
-      }
-    };
-    if (workspaceUri) {
-      initParams.workspaceFolders = [{
-        uri: workspaceUri,
-        name: "codeql-workspace"
-      }];
-    }
-    await this.sendRequest("initialize", initParams);
-    this.sendNotification("initialized", {});
-    this.isInitialized = true;
-    logger.info("CodeQL Language Server initialized successfully");
-  }
-  async evaluateQL(qlCode, uri) {
-    if (!this.isInitialized) {
-      throw new Error("Language server is not initialized");
-    }
-    const documentUri = uri || pathToFileURL(join5(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-    return new Promise((resolve11, reject) => {
-      let diagnosticsReceived = false;
-      const timeout = setTimeout2(() => {
-        if (!diagnosticsReceived) {
-          this.removeAllListeners("diagnostics");
-          reject(new Error("Timeout waiting for diagnostics"));
-        }
-      }, 5e3);
-      const diagnosticsHandler = (params) => {
-        if (params.uri === documentUri) {
-          diagnosticsReceived = true;
-          clearTimeout(timeout);
-          this.removeListener("diagnostics", diagnosticsHandler);
-          this.sendNotification("textDocument/didClose", {
-            textDocument: { uri: documentUri }
-          });
-          resolve11(params.diagnostics);
-        }
-      };
-      this.on("diagnostics", diagnosticsHandler);
-      this.sendNotification("textDocument/didOpen", {
-        textDocument: {
-          uri: documentUri,
-          languageId: "ql",
-          version: 1,
-          text: qlCode
-        }
-      });
-    });
-  }
-  async shutdown() {
-    if (!this.server) {
-      return;
-    }
-    logger.info("Shutting down CodeQL Language Server...");
-    try {
-      await this.sendRequest("shutdown", {});
-      this.sendNotification("exit", {});
-    } catch (error) {
-      logger.warn("Error during graceful shutdown:", error);
-    }
-    setTimeout2(() => {
-      if (this.server) {
-        this.server.kill("SIGTERM");
-      }
-    }, 1e3);
-    this.isInitialized = false;
-  }
-  isRunning() {
-    return this.server !== null && !this.server.killed;
-  }
-};
-
-// src/tools/codeql/language-server-eval.ts
-init_logger();
-import { join as join6, resolve as resolve6 } from "path";
-import { pathToFileURL as pathToFileURL2 } from "url";
-var globalLanguageServer = null;
-function formatDiagnostics(diagnostics) {
-  if (diagnostics.length === 0) {
-    return "\u2705 No issues found in QL code";
-  }
-  const lines = [];
-  lines.push(`Found ${diagnostics.length} issue(s):
-`);
-  diagnostics.forEach((diagnostic, index) => {
-    const severityIcon = getSeverityIcon(diagnostic.severity);
-    const severityName = getSeverityName(diagnostic.severity);
-    const location = `Line ${diagnostic.range.start.line + 1}, Column ${diagnostic.range.start.character + 1}`;
-    lines.push(`${index + 1}. ${severityIcon} ${severityName} at ${location}`);
-    lines.push(`   ${diagnostic.message}`);
-    if (diagnostic.source) {
-      lines.push(`   Source: ${diagnostic.source}`);
-    }
-    if (diagnostic.code) {
-      lines.push(`   Code: ${diagnostic.code}`);
-    }
-    lines.push("");
-  });
-  return lines.join("\n");
-}
-function getSeverityIcon(severity) {
-  switch (severity) {
-    case 1:
-      return "\u274C";
-    // Error
-    case 2:
-      return "\u26A0\uFE0F";
-    // Warning
-    case 3:
-      return "\u2139\uFE0F";
-    // Information
-    case 4:
-      return "\u{1F4A1}";
-    // Hint
-    default:
-      return "\u2753";
-  }
-}
-function getSeverityName(severity) {
-  switch (severity) {
-    case 1:
-      return "Error";
-    case 2:
-      return "Warning";
-    case 3:
-      return "Information";
-    case 4:
-      return "Hint";
-    default:
-      return "Unknown";
-  }
-}
-async function getLanguageServer(options = {}) {
-  if (globalLanguageServer && globalLanguageServer.isRunning()) {
-    return globalLanguageServer;
-  }
-  const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-  const defaultOptions = {
-    searchPath: resolve6(pkgRoot, "ql"),
-    loglevel: "WARN",
-    ...options
-  };
-  globalLanguageServer = new CodeQLLanguageServer(defaultOptions);
-  try {
-    await globalLanguageServer.start();
-    const workspaceUri = pathToFileURL2(resolve6(pkgRoot, "ql")).href;
-    await globalLanguageServer.initialize(workspaceUri);
-    logger.info("CodeQL Language Server started and initialized successfully");
-    return globalLanguageServer;
-  } catch (error) {
-    logger.error("Failed to start language server:", error);
-    globalLanguageServer = null;
-    throw error;
-  }
-}
-async function evaluateQLCode({
-  qlCode,
-  workspaceUri: _workspaceUri,
-  serverOptions = {}
-}) {
-  try {
-    logger.info("Evaluating QL code via Language Server...");
-    const languageServer = await getLanguageServer(serverOptions);
-    const evalUri = pathToFileURL2(join6(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
-    const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
-    const summary = {
-      errorCount: diagnostics.filter((d) => d.severity === 1).length,
-      warningCount: diagnostics.filter((d) => d.severity === 2).length,
-      infoCount: diagnostics.filter((d) => d.severity === 3).length,
-      hintCount: diagnostics.filter((d) => d.severity === 4).length
-    };
-    const isValid = summary.errorCount === 0;
-    const formattedOutput = formatDiagnostics(diagnostics);
-    logger.info(`QL evaluation complete. Valid: ${isValid}, Issues: ${diagnostics.length}`);
-    return {
-      isValid,
-      diagnostics,
-      summary,
-      formattedOutput
-    };
-  } catch (error) {
-    logger.error("Error evaluating QL code:", error);
-    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-async function shutdownLanguageServer() {
-  if (globalLanguageServer) {
-    logger.info("Shutting down CodeQL Language Server...");
-    await globalLanguageServer.shutdown();
-    globalLanguageServer = null;
-  }
-}
-function registerLanguageServerEvalTool(server) {
-  server.tool(
-    "codeql_language_server_eval",
-    "Authoritative syntax and semantic validation of CodeQL (QL) code via the CodeQL Language Server. Compiles the query and provides real-time diagnostics with precise error locations. Use this for accurate validation; for quick heuristic checks without compilation, use validate_codeql_query instead.",
-    {
-      ql_code: z12.string().describe("The CodeQL (QL) code to evaluate for syntax and semantic errors"),
-      workspace_uri: z12.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)"),
-      search_path: z12.string().optional().describe("Optional search path for CodeQL libraries"),
-      log_level: z12.enum(["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "ALL"]).optional().describe("Language server log level")
-    },
-    async ({ ql_code, workspace_uri, search_path, log_level }) => {
-      try {
-        const serverOptions = {};
-        if (search_path) {
-          serverOptions.searchPath = search_path;
-        }
-        if (log_level) {
-          serverOptions.loglevel = log_level;
-        }
-        const result = await evaluateQLCode({
-          qlCode: ql_code,
-          workspaceUri: workspace_uri,
-          serverOptions
-        });
-        const responseContent = {
-          isValid: result.isValid,
-          summary: result.summary,
-          formattedOutput: result.formattedOutput,
-          diagnostics: result.diagnostics.map((d) => ({
-            line: d.range.start.line + 1,
-            // Convert to 1-based line numbers
-            column: d.range.start.character + 1,
-            // Convert to 1-based column numbers
-            severity: getSeverityName(d.severity),
-            message: d.message,
-            code: d.code,
-            source: d.source
-          }))
-        };
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(responseContent, null, 2)
-            }
-          ]
-        };
-      } catch (error) {
-        logger.error("Error in language server eval tool:", error);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
-  );
-  process.on("SIGINT", async () => {
-    await shutdownLanguageServer();
-  });
-  process.on("SIGTERM", async () => {
-    await shutdownLanguageServer();
-  });
-}
-
 // src/tools/codeql/pack-install.ts
-import { z as z13 } from "zod";
+import { z as z12 } from "zod";
 var codeqlPackInstallTool = {
   name: "codeql_pack_install",
   description: "Install CodeQL pack dependencies",
   command: "codeql",
   subcommand: "pack install",
   inputSchema: {
-    packDir: z13.string().optional().describe("Directory containing qlpack.yml (default: current)"),
-    force: z13.boolean().optional().describe("Force reinstall of dependencies"),
-    "no-strict-mode": z13.boolean().optional().describe("Allow non-strict dependency resolution"),
+    packDir: z12.string().optional().describe("Directory containing qlpack.yml (default: current)"),
+    force: z12.boolean().optional().describe("Force reinstall of dependencies"),
+    "no-strict-mode": z12.boolean().optional().describe("Allow non-strict dependency resolution"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -4999,16 +4557,16 @@ var codeqlPackInstallTool = {
 };
 
 // src/tools/codeql/pack-ls.ts
-import { z as z14 } from "zod";
+import { z as z13 } from "zod";
 var codeqlPackLsTool = {
   name: "codeql_pack_ls",
   description: "List CodeQL packs under some local directory path",
   command: "codeql",
   subcommand: "pack ls",
   inputSchema: {
-    dir: z14.string().optional().describe("The root directory of the package or workspace, defaults to the current working directory"),
-    format: z14.enum(["text", "json"]).optional().describe("Output format: text (default) or json"),
-    groups: z14.string().optional().describe("List of CodeQL pack groups to include or exclude"),
+    dir: z13.string().optional().describe("The root directory of the package or workspace, defaults to the current working directory"),
+    format: z13.enum(["text", "json"]).optional().describe("Output format: text (default) or json"),
+    groups: z13.string().optional().describe("List of CodeQL pack groups to include or exclude"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5023,9 +4581,9 @@ var codeqlPackLsTool = {
 // src/tools/codeql/profile-codeql-query.ts
 init_cli_executor();
 init_logger();
-import { z as z15 } from "zod";
+import { z as z14 } from "zod";
 import { writeFileSync as writeFileSync3, readFileSync as readFileSync4, existsSync as existsSync6 } from "fs";
-import { join as join7, dirname as dirname6, basename as basename4 } from "path";
+import { join as join5, dirname as dirname6, basename as basename4 } from "path";
 import { mkdirSync as mkdirSync5 } from "fs";
 function parseEvaluatorLog(logPath) {
   const logContent = readFileSync4(logPath, "utf-8");
@@ -5147,12 +4705,12 @@ function registerProfileCodeQLQueryTool(server) {
     "profile_codeql_query",
     "Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log JSON file",
     {
-      query: z15.string().describe("Path to the .ql query file"),
-      database: z15.string().describe("Path to the CodeQL database directory"),
-      evaluatorLog: z15.string().optional().describe(
+      query: z14.string().describe("Path to the .ql query file"),
+      database: z14.string().describe("Path to the CodeQL database directory"),
+      evaluatorLog: z14.string().optional().describe(
         "Path to an existing structured JSON log (e.g., evaluator-log.jsonl) file. If not provided, the tool will run the query to generate one."
       ),
-      outputDir: z15.string().optional().describe("Directory to write profiling data files (defaults to same directory as evaluator log)")
+      outputDir: z14.string().optional().describe("Directory to write profiling data files (defaults to same directory as evaluator log)")
     },
     async (params) => {
       try {
@@ -5162,11 +4720,11 @@ function registerProfileCodeQLQueryTool(server) {
         let sarifPath;
         if (!logPath) {
           logger.info("No evaluator log provided, running query to generate one");
-          const defaultOutputDir = outputDir || join7(dirname6(query), "profile-output");
+          const defaultOutputDir = outputDir || join5(dirname6(query), "profile-output");
           mkdirSync5(defaultOutputDir, { recursive: true });
-          logPath = join7(defaultOutputDir, "evaluator-log.jsonl");
-          bqrsPath = join7(defaultOutputDir, "query-results.bqrs");
-          sarifPath = join7(defaultOutputDir, "query-results.sarif");
+          logPath = join5(defaultOutputDir, "evaluator-log.jsonl");
+          bqrsPath = join5(defaultOutputDir, "query-results.bqrs");
+          sarifPath = join5(defaultOutputDir, "query-results.sarif");
           const queryResult = await executeCodeQLCommand(
             "query run",
             {
@@ -5219,11 +4777,11 @@ function registerProfileCodeQLQueryTool(server) {
         const profile = parseEvaluatorLog(logPath);
         const profileOutputDir = outputDir || dirname6(logPath);
         mkdirSync5(profileOutputDir, { recursive: true });
-        const jsonPath = join7(profileOutputDir, "query-evaluation-profile.json");
+        const jsonPath = join5(profileOutputDir, "query-evaluation-profile.json");
         const jsonContent = formatAsJson(profile);
         writeFileSync3(jsonPath, jsonContent);
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join7(profileOutputDir, "query-evaluation-profile.md");
+        const mdPath = join5(profileOutputDir, "query-evaluation-profile.md");
         const mdContent = formatAsMermaid(profile);
         writeFileSync3(mdPath, mdContent);
         logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
@@ -5280,20 +4838,20 @@ function registerProfileCodeQLQueryTool(server) {
 }
 
 // src/tools/codeql/query-compile.ts
-import { z as z16 } from "zod";
+import { z as z15 } from "zod";
 var codeqlQueryCompileTool = {
   name: "codeql_query_compile",
   description: "Compile and validate CodeQL queries",
   command: "codeql",
   subcommand: "query compile",
   inputSchema: {
-    query: z16.string().describe("Path to the CodeQL query file (.ql)"),
-    database: z16.string().optional().describe("Path to the CodeQL database"),
-    library: z16.string().optional().describe("Path to query library"),
-    output: z16.string().optional().describe("Output file path"),
-    warnings: z16.enum(["hide", "show", "error"]).optional().describe("How to handle compilation warnings"),
-    verbose: z16.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z16.array(z16.string()).optional().describe("Additional command-line arguments")
+    query: z15.string().describe("Path to the CodeQL query file (.ql)"),
+    database: z15.string().optional().describe("Path to the CodeQL database"),
+    library: z15.string().optional().describe("Path to query library"),
+    output: z15.string().optional().describe("Output file path"),
+    warnings: z15.enum(["hide", "show", "error"]).optional().describe("How to handle compilation warnings"),
+    verbose: z15.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z15.array(z15.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql query compile --database=/path/to/db MyQuery.ql",
@@ -5302,7 +4860,7 @@ var codeqlQueryCompileTool = {
 };
 
 // src/tools/codeql/query-format.ts
-import { z as z17 } from "zod";
+import { z as z16 } from "zod";
 function formatResultProcessor(result, params) {
   const isCheckOnly = params["check-only"];
   const hasFormatChanges = result.exitCode === 1;
@@ -5318,12 +4876,12 @@ var codeqlQueryFormatTool = {
   command: "codeql",
   subcommand: "query format",
   inputSchema: {
-    files: z17.array(z17.string()).describe("One or more .ql or .qll source files to format"),
-    output: z17.string().optional().describe("Write formatted code to this file instead of stdout"),
-    "in-place": z17.boolean().optional().describe("Overwrite each input file with formatted version"),
-    "check-only": z17.boolean().optional().describe("Check formatting without writing output"),
-    backup: z17.string().optional().describe("Backup extension when overwriting existing files"),
-    "no-syntax-errors": z17.boolean().optional().describe("Ignore syntax errors and pretend file is formatted"),
+    files: z16.array(z16.string()).describe("One or more .ql or .qll source files to format"),
+    output: z16.string().optional().describe("Write formatted code to this file instead of stdout"),
+    "in-place": z16.boolean().optional().describe("Overwrite each input file with formatted version"),
+    "check-only": z16.boolean().optional().describe("Check formatting without writing output"),
+    backup: z16.string().optional().describe("Backup extension when overwriting existing files"),
+    "no-syntax-errors": z16.boolean().optional().describe("Ignore syntax errors and pretend file is formatted"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5336,33 +4894,33 @@ var codeqlQueryFormatTool = {
 };
 
 // src/tools/codeql/query-run.ts
-import { z as z18 } from "zod";
+import { z as z17 } from "zod";
 var codeqlQueryRunTool = {
   name: "codeql_query_run",
   description: 'Execute a CodeQL query against a database. Use either "query" parameter for direct file path OR "queryName" + "queryLanguage" for pre-defined tool queries.',
   command: "codeql",
   subcommand: "query run",
   inputSchema: {
-    query: z18.string().optional().describe("Path to the CodeQL query file (.ql) - cannot be used with queryName"),
-    queryName: z18.string().optional().describe('Name of pre-defined query to run (e.g., "PrintAST", "CallGraphFrom", "CallGraphTo") - requires queryLanguage'),
-    queryLanguage: z18.string().optional().describe('Programming language for tools queries (e.g., "javascript", "java", "python") - required when using queryName'),
-    queryPack: z18.string().optional().describe("Query pack path (defaults to server/ql/<language>/tools/src/ for tool queries)"),
-    sourceFiles: z18.string().optional().describe('Comma-separated list of source file paths for PrintAST queries (e.g., "src/main.js,src/utils.js" or just "main.js")'),
-    sourceFunction: z18.string().optional().describe('Comma-separated list of source function names for CallGraphFrom queries (e.g., "main,processData")'),
-    targetFunction: z18.string().optional().describe('Comma-separated list of target function names for CallGraphTo queries (e.g., "helper,validateInput")'),
+    query: z17.string().optional().describe("Path to the CodeQL query file (.ql) - cannot be used with queryName"),
+    queryName: z17.string().optional().describe('Name of pre-defined query to run (e.g., "PrintAST", "CallGraphFrom", "CallGraphTo") - requires queryLanguage'),
+    queryLanguage: z17.string().optional().describe('Programming language for tools queries (e.g., "javascript", "java", "python") - required when using queryName'),
+    queryPack: z17.string().optional().describe("Query pack path (defaults to server/ql/<language>/tools/src/ for tool queries)"),
+    sourceFiles: z17.string().optional().describe('Comma-separated list of source file paths for PrintAST queries (e.g., "src/main.js,src/utils.js" or just "main.js")'),
+    sourceFunction: z17.string().optional().describe('Comma-separated list of source function names for CallGraphFrom queries (e.g., "main,processData")'),
+    targetFunction: z17.string().optional().describe('Comma-separated list of target function names for CallGraphTo queries (e.g., "helper,validateInput")'),
     database: createCodeQLSchemas.database(),
     output: createCodeQLSchemas.output(),
-    external: z18.array(z18.string()).optional().describe("External predicate data: predicate=file.csv"),
+    external: z17.array(z17.string()).optional().describe("External predicate data: predicate=file.csv"),
     timeout: createCodeQLSchemas.timeout(),
-    logDir: z18.string().optional().describe("Custom directory for query execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
-    "evaluator-log": z18.string().optional().describe("Path to save evaluator log (deprecated: use logDir instead)"),
-    "evaluator-log-minify": z18.boolean().optional().describe("Minimize evaluator log for smaller size"),
-    "evaluator-log-level": z18.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
-    "tuple-counting": z18.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
-    format: z18.enum(["sarif-latest", "sarifv2.1.0", "csv", "graphtext", "dgml", "dot"]).optional().describe("Output format for query results via codeql bqrs interpret. Defaults to sarif-latest for @kind problem/path-problem queries, graphtext for @kind graph queries. Graph formats (graphtext, dgml, dot) only work with @kind graph queries."),
-    interpretedOutput: z18.string().optional().describe("Output file for interpreted results (e.g., results.sarif, results.txt). If not provided, defaults based on format: .sarif for SARIF, .txt for graphtext/csv, .dgml for dgml, .dot for dot"),
-    evaluationFunction: z18.string().optional().describe('[DEPRECATED - use format parameter instead] Built-in function for query results evaluation (e.g., "mermaid-graph", "json-decode", "csv-decode") or path to custom evaluation script'),
-    evaluationOutput: z18.string().optional().describe("[DEPRECATED - use interpretedOutput parameter instead] Output file for evaluation results"),
+    logDir: z17.string().optional().describe("Custom directory for query execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
+    "evaluator-log": z17.string().optional().describe("Path to save evaluator log (deprecated: use logDir instead)"),
+    "evaluator-log-minify": z17.boolean().optional().describe("Minimize evaluator log for smaller size"),
+    "evaluator-log-level": z17.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
+    "tuple-counting": z17.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
+    format: z17.enum(["sarif-latest", "sarifv2.1.0", "csv", "graphtext", "dgml", "dot"]).optional().describe("Output format for query results via codeql bqrs interpret. Defaults to sarif-latest for @kind problem/path-problem queries, graphtext for @kind graph queries. Graph formats (graphtext, dgml, dot) only work with @kind graph queries."),
+    interpretedOutput: z17.string().optional().describe("Output file for interpreted results (e.g., results.sarif, results.txt). If not provided, defaults based on format: .sarif for SARIF, .txt for graphtext/csv, .dgml for dgml, .dot for dot"),
+    evaluationFunction: z17.string().optional().describe('[DEPRECATED - use format parameter instead] Built-in function for query results evaluation (e.g., "mermaid-graph", "json-decode", "csv-decode") or path to custom evaluation script'),
+    evaluationOutput: z17.string().optional().describe("[DEPRECATED - use interpretedOutput parameter instead] Output file for evaluation results"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5377,8 +4935,8 @@ var codeqlQueryRunTool = {
 };
 
 // src/tools/codeql/quick-evaluate.ts
-import { z as z19 } from "zod";
-import { join as join8, resolve as resolve7 } from "path";
+import { z as z18 } from "zod";
+import { join as join6, resolve as resolve6 } from "path";
 init_logger();
 async function quickEvaluate({
   file,
@@ -5396,7 +4954,7 @@ async function quickEvaluate({
         throw new Error(`Symbol '${symbol}' not found as class or predicate in file: ${file}`);
       }
     }
-    const resolvedOutput = resolve7(output_path || join8(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
+    const resolvedOutput = resolve6(output_path || join6(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error) {
     throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -5407,10 +4965,10 @@ function registerQuickEvaluateTool(server) {
     "quick_evaluate",
     "Quick evaluate either a class or a predicate in a CodeQL query for debugging",
     {
-      file: z19.string().describe("Path to the .ql file containing the symbol"),
-      db: z19.string().describe("Path to the CodeQL database"),
-      symbol: z19.string().describe("Name of the class or predicate to evaluate"),
-      output_path: z19.string().optional().describe("Output path for results (defaults to project-local .tmp/quickeval/)")
+      file: z18.string().describe("Path to the .ql file containing the symbol"),
+      db: z18.string().describe("Path to the CodeQL database"),
+      symbol: z18.string().describe("Name of the class or predicate to evaluate"),
+      output_path: z18.string().optional().describe("Output path for results (defaults to project-local .tmp/quickeval/)")
     },
     async ({ file, db, symbol, output_path }) => {
       try {
@@ -5436,17 +4994,17 @@ function registerQuickEvaluateTool(server) {
 
 // src/tools/codeql/register-database.ts
 init_logger();
-import { z as z20 } from "zod";
+import { z as z19 } from "zod";
 import { access, constants } from "fs/promises";
-import { resolve as resolve8 } from "path";
+import { resolve as resolve7 } from "path";
 async function registerDatabase(dbPath) {
   try {
-    const resolvedPath = resolve8(dbPath);
+    const resolvedPath = resolve7(dbPath);
     await access(resolvedPath, constants.F_OK);
-    const dbYmlPath = resolve8(resolvedPath, "codeql-database.yml");
+    const dbYmlPath = resolve7(resolvedPath, "codeql-database.yml");
     await access(dbYmlPath, constants.F_OK);
-    const srcZipPath = resolve8(resolvedPath, "src.zip");
-    const srcDirPath = resolve8(resolvedPath, "src");
+    const srcZipPath = resolve7(resolvedPath, "src.zip");
+    const srcDirPath = resolve7(resolvedPath, "src");
     let hasSrcZip = false;
     let hasSrcDir = false;
     try {
@@ -5487,7 +5045,7 @@ function registerRegisterDatabaseTool(server) {
     "register_database",
     "Register a CodeQL database given a local path to the database directory",
     {
-      db_path: z20.string().describe("Path to the CodeQL database directory")
+      db_path: z19.string().describe("Path to the CodeQL database directory")
     },
     async ({ db_path }) => {
       try {
@@ -5512,15 +5070,15 @@ function registerRegisterDatabaseTool(server) {
 }
 
 // src/tools/codeql/resolve-database.ts
-import { z as z21 } from "zod";
+import { z as z20 } from "zod";
 var codeqlResolveDatabaseTool = {
   name: "codeql_resolve_database",
   description: "Resolve database path and validate database structure",
   command: "codeql",
   subcommand: "resolve database",
   inputSchema: {
-    database: z21.string().describe("Database path to resolve"),
-    format: z21.enum(["text", "json", "betterjson"]).optional().describe("Output format for database information"),
+    database: z20.string().describe("Database path to resolve"),
+    format: z20.enum(["text", "json", "betterjson"]).optional().describe("Output format for database information"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5533,16 +5091,16 @@ var codeqlResolveDatabaseTool = {
 };
 
 // src/tools/codeql/resolve-languages.ts
-import { z as z22 } from "zod";
+import { z as z21 } from "zod";
 var codeqlResolveLanguagesTool = {
   name: "codeql_resolve_languages",
   description: "List installed CodeQL extractor packs",
   command: "codeql",
   subcommand: "resolve languages",
   inputSchema: {
-    format: z22.enum(["text", "json", "betterjson"]).optional().describe("Output format for language information"),
-    verbose: z22.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z22.array(z22.string()).optional().describe("Additional command-line arguments")
+    format: z21.enum(["text", "json", "betterjson"]).optional().describe("Output format for language information"),
+    verbose: z21.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z21.array(z21.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql resolve languages --format=text",
@@ -5553,17 +5111,17 @@ var codeqlResolveLanguagesTool = {
 };
 
 // src/tools/codeql/resolve-library-path.ts
-import { z as z23 } from "zod";
+import { z as z22 } from "zod";
 var codeqlResolveLibraryPathTool = {
   name: "codeql_resolve_library-path",
   description: "Resolve library path for CodeQL queries and libraries",
   command: "codeql",
   subcommand: "resolve library-path",
   inputSchema: {
-    language: z23.string().optional().describe("Programming language to resolve library path for"),
-    format: z23.enum(["text", "json", "betterjson"]).optional().describe("Output format for library path information"),
-    verbose: z23.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z23.array(z23.string()).optional().describe("Additional command-line arguments")
+    language: z22.string().optional().describe("Programming language to resolve library path for"),
+    format: z22.enum(["text", "json", "betterjson"]).optional().describe("Output format for library path information"),
+    verbose: z22.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z22.array(z22.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql resolve library-path --language=java",
@@ -5574,17 +5132,17 @@ var codeqlResolveLibraryPathTool = {
 };
 
 // src/tools/codeql/resolve-metadata.ts
-import { z as z24 } from "zod";
+import { z as z23 } from "zod";
 var codeqlResolveMetadataTool = {
   name: "codeql_resolve_metadata",
   description: "Resolve and return the key-value metadata pairs from a CodeQL query source file.",
   command: "codeql",
   subcommand: "resolve metadata",
   inputSchema: {
-    query: z24.string().describe("Query file to resolve metadata for"),
-    format: z24.enum(["json"]).optional().describe("Output format for metadata information (always JSON, optional for future compatibility)"),
-    verbose: z24.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z24.array(z24.string()).optional().describe("Additional command-line arguments")
+    query: z23.string().describe("Query file to resolve metadata for"),
+    format: z23.enum(["json"]).optional().describe("Output format for metadata information (always JSON, optional for future compatibility)"),
+    verbose: z23.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z23.array(z23.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql resolve metadata -- relative-path/2/MyQuery.ql",
@@ -5594,15 +5152,15 @@ var codeqlResolveMetadataTool = {
 };
 
 // src/tools/codeql/resolve-qlref.ts
-import { z as z25 } from "zod";
+import { z as z24 } from "zod";
 var codeqlResolveQlrefTool = {
   name: "codeql_resolve_qlref",
   description: "Resolve qlref files to their corresponding query files",
   command: "codeql",
   subcommand: "resolve qlref",
   inputSchema: {
-    qlref: z25.string().describe("Path to the .qlref file to resolve"),
-    format: z25.enum(["text", "json", "betterjson"]).optional().describe("Output format for qlref resolution"),
+    qlref: z24.string().describe("Path to the .qlref file to resolve"),
+    format: z24.enum(["text", "json", "betterjson"]).optional().describe("Output format for qlref resolution"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5615,7 +5173,7 @@ var codeqlResolveQlrefTool = {
 };
 
 // src/tools/codeql/resolve-queries.ts
-import { z as z26 } from "zod";
+import { z as z25 } from "zod";
 var jsonOnlyResultProcessor = (result, params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -5645,10 +5203,10 @@ var codeqlResolveQueriesTool = {
   command: "codeql",
   subcommand: "resolve queries",
   inputSchema: {
-    directory: z26.string().optional().describe("Directory to search for queries"),
-    language: z26.string().optional().describe("Filter queries by programming language"),
-    format: z26.enum(["text", "json", "betterjson", "bylanguage"]).optional().describe("Output format for query list"),
-    "additional-packs": z26.union([z26.string(), z26.array(z26.string())]).optional().describe("Additional pack directories to search for CodeQL packs"),
+    directory: z25.string().optional().describe("Directory to search for queries"),
+    language: z25.string().optional().describe("Filter queries by programming language"),
+    format: z25.enum(["text", "json", "betterjson", "bylanguage"]).optional().describe("Output format for query list"),
+    "additional-packs": z25.union([z25.string(), z25.array(z25.string())]).optional().describe("Additional pack directories to search for CodeQL packs"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5662,15 +5220,15 @@ var codeqlResolveQueriesTool = {
 };
 
 // src/tools/codeql/resolve-tests.ts
-import { z as z27 } from "zod";
+import { z as z26 } from "zod";
 var codeqlResolveTestsTool = {
   name: "codeql_resolve_tests",
   description: "Resolve the local filesystem paths of unit tests and/or queries under some base directory",
   command: "codeql",
   subcommand: "resolve tests",
   inputSchema: {
-    tests: z27.array(z27.string()).optional().describe("One or more tests (.ql, .qlref files, or test directories)"),
-    format: z27.enum(["text", "json"]).optional().describe("Output format for test list"),
+    tests: z26.array(z26.string()).optional().describe("One or more tests (.ql, .qlref files, or test directories)"),
+    format: z26.enum(["text", "json"]).optional().describe("Output format for test list"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5683,14 +5241,14 @@ var codeqlResolveTestsTool = {
 };
 
 // src/tools/codeql/test-accept.ts
-import { z as z28 } from "zod";
+import { z as z27 } from "zod";
 var codeqlTestAcceptTool = {
   name: "codeql_test_accept",
   description: "Accept new test results as the expected baseline",
   command: "codeql",
   subcommand: "test accept",
   inputSchema: {
-    tests: z28.array(z28.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
+    tests: z27.array(z27.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5703,15 +5261,15 @@ var codeqlTestAcceptTool = {
 };
 
 // src/tools/codeql/test-extract.ts
-import { z as z29 } from "zod";
+import { z as z28 } from "zod";
 var codeqlTestExtractTool = {
   name: "codeql_test_extract",
   description: "Extract test databases for CodeQL query tests",
   command: "codeql",
   subcommand: "test extract",
   inputSchema: {
-    tests: z29.array(z29.string()).describe("One or more test directories or files"),
-    language: z29.string().optional().describe("Programming language for extraction"),
+    tests: z28.array(z28.string()).describe("One or more test directories or files"),
+    language: z28.string().optional().describe("Programming language for extraction"),
     threads: createCodeQLSchemas.threads(),
     ram: createCodeQLSchemas.ram(),
     verbose: createCodeQLSchemas.verbose(),
@@ -5726,18 +5284,18 @@ var codeqlTestExtractTool = {
 };
 
 // src/tools/codeql/test-run.ts
-import { z as z30 } from "zod";
+import { z as z29 } from "zod";
 var codeqlTestRunTool = {
   name: "codeql_test_run",
   description: "Run CodeQL query tests",
   command: "codeql",
   subcommand: "test run",
   inputSchema: {
-    tests: z30.array(z30.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
-    "show-extractor-output": z30.boolean().optional().describe("Show output from extractors during test execution"),
-    "keep-databases": z30.boolean().optional().describe("Keep test databases after running tests"),
-    "learn": z30.boolean().optional().describe("Accept current output as expected for failing tests"),
-    logDir: z30.string().optional().describe("Custom directory for test execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
+    tests: z29.array(z29.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
+    "show-extractor-output": z29.boolean().optional().describe("Show output from extractors during test execution"),
+    "keep-databases": z29.boolean().optional().describe("Keep test databases after running tests"),
+    "learn": z29.boolean().optional().describe("Accept current output as expected for failing tests"),
+    logDir: z29.string().optional().describe("Custom directory for test execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
     threads: createCodeQLSchemas.threads(),
     ram: createCodeQLSchemas.ram(),
     verbose: createCodeQLSchemas.verbose(),
@@ -5752,7 +5310,7 @@ var codeqlTestRunTool = {
 };
 
 // src/tools/codeql-tools.ts
-import { z as z31 } from "zod";
+import { z as z30 } from "zod";
 
 // src/lib/validation.ts
 function validateCodeQLSyntax(query, _language) {
@@ -5869,10 +5427,10 @@ init_logger();
 function registerCodeQLTools(server) {
   server.tool(
     "validate_codeql_query",
-    "Quick heuristic validation for CodeQL query structure - checks for common patterns like from/where/select clauses and metadata presence. Does NOT compile the query. For authoritative validation with actual compilation, use codeql_language_server_eval instead.",
+    "Quick heuristic validation for CodeQL query structure - checks for common patterns like from/where/select clauses and metadata presence. Does NOT compile the query. For authoritative validation with actual compilation, use codeql_lsp_diagnostics instead.",
     {
-      query: z31.string().describe("The CodeQL query to validate"),
-      language: z31.string().optional().describe("Target programming language")
+      query: z30.string().describe("The CodeQL query to validate"),
+      language: z30.string().optional().describe("Target programming language")
     },
     async ({ query, language }) => {
       try {
@@ -5898,11 +5456,11 @@ function registerCodeQLTools(server) {
     "create_codeql_query",
     "Create directory structure and files for a new CodeQL query with tests",
     {
-      basePath: z31.string().describe("Base path where src/ and test/ directories will be created"),
-      queryName: z31.string().describe("Name of the query (e.g., MySecurityQuery)"),
-      language: z31.string().describe("Target programming language (e.g., javascript, python, java)"),
-      description: z31.string().optional().describe("Description of what the query does"),
-      queryId: z31.string().optional().describe("Custom query ID (defaults to language/example/queryname)")
+      basePath: z30.string().describe("Base path where src/ and test/ directories will be created"),
+      queryName: z30.string().describe("Name of the query (e.g., MySecurityQuery)"),
+      language: z30.string().describe("Target programming language (e.g., javascript, python, java)"),
+      description: z30.string().optional().describe("Description of what the query does"),
+      queryId: z30.string().optional().describe("Custom query ID (defaults to language/example/queryname)")
     },
     async ({ basePath, queryName, language, description, queryId }) => {
       try {
@@ -5970,7 +5528,6 @@ function registerCodeQLTools(server) {
   registerFindClassPositionTool(server);
   registerFindCodeQLQueryFilesTool(server);
   registerFindPredicatePositionTool(server);
-  registerLanguageServerEvalTool(server);
   registerProfileCodeQLQueryTool(server);
   registerQuickEvaluateTool(server);
   registerRegisterDatabaseTool(server);
@@ -5978,34 +5535,34 @@ function registerCodeQLTools(server) {
 
 // src/lib/resources.ts
 import { readFileSync as readFileSync5 } from "fs";
-import { join as join10, dirname as dirname7 } from "path";
+import { join as join8, dirname as dirname7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = dirname7(__filename2);
 function getGettingStartedGuide() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/getting-started.md"), "utf-8");
+    return readFileSync5(join8(__dirname2, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/query-basics.md"), "utf-8");
+    return readFileSync5(join8(__dirname2, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/security-templates.md"), "utf-8");
+    return readFileSync5(join8(__dirname2, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync5(join8(__dirname2, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -6091,9 +5648,1384 @@ function registerCodeQLResources(server) {
   );
 }
 
+// src/tools/lsp/lsp-diagnostics.ts
+import { z as z31 } from "zod";
+
+// src/lib/server-manager.ts
+import { mkdirSync as mkdirSync7 } from "fs";
+import { join as join10 } from "path";
+import { randomUUID } from "crypto";
+
+// src/lib/server-config.ts
+import { createHash } from "crypto";
+function computeConfigHash(type2, config) {
+  const sortKeys = (_key, value) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const sorted = {};
+      for (const k of Object.keys(value).sort()) {
+        sorted[k] = value[k];
+      }
+      return sorted;
+    }
+    return value;
+  };
+  const canonical = JSON.stringify({ config, type: type2 }, sortKeys);
+  return createHash("sha256").update(canonical).digest("hex");
+}
+function buildQueryServerArgs(config) {
+  const args = [
+    "execute",
+    "query-server2"
+  ];
+  if (config.searchPath) {
+    args.push(`--search-path=${config.searchPath}`);
+  }
+  if (config.commonCaches) {
+    args.push(`--common-caches=${config.commonCaches}`);
+  }
+  if (config.logdir) {
+    args.push(`--logdir=${config.logdir}`);
+  }
+  if (config.threads !== void 0) {
+    args.push(`--threads=${config.threads}`);
+  }
+  if (config.timeout !== void 0) {
+    args.push(`--timeout=${config.timeout}`);
+  }
+  if (config.maxDiskCache !== void 0) {
+    args.push(`--max-disk-cache=${config.maxDiskCache}`);
+  }
+  if (config.evaluatorLog) {
+    args.push(`--evaluator-log=${config.evaluatorLog}`);
+  }
+  if (config.tupleCounting) {
+    args.push("--tuple-counting");
+  }
+  if (config.debug) {
+    args.push("--debug");
+    args.push("--tuple-counting");
+  }
+  return args;
+}
+function buildCLIServerArgs(config) {
+  const args = [
+    "execute",
+    "cli-server"
+  ];
+  if (config.commonCaches) {
+    args.push(`--common-caches=${config.commonCaches}`);
+  }
+  if (config.logdir) {
+    args.push(`--logdir=${config.logdir}`);
+  }
+  return args;
+}
+
+// src/lib/language-server.ts
+init_logger();
+init_package_paths();
+import { spawn } from "child_process";
+import { EventEmitter } from "events";
+import { setTimeout as setTimeout2, clearTimeout } from "timers";
+import { pathToFileURL } from "url";
+import { delimiter as delimiter2, join as join9 } from "path";
+init_cli_executor();
+var CodeQLLanguageServer = class extends EventEmitter {
+  constructor(_options = {}) {
+    super();
+    this._options = _options;
+  }
+  server = null;
+  messageId = 1;
+  pendingResponses = /* @__PURE__ */ new Map();
+  isInitialized = false;
+  currentWorkspaceUri;
+  messageBuffer = "";
+  async start() {
+    if (this.server) {
+      throw new Error("Language server is already running");
+    }
+    logger.info("Starting CodeQL Language Server...");
+    const args = [
+      "execute",
+      "language-server",
+      "--check-errors=ON_CHANGE"
+    ];
+    if (this._options.searchPath) {
+      args.push(`--search-path=${this._options.searchPath}`);
+    }
+    if (this._options.logdir) {
+      args.push(`--logdir=${this._options.logdir}`);
+    }
+    if (this._options.loglevel) {
+      args.push(`--loglevel=${this._options.loglevel}`);
+    }
+    if (this._options.synchronous) {
+      args.push("--synchronous");
+    }
+    if (this._options.verbosity) {
+      args.push(`--verbosity=${this._options.verbosity}`);
+    }
+    const spawnEnv = { ...process.env };
+    const codeqlDir = getResolvedCodeQLDir();
+    if (codeqlDir && spawnEnv.PATH) {
+      spawnEnv.PATH = `${codeqlDir}${delimiter2}${spawnEnv.PATH}`;
+    } else if (codeqlDir) {
+      spawnEnv.PATH = codeqlDir;
+    }
+    this.server = spawn("codeql", args, {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: spawnEnv
+    });
+    this.server.stderr?.on("data", (data) => {
+      logger.debug("CodeQL LS stderr:", data.toString());
+    });
+    this.server.stdout?.on("data", (data) => {
+      this.handleStdout(data);
+    });
+    this.server.on("error", (error) => {
+      logger.error("CodeQL Language Server error:", error);
+      this.emit("error", error);
+    });
+    this.server.on("exit", (code) => {
+      logger.info("CodeQL Language Server exited with code:", code);
+      this.server = null;
+      this.isInitialized = false;
+      this.emit("exit", code);
+    });
+    await new Promise((resolve12) => setTimeout2(resolve12, 2e3));
+  }
+  handleStdout(data) {
+    this.messageBuffer += data.toString();
+    let headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+    while (headerEnd !== -1) {
+      const header = this.messageBuffer.substring(0, headerEnd);
+      const contentLengthMatch = header.match(/Content-Length: (\d+)/);
+      if (contentLengthMatch) {
+        const contentLength = parseInt(contentLengthMatch[1]);
+        const messageStart = headerEnd + 4;
+        const messageEnd = messageStart + contentLength;
+        if (this.messageBuffer.length >= messageEnd) {
+          const messageContent = this.messageBuffer.substring(messageStart, messageEnd);
+          this.messageBuffer = this.messageBuffer.substring(messageEnd);
+          try {
+            const message = JSON.parse(messageContent);
+            this.handleMessage(message);
+          } catch (error) {
+            logger.error("Failed to parse LSP message:", error, messageContent);
+          }
+          headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+        } else {
+          break;
+        }
+      } else {
+        logger.error("Invalid LSP header:", header);
+        this.messageBuffer = "";
+        break;
+      }
+    }
+  }
+  handleMessage(message) {
+    logger.debug("Received LSP message:", message);
+    if (message.id !== void 0 && this.pendingResponses.has(Number(message.id))) {
+      const pending = this.pendingResponses.get(Number(message.id));
+      this.pendingResponses.delete(Number(message.id));
+      if (message.error) {
+        pending.reject(new Error(`LSP Error: ${message.error.message}`));
+      } else {
+        pending.resolve(message.result);
+      }
+      return;
+    }
+    if (message.method === "textDocument/publishDiagnostics") {
+      this.emit("diagnostics", message.params);
+    }
+  }
+  sendMessage(message) {
+    if (!this.server?.stdin) {
+      throw new Error("Language server is not running");
+    }
+    const messageStr = JSON.stringify(message);
+    const contentLength = Buffer.byteLength(messageStr, "utf8");
+    const header = `Content-Length: ${contentLength}\r
+\r
+`;
+    const fullMessage = header + messageStr;
+    logger.debug("Sending LSP message:", fullMessage);
+    this.server.stdin.write(fullMessage);
+  }
+  sendRequest(method, params) {
+    const id = this.messageId++;
+    const message = {
+      jsonrpc: "2.0",
+      id,
+      method,
+      params
+    };
+    return new Promise((resolve12, reject) => {
+      this.pendingResponses.set(id, { resolve: resolve12, reject });
+      this.sendMessage(message);
+      setTimeout2(() => {
+        if (this.pendingResponses.has(id)) {
+          this.pendingResponses.delete(id);
+          reject(new Error(`LSP request timeout for method: ${method}`));
+        }
+      }, 1e4);
+    });
+  }
+  sendNotification(method, params) {
+    const message = {
+      jsonrpc: "2.0",
+      method,
+      params
+    };
+    this.sendMessage(message);
+  }
+  /**
+   * Initialize the language server with an optional workspace URI.
+   *
+   * If the server is already initialized with a different workspace, a
+   * `workspace/didChangeWorkspaceFolders` notification is sent to update
+   * the workspace context instead of requiring a full restart.
+   */
+  async initialize(workspaceUri) {
+    if (this.isInitialized) {
+      if (workspaceUri && workspaceUri !== this.currentWorkspaceUri) {
+        await this.updateWorkspace(workspaceUri);
+      }
+      return;
+    }
+    logger.info("Initializing CodeQL Language Server...");
+    const initParams = {
+      processId: process.pid,
+      clientInfo: {
+        name: "codeql-development-mcp-server",
+        version: getPackageVersion()
+      },
+      capabilities: {
+        textDocument: {
+          completion: { completionItem: { snippetSupport: false } },
+          definition: {},
+          publishDiagnostics: {},
+          references: {},
+          synchronization: {
+            didClose: true,
+            didChange: true,
+            didOpen: true
+          }
+        },
+        workspace: {
+          workspaceFolders: true
+        }
+      }
+    };
+    if (workspaceUri) {
+      initParams.workspaceFolders = [{
+        uri: workspaceUri,
+        name: "codeql-workspace"
+      }];
+    }
+    await this.sendRequest("initialize", initParams);
+    this.sendNotification("initialized", {});
+    this.currentWorkspaceUri = workspaceUri;
+    this.isInitialized = true;
+    logger.info("CodeQL Language Server initialized successfully");
+  }
+  /**
+   * Update the workspace folders on a running, initialized server.
+   */
+  async updateWorkspace(newUri) {
+    logger.info(`Updating workspace from ${this.currentWorkspaceUri} to ${newUri}`);
+    const removed = this.currentWorkspaceUri ? [{ uri: this.currentWorkspaceUri, name: "codeql-workspace" }] : [];
+    this.sendNotification("workspace/didChangeWorkspaceFolders", {
+      event: {
+        added: [{ uri: newUri, name: "codeql-workspace" }],
+        removed
+      }
+    });
+    this.currentWorkspaceUri = newUri;
+  }
+  /**
+   * Get the current workspace URI.
+   */
+  getWorkspaceUri() {
+    return this.currentWorkspaceUri;
+  }
+  async evaluateQL(qlCode, uri) {
+    if (!this.isInitialized) {
+      throw new Error("Language server is not initialized");
+    }
+    const documentUri = uri || pathToFileURL(join9(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
+    return new Promise((resolve12, reject) => {
+      let diagnosticsReceived = false;
+      const timeout = setTimeout2(() => {
+        if (!diagnosticsReceived) {
+          this.removeAllListeners("diagnostics");
+          reject(new Error("Timeout waiting for diagnostics"));
+        }
+      }, 5e3);
+      const diagnosticsHandler = (params) => {
+        if (params.uri === documentUri) {
+          diagnosticsReceived = true;
+          clearTimeout(timeout);
+          this.removeListener("diagnostics", diagnosticsHandler);
+          this.sendNotification("textDocument/didClose", {
+            textDocument: { uri: documentUri }
+          });
+          resolve12(params.diagnostics);
+        }
+      };
+      this.on("diagnostics", diagnosticsHandler);
+      this.sendNotification("textDocument/didOpen", {
+        textDocument: {
+          uri: documentUri,
+          languageId: "ql",
+          version: 1,
+          text: qlCode
+        }
+      });
+    });
+  }
+  // ---- LSP feature methods (issue #1) ----
+  /**
+   * Get code completions at a position in a document.
+   */
+  async getCompletions(params) {
+    if (!this.isInitialized) {
+      throw new Error("Language server is not initialized");
+    }
+    const result = await this.sendRequest("textDocument/completion", params);
+    if (result && typeof result === "object" && "items" in result) {
+      return result.items;
+    }
+    return result || [];
+  }
+  /**
+   * Find the definition(s) of a symbol at a position.
+   */
+  async getDefinition(params) {
+    if (!this.isInitialized) {
+      throw new Error("Language server is not initialized");
+    }
+    const result = await this.sendRequest("textDocument/definition", params);
+    return this.normalizeLocations(result);
+  }
+  /**
+   * Find all references to a symbol at a position.
+   */
+  async getReferences(params) {
+    if (!this.isInitialized) {
+      throw new Error("Language server is not initialized");
+    }
+    const result = await this.sendRequest("textDocument/references", {
+      ...params,
+      context: params.context ?? { includeDeclaration: true }
+    });
+    return this.normalizeLocations(result);
+  }
+  /**
+   * Open a text document in the language server.
+   * The document must be opened before requesting completions, definitions, etc.
+   */
+  openDocument(uri, text, languageId = "ql", version = 1) {
+    if (!this.isInitialized) {
+      throw new Error("Language server is not initialized");
+    }
+    this.sendNotification("textDocument/didOpen", {
+      textDocument: { uri, languageId, version, text }
+    });
+  }
+  /**
+   * Close a text document in the language server.
+   */
+  closeDocument(uri) {
+    if (!this.isInitialized) {
+      throw new Error("Language server is not initialized");
+    }
+    this.sendNotification("textDocument/didClose", {
+      textDocument: { uri }
+    });
+  }
+  /**
+   * Normalize a definition/references/implementation result to Location[].
+   * The LSP spec allows Location | Location[] | LocationLink[].
+   */
+  normalizeLocations(result) {
+    if (!result) return [];
+    if (Array.isArray(result)) {
+      return result.map((item) => {
+        if ("targetUri" in item) {
+          return { uri: item.targetUri, range: item.targetRange };
+        }
+        return item;
+      });
+    }
+    if (typeof result === "object" && "uri" in result) {
+      return [result];
+    }
+    return [];
+  }
+  async shutdown() {
+    if (!this.server) {
+      return;
+    }
+    logger.info("Shutting down CodeQL Language Server...");
+    try {
+      await this.sendRequest("shutdown", {});
+      this.sendNotification("exit", {});
+    } catch (error) {
+      logger.warn("Error during graceful shutdown:", error);
+    }
+    setTimeout2(() => {
+      if (this.server) {
+        this.server.kill("SIGTERM");
+      }
+    }, 1e3);
+    this.isInitialized = false;
+  }
+  isRunning() {
+    return this.server !== null && !this.server.killed;
+  }
+};
+
+// src/lib/query-server.ts
+import { spawn as spawn2 } from "child_process";
+import { delimiter as delimiter3 } from "path";
+import { EventEmitter as EventEmitter2 } from "events";
+import { clearTimeout as clearTimeout2, setTimeout as setTimeout3 } from "timers";
+init_cli_executor();
+init_logger();
+var CodeQLQueryServer = class extends EventEmitter2 {
+  messageBuffer = "";
+  messageId = 1;
+  pendingRequests = /* @__PURE__ */ new Map();
+  process = null;
+  config;
+  constructor(config) {
+    super();
+    this.config = config;
+  }
+  /**
+   * Start the query-server2 process.
+   */
+  async start() {
+    if (this.process) {
+      throw new Error("Query server is already running");
+    }
+    logger.info("Starting CodeQL Query Server (query-server2)...");
+    const args = buildQueryServerArgs(this.config);
+    const spawnEnv = { ...process.env };
+    const codeqlDir = getResolvedCodeQLDir();
+    if (codeqlDir && spawnEnv.PATH) {
+      spawnEnv.PATH = `${codeqlDir}${delimiter3}${spawnEnv.PATH}`;
+    } else if (codeqlDir) {
+      spawnEnv.PATH = codeqlDir;
+    }
+    this.process = spawn2("codeql", args, {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: spawnEnv
+    });
+    this.process.stderr?.on("data", (data) => {
+      logger.debug("QueryServer2 stderr:", data.toString());
+    });
+    this.process.stdout?.on("data", (data) => {
+      this.handleStdout(data);
+    });
+    this.process.on("error", (error) => {
+      logger.error("Query server process error:", error);
+      this.emit("error", error);
+    });
+    this.process.on("exit", (code) => {
+      logger.info(`Query server exited with code: ${code}`);
+      this.rejectAllPending(new Error(`Query server exited with code: ${code}`));
+      this.process = null;
+      this.emit("exit", code);
+    });
+    await new Promise((resolve12) => setTimeout3(resolve12, 2e3));
+    logger.info("CodeQL Query Server started");
+  }
+  /**
+   * Send a request to the query server and await the response.
+   *
+   * @param method - The JSON-RPC method name.
+   * @param params - The method parameters.
+   * @param timeoutMs - Request timeout in milliseconds (default: 300000 = 5 min).
+   * @returns The result from the server.
+   */
+  sendRequest(method, params, timeoutMs = 3e5) {
+    const id = this.messageId++;
+    const message = {
+      id,
+      jsonrpc: "2.0",
+      method,
+      params
+    };
+    return new Promise((resolve12, reject) => {
+      this.pendingRequests.set(id, { reject, resolve: resolve12 });
+      this.sendRaw(message);
+      const timer = setTimeout3(() => {
+        if (this.pendingRequests.has(id)) {
+          this.pendingRequests.delete(id);
+          reject(new Error(`Query server request timeout for method: ${method}`));
+        }
+      }, timeoutMs);
+      const originalResolve = resolve12;
+      const originalReject = reject;
+      const wrapped = {
+        reject: (err) => {
+          clearTimeout2(timer);
+          originalReject(err);
+        },
+        resolve: (val) => {
+          clearTimeout2(timer);
+          originalResolve(val);
+        }
+      };
+      this.pendingRequests.set(id, wrapped);
+    });
+  }
+  /**
+   * Gracefully shut down the query server.
+   */
+  async shutdown() {
+    if (!this.process) {
+      return;
+    }
+    logger.info("Shutting down CodeQL Query Server...");
+    try {
+      await this.sendRequest("shutdown", {}, 5e3);
+    } catch (error) {
+      logger.warn("Error during query server graceful shutdown:", error);
+    }
+    setTimeout3(() => {
+      if (this.process) {
+        this.process.kill("SIGTERM");
+        this.process = null;
+      }
+    }, 2e3);
+  }
+  /**
+   * Whether the query server process is running.
+   */
+  isRunning() {
+    return this.process !== null && !this.process.killed;
+  }
+  // ---- private helpers ----
+  handleStdout(data) {
+    this.messageBuffer += data.toString();
+    let headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+    while (headerEnd !== -1) {
+      const header = this.messageBuffer.substring(0, headerEnd);
+      const contentLengthMatch = header.match(/Content-Length: (\d+)/);
+      if (contentLengthMatch) {
+        const contentLength = parseInt(contentLengthMatch[1]);
+        const messageStart = headerEnd + 4;
+        const messageEnd = messageStart + contentLength;
+        if (this.messageBuffer.length >= messageEnd) {
+          const messageContent = this.messageBuffer.substring(messageStart, messageEnd);
+          this.messageBuffer = this.messageBuffer.substring(messageEnd);
+          try {
+            const message = JSON.parse(messageContent);
+            this.handleMessage(message);
+          } catch (error) {
+            logger.error("Failed to parse query server message:", error);
+          }
+          headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+        } else {
+          break;
+        }
+      } else {
+        logger.error("Invalid query server header:", header);
+        this.messageBuffer = "";
+        break;
+      }
+    }
+  }
+  handleMessage(message) {
+    logger.debug("QueryServer2 message:", message);
+    if (message.id !== void 0 && this.pendingRequests.has(Number(message.id))) {
+      const pending = this.pendingRequests.get(Number(message.id));
+      this.pendingRequests.delete(Number(message.id));
+      if (message.error) {
+        pending.reject(new Error(`Query server error: ${message.error.message}`));
+      } else {
+        pending.resolve(message.result);
+      }
+      return;
+    }
+    if (message.method) {
+      this.emit("notification", { method: message.method, params: message.params });
+    }
+  }
+  rejectAllPending(error) {
+    for (const [id, pending] of this.pendingRequests) {
+      pending.reject(error);
+      this.pendingRequests.delete(id);
+    }
+  }
+  sendRaw(message) {
+    if (!this.process?.stdin) {
+      throw new Error("Query server is not running");
+    }
+    const body = JSON.stringify(message);
+    const contentLength = Buffer.byteLength(body, "utf8");
+    const frame = `Content-Length: ${contentLength}\r
+\r
+${body}`;
+    this.process.stdin.write(frame);
+  }
+};
+
+// src/lib/cli-server.ts
+import { spawn as spawn3 } from "child_process";
+import { delimiter as delimiter4 } from "path";
+import { EventEmitter as EventEmitter3 } from "events";
+import { clearTimeout as clearTimeout3, setTimeout as setTimeout4 } from "timers";
+init_cli_executor();
+init_logger();
+var CodeQLCLIServer = class extends EventEmitter3 {
+  commandInProgress = false;
+  commandQueue = [];
+  config;
+  currentReject = null;
+  currentResolve = null;
+  nullBuffer = Buffer.alloc(1);
+  process = null;
+  stdoutBuffer = "";
+  constructor(config) {
+    super();
+    this.config = config;
+  }
+  /**
+   * Start the cli-server process.
+   */
+  async start() {
+    if (this.process) {
+      throw new Error("CLI server is already running");
+    }
+    logger.info("Starting CodeQL CLI Server...");
+    const args = buildCLIServerArgs(this.config);
+    const spawnEnv = { ...process.env };
+    const codeqlDir = getResolvedCodeQLDir();
+    if (codeqlDir && spawnEnv.PATH) {
+      spawnEnv.PATH = `${codeqlDir}${delimiter4}${spawnEnv.PATH}`;
+    } else if (codeqlDir) {
+      spawnEnv.PATH = codeqlDir;
+    }
+    this.process = spawn3("codeql", args, {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: spawnEnv
+    });
+    this.process.stdout?.on("data", (data) => {
+      this.handleStdout(data);
+    });
+    this.process.stderr?.on("data", (data) => {
+      logger.debug("CLIServer stderr:", data.toString());
+    });
+    this.process.on("error", (error) => {
+      logger.error("CLI server process error:", error);
+      if (this.currentReject) {
+        this.currentReject(error);
+        this.currentReject = null;
+        this.currentResolve = null;
+      }
+      this.emit("error", error);
+    });
+    this.process.on("exit", (code) => {
+      logger.info(`CLI server exited with code: ${code}`);
+      if (this.currentReject) {
+        this.currentReject(new Error(`CLI server exited unexpectedly with code: ${code}`));
+        this.currentReject = null;
+        this.currentResolve = null;
+      }
+      this.process = null;
+      this.emit("exit", code);
+    });
+    await new Promise((resolve12) => setTimeout4(resolve12, 1500));
+    logger.info("CodeQL CLI Server started");
+  }
+  /**
+   * Run a CodeQL CLI command through the persistent server.
+   *
+   * Commands are serialized and queued; only one command runs at a time.
+   *
+   * @param args - The full command arguments (e.g. `['resolve', 'qlpacks']`).
+   * @returns The stdout output from the command.
+   */
+  runCommand(args) {
+    return new Promise((resolve12, reject) => {
+      const execute = () => {
+        this.executeCommand({ args, reject, resolve: resolve12 });
+      };
+      if (this.commandInProgress) {
+        this.commandQueue.push(execute);
+      } else {
+        execute();
+      }
+    });
+  }
+  /**
+   * Gracefully shut down the CLI server.
+   */
+  async shutdown() {
+    if (!this.process) {
+      return;
+    }
+    logger.info("Shutting down CodeQL CLI Server...");
+    try {
+      this.process.stdin?.write(JSON.stringify(["shutdown"]), "utf8");
+      this.process.stdin?.write(this.nullBuffer);
+    } catch (error) {
+      logger.warn("Error during CLI server shutdown request:", error);
+    }
+    await new Promise((resolve12) => {
+      const timer = setTimeout4(() => {
+        if (this.process) {
+          this.process.kill("SIGTERM");
+          this.process = null;
+        }
+        resolve12();
+      }, 2e3);
+      if (this.process) {
+        this.process.once("exit", () => {
+          clearTimeout3(timer);
+          this.process = null;
+          resolve12();
+        });
+      } else {
+        clearTimeout3(timer);
+        resolve12();
+      }
+    });
+    this.commandInProgress = false;
+    this.commandQueue = [];
+    logger.info("CodeQL CLI Server stopped");
+  }
+  /**
+   * Whether the CLI server process is running.
+   */
+  isRunning() {
+    return this.process !== null && !this.process.killed;
+  }
+  // ---- private helpers ----
+  executeCommand(cmd) {
+    if (!this.process?.stdin) {
+      cmd.reject(new Error("CLI server is not running"));
+      return;
+    }
+    this.commandInProgress = true;
+    this.currentResolve = cmd.resolve;
+    this.currentReject = cmd.reject;
+    this.stdoutBuffer = "";
+    try {
+      this.process.stdin.write(JSON.stringify(cmd.args), "utf8");
+      this.process.stdin.write(this.nullBuffer);
+    } catch (error) {
+      this.commandInProgress = false;
+      this.currentResolve = null;
+      this.currentReject = null;
+      cmd.reject(error instanceof Error ? error : new Error(String(error)));
+      this.runNext();
+    }
+  }
+  handleStdout(data) {
+    const str2 = data.toString();
+    const nulIndex = str2.indexOf("\0");
+    if (nulIndex === -1) {
+      this.stdoutBuffer += str2;
+      return;
+    }
+    this.stdoutBuffer += str2.substring(0, nulIndex);
+    const result = this.stdoutBuffer;
+    this.stdoutBuffer = "";
+    if (this.currentResolve) {
+      this.currentResolve(result);
+      this.currentResolve = null;
+      this.currentReject = null;
+    }
+    this.commandInProgress = false;
+    this.runNext();
+    const remainder = str2.substring(nulIndex + 1);
+    if (remainder.length > 0) {
+      this.stdoutBuffer = remainder;
+    }
+  }
+  runNext() {
+    const next = this.commandQueue.shift();
+    if (next) {
+      next();
+    }
+  }
+};
+
+// src/lib/server-manager.ts
+init_logger();
+var CodeQLServerManager = class {
+  /** Keyed by `CodeQLServerType` — at most one per type at a time. */
+  servers = /* @__PURE__ */ new Map();
+  /** The session ID used for cache isolation. */
+  sessionId;
+  /** Root directory for session-specific caches. */
+  sessionCacheDir;
+  constructor(options) {
+    this.sessionId = options?.sessionId ?? randomUUID();
+    this.sessionCacheDir = join10(
+      getProjectTmpDir("codeql-cache"),
+      this.sessionId
+    );
+    for (const subdir of ["compilation-cache", "logs", "query-cache"]) {
+      mkdirSync7(join10(this.sessionCacheDir, subdir), { recursive: true });
+    }
+    logger.info(`CodeQLServerManager initialized (session: ${this.sessionId})`);
+  }
+  // ---- Public API ----
+  /**
+   * Get the current session ID.
+   */
+  getSessionId() {
+    return this.sessionId;
+  }
+  /**
+   * Get the session-specific cache directory.
+   */
+  getCacheDir() {
+    return this.sessionCacheDir;
+  }
+  /**
+   * Return the session-specific log directory.
+   */
+  getLogDir() {
+    return join10(this.sessionCacheDir, "logs");
+  }
+  /**
+   * Get or create a Language Server with the given configuration.
+   *
+   * If a language server is already running with the same config it is reused.
+   * If the config has changed the old server is shut down first.
+   */
+  async getLanguageServer(config) {
+    const enriched = this.enrichConfig(config);
+    return this.getOrRestart("language", enriched, () => {
+      return new CodeQLLanguageServer({
+        loglevel: enriched.loglevel,
+        logdir: enriched.logdir,
+        searchPath: enriched.searchPath,
+        synchronous: enriched.synchronous,
+        verbosity: enriched.verbosity
+      });
+    });
+  }
+  /**
+   * Get or create a Query Server with the given configuration.
+   */
+  async getQueryServer(config) {
+    const enriched = this.enrichConfig(config);
+    return this.getOrRestart("query", enriched, () => {
+      return new CodeQLQueryServer(enriched);
+    });
+  }
+  /**
+   * Get or create a CLI Server with the given configuration.
+   */
+  async getCLIServer(config) {
+    const enriched = this.enrichConfig(config);
+    return this.getOrRestart("cli", enriched, () => {
+      return new CodeQLCLIServer(enriched);
+    });
+  }
+  /**
+   * Shut down a specific server type.
+   */
+  async shutdownServer(type2) {
+    const managed = this.servers.get(type2);
+    if (!managed) return;
+    logger.info(`Shutting down ${type2} server (session: ${managed.sessionId})`);
+    await this.stopServer(managed);
+    this.servers.delete(type2);
+  }
+  /**
+   * Shut down all managed servers.
+   */
+  async shutdownAll() {
+    logger.info(`Shutting down all servers for session: ${this.sessionId}`);
+    const shutdownPromises = Array.from(this.servers.entries()).map(
+      async ([type2, managed]) => {
+        try {
+          await this.stopServer(managed);
+        } catch (error) {
+          logger.error(`Error shutting down ${type2} server:`, error);
+        }
+      }
+    );
+    await Promise.all(shutdownPromises);
+    this.servers.clear();
+    logger.info("All servers shut down");
+  }
+  /**
+   * Check whether a server of the given type is currently running.
+   */
+  isRunning(type2) {
+    const managed = this.servers.get(type2);
+    if (!managed) return false;
+    return managed.server.isRunning();
+  }
+  /**
+   * Get status information for all managed servers.
+   */
+  getStatus() {
+    const status = {
+      cli: null,
+      language: null,
+      query: null
+    };
+    for (const [type2, managed] of this.servers) {
+      status[type2] = {
+        configHash: managed.configHash,
+        running: managed.server.isRunning(),
+        sessionId: managed.sessionId
+      };
+    }
+    return status;
+  }
+  // ---- Private helpers ----
+  /**
+   * Enrich a config with session-specific defaults for commonCaches and logdir.
+   */
+  enrichConfig(config) {
+    return {
+      ...config,
+      commonCaches: config.commonCaches ?? this.sessionCacheDir,
+      logdir: config.logdir ?? this.getLogDir()
+    };
+  }
+  /**
+   * Get an existing server if its config matches, otherwise stop the old
+   * one and start a new server.
+   */
+  async getOrRestart(type2, config, factory) {
+    const hash = computeConfigHash(type2, config);
+    const existing = this.servers.get(type2);
+    if (existing && existing.configHash === hash && existing.server.isRunning()) {
+      logger.debug(`Reusing existing ${type2} server (hash: ${hash.substring(0, 8)})`);
+      return existing.server;
+    }
+    if (existing) {
+      logger.info(`${type2} server config changed or dead, restarting...`);
+      await this.stopServer(existing);
+      this.servers.delete(type2);
+    }
+    const server = factory();
+    await server.start();
+    this.servers.set(type2, {
+      configHash: hash,
+      server,
+      sessionId: this.sessionId,
+      type: type2
+    });
+    logger.info(`${type2} server started (hash: ${hash.substring(0, 8)})`);
+    return server;
+  }
+  /**
+   * Stop a managed server, ignoring errors.
+   */
+  async stopServer(managed) {
+    try {
+      await managed.server.shutdown();
+    } catch (error) {
+      logger.warn(`Error stopping ${managed.type} server:`, error);
+    }
+  }
+};
+var globalServerManager = null;
+function initServerManager(options) {
+  if (!globalServerManager) {
+    globalServerManager = new CodeQLServerManager(options);
+  }
+  return globalServerManager;
+}
+function getServerManager() {
+  if (!globalServerManager) {
+    globalServerManager = new CodeQLServerManager();
+  }
+  return globalServerManager;
+}
+async function shutdownServerManager() {
+  if (globalServerManager) {
+    await globalServerManager.shutdownAll();
+    globalServerManager = null;
+  }
+}
+
+// src/tools/lsp/lsp-diagnostics.ts
+init_logger();
+import { join as join11, resolve as resolve9 } from "path";
+import { pathToFileURL as pathToFileURL2 } from "url";
+function formatDiagnostics(diagnostics) {
+  if (diagnostics.length === 0) {
+    return "\u2705 No issues found in QL code";
+  }
+  const lines = [];
+  lines.push(`Found ${diagnostics.length} issue(s):
+`);
+  diagnostics.forEach((diagnostic, index) => {
+    const severityIcon = getSeverityIcon(diagnostic.severity);
+    const severityName = getSeverityName(diagnostic.severity);
+    const location = `Line ${diagnostic.range.start.line + 1}, Column ${diagnostic.range.start.character + 1}`;
+    lines.push(`${index + 1}. ${severityIcon} ${severityName} at ${location}`);
+    lines.push(`   ${diagnostic.message}`);
+    if (diagnostic.source) {
+      lines.push(`   Source: ${diagnostic.source}`);
+    }
+    if (diagnostic.code) {
+      lines.push(`   Code: ${diagnostic.code}`);
+    }
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+function getSeverityIcon(severity) {
+  switch (severity) {
+    case 1:
+      return "\u274C";
+    // Error
+    case 2:
+      return "\u26A0\uFE0F";
+    // Warning
+    case 3:
+      return "\u2139\uFE0F";
+    // Information
+    case 4:
+      return "\u{1F4A1}";
+    // Hint
+    default:
+      return "\u2753";
+  }
+}
+function getSeverityName(severity) {
+  switch (severity) {
+    case 1:
+      return "Error";
+    case 2:
+      return "Warning";
+    case 3:
+      return "Information";
+    case 4:
+      return "Hint";
+    default:
+      return "Unknown";
+  }
+}
+async function getLanguageServer(options = {}, workspaceUri) {
+  const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
+  const config = {
+    checkErrors: "ON_CHANGE",
+    loglevel: options.loglevel ?? "WARN",
+    searchPath: options.searchPath ?? resolve9(pkgRoot, "ql"),
+    synchronous: options.synchronous,
+    verbosity: options.verbosity
+  };
+  const manager = getServerManager();
+  const languageServer = await manager.getLanguageServer(config);
+  const effectiveUri = workspaceUri ?? pathToFileURL2(resolve9(pkgRoot, "ql")).href;
+  await languageServer.initialize(effectiveUri);
+  return languageServer;
+}
+async function lspDiagnostics({
+  qlCode,
+  workspaceUri,
+  serverOptions = {}
+}) {
+  try {
+    logger.info("Evaluating QL code via Language Server...");
+    const languageServer = await getLanguageServer(serverOptions, workspaceUri);
+    const evalUri = pathToFileURL2(join11(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
+    const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
+    const summary = {
+      errorCount: diagnostics.filter((d) => d.severity === 1).length,
+      hintCount: diagnostics.filter((d) => d.severity === 4).length,
+      infoCount: diagnostics.filter((d) => d.severity === 3).length,
+      warningCount: diagnostics.filter((d) => d.severity === 2).length
+    };
+    const isValid = summary.errorCount === 0;
+    const formattedOutput = formatDiagnostics(diagnostics);
+    logger.info(`QL evaluation complete. Valid: ${isValid}, Issues: ${diagnostics.length}`);
+    return {
+      diagnostics,
+      formattedOutput,
+      isValid,
+      summary
+    };
+  } catch (error) {
+    logger.error("Error evaluating QL code:", error);
+    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+async function shutdownDiagnosticsServer() {
+  const manager = getServerManager();
+  await manager.shutdownServer("language");
+}
+function registerLspDiagnosticsTool(server) {
+  server.tool(
+    "codeql_lsp_diagnostics",
+    "Authoritative syntax and semantic validation of CodeQL (QL) code via the CodeQL Language Server. Compiles the query and provides real-time diagnostics with precise error locations. Use this for accurate validation; for quick heuristic checks without compilation, use validate_codeql_query instead. Note: inline ql_code is evaluated as a virtual document and cannot resolve pack imports (e.g. `import javascript`). For validating queries with imports, use codeql_query_compile on the actual file instead.",
+    {
+      log_level: z31.enum(["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "ALL"]).optional().describe("Language server log level"),
+      ql_code: z31.string().describe("The CodeQL (QL) code to evaluate for syntax and semantic errors"),
+      search_path: z31.string().optional().describe("Optional search path for CodeQL libraries"),
+      workspace_uri: z31.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)")
+    },
+    async ({ ql_code, workspace_uri, search_path, log_level }) => {
+      try {
+        const serverOptions = {};
+        if (search_path) {
+          serverOptions.searchPath = search_path;
+        }
+        if (log_level) {
+          serverOptions.loglevel = log_level;
+        }
+        const result = await lspDiagnostics({
+          qlCode: ql_code,
+          serverOptions,
+          workspaceUri: workspace_uri
+        });
+        const responseContent = {
+          diagnostics: result.diagnostics.map((d) => ({
+            code: d.code,
+            column: d.range.start.character + 1,
+            // Convert to 1-based column numbers
+            line: d.range.start.line + 1,
+            // Convert to 1-based line numbers
+            message: d.message,
+            severity: getSeverityName(d.severity),
+            source: d.source
+          })),
+          formattedOutput: result.formattedOutput,
+          isValid: result.isValid,
+          summary: result.summary
+        };
+        return {
+          content: [
+            {
+              text: JSON.stringify(responseContent, null, 2),
+              type: "text"
+            }
+          ]
+        };
+      } catch (error) {
+        logger.error("Error in codeql_lsp_diagnostics tool:", error);
+        return {
+          content: [
+            {
+              text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+              type: "text"
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+  process.on("SIGINT", async () => {
+    await shutdownDiagnosticsServer();
+  });
+  process.on("SIGTERM", async () => {
+    await shutdownDiagnosticsServer();
+  });
+}
+
+// src/tools/lsp/lsp-handlers.ts
+init_logger();
+import { readFileSync as readFileSync6 } from "fs";
+import { pathToFileURL as pathToFileURL3 } from "url";
+import { isAbsolute as isAbsolute5, resolve as resolve10 } from "path";
+async function getInitializedServer(params) {
+  const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
+  const config = {
+    checkErrors: "ON_CHANGE",
+    loglevel: "WARN",
+    searchPath: params.searchPath ?? resolve10(pkgRoot, "ql")
+  };
+  const manager = getServerManager();
+  const server = await manager.getLanguageServer(config);
+  const effectiveUri = params.workspaceUri ?? pathToFileURL3(resolve10(pkgRoot, "ql")).href;
+  await server.initialize(effectiveUri);
+  return server;
+}
+function prepareDocumentPosition(server, params) {
+  const absPath = isAbsolute5(params.filePath) ? params.filePath : resolve10(process.cwd(), params.filePath);
+  const docUri = pathToFileURL3(absPath).href;
+  let text;
+  if (params.fileContent) {
+    text = params.fileContent;
+  } else {
+    try {
+      text = readFileSync6(absPath, "utf-8");
+    } catch (error) {
+      throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+  server.openDocument(docUri, text);
+  const positionParams = {
+    position: { character: params.character, line: params.line },
+    textDocument: { uri: docUri }
+  };
+  return { docUri, positionParams };
+}
+async function lspCompletion(params) {
+  logger.info(`LSP completion at ${params.filePath}:${params.line}:${params.character}`);
+  const server = await getInitializedServer(params);
+  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  try {
+    return await server.getCompletions(positionParams);
+  } finally {
+    server.closeDocument(docUri);
+  }
+}
+async function lspDefinition(params) {
+  logger.info(`LSP definition at ${params.filePath}:${params.line}:${params.character}`);
+  const server = await getInitializedServer(params);
+  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  try {
+    return await server.getDefinition(positionParams);
+  } finally {
+    server.closeDocument(docUri);
+  }
+}
+async function lspReferences(params) {
+  logger.info(`LSP references at ${params.filePath}:${params.line}:${params.character}`);
+  const server = await getInitializedServer(params);
+  const { docUri, positionParams } = prepareDocumentPosition(server, params);
+  try {
+    return await server.getReferences({
+      ...positionParams,
+      context: { includeDeclaration: true }
+    });
+  } finally {
+    server.closeDocument(docUri);
+  }
+}
+
+// src/tools/lsp/lsp-tools.ts
+import { z as z32 } from "zod";
+init_logger();
+var lspParamsSchema = {
+  character: z32.number().int().min(0).describe("0-based character offset within the line"),
+  file_content: z32.string().optional().describe("Optional file content override (reads from disk if omitted)"),
+  file_path: z32.string().describe("Absolute path to the CodeQL (.ql/.qll) file"),
+  line: z32.number().int().min(0).describe("0-based line number in the document"),
+  search_path: z32.string().optional().describe("Optional search path for CodeQL libraries"),
+  workspace_uri: z32.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)")
+};
+function toHandlerParams(input) {
+  return {
+    character: input.character,
+    fileContent: input.file_content,
+    filePath: input.file_path,
+    line: input.line,
+    searchPath: input.search_path,
+    workspaceUri: input.workspace_uri
+  };
+}
+function registerLSPTools(server) {
+  registerLspDiagnosticsTool(server);
+  server.tool(
+    "codeql_lsp_completion",
+    "Get code completions at a cursor position in a CodeQL file. Returns completion items with labels, documentation, and insert text. The file must be a .ql or .qll file. IMPORTANT: Set workspace_uri to the pack or workspace root directory for dependency resolution; without it, completions for imported libraries will be empty.",
+    lspParamsSchema,
+    async (input) => {
+      try {
+        const items = await lspCompletion(toHandlerParams(input));
+        return {
+          content: [{
+            text: JSON.stringify({
+              completionCount: items.length,
+              items: items.map((item) => ({
+                detail: item.detail,
+                documentation: item.documentation,
+                insertText: item.insertText,
+                kind: item.kind,
+                label: item.label
+              }))
+            }, null, 2),
+            type: "text"
+          }]
+        };
+      } catch (error) {
+        logger.error("codeql_lsp_completion error:", error);
+        return {
+          content: [{ text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`, type: "text" }],
+          isError: true
+        };
+      }
+    }
+  );
+  server.tool(
+    "codeql_lsp_definition",
+    "Go to the definition of a CodeQL symbol at a given position. Returns one or more file locations where the symbol is defined. Set workspace_uri to the pack root for dependency resolution.",
+    lspParamsSchema,
+    async (input) => {
+      try {
+        const locations = await lspDefinition(toHandlerParams(input));
+        return {
+          content: [{
+            text: JSON.stringify({
+              definitionCount: locations.length,
+              locations: locations.map((loc) => ({
+                endCharacter: loc.range.end.character,
+                endLine: loc.range.end.line + 1,
+                startCharacter: loc.range.start.character,
+                startLine: loc.range.start.line + 1,
+                uri: loc.uri
+              }))
+            }, null, 2),
+            type: "text"
+          }]
+        };
+      } catch (error) {
+        logger.error("codeql_lsp_definition error:", error);
+        return {
+          content: [{ text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`, type: "text" }],
+          isError: true
+        };
+      }
+    }
+  );
+  server.tool(
+    "codeql_lsp_references",
+    "Find all references to a CodeQL symbol at a given position. Returns file locations of all usages, including the declaration. Set workspace_uri to the pack root for dependency resolution.",
+    lspParamsSchema,
+    async (input) => {
+      try {
+        const locations = await lspReferences(toHandlerParams(input));
+        return {
+          content: [{
+            text: JSON.stringify({
+              locations: locations.map((loc) => ({
+                endCharacter: loc.range.end.character,
+                endLine: loc.range.end.line + 1,
+                startCharacter: loc.range.start.character,
+                startLine: loc.range.start.line + 1,
+                uri: loc.uri
+              })),
+              referenceCount: locations.length
+            }, null, 2),
+            type: "text"
+          }]
+        };
+      } catch (error) {
+        logger.error("codeql_lsp_references error:", error);
+        return {
+          content: [{ text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`, type: "text" }],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync6, existsSync as existsSync7 } from "fs";
-import { join as join11 } from "path";
+import { readFileSync as readFileSync7, existsSync as existsSync7 } from "fs";
+import { join as join12 } from "path";
 
 // src/types/language-types.ts
 var LANGUAGE_RESOURCES = [
@@ -6153,12 +7085,12 @@ function getQLBasePath() {
 }
 function loadResourceContent(relativePath) {
   try {
-    const fullPath = join11(getQLBasePath(), relativePath);
+    const fullPath = join12(getQLBasePath(), relativePath);
     if (!existsSync7(fullPath)) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync6(fullPath, "utf-8");
+    return readFileSync7(fullPath, "utf-8");
   } catch (error) {
     logger.error(`Error loading resource file ${relativePath}:`, error);
     return null;
@@ -6280,19 +7212,19 @@ function registerLanguageResources(server) {
 }
 
 // src/prompts/workflow-prompts.ts
-import { z as z32 } from "zod";
+import { z as z33 } from "zod";
 import { basename as basename5 } from "path";
 
 // src/prompts/prompt-loader.ts
-import { readFileSync as readFileSync7 } from "fs";
-import { join as join12, dirname as dirname8 } from "path";
+import { readFileSync as readFileSync8 } from "fs";
+import { join as join13, dirname as dirname8 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 var __filename3 = fileURLToPath3(import.meta.url);
 var __dirname3 = dirname8(__filename3);
 function loadPromptTemplate(promptFileName) {
   try {
-    const promptPath = join12(__dirname3, promptFileName);
-    return readFileSync7(promptPath, "utf-8");
+    const promptPath = join13(__dirname3, promptFileName);
+    return readFileSync8(promptPath, "utf-8");
   } catch (error) {
     return `Prompt template '${promptFileName}' not available: ${error instanceof Error ? error.message : "Unknown error"}`;
   }
@@ -6324,20 +7256,67 @@ var SUPPORTED_LANGUAGES = [
   "ruby",
   "swift"
 ];
-var workshopCreationWorkflowSchema = z32.object({
-  queryPath: z32.string().describe("Path to the production-grade CodeQL query (.ql or .qlref)"),
-  language: z32.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
-  workshopName: z32.string().optional().describe("Name for the workshop directory"),
-  numStages: z32.coerce.number().optional().describe("Number of incremental stages (default: 4-8)")
+var testDrivenDevelopmentSchema = z33.object({
+  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
+  queryName: z33.string().optional().describe("Name of the query to develop")
 });
+var toolsQueryWorkflowSchema = z33.object({
+  database: z33.string().describe("Path to the CodeQL database"),
+  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language for the tools queries"),
+  sourceFiles: z33.string().optional().describe('Comma-separated source file names for PrintAST (e.g., "main.js,utils.js")'),
+  sourceFunction: z33.string().optional().describe('Function name for PrintCFG or CallGraphFrom (e.g., "processData")'),
+  targetFunction: z33.string().optional().describe('Function name for CallGraphTo (e.g., "validate")')
+});
+var workshopCreationWorkflowSchema = z33.object({
+  queryPath: z33.string().describe("Path to the production-grade CodeQL query (.ql or .qlref)"),
+  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
+  workshopName: z33.string().optional().describe("Name for the workshop directory"),
+  numStages: z33.coerce.number().optional().describe("Number of incremental stages (default: 4-8)")
+});
+var qlTddBasicSchema = z33.object({
+  language: z33.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  queryName: z33.string().optional().describe("Name of the query to develop")
+});
+var qlTddAdvancedSchema = z33.object({
+  database: z33.string().optional().describe("Path to the CodeQL database for analysis"),
+  language: z33.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  queryName: z33.string().optional().describe("Name of the query to develop")
+});
+var sarifRankSchema = z33.object({
+  queryId: z33.string().optional().describe("CodeQL query/rule identifier"),
+  sarifPath: z33.string().optional().describe("Path to the SARIF file to analyze")
+});
+var explainCodeqlQuerySchema = z33.object({
+  databasePath: z33.string().optional().describe("Optional path to a real CodeQL database for profiling"),
+  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
+  queryPath: z33.string().describe("Path to the CodeQL query file (.ql or .qlref)")
+});
+var documentCodeqlQuerySchema = z33.object({
+  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
+  queryPath: z33.string().describe("Path to the CodeQL query file (.ql or .qlref)")
+});
+var qlLspIterativeDevelopmentSchema = z33.object({
+  language: z33.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query"),
+  queryPath: z33.string().optional().describe("Path to the query file being developed"),
+  workspaceUri: z33.string().optional().describe("Workspace URI for LSP dependency resolution")
+});
+var WORKFLOW_PROMPT_NAMES = [
+  "document_codeql_query",
+  "explain_codeql_query",
+  "ql_lsp_iterative_development",
+  "ql_tdd_advanced",
+  "ql_tdd_basic",
+  "sarif_rank_false_positives",
+  "sarif_rank_true_positives",
+  "test_driven_development",
+  "tools_query_workflow",
+  "workshop_creation_workflow"
+];
 function registerWorkflowPrompts(server) {
   server.prompt(
     "test_driven_development",
     "Test-driven development workflow for CodeQL queries using MCP tools",
-    {
-      language: z32.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
-      queryName: z32.string().optional().describe("Name of the query to develop")
-    },
+    testDrivenDevelopmentSchema.shape,
     async ({ language, queryName }) => {
       const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
       const content = processPromptTemplate(template, {
@@ -6365,17 +7344,7 @@ ${content}`
   server.prompt(
     "tools_query_workflow",
     "Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure",
-    {
-      language: z32.enum(SUPPORTED_LANGUAGES).describe("Programming language for the tools queries"),
-      database: z32.string().describe("Path to the CodeQL database"),
-      sourceFiles: z32.string().optional().describe(
-        'Comma-separated source file names for PrintAST (e.g., "main.js,utils.js")'
-      ),
-      sourceFunction: z32.string().optional().describe(
-        'Function name for PrintCFG or CallGraphFrom (e.g., "processData")'
-      ),
-      targetFunction: z32.string().optional().describe('Function name for CallGraphTo (e.g., "validate")')
-    },
+    toolsQueryWorkflowSchema.shape,
     async ({
       language,
       database,
@@ -6437,10 +7406,7 @@ ${content}`
   server.prompt(
     "ql_tdd_basic",
     "Test-driven CodeQL query development checklist - write tests first, implement query, iterate until tests pass",
-    {
-      language: z32.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
-      queryName: z32.string().optional().describe("Name of the query to develop")
-    },
+    qlTddBasicSchema.shape,
     async ({ language, queryName }) => {
       const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
       let contextSection = "## Your Development Context\n\n";
@@ -6471,11 +7437,7 @@ ${content}`
   server.prompt(
     "ql_tdd_advanced",
     "Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis",
-    {
-      language: z32.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
-      queryName: z32.string().optional().describe("Name of the query to develop"),
-      database: z32.string().optional().describe("Path to the CodeQL database for analysis")
-    },
+    qlTddAdvancedSchema.shape,
     async ({ language, queryName, database }) => {
       const template = loadPromptTemplate("ql-tdd-advanced.prompt.md");
       let contextSection = "## Your Development Context\n\n";
@@ -6510,10 +7472,7 @@ ${content}`
   server.prompt(
     "sarif_rank_false_positives",
     "Analyze SARIF results to identify likely false positives in CodeQL query results",
-    {
-      queryId: z32.string().optional().describe("CodeQL query/rule identifier"),
-      sarifPath: z32.string().optional().describe("Path to the SARIF file to analyze")
-    },
+    sarifRankSchema.shape,
     async ({ queryId, sarifPath }) => {
       const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
       let contextSection = "## Analysis Context\n\n";
@@ -6544,10 +7503,7 @@ ${content}`
   server.prompt(
     "sarif_rank_true_positives",
     "Analyze SARIF results to identify likely true positives in CodeQL query results",
-    {
-      queryId: z32.string().optional().describe("CodeQL query/rule identifier"),
-      sarifPath: z32.string().optional().describe("Path to the SARIF file to analyze")
-    },
+    sarifRankSchema.shape,
     async ({ queryId, sarifPath }) => {
       const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
       let contextSection = "## Analysis Context\n\n";
@@ -6578,11 +7534,7 @@ ${content}`
   server.prompt(
     "explain_codeql_query",
     "Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams",
-    {
-      queryPath: z32.string().describe("Path to the CodeQL query file (.ql or .qlref)"),
-      language: z32.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
-      databasePath: z32.string().optional().describe("Optional path to a real CodeQL database for profiling")
-    },
+    explainCodeqlQuerySchema.shape,
     async ({ queryPath, language, databasePath }) => {
       const template = loadPromptTemplate("explain-codeql-query.prompt.md");
       let contextSection = "## Query to Explain\n\n";
@@ -6611,10 +7563,7 @@ ${content}`
   server.prompt(
     "document_codeql_query",
     "Create or update documentation for a CodeQL query - generates standardized markdown documentation as a sibling file to the query",
-    {
-      queryPath: z32.string().describe("Path to the CodeQL query file (.ql or .qlref)"),
-      language: z32.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query")
-    },
+    documentCodeqlQuerySchema.shape,
     async ({ queryPath, language }) => {
       const template = loadPromptTemplate("document-codeql-query.prompt.md");
       const contextSection = `## Query to Document
@@ -6636,7 +7585,42 @@ ${content}`
       };
     }
   );
-  logger.info("Registered 9 workflow prompts");
+  server.prompt(
+    "ql_lsp_iterative_development",
+    "Iterative CodeQL query development using LSP tools for completion, navigation, and validation",
+    qlLspIterativeDevelopmentSchema.shape,
+    async ({ language, queryPath, workspaceUri }) => {
+      const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
+      let contextSection = "## Your Development Context\n\n";
+      if (language) {
+        contextSection += `- **Language**: ${language}
+`;
+      }
+      if (queryPath) {
+        contextSection += `- **Query Path**: ${queryPath}
+`;
+      }
+      if (workspaceUri) {
+        contextSection += `- **Workspace URI**: ${workspaceUri}
+`;
+      }
+      if (language || queryPath || workspaceUri) {
+        contextSection += "\n";
+      }
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: contextSection + template
+            }
+          }
+        ]
+      };
+    }
+  );
+  logger.info(`Registered ${WORKFLOW_PROMPT_NAMES.length} workflow prompts`);
 }
 function buildToolsQueryContext(language, database, sourceFiles, sourceFunction, targetFunction) {
   const lines = [
@@ -6701,8 +7685,8 @@ function buildWorkshopContext(queryPath, language, workshopName, numStages) {
 }
 
 // src/tools/monitoring-tools.ts
-import { z as z34 } from "zod";
-import { randomUUID as randomUUID2 } from "crypto";
+import { z as z35 } from "zod";
+import { randomUUID as randomUUID3 } from "crypto";
 
 // ../node_modules/lowdb/lib/core/Low.js
 function checkArgs(adapter, defaultData) {
@@ -6735,7 +7719,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync8, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { readFileSync as readFileSync9, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -6748,7 +7732,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync8(this.#filename, "utf-8");
+      data = readFileSync9(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -6797,136 +7781,136 @@ var JSONFileSync = class extends DataFileSync {
 };
 
 // src/lib/session-data-manager.ts
-import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync6 } from "fs";
-import { join as join13 } from "path";
-import { randomUUID } from "crypto";
+import { mkdirSync as mkdirSync8, writeFileSync as writeFileSync6 } from "fs";
+import { join as join14 } from "path";
+import { randomUUID as randomUUID2 } from "crypto";
 
 // src/types/monitoring.ts
-import { z as z33 } from "zod";
-var MCPCallRecordSchema = z33.object({
-  callId: z33.string(),
-  timestamp: z33.string(),
+import { z as z34 } from "zod";
+var MCPCallRecordSchema = z34.object({
+  callId: z34.string(),
+  timestamp: z34.string(),
   // ISO timestamp
-  toolName: z33.string(),
-  parameters: z33.record(z33.any()),
-  result: z33.any(),
-  success: z33.boolean(),
-  duration: z33.number(),
+  toolName: z34.string(),
+  parameters: z34.record(z34.any()),
+  result: z34.any(),
+  success: z34.boolean(),
+  duration: z34.number(),
   // milliseconds
-  nextSuggestedTool: z33.string().optional()
+  nextSuggestedTool: z34.string().optional()
 });
-var TestExecutionRecordSchema = z33.object({
-  executionId: z33.string(),
-  timestamp: z33.string(),
-  type: z33.enum(["compilation", "test_run", "database_build"]),
-  success: z33.boolean(),
-  details: z33.record(z33.any()),
-  metrics: z33.object({
-    passRate: z33.number().optional(),
-    coverage: z33.number().optional(),
-    performance: z33.number().optional()
+var TestExecutionRecordSchema = z34.object({
+  executionId: z34.string(),
+  timestamp: z34.string(),
+  type: z34.enum(["compilation", "test_run", "database_build"]),
+  success: z34.boolean(),
+  details: z34.record(z34.any()),
+  metrics: z34.object({
+    passRate: z34.number().optional(),
+    coverage: z34.number().optional(),
+    performance: z34.number().optional()
   }).optional()
 });
-var QualityScoreRecordSchema = z33.object({
-  scoreId: z33.string(),
-  timestamp: z33.string(),
-  overallScore: z33.number().min(0).max(100),
+var QualityScoreRecordSchema = z34.object({
+  scoreId: z34.string(),
+  timestamp: z34.string(),
+  overallScore: z34.number().min(0).max(100),
   // 0-100
-  dimensions: z33.object({
-    syntacticCorrectness: z33.number().min(0).max(100),
-    testCoverageResults: z33.number().min(0).max(100),
-    documentationQuality: z33.number().min(0).max(100),
-    functionalCorrectness: z33.number().min(0).max(100)
+  dimensions: z34.object({
+    syntacticCorrectness: z34.number().min(0).max(100),
+    testCoverageResults: z34.number().min(0).max(100),
+    documentationQuality: z34.number().min(0).max(100),
+    functionalCorrectness: z34.number().min(0).max(100)
   }),
-  grade: z33.enum(["A", "B", "C", "D", "F"]),
-  recommendations: z33.array(z33.string())
+  grade: z34.enum(["A", "B", "C", "D", "F"]),
+  recommendations: z34.array(z34.string())
 });
-var QueryStateSchema = z33.object({
-  filesPresent: z33.array(z33.string()),
-  compilationStatus: z33.enum(["unknown", "success", "failed"]),
-  testStatus: z33.enum(["unknown", "passing", "failing", "no_tests"]),
-  documentationStatus: z33.enum(["unknown", "present", "missing", "incomplete"]),
-  lastActivity: z33.string()
+var QueryStateSchema = z34.object({
+  filesPresent: z34.array(z34.string()),
+  compilationStatus: z34.enum(["unknown", "success", "failed"]),
+  testStatus: z34.enum(["unknown", "passing", "failing", "no_tests"]),
+  documentationStatus: z34.enum(["unknown", "present", "missing", "incomplete"]),
+  lastActivity: z34.string()
   // ISO timestamp
 });
-var QueryDevelopmentSessionSchema = z33.object({
+var QueryDevelopmentSessionSchema = z34.object({
   // Session Metadata
-  sessionId: z33.string(),
-  queryPath: z33.string(),
-  language: z33.string(),
-  queryType: z33.string().optional(),
-  description: z33.string().optional(),
-  startTime: z33.string(),
+  sessionId: z34.string(),
+  queryPath: z34.string(),
+  language: z34.string(),
+  queryType: z34.string().optional(),
+  description: z34.string().optional(),
+  startTime: z34.string(),
   // ISO timestamp
-  endTime: z33.string().optional(),
+  endTime: z34.string().optional(),
   // ISO timestamp
-  status: z33.enum(["active", "completed", "failed", "abandoned"]),
+  status: z34.enum(["active", "completed", "failed", "abandoned"]),
   // MCP Call History
-  mcpCalls: z33.array(MCPCallRecordSchema),
+  mcpCalls: z34.array(MCPCallRecordSchema),
   // Test Execution Records
-  testExecutions: z33.array(TestExecutionRecordSchema),
+  testExecutions: z34.array(TestExecutionRecordSchema),
   // Quality Metrics
-  qualityScores: z33.array(QualityScoreRecordSchema),
+  qualityScores: z34.array(QualityScoreRecordSchema),
   // Development State
   currentState: QueryStateSchema,
-  recommendations: z33.array(z33.string()),
-  nextSuggestedTool: z33.string().optional()
+  recommendations: z34.array(z34.string()),
+  nextSuggestedTool: z34.string().optional()
 });
-var SessionFilterSchema = z33.object({
-  queryPath: z33.string().optional(),
-  status: z33.string().optional(),
-  dateRange: z33.tuple([z33.string(), z33.string()]).optional(),
-  language: z33.string().optional(),
-  queryType: z33.string().optional()
+var SessionFilterSchema = z34.object({
+  queryPath: z34.string().optional(),
+  status: z34.string().optional(),
+  dateRange: z34.tuple([z34.string(), z34.string()]).optional(),
+  language: z34.string().optional(),
+  queryType: z34.string().optional()
 });
-var ComparisonReportSchema = z33.object({
-  sessionIds: z33.array(z33.string()),
-  dimensions: z33.array(z33.string()),
-  timestamp: z33.string(),
-  results: z33.record(z33.any())
+var ComparisonReportSchema = z34.object({
+  sessionIds: z34.array(z34.string()),
+  dimensions: z34.array(z34.string()),
+  timestamp: z34.string(),
+  results: z34.record(z34.any())
 });
-var AggregateReportSchema = z33.object({
+var AggregateReportSchema = z34.object({
   filters: SessionFilterSchema,
-  timestamp: z33.string(),
-  totalSessions: z33.number(),
-  successRate: z33.number(),
-  averageQualityScore: z33.number(),
-  commonPatterns: z33.array(z33.string()),
-  recommendations: z33.array(z33.string())
+  timestamp: z34.string(),
+  totalSessions: z34.number(),
+  successRate: z34.number(),
+  averageQualityScore: z34.number(),
+  commonPatterns: z34.array(z34.string()),
+  recommendations: z34.array(z34.string())
 });
-var ExportResultSchema = z33.object({
-  format: z33.enum(["json", "html", "markdown"]),
-  filename: z33.string(),
-  content: z33.string(),
-  timestamp: z33.string()
+var ExportResultSchema = z34.object({
+  format: z34.enum(["json", "html", "markdown"]),
+  filename: z34.string(),
+  content: z34.string(),
+  timestamp: z34.string()
 });
-var FunctionalTestResultSchema = z33.object({
-  sessionId: z33.string(),
-  queryPath: z33.string(),
-  passed: z33.boolean(),
-  criteria: z33.record(z33.any()),
-  details: z33.record(z33.any()),
-  timestamp: z33.string()
+var FunctionalTestResultSchema = z34.object({
+  sessionId: z34.string(),
+  queryPath: z34.string(),
+  passed: z34.boolean(),
+  criteria: z34.record(z34.any()),
+  details: z34.record(z34.any()),
+  timestamp: z34.string()
 });
-var TestReportSchema = z33.object({
-  sessionIds: z33.array(z33.string()),
-  criteria: z33.record(z33.any()),
-  timestamp: z33.string(),
-  overallPassRate: z33.number(),
-  results: z33.array(FunctionalTestResultSchema),
-  summary: z33.record(z33.any())
+var TestReportSchema = z34.object({
+  sessionIds: z34.array(z34.string()),
+  criteria: z34.record(z34.any()),
+  timestamp: z34.string(),
+  overallPassRate: z34.number(),
+  results: z34.array(FunctionalTestResultSchema),
+  summary: z34.record(z34.any())
 });
-var MonitoringConfigSchema = z33.object({
-  storageLocation: z33.string().default(".ql-mcp-tracking/"),
-  autoTrackSessions: z33.boolean().default(true),
-  retentionDays: z33.number().default(90),
-  includeCallParameters: z33.boolean().default(true),
-  includeCallResults: z33.boolean().default(true),
-  maxActiveSessionsPerQuery: z33.number().default(3),
-  scoringFrequency: z33.enum(["per_call", "periodic", "manual"]).default("per_call"),
-  archiveCompletedSessions: z33.boolean().default(true),
-  enableRecommendations: z33.boolean().default(true),
-  enableMonitoringTools: z33.boolean().default(false)
+var MonitoringConfigSchema = z34.object({
+  storageLocation: z34.string().default(".ql-mcp-tracking/"),
+  autoTrackSessions: z34.boolean().default(true),
+  retentionDays: z34.number().default(90),
+  includeCallParameters: z34.boolean().default(true),
+  includeCallResults: z34.boolean().default(true),
+  maxActiveSessionsPerQuery: z34.number().default(3),
+  scoringFrequency: z34.enum(["per_call", "periodic", "manual"]).default("per_call"),
+  archiveCompletedSessions: z34.boolean().default(true),
+  enableRecommendations: z34.boolean().default(true),
+  enableMonitoringTools: z34.boolean().default(false)
   // Opt-in: session_* tools disabled by default for end-users
 });
 
@@ -6943,7 +7927,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join13(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join14(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -6972,12 +7956,12 @@ var SessionDataManager = class {
    */
   ensureStorageDirectory() {
     try {
-      mkdirSync7(this.storageDir, { recursive: true });
+      mkdirSync8(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync7(join13(this.storageDir, subdir), { recursive: true });
+        mkdirSync8(join14(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join13(this.storageDir, "config.json");
+      const configPath = join14(this.storageDir, "config.json");
       try {
         writeFileSync6(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
@@ -6994,7 +7978,7 @@ var SessionDataManager = class {
    * Start a new query development session
    */
   async startSession(queryPath, language, queryType, description) {
-    const sessionId = randomUUID();
+    const sessionId = randomUUID2();
     const startTime = (/* @__PURE__ */ new Date()).toISOString();
     const session = {
       sessionId,
@@ -7156,9 +8140,9 @@ var SessionDataManager = class {
       if (!session) return;
       const date = new Date(session.endTime || session.startTime);
       const monthDir = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join13(this.storageDir, "sessions-archive", monthDir);
-      mkdirSync7(archiveDir, { recursive: true });
-      const archiveFile = join13(archiveDir, `${sessionId}.json`);
+      const archiveDir = join14(this.storageDir, "sessions-archive", monthDir);
+      mkdirSync8(archiveDir, { recursive: true });
+      const archiveFile = join14(archiveDir, `${sessionId}.json`);
       writeFileSync6(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
@@ -7210,7 +8194,7 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join13(this.storageDir, "config.json");
+    const configPath = join14(this.storageDir, "config.json");
     writeFileSync6(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
@@ -7220,7 +8204,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join13(getProjectTmpBase(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join14(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
@@ -7250,8 +8234,8 @@ function registerSessionEndTool(server) {
     "session_end",
     "End a query development session with final status",
     {
-      sessionId: z34.string().describe("ID of the session to end"),
-      status: z34.enum(["completed", "failed", "abandoned"]).describe("Final status of the session")
+      sessionId: z35.string().describe("ID of the session to end"),
+      status: z35.enum(["completed", "failed", "abandoned"]).describe("Final status of the session")
     },
     async ({ sessionId, status }) => {
       try {
@@ -7295,7 +8279,7 @@ function registerSessionGetTool(server) {
     "session_get",
     "Get complete details of a specific query development session",
     {
-      sessionId: z34.string().describe("ID of the session to retrieve")
+      sessionId: z35.string().describe("ID of the session to retrieve")
     },
     async ({ sessionId }) => {
       try {
@@ -7339,11 +8323,11 @@ function registerSessionListTool(server) {
     "session_list",
     "List query development sessions with optional filtering",
     {
-      queryPath: z34.string().optional().describe("Filter by query path (partial match)"),
-      status: z34.string().optional().describe("Filter by session status"),
-      dateRange: z34.array(z34.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
-      language: z34.string().optional().describe("Filter by programming language"),
-      queryType: z34.string().optional().describe("Filter by query type")
+      queryPath: z35.string().optional().describe("Filter by query path (partial match)"),
+      status: z35.string().optional().describe("Filter by session status"),
+      dateRange: z35.array(z35.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
+      language: z35.string().optional().describe("Filter by programming language"),
+      queryType: z35.string().optional().describe("Filter by query type")
     },
     async ({ queryPath, status, dateRange, language, queryType }) => {
       try {
@@ -7399,11 +8383,11 @@ function registerSessionUpdateStateTool(server) {
     "session_update_state",
     "Update the current state of a query development session",
     {
-      sessionId: z34.string().describe("ID of the session to update"),
-      filesPresent: z34.array(z34.string()).optional().describe("List of files present in the query development"),
-      compilationStatus: z34.enum(["unknown", "success", "failed"]).optional().describe("Current compilation status"),
-      testStatus: z34.enum(["unknown", "passing", "failing", "no_tests"]).optional().describe("Current test status"),
-      documentationStatus: z34.enum(["unknown", "present", "missing", "incomplete"]).optional().describe("Documentation status")
+      sessionId: z35.string().describe("ID of the session to update"),
+      filesPresent: z35.array(z35.string()).optional().describe("List of files present in the query development"),
+      compilationStatus: z35.enum(["unknown", "success", "failed"]).optional().describe("Current compilation status"),
+      testStatus: z35.enum(["unknown", "passing", "failing", "no_tests"]).optional().describe("Current test status"),
+      documentationStatus: z35.enum(["unknown", "present", "missing", "incomplete"]).optional().describe("Documentation status")
     },
     async ({ sessionId, filesPresent, compilationStatus, testStatus, documentationStatus }) => {
       try {
@@ -7453,8 +8437,8 @@ function registerSessionGetCallHistoryTool(server) {
     "session_get_call_history",
     "Get MCP call history for a specific session",
     {
-      sessionId: z34.string().describe("ID of the session"),
-      limit: z34.number().optional().describe("Maximum number of calls to return (most recent first)")
+      sessionId: z35.string().describe("ID of the session"),
+      limit: z35.number().optional().describe("Maximum number of calls to return (most recent first)")
     },
     async ({ sessionId, limit }) => {
       try {
@@ -7506,8 +8490,8 @@ function registerSessionGetTestHistoryTool(server) {
     "session_get_test_history",
     "Get test execution history for a specific session",
     {
-      sessionId: z34.string().describe("ID of the session"),
-      limit: z34.number().optional().describe("Maximum number of test executions to return (most recent first)")
+      sessionId: z35.string().describe("ID of the session"),
+      limit: z35.number().optional().describe("Maximum number of test executions to return (most recent first)")
     },
     async ({ sessionId, limit }) => {
       try {
@@ -7559,8 +8543,8 @@ function registerSessionGetScoreHistoryTool(server) {
     "session_get_score_history",
     "Get quality score history for a specific session",
     {
-      sessionId: z34.string().describe("ID of the session"),
-      limit: z34.number().optional().describe("Maximum number of scores to return (most recent first)")
+      sessionId: z35.string().describe("ID of the session"),
+      limit: z35.number().optional().describe("Maximum number of scores to return (most recent first)")
     },
     async ({ sessionId, limit }) => {
       try {
@@ -7612,7 +8596,7 @@ function registerSessionCalculateCurrentScoreTool(server) {
     "session_calculate_current_score",
     "Calculate current quality score for a session based on its state",
     {
-      sessionId: z34.string().describe("ID of the session")
+      sessionId: z35.string().describe("ID of the session")
     },
     async ({ sessionId }) => {
       try {
@@ -7660,8 +8644,8 @@ function registerSessionsCompareTool(server) {
     "sessions_compare",
     "Compare multiple query development sessions across specified dimensions",
     {
-      sessionIds: z34.array(z34.string()).describe("Array of session IDs to compare"),
-      dimensions: z34.array(z34.string()).optional().describe("Specific dimensions to compare (default: all)")
+      sessionIds: z35.array(z35.string()).describe("Array of session IDs to compare"),
+      dimensions: z35.array(z35.string()).optional().describe("Specific dimensions to compare (default: all)")
     },
     async ({ sessionIds, dimensions }) => {
       try {
@@ -7709,11 +8693,11 @@ function registerSessionsAggregateTool(server) {
     "sessions_aggregate",
     "Generate aggregate insights from multiple sessions based on filters",
     {
-      queryPath: z34.string().optional().describe("Filter by query path (partial match)"),
-      status: z34.string().optional().describe("Filter by session status"),
-      dateRange: z34.array(z34.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
-      language: z34.string().optional().describe("Filter by programming language"),
-      queryType: z34.string().optional().describe("Filter by query type")
+      queryPath: z35.string().optional().describe("Filter by query path (partial match)"),
+      status: z35.string().optional().describe("Filter by session status"),
+      dateRange: z35.array(z35.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
+      language: z35.string().optional().describe("Filter by programming language"),
+      queryType: z35.string().optional().describe("Filter by query type")
     },
     async ({ queryPath, status, dateRange, language, queryType }) => {
       try {
@@ -7755,8 +8739,8 @@ function registerSessionsExportTool(server) {
     "sessions_export",
     "Export session data in specified format for external analysis",
     {
-      sessionIds: z34.array(z34.string()).describe("Array of session IDs to export"),
-      format: z34.enum(["json", "html", "markdown"]).optional().default("json").describe("Export format")
+      sessionIds: z35.array(z35.string()).describe("Array of session IDs to export"),
+      format: z35.enum(["json", "html", "markdown"]).optional().default("json").describe("Export format")
     },
     async ({ sessionIds, format = "json" }) => {
       try {
@@ -7825,7 +8809,7 @@ function calculateQualityScore(session) {
     recommendations.push("Improve test pass rate and verify query logic");
   }
   return {
-    scoreId: randomUUID2(),
+    scoreId: randomUUID3(),
     timestamp: timestamp2,
     overallScore,
     dimensions: {
@@ -8093,7 +9077,7 @@ function generateListRecommendations(sessions) {
 init_cli_executor();
 init_package_paths();
 init_logger();
-dotenv.config({ path: resolve10(packageRootDir, ".env") });
+dotenv.config({ path: resolve11(packageRootDir, ".env") });
 var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.23.9";
 async function startServer(mode = "stdio") {
@@ -8107,11 +9091,13 @@ async function startServer(mode = "stdio") {
     version: VERSION
   });
   registerCodeQLTools(server);
+  registerLSPTools(server);
   registerCodeQLResources(server);
   registerLanguageResources(server);
   registerWorkflowPrompts(server);
   registerMonitoringTools(server);
   await sessionDataManager.initialize();
+  initServerManager();
   if (mode === "stdio") {
     const transport = new StdioServerTransport();
     await server.connect(transport);
@@ -8142,10 +9128,10 @@ async function startServer(mode = "stdio") {
     });
     const host = process.env.HTTP_HOST || "localhost";
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve11();
+        resolve12();
       });
       httpServer.on("error", (error) => {
         logger.error("HTTP server error:", error);
@@ -8160,6 +9146,7 @@ function setupGracefulShutdown(server) {
   const shutdown = async () => {
     logger.info("Shutting down server...");
     try {
+      await shutdownServerManager();
       await server.close();
       logger.info("McpServer closed gracefully");
       process.exit(0);
@@ -8181,8 +9168,8 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? resolve10(process.argv[1]) : void 0;
-if (scriptPath && import.meta.url === pathToFileURL3(scriptPath).href) {
+var scriptPath = process.argv[1] ? resolve11(process.argv[1]) : void 0;
+if (scriptPath && import.meta.url === pathToFileURL4(scriptPath).href) {
   main();
 }
 export {

@@ -8,6 +8,7 @@ The MCP server provides tools that wrap CodeQL CLI commands and helper utilities
 
 - **Query Development** - Create, compile, and format queries
 - **Query Execution** - Run queries and process results
+- **Validation & LSP** - Validate QL code and navigate symbols via LSP
 - **Testing** - Run and manage CodeQL tests
 - **Database Operations** - Create and analyze databases
 - **Resolution** - Resolve paths, dependencies, and metadata
@@ -143,6 +144,81 @@ Analyze a database:
 - format: sarif
 - output: /path/to/results.sarif
 ```
+
+## Validation & LSP Tools
+
+### validate_codeql_query
+
+Quick heuristic validation for CodeQL query structure. Checks for common patterns like `from`/`where`/`select` clauses and metadata presence. Does **not** compile the query.
+
+**Parameters:**
+
+| Parameter  | Type   | Required | Description                       |
+| ---------- | ------ | -------- | --------------------------------- |
+| `query`    | string | Yes      | The CodeQL query text to validate |
+| `language` | string | No       | Target programming language       |
+
+### codeql_lsp_diagnostics
+
+Authoritative syntax and semantic validation of CodeQL (QL) code via the CodeQL Language Server. Compiles the query and provides real-time diagnostics with precise error locations.
+
+> **Note**: Inline `ql_code` is evaluated as a virtual document and cannot resolve pack imports (e.g., `import javascript`). For validating queries with imports, use `codeql_query_compile` on the actual file instead. This tool is best for syntax validation and checking QL code fragments that don't depend on external libraries.
+
+**Parameters:**
+
+| Parameter       | Type   | Required | Description                                          |
+| --------------- | ------ | -------- | ---------------------------------------------------- |
+| `ql_code`       | string | Yes      | The CodeQL code to evaluate                          |
+| `workspace_uri` | string | No       | Workspace URI for context (defaults to `./ql`)       |
+| `search_path`   | string | No       | Search path for CodeQL libraries                     |
+| `log_level`     | string | No       | Log level: OFF, ERROR, WARN, INFO, DEBUG, TRACE, ALL |
+
+### codeql_lsp_completion
+
+Get code completions at a cursor position in a CodeQL file.
+
+> **Important**: Set `workspace_uri` to the pack or workspace root directory (as a `file://` URI) for dependency resolution. Without it, completions for imported library types will be empty.
+
+**Parameters:**
+
+| Parameter       | Type   | Required | Description                                   |
+| --------------- | ------ | -------- | --------------------------------------------- |
+| `file_path`     | string | Yes      | Absolute path to the `.ql`/`.qll` file        |
+| `line`          | number | Yes      | 0-based line number                           |
+| `character`     | number | Yes      | 0-based character offset                      |
+| `file_content`  | string | No       | File content override (reads disk if omitted) |
+| `search_path`   | string | No       | Search path for CodeQL libraries              |
+| `workspace_uri` | string | No       | Workspace URI for context                     |
+
+### codeql_lsp_definition
+
+Go to the definition of a CodeQL symbol at a given position.
+
+**Parameters:**
+
+| Parameter       | Type   | Required | Description                                   |
+| --------------- | ------ | -------- | --------------------------------------------- |
+| `file_path`     | string | Yes      | Absolute path to the `.ql`/`.qll` file        |
+| `line`          | number | Yes      | 0-based line number                           |
+| `character`     | number | Yes      | 0-based character offset                      |
+| `file_content`  | string | No       | File content override (reads disk if omitted) |
+| `search_path`   | string | No       | Search path for CodeQL libraries              |
+| `workspace_uri` | string | No       | Workspace URI for context                     |
+
+### codeql_lsp_references
+
+Find all references to a CodeQL symbol at a given position.
+
+**Parameters:**
+
+| Parameter       | Type   | Required | Description                                   |
+| --------------- | ------ | -------- | --------------------------------------------- |
+| `file_path`     | string | Yes      | Absolute path to the `.ql`/`.qll` file        |
+| `line`          | number | Yes      | 0-based line number                           |
+| `character`     | number | Yes      | 0-based character offset                      |
+| `file_content`  | string | No       | File content override (reads disk if omitted) |
+| `search_path`   | string | No       | Search path for CodeQL libraries              |
+| `workspace_uri` | string | No       | Workspace URI for context                     |
 
 ## Testing Tools
 

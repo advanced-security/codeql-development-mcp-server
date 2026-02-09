@@ -1,39 +1,41 @@
 /**
- * CodeQL Language Server Eval tool for MCP server
- * Provides real-time QL code validation through LSP communication
+ * CodeQL LSP Diagnostics tool for MCP server.
+ *
+ * Provides real-time QL code validation through LSP communication.
+ * Renamed from `codeql_language_server_eval` to `codeql_lsp_diagnostics`
+ * for consistency with the `codeql_lsp_*` tool naming convention.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { CodeQLLanguageServer, Diagnostic, LanguageServerOptions } from '../../lib/language-server';
+import { Diagnostic, LanguageServerOptions } from '../../lib/language-server';
+import { LanguageServerConfig } from '../../lib/server-config';
+import { getServerManager } from '../../lib/server-manager';
 import { logger } from '../../utils/logger';
 import { getProjectTmpDir } from '../../utils/temp-dir';
 import { join, resolve } from 'path';
 import { pathToFileURL } from 'url';
 
-// Global language server instance for reuse across evaluations
-let globalLanguageServer: CodeQLLanguageServer | null = null;
-
-export interface LanguageServerEvalParams {
+export interface LspDiagnosticsParams {
   qlCode: string;
-  workspaceUri?: string;
   serverOptions?: LanguageServerOptions;
+  workspaceUri?: string;
 }
 
-export interface LanguageServerEvalResult {
-  isValid: boolean;
+export interface LspDiagnosticsResult {
   diagnostics: Diagnostic[];
+  formattedOutput: string;
+  isValid: boolean;
   summary: {
     errorCount: number;
-    warningCount: number;
-    infoCount: number;
     hintCount: number;
+    infoCount: number;
+    warningCount: number;
   };
-  formattedOutput: string;
 }
 
 /**
- * Format diagnostics for human-readable output
+ * Format diagnostics for human-readable output.
  */
 function formatDiagnostics(diagnostics: Diagnostic[]): string {
   if (diagnostics.length === 0) {
@@ -47,7 +49,7 @@ function formatDiagnostics(diagnostics: Diagnostic[]): string {
     const severityIcon = getSeverityIcon(diagnostic.severity);
     const severityName = getSeverityName(diagnostic.severity);
     const location = `Line ${diagnostic.range.start.line + 1}, Column ${diagnostic.range.start.character + 1}`;
-    
+
     lines.push(`${index + 1}. ${severityIcon} ${severityName} at ${location}`);
     lines.push(`   ${diagnostic.message}`);
     if (diagnostic.source) {
@@ -83,78 +85,73 @@ function getSeverityName(severity: number): string {
 }
 
 /**
- * Initialize or get existing language server instance
+ * Initialize or get existing language server instance via the server manager.
+ *
+ * - Respects `searchPath` and `workspaceUri` on every call
+ * - Restarts the server when configuration changes
+ * - Uses session-isolated cache directories
  */
-async function getLanguageServer(options: LanguageServerOptions = {}): Promise<CodeQLLanguageServer> {
-  if (globalLanguageServer && globalLanguageServer.isRunning()) {
-    return globalLanguageServer;
-  }
-
-  // Set default options — use packageRootDir instead of process.cwd()
-  // so the QL search path works regardless of where the server is launched.
+async function getLanguageServer(
+  options: LanguageServerOptions = {},
+  workspaceUri?: string,
+): Promise<import('../../lib/language-server').CodeQLLanguageServer> {
   const { packageRootDir: pkgRoot } = await import('../../utils/package-paths');
-  const defaultOptions: LanguageServerOptions = {
-    searchPath: resolve(pkgRoot, 'ql'),
-    loglevel: 'WARN',
-    ...options
+
+  const config: LanguageServerConfig = {
+    checkErrors: 'ON_CHANGE',
+    loglevel: options.loglevel ?? 'WARN',
+    searchPath: options.searchPath ?? resolve(pkgRoot, 'ql'),
+    synchronous: options.synchronous,
+    verbosity: options.verbosity,
   };
 
-  globalLanguageServer = new CodeQLLanguageServer(defaultOptions);
-  
-  try {
-    await globalLanguageServer.start();
-    
-    // Use provided workspace URI or default to ql directory under package root
-    const workspaceUri = pathToFileURL(resolve(pkgRoot, 'ql')).href;
-    await globalLanguageServer.initialize(workspaceUri);
-    
-    logger.info('CodeQL Language Server started and initialized successfully');
-    return globalLanguageServer;
-  } catch (error) {
-    logger.error('Failed to start language server:', error);
-    globalLanguageServer = null;
-    throw error;
-  }
+  const manager = getServerManager();
+  const languageServer = await manager.getLanguageServer(config);
+
+  const effectiveUri = workspaceUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
+  await languageServer.initialize(effectiveUri);
+
+  return languageServer;
 }
 
 /**
- * Evaluate QL code using the CodeQL Language Server
+ * Evaluate QL code using the CodeQL Language Server and return diagnostics.
  */
-export async function evaluateQLCode({
+export async function lspDiagnostics({
   qlCode,
-  workspaceUri: _workspaceUri,
+  workspaceUri,
   serverOptions = {}
-}: LanguageServerEvalParams): Promise<LanguageServerEvalResult> {
+}: LspDiagnosticsParams): Promise<LspDiagnosticsResult> {
   try {
     logger.info('Evaluating QL code via Language Server...');
-    
-    const languageServer = await getLanguageServer(serverOptions);
-    
+
+    const languageServer = await getLanguageServer(serverOptions, workspaceUri);
+
     // Generate unique URI for this evaluation
     const evalUri = pathToFileURL(join(getProjectTmpDir('lsp-eval'), `eval_${Date.now()}.ql`)).href;
-    
+
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
-    
+
     // Count diagnostics by severity
     const summary = {
       errorCount: diagnostics.filter(d => d.severity === 1).length,
-      warningCount: diagnostics.filter(d => d.severity === 2).length,
+      hintCount: diagnostics.filter(d => d.severity === 4).length,
       infoCount: diagnostics.filter(d => d.severity === 3).length,
-      hintCount: diagnostics.filter(d => d.severity === 4).length
+      warningCount: diagnostics.filter(d => d.severity === 2).length,
     };
-    
+
     const isValid = summary.errorCount === 0;
     const formattedOutput = formatDiagnostics(diagnostics);
-    
+
     logger.info(`QL evaluation complete. Valid: ${isValid}, Issues: ${diagnostics.length}`);
-    
+
     return {
-      isValid,
       diagnostics,
+      formattedOutput,
+      isValid,
       summary,
-      formattedOutput
     };
-    
+
   } catch (error) {
     logger.error('Error evaluating QL code:', error);
     throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -162,77 +159,74 @@ export async function evaluateQLCode({
 }
 
 /**
- * Shutdown the global language server
+ * Shutdown the language server via the server manager.
  */
-export async function shutdownLanguageServer(): Promise<void> {
-  if (globalLanguageServer) {
-    logger.info('Shutting down CodeQL Language Server...');
-    await globalLanguageServer.shutdown();
-    globalLanguageServer = null;
-  }
+export async function shutdownDiagnosticsServer(): Promise<void> {
+  const manager = getServerManager();
+  await manager.shutdownServer('language');
 }
 
 /**
- * Register the language server eval tool with the MCP server
+ * Register the codeql_lsp_diagnostics tool with the MCP server.
  */
-export function registerLanguageServerEvalTool(server: McpServer): void {
+export function registerLspDiagnosticsTool(server: McpServer): void {
   server.tool(
-    'codeql_language_server_eval',
-    'Authoritative syntax and semantic validation of CodeQL (QL) code via the CodeQL Language Server. Compiles the query and provides real-time diagnostics with precise error locations. Use this for accurate validation; for quick heuristic checks without compilation, use validate_codeql_query instead.',
+    'codeql_lsp_diagnostics',
+    'Authoritative syntax and semantic validation of CodeQL (QL) code via the CodeQL Language Server. Compiles the query and provides real-time diagnostics with precise error locations. Use this for accurate validation; for quick heuristic checks without compilation, use validate_codeql_query instead. Note: inline ql_code is evaluated as a virtual document and cannot resolve pack imports (e.g. `import javascript`). For validating queries with imports, use codeql_query_compile on the actual file instead.',
     {
+      log_level: z.enum(['OFF', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE', 'ALL']).optional().describe('Language server log level'),
       ql_code: z.string().describe('The CodeQL (QL) code to evaluate for syntax and semantic errors'),
-      workspace_uri: z.string().optional().describe('Optional workspace URI for context (defaults to ./ql directory)'),
       search_path: z.string().optional().describe('Optional search path for CodeQL libraries'),
-      log_level: z.enum(['OFF', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE', 'ALL']).optional().describe('Language server log level')
+      workspace_uri: z.string().optional().describe('Optional workspace URI for context (defaults to ./ql directory)'),
     },
     async ({ ql_code, workspace_uri, search_path, log_level }) => {
       try {
         const serverOptions: LanguageServerOptions = {};
-        
+
         if (search_path) {
           serverOptions.searchPath = search_path;
         }
         if (log_level) {
           serverOptions.loglevel = log_level;
         }
-        
-        const result = await evaluateQLCode({
+
+        const result = await lspDiagnostics({
           qlCode: ql_code,
+          serverOptions,
           workspaceUri: workspace_uri,
-          serverOptions
         });
-        
+
         // Return structured result
         const responseContent = {
+          diagnostics: result.diagnostics.map(d => ({
+            code: d.code,
+            column: d.range.start.character + 1, // Convert to 1-based column numbers
+            line: d.range.start.line + 1, // Convert to 1-based line numbers
+            message: d.message,
+            severity: getSeverityName(d.severity),
+            source: d.source,
+          })),
+          formattedOutput: result.formattedOutput,
           isValid: result.isValid,
           summary: result.summary,
-          formattedOutput: result.formattedOutput,
-          diagnostics: result.diagnostics.map(d => ({
-            line: d.range.start.line + 1, // Convert to 1-based line numbers
-            column: d.range.start.character + 1, // Convert to 1-based column numbers
-            severity: getSeverityName(d.severity),
-            message: d.message,
-            code: d.code,
-            source: d.source
-          }))
         };
-        
-        return {
-          content: [
-            { 
-              type: 'text', 
-              text: JSON.stringify(responseContent, null, 2) 
-            }
-          ],
-        };
-        
-      } catch (error) {
-        logger.error('Error in language server eval tool:', error);
+
         return {
           content: [
             {
+              text: JSON.stringify(responseContent, null, 2),
               type: 'text',
+            }
+          ],
+        };
+
+      } catch (error) {
+        logger.error('Error in codeql_lsp_diagnostics tool:', error);
+        return {
+          content: [
+            {
               text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              type: 'text',
             },
           ],
           isError: true,
@@ -240,12 +234,12 @@ export function registerLanguageServerEvalTool(server: McpServer): void {
       }
     }
   );
-  
+
   // Register cleanup on server shutdown
   process.on('SIGINT', async () => {
-    await shutdownLanguageServer();
+    await shutdownDiagnosticsServer();
   });
   process.on('SIGTERM', async () => {
-    await shutdownLanguageServer();
+    await shutdownDiagnosticsServer();
   });
 }

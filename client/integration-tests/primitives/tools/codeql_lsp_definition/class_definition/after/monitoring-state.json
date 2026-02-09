@@ -1,0 +1,14 @@
+{
+  "sessions": [
+    {
+      "id": "integration_test_session",
+      "calls": [
+        {
+          "tool": "codeql_lsp_definition",
+          "timestamp": "2026-02-08T00:00:00.000Z",
+          "status": "success"
+        }
+      ]
+    }
+  ]
+}

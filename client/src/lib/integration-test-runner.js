@@ -232,8 +232,8 @@ export class IntegrationTestRunner {
         return;
       }
 
-      // Handle special case for codeql_language_server_eval tool
-      if (toolName === "codeql_language_server_eval") {
+      // Handle special case for codeql_lsp_diagnostics tool
+      if (toolName === "codeql_lsp_diagnostics") {
         await this.runLanguageServerEvalTest(toolName, testCase, beforeDir, afterDir);
         return;
       }
@@ -293,7 +293,7 @@ export class IntegrationTestRunner {
   }
 
   /**
-   * Special test runner for codeql_language_server_eval tool
+   * Special test runner for codeql_lsp_diagnostics tool
    * This tool validates QL code and returns diagnostics, rather than modifying files
    */
   async runLanguageServerEvalTest(toolName, testCase, beforeDir, afterDir) {
@@ -331,7 +331,7 @@ export class IntegrationTestRunner {
         // eslint-disable-next-line no-unused-vars
         const _afterContent = fs.readFileSync(afterPath, "utf8");
 
-        // Run the language server eval tool on the before content
+        // Run the codeql_lsp_diagnostics tool on the before content
         const result = await this.client.callTool({
           name: toolName,
           arguments: {
@@ -882,7 +882,7 @@ export class IntegrationTestRunner {
     const beforeDir = path.join(testCaseDir, "before");
     const staticPath = this.getStaticFilesPath();
 
-    if (toolName === "codeql_language_server_eval") {
+    if (toolName === "codeql_lsp_diagnostics") {
       params.ql_code = "from DataFlow::Configuration cfg select cfg";
       // Skip workspace_uri for now as it's not needed for basic validation
     } else if (toolName === "codeql_bqrs_decode") {

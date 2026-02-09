@@ -12,7 +12,7 @@ export { registerFindPredicatePositionTool } from './find-predicate-position';
 export { registerFindCodeQLQueryFilesTool } from './find-query-files';
 export { codeqlGenerateLogSummaryTool } from './generate-log-summary';
 export { codeqlGenerateQueryHelpTool } from './generate-query-help';
-export { registerLanguageServerEvalTool } from './language-server-eval';
+// codeql_lsp_diagnostics has moved to server/src/tools/lsp/lsp-diagnostics.ts
 export { codeqlPackInstallTool } from './pack-install';
 export { codeqlPackLsTool } from './pack-ls';
 export { registerProfileCodeQLQueryTool } from './profile-codeql-query';

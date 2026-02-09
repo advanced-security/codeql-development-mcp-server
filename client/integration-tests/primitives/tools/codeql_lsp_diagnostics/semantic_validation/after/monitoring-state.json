@@ -5,7 +5,7 @@
       "queryPath": "/test/semantic_query.ql",
       "language": "javascript",
       "queryType": "test",
-      "description": "CodeQL language server evaluation test",
+      "description": "CodeQL LSP diagnostics test",
       "status": "active",
       "state": {
         "compilationStatus": "success",
@@ -17,7 +17,7 @@
         {
           "callId": "eval-call-1",
           "timestamp": "2024-01-01T00:00:00.000Z",
-          "toolName": "codeql_language_server_eval",
+          "toolName": "codeql_lsp_diagnostics",
           "parameters": {
             "sessionId": "codeql-eval-session",
             "query": "from DataFlow::Configuration cfg select cfg",

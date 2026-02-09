@@ -12,11 +12,13 @@ import dotenv from 'dotenv';
 import { resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { registerCodeQLTools, registerCodeQLResources } from './tools';
+import { registerLSPTools } from './tools/lsp';
 import { registerLanguageResources } from './resources/language-resources';
 import { registerWorkflowPrompts } from './prompts/workflow-prompts';
 import { registerMonitoringTools } from './tools/monitoring-tools';
 import { sessionDataManager } from './lib/session-data-manager';
 import { resolveCodeQLBinary, validateCodeQLBinaryReachable } from './lib/cli-executor';
+import { initServerManager, shutdownServerManager } from './lib/server-manager';
 import { packageRootDir } from './utils/package-paths';
 import { logger } from './utils/logger';
 
@@ -54,6 +56,9 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
   // Register CodeQL tools (legacy high-level helpers)
   registerCodeQLTools(server);
 
+  // Register LSP-based tools (diagnostics, completion, definition, references)
+  registerLSPTools(server);
+
   // Register CodeQL resources (static guides)
   registerCodeQLResources(server);
 
@@ -68,6 +73,9 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
 
   // Initialize session data manager
   await sessionDataManager.initialize();
+
+  // Initialize the CodeQL background server manager
+  initServerManager();
 
   if (mode === 'stdio') {
     const transport = new StdioServerTransport();
@@ -130,6 +138,8 @@ function setupGracefulShutdown(server: McpServer): void {
   const shutdown = async () => {
     logger.info('Shutting down server...');
     try {
+      // Shut down all CodeQL background servers first
+      await shutdownServerManager();
       await server.close();
       logger.info('McpServer closed gracefully');
       process.exit(0);

@@ -24,9 +24,69 @@ export const SUPPORTED_LANGUAGES = [
   'swift'
 ] as const;
 
+// ────────────────────────────────────────────────────────────────────────────
+// Exported parameter schemas for each workflow prompt.
+//
+// Extracting the schemas makes it easy to unit-test required vs optional
+// validation independently of the MCP server registration.
+//
+// **Convention for VS Code UX consistency**:
+// Every prompt MUST expose at least one parameter – even if all parameters
+// are optional – so that VS Code always displays the parameter input dialog
+// and allows the user to customize the prompt before Copilot Chat processes
+// it.  The `description` field on each Zod schema member doubles as the
+// placeholder text shown in the VS Code input box.
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Schema for test_driven_development prompt parameters.
+ *
+ * - `language` is **required** – the TDD workflow is language-specific.
+ * - `queryName` is optional – defaults to '[QueryName]' if omitted.
+ */
+export const testDrivenDevelopmentSchema = z.object({
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .describe('Programming language for the query'),
+  queryName: z
+    .string()
+    .optional()
+    .describe('Name of the query to develop'),
+});
+
+/**
+ * Schema for tools_query_workflow prompt parameters.
+ *
+ * - `language` and `database` are **required**.
+ * - `sourceFiles`, `sourceFunction`, `targetFunction` are optional context.
+ */
+export const toolsQueryWorkflowSchema = z.object({
+  database: z
+    .string()
+    .describe('Path to the CodeQL database'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .describe('Programming language for the tools queries'),
+  sourceFiles: z
+    .string()
+    .optional()
+    .describe('Comma-separated source file names for PrintAST (e.g., "main.js,utils.js")'),
+  sourceFunction: z
+    .string()
+    .optional()
+    .describe('Function name for PrintCFG or CallGraphFrom (e.g., "processData")'),
+  targetFunction: z
+    .string()
+    .optional()
+    .describe('Function name for CallGraphTo (e.g., "validate")'),
+});
+
 /**
  * Schema for workshop_creation_workflow prompt parameters.
  * Uses z.coerce.number() for numStages to handle string inputs from VSCode slash commands.
+ *
+ * - `queryPath` and `language` are **required**.
+ * - `workshopName` and `numStages` are optional.
  */
 export const workshopCreationWorkflowSchema = z.object({
   queryPath: z
@@ -42,26 +102,149 @@ export const workshopCreationWorkflowSchema = z.object({
   numStages: z
     .coerce.number()
     .optional()
-    .describe('Number of incremental stages (default: 4-8)')
+    .describe('Number of incremental stages (default: 4-8)'),
 });
+
+/**
+ * Schema for ql_tdd_basic prompt parameters.
+ *
+ * All parameters are optional – but at least one should be present so the
+ * VS Code quick-pick dialog appears.
+ */
+export const qlTddBasicSchema = z.object({
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language for the query (optional)'),
+  queryName: z
+    .string()
+    .optional()
+    .describe('Name of the query to develop'),
+});
+
+/**
+ * Schema for ql_tdd_advanced prompt parameters.
+ *
+ * All parameters are optional.
+ */
+export const qlTddAdvancedSchema = z.object({
+  database: z
+    .string()
+    .optional()
+    .describe('Path to the CodeQL database for analysis'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language for the query (optional)'),
+  queryName: z
+    .string()
+    .optional()
+    .describe('Name of the query to develop'),
+});
+
+/**
+ * Schema for sarif_rank_false_positives / sarif_rank_true_positives.
+ *
+ * Both parameters are optional.
+ */
+export const sarifRankSchema = z.object({
+  queryId: z
+    .string()
+    .optional()
+    .describe('CodeQL query/rule identifier'),
+  sarifPath: z
+    .string()
+    .optional()
+    .describe('Path to the SARIF file to analyze'),
+});
+
+/**
+ * Schema for explain_codeql_query prompt parameters.
+ *
+ * - `queryPath` and `language` are **required**.
+ * - `databasePath` is optional.
+ */
+export const explainCodeqlQuerySchema = z.object({
+  databasePath: z
+    .string()
+    .optional()
+    .describe('Optional path to a real CodeQL database for profiling'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .describe('Programming language of the query'),
+  queryPath: z
+    .string()
+    .describe('Path to the CodeQL query file (.ql or .qlref)'),
+});
+
+/**
+ * Schema for document_codeql_query prompt parameters.
+ *
+ * - `queryPath` and `language` are **required**.
+ */
+export const documentCodeqlQuerySchema = z.object({
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .describe('Programming language of the query'),
+  queryPath: z
+    .string()
+    .describe('Path to the CodeQL query file (.ql or .qlref)'),
+});
+
+/**
+ * Schema for ql_lsp_iterative_development prompt parameters.
+ *
+ * All parameters are optional.
+ */
+export const qlLspIterativeDevelopmentSchema = z.object({
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language for the query'),
+  queryPath: z
+    .string()
+    .optional()
+    .describe('Path to the query file being developed'),
+  workspaceUri: z
+    .string()
+    .optional()
+    .describe('Workspace URI for LSP dependency resolution'),
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Prompt names (exported for testing)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Names of every workflow prompt registered with the MCP server. */
+export const WORKFLOW_PROMPT_NAMES = [
+  'document_codeql_query',
+  'explain_codeql_query',
+  'ql_lsp_iterative_development',
+  'ql_tdd_advanced',
+  'ql_tdd_basic',
+  'sarif_rank_false_positives',
+  'sarif_rank_true_positives',
+  'test_driven_development',
+  'tools_query_workflow',
+  'workshop_creation_workflow',
+] as const;
 
 /**
  * Register MCP workflow prompts
  *
  * Each prompt loads its content from a corresponding .prompt.md file
  * and processes any parameter substitutions.
+ *
+ * **UX note**: Every prompt schema is passed to `server.prompt()` so that
+ * VS Code always displays the parameter-input quick-pick before the prompt
+ * is sent to Copilot Chat. This lets users review and customise the values.
  */
 export function registerWorkflowPrompts(server: McpServer): void {
   // Test-Driven Development Prompt
   server.prompt(
     'test_driven_development',
     'Test-driven development workflow for CodeQL queries using MCP tools',
-    {
-      language: z
-        .enum(SUPPORTED_LANGUAGES)
-        .describe('Programming language for the query'),
-      queryName: z.string().optional().describe('Name of the query to develop')
-    },
+    testDrivenDevelopmentSchema.shape,
     async ({ language, queryName }) => {
       const template = loadPromptTemplate('ql-tdd-basic.prompt.md');
       const content = processPromptTemplate(template, {
@@ -87,28 +270,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'tools_query_workflow',
     'Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure',
-    {
-      language: z
-        .enum(SUPPORTED_LANGUAGES)
-        .describe('Programming language for the tools queries'),
-      database: z.string().describe('Path to the CodeQL database'),
-      sourceFiles: z
-        .string()
-        .optional()
-        .describe(
-          'Comma-separated source file names for PrintAST (e.g., "main.js,utils.js")'
-        ),
-      sourceFunction: z
-        .string()
-        .optional()
-        .describe(
-          'Function name for PrintCFG or CallGraphFrom (e.g., "processData")'
-        ),
-      targetFunction: z
-        .string()
-        .optional()
-        .describe('Function name for CallGraphTo (e.g., "validate")')
-    },
+    toolsQueryWorkflowSchema.shape,
     async ({
       language,
       database,
@@ -186,13 +348,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'ql_tdd_basic',
     'Test-driven CodeQL query development checklist - write tests first, implement query, iterate until tests pass',
-    {
-      language: z
-        .enum(SUPPORTED_LANGUAGES)
-        .optional()
-        .describe('Programming language for the query (optional)'),
-      queryName: z.string().optional().describe('Name of the query to develop')
-    },
+    qlTddBasicSchema.shape,
     async ({ language, queryName }) => {
       const template = loadPromptTemplate('ql-tdd-basic.prompt.md');
 
@@ -225,17 +381,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'ql_tdd_advanced',
     'Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis',
-    {
-      language: z
-        .enum(SUPPORTED_LANGUAGES)
-        .optional()
-        .describe('Programming language for the query (optional)'),
-      queryName: z.string().optional().describe('Name of the query to develop'),
-      database: z
-        .string()
-        .optional()
-        .describe('Path to the CodeQL database for analysis')
-    },
+    qlTddAdvancedSchema.shape,
     async ({ language, queryName, database }) => {
       const template = loadPromptTemplate('ql-tdd-advanced.prompt.md');
 
@@ -271,13 +417,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'sarif_rank_false_positives',
     'Analyze SARIF results to identify likely false positives in CodeQL query results',
-    {
-      queryId: z.string().optional().describe('CodeQL query/rule identifier'),
-      sarifPath: z
-        .string()
-        .optional()
-        .describe('Path to the SARIF file to analyze')
-    },
+    sarifRankSchema.shape,
     async ({ queryId, sarifPath }) => {
       const template = loadPromptTemplate('sarif-rank-false-positives.prompt.md');
 
@@ -310,13 +450,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'sarif_rank_true_positives',
     'Analyze SARIF results to identify likely true positives in CodeQL query results',
-    {
-      queryId: z.string().optional().describe('CodeQL query/rule identifier'),
-      sarifPath: z
-        .string()
-        .optional()
-        .describe('Path to the SARIF file to analyze')
-    },
+    sarifRankSchema.shape,
     async ({ queryId, sarifPath }) => {
       const template = loadPromptTemplate('sarif-rank-true-positives.prompt.md');
 
@@ -349,18 +483,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'explain_codeql_query',
     'Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams',
-    {
-      queryPath: z
-        .string()
-        .describe('Path to the CodeQL query file (.ql or .qlref)'),
-      language: z
-        .enum(SUPPORTED_LANGUAGES)
-        .describe('Programming language of the query'),
-      databasePath: z
-        .string()
-        .optional()
-        .describe('Optional path to a real CodeQL database for profiling')
-    },
+    explainCodeqlQuerySchema.shape,
     async ({ queryPath, language, databasePath }) => {
       const template = loadPromptTemplate('explain-codeql-query.prompt.md');
 
@@ -390,14 +513,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'document_codeql_query',
     'Create or update documentation for a CodeQL query - generates standardized markdown documentation as a sibling file to the query',
-    {
-      queryPath: z
-        .string()
-        .describe('Path to the CodeQL query file (.ql or .qlref)'),
-      language: z
-        .enum(SUPPORTED_LANGUAGES)
-        .describe('Programming language of the query')
-    },
+    documentCodeqlQuerySchema.shape,
     async ({ queryPath, language }) => {
       const template = loadPromptTemplate('document-codeql-query.prompt.md');
 
@@ -422,7 +538,43 @@ export function registerWorkflowPrompts(server: McpServer): void {
     }
   );
 
-  logger.info('Registered 9 workflow prompts');
+  // LSP-powered Iterative Development Prompt
+  server.prompt(
+    'ql_lsp_iterative_development',
+    'Iterative CodeQL query development using LSP tools for completion, navigation, and validation',
+    qlLspIterativeDevelopmentSchema.shape,
+    async ({ language, queryPath, workspaceUri }) => {
+      const template = loadPromptTemplate('ql-lsp-iterative-development.prompt.md');
+
+      let contextSection = '## Your Development Context\n\n';
+      if (language) {
+        contextSection += `- **Language**: ${language}\n`;
+      }
+      if (queryPath) {
+        contextSection += `- **Query Path**: ${queryPath}\n`;
+      }
+      if (workspaceUri) {
+        contextSection += `- **Workspace URI**: ${workspaceUri}\n`;
+      }
+      if (language || queryPath || workspaceUri) {
+        contextSection += '\n';
+      }
+
+      return {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: contextSection + template,
+            },
+          },
+        ],
+      };
+    }
+  );
+
+  logger.info(`Registered ${WORKFLOW_PROMPT_NAMES.length} workflow prompts`);
 }
 
 /**

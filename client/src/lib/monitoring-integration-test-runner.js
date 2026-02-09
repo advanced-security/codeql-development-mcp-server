@@ -329,7 +329,7 @@ export class MonitoringIntegrationTestRunner {
   getToolSpecificParams(toolName, _testCase, testCaseDir) {
     const params = {};
 
-    if (toolName === "codeql_language_server_eval") {
+    if (toolName === "codeql_lsp_diagnostics") {
       params.query = "from DataFlow::Configuration cfg select cfg";
       params.language = "javascript";
     } else if (toolName === "codeql_query_format") {
