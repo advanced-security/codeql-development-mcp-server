@@ -2,16 +2,21 @@
 
 ## PURPOSE
 
-Tests that `codeql_lsp_completion` returns completion items when the cursor is
-positioned on a type name in a `from` clause of a CodeQL query.
+Tests that `codeql_lsp_completion` returns targeted completion items for a
+member-access expression. The cursor is positioned after `f.getBa` so the
+language server should return completions matching the prefix (e.g.
+`getBaseName`). Uses `file_content` to provide inline query text, which
+avoids disk I/O and produces a small, focused result set.
 
 ## INPUTS
 
+- **file_content**: Inline QL with cursor after `f.getBa`
 - **file_path**: `server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql`
-- **line**: 12 (on the type name in the `from` clause)
-- **character**: 7 (cursor on the type name)
+- **line**: 3 (`where f.getBa`)
+- **character**: 13 (end of `getBa` prefix)
+- **workspace_uri**: `server/ql/javascript/examples`
 
 ## EXPECTED OUTPUTS
 
-- A list of completion items (may be empty if no workspace URI is set).
+- A list of completion items matching the `getBa` prefix (e.g. `getBaseName`).
 - Monitoring state updated to record a successful `codeql_lsp_completion` call.

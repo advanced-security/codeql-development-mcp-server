@@ -264,16 +264,19 @@ export class CodeQLLanguageServer extends EventEmitter {
     };
 
     return new Promise((resolve, reject) => {
-      this.pendingResponses.set(id, { resolve, reject });
-      this.sendMessage(message);
-      
-      // Add timeout — CI environments may need longer for initial JVM warm-up
-      setTimeout(() => {
+      // Wrap resolve/reject to clear the timer when the promise settles.
+      const timer = setTimeout(() => {
         if (this.pendingResponses.has(id)) {
           this.pendingResponses.delete(id);
           reject(new Error(`LSP request timeout for method: ${method}`));
         }
-      }, 30_000); // 30 second timeout
+      }, 60_000); // 60 second timeout (Windows CI cold JVM can exceed 30s)
+
+      this.pendingResponses.set(id, {
+        reject: (err: Error) => { clearTimeout(timer); reject(err); },
+        resolve: (val: unknown) => { clearTimeout(timer); resolve(val); },
+      });
+      this.sendMessage(message);
     });
   }
 
@@ -382,10 +385,10 @@ export class CodeQLLanguageServer extends EventEmitter {
       let diagnosticsReceived = false;
       const timeout = setTimeout(() => {
         if (!diagnosticsReceived) {
-          this.removeAllListeners('diagnostics');
+          this.removeListener('diagnostics', diagnosticsHandler);
           reject(new Error('Timeout waiting for diagnostics'));
         }
-      }, 30_000); // 30s — CI environments need longer for JVM warm-up
+      }, 90_000); // 90s — first call triggers JVM start + compilation; Windows CI is slow
 
       // Listen for diagnostics
       const diagnosticsHandler = (params: PublishDiagnosticsParams) => {

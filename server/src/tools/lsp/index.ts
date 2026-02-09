@@ -12,4 +12,5 @@ export {
   lspDefinition,
   lspReferences,
 } from './lsp-handlers';
+export { getInitializedLanguageServer } from './lsp-server-helper';
 export { registerLSPTools } from './lsp-tools';

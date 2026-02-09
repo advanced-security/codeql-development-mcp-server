@@ -15,10 +15,9 @@ import {
   LSPLocation,
   TextDocumentPositionParams,
 } from '../../lib/language-server';
-import { LanguageServerConfig } from '../../lib/server-config';
-import { getServerManager } from '../../lib/server-manager';
 import { logger } from '../../utils/logger';
 import { getUserWorkspaceDir } from '../../utils/package-paths';
+import { getInitializedLanguageServer } from './lsp-server-helper';
 
 /**
  * Common parameters for LSP tool invocations.
@@ -42,31 +41,10 @@ export interface LSPToolParams {
  * Get a running, initialized language server for the given parameters.
  */
 async function getInitializedServer(params: LSPToolParams) {
-  const { packageRootDir: pkgRoot } = await import('../../utils/package-paths');
-
-  const config: LanguageServerConfig = {
-    checkErrors: 'ON_CHANGE',
-    loglevel: 'WARN',
-    searchPath: params.searchPath ?? resolve(pkgRoot, 'ql'),
-  };
-
-  const manager = getServerManager();
-  const server = await manager.getLanguageServer(config);
-
-  // Resolve workspace URI: convert relative paths to absolute file:// URIs.
-  // Relative paths resolve against getUserWorkspaceDir() so that
-  // CODEQL_MCP_WORKSPACE is respected and behaviour is consistent across tools.
-  let effectiveUri = params.workspaceUri;
-  if (effectiveUri && !effectiveUri.startsWith('file://')) {
-    const absWorkspace = isAbsolute(effectiveUri)
-      ? effectiveUri
-      : resolve(getUserWorkspaceDir(), effectiveUri);
-    effectiveUri = pathToFileURL(absWorkspace).href;
-  }
-  effectiveUri = effectiveUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
-  await server.initialize(effectiveUri);
-
-  return server;
+  return getInitializedLanguageServer({
+    serverOptions: { searchPath: params.searchPath },
+    workspaceUri: params.workspaceUri,
+  });
 }
 
 /**

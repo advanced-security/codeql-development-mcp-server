@@ -32,6 +32,7 @@ vi.mock('../../../../src/lib/server-manager', () => ({
 // Mock package-paths
 vi.mock('../../../../src/utils/package-paths', () => ({
   getPackageRootDir: vi.fn(() => '/mock/pkg'),
+  getUserWorkspaceDir: vi.fn(() => '/mock/workspace'),
   packageRootDir: '/mock/pkg',
 }));
 

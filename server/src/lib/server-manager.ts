@@ -202,6 +202,55 @@ export class CodeQLServerManager {
   // ---- Private helpers ----
 
   /**
+   * Eagerly start the language server so the JVM is warm when the first
+   * LSP tool call arrives.  Uses the default configuration that
+   * `lsp-handlers.ts` / `lsp-diagnostics.ts` would create on the first
+   * `getLanguageServer()` call.  The server is stored in the managed-servers
+   * map and reused by subsequent tool invocations.
+   *
+   * This is fire-and-forget: errors are logged but do not prevent the MCP
+   * server from starting.
+   */
+  async warmUpLanguageServer(): Promise<void> {
+    try {
+      // Lazy-import to avoid circular dependency at module level
+      const { packageRootDir } = await import('../utils/package-paths');
+      const { resolve } = await import('path');
+
+      const config: LanguageServerConfig = {
+        checkErrors: 'ON_CHANGE',
+        loglevel: 'WARN',
+        searchPath: resolve(packageRootDir, 'ql'),
+      };
+      logger.info('Warming up language server (background JVM start)...');
+      await this.getLanguageServer(config);
+      logger.info('Language server warm-up complete');
+    } catch (error) {
+      logger.warn('Language server warm-up failed (will retry on first tool call):', error);
+    }
+  }
+
+  /**
+   * Eagerly start the CLI server so the JVM is warm when the first
+   * `executeCodeQLCommand()` call routes through it.
+   *
+   * The CLI server uses only session-scoped `commonCaches` and `logdir`,
+   * both injected by `enrichConfig()`.  Passing an empty config is
+   * intentional — it matches what `executeCodeQLCommand()` will request.
+   *
+   * Fire-and-forget: errors are logged but do not block startup.
+   */
+  async warmUpCLIServer(): Promise<void> {
+    try {
+      logger.info('Warming up CLI server (background JVM start)...');
+      await this.getCLIServer({});
+      logger.info('CLI server warm-up complete');
+    } catch (error) {
+      logger.warn('CLI server warm-up failed (will retry on first tool call):', error);
+    }
+  }
+
+  /**
    * Enrich a config with session-specific defaults for commonCaches and logdir.
    */
   private enrichConfig<T extends ServerConfig>(config: T): T {

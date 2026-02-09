@@ -276,6 +276,74 @@ describe('CodeQLLanguageServer', () => {
     });
   });
 
+  describe('sendRequest timer cleanup', () => {
+    it('should clear the timeout timer when a response arrives', async () => {
+      vi.useFakeTimers();
+
+      const ls = new CodeQLLanguageServer();
+      await ls.start();
+
+      // Initialize first
+      const initPromise = ls.initialize('file:///workspace');
+      mockProc.stdout.emit('data', Buffer.from(buildLspFrame({
+        id: 1, jsonrpc: '2.0', result: { capabilities: {} },
+      })));
+      await initPromise;
+
+      // Issue a completion request
+      const completionsPromise = ls.getCompletions({
+        position: { character: 0, line: 0 },
+        textDocument: { uri: 'file:///test.ql' },
+      });
+
+      // Respond successfully (id=2 since id=1 was initialize)
+      mockProc.stdout.emit('data', Buffer.from(buildLspFrame({
+        id: 2, jsonrpc: '2.0', result: [],
+      })));
+
+      const result = await completionsPromise;
+      expect(result).toEqual([]);
+
+      // Advance time past the 60s timeout — must NOT throw
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('evaluateQL listener isolation', () => {
+    it('should only remove its own diagnostics handler, not all listeners', async () => {
+      const ls = new CodeQLLanguageServer();
+      await ls.start();
+
+      // Initialize
+      const initPromise = ls.initialize('file:///workspace');
+      mockProc.stdout.emit('data', Buffer.from(buildLspFrame({
+        id: 1, jsonrpc: '2.0', result: { capabilities: {} },
+      })));
+      await initPromise;
+
+      // Add a separate diagnostics listener that should survive
+      const externalHandler = vi.fn();
+      ls.on('diagnostics', externalHandler);
+
+      // evaluateQL adds its own handler — total should be 2
+      const evalPromise = ls.evaluateQL('select 1', 'file:///eval.ql');
+      expect(ls.listenerCount('diagnostics')).toBe(2);
+
+      // Simulate diagnostics arriving for the evaluateQL document
+      ls.emit('diagnostics', {
+        uri: 'file:///eval.ql',
+        diagnostics: [],
+      });
+
+      await evalPromise;
+
+      // evaluateQL's handler should be gone, but external handler must survive
+      expect(ls.listenerCount('diagnostics')).toBe(1);
+    });
+  });
+
   describe('shutdown', () => {
     it('should not throw when server is not running', async () => {
       const ls = new CodeQLLanguageServer();

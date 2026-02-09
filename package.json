@@ -44,7 +44,7 @@
     "start": "npm run start -w server",
     "test": "npm run test:server && npm run test:client",
     "test:all": "npm run test:server && npm run test:client",
-    "test:client": "npm run test -w client",
+    "test:client": "npm run test:integration:default -w client",
     "test:server": "npm run test -w server",
     "tidy": "npm run lint:fix && npm run format",
     "tidy:check": "npm run lint && npm run format:check",

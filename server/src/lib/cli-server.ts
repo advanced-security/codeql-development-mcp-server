@@ -193,7 +193,6 @@ export class CodeQLCLIServer extends EventEmitter {
     this.commandInProgress = true;
     this.currentResolve = cmd.resolve;
     this.currentReject = cmd.reject;
-    this.stdoutBuffer = '';
 
     try {
       this.process.stdin.write(JSON.stringify(cmd.args), 'utf8');
@@ -208,34 +207,24 @@ export class CodeQLCLIServer extends EventEmitter {
   }
 
   private handleStdout(data: Buffer): void {
-    const str = data.toString();
+    this.stdoutBuffer += data.toString();
 
-    // Look for NUL byte delimiter
-    const nulIndex = str.indexOf('\0');
-    if (nulIndex === -1) {
-      // No delimiter yet, accumulate
-      this.stdoutBuffer += str;
-      return;
-    }
+    // Process all NUL-delimited responses in the buffer
+    let nulIndex = this.stdoutBuffer.indexOf('\0');
+    while (nulIndex !== -1) {
+      const result = this.stdoutBuffer.substring(0, nulIndex);
+      this.stdoutBuffer = this.stdoutBuffer.substring(nulIndex + 1);
 
-    // Found delimiter — command is complete
-    this.stdoutBuffer += str.substring(0, nulIndex);
-    const result = this.stdoutBuffer;
-    this.stdoutBuffer = '';
+      if (this.currentResolve) {
+        this.currentResolve(result);
+        this.currentResolve = null;
+        this.currentReject = null;
+      }
 
-    if (this.currentResolve) {
-      this.currentResolve(result);
-      this.currentResolve = null;
-      this.currentReject = null;
-    }
+      this.commandInProgress = false;
+      this.runNext();
 
-    this.commandInProgress = false;
-    this.runNext();
-
-    // Handle any remaining data after the NUL byte
-    const remainder = str.substring(nulIndex + 1);
-    if (remainder.length > 0) {
-      this.stdoutBuffer = remainder;
+      nulIndex = this.stdoutBuffer.indexOf('\0');
     }
   }
 

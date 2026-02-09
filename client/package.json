@@ -54,7 +54,7 @@
     "test": "npm run test:integration",
     "test:coverage": "echo 'NOOP client test:coverage'",
     "test:integration": "scripts/run-integration-tests.sh --no-install-packs",
-    "test:integration:default": "ENABLE_MONITORING_TOOLS=false scripts/run-integration-tests.sh",
+    "test:integration:default": "ENABLE_MONITORING_TOOLS=false scripts/run-integration-tests.sh --no-install-packs",
     "test:integration:install-packs": "scripts/run-integration-tests.sh",
     "test:integration:monitoring": "ENABLE_MONITORING_TOOLS=true scripts/run-integration-tests.sh",
     "tidy": "npm run lint && npm run format"

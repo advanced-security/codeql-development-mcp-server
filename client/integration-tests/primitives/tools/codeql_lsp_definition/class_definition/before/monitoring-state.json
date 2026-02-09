@@ -1,9 +1,10 @@
 {
   "sessions": [],
   "parameters": {
+    "file_content": "import javascript\n\nfrom File f\nwhere f.getBaseName() = \"test.js\"\nselect f, \"found\"",
     "file_path": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
-    "line": 12,
-    "character": 5,
+    "line": 0,
+    "character": 10,
     "workspace_uri": "server/ql/javascript/examples"
   }
 }

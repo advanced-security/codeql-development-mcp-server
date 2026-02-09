@@ -264,4 +264,48 @@ describe('global server manager', () => {
       expect(newManager).toBeDefined();
     });
   });
+
+  describe('warmUpLanguageServer', () => {
+    it('should start the language server eagerly', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'warmup-lang-test' });
+      expect(manager.isRunning('language')).toBe(false);
+
+      await manager.warmUpLanguageServer();
+
+      expect(manager.isRunning('language')).toBe(true);
+    });
+
+    it('should not throw on failure', async () => {
+      // Mock spawn to throw — warmUpLanguageServer should catch and log
+      const { spawn } = await import('child_process');
+      (spawn as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+        throw new Error('mock spawn failure');
+      });
+
+      const manager = new CodeQLServerManager({ sessionId: 'warmup-fail-test' });
+      // Should not throw
+      await expect(manager.warmUpLanguageServer()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('warmUpCLIServer', () => {
+    it('should start the CLI server eagerly', async () => {
+      const manager = new CodeQLServerManager({ sessionId: 'warmup-cli-test' });
+      expect(manager.isRunning('cli')).toBe(false);
+
+      await manager.warmUpCLIServer();
+
+      expect(manager.isRunning('cli')).toBe(true);
+    });
+
+    it('should not throw on failure', async () => {
+      const { spawn } = await import('child_process');
+      (spawn as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+        throw new Error('mock spawn failure');
+      });
+
+      const manager = new CodeQLServerManager({ sessionId: 'warmup-cli-fail-test' });
+      await expect(manager.warmUpCLIServer()).resolves.toBeUndefined();
+    });
+  });
 });

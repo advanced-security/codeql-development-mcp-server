@@ -74,8 +74,14 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
   // Initialize session data manager
   await sessionDataManager.initialize();
 
-  // Initialize the CodeQL background server manager
-  initServerManager();
+  // Initialize the CodeQL background server manager and eagerly start the
+  // language server and CLI server JVMs so they are warm when the first tool
+  // calls arrive.  This avoids 2-60 s cold-start penalties per JVM.
+  const manager = initServerManager();
+  Promise.all([
+    manager.warmUpLanguageServer(),
+    manager.warmUpCLIServer(),
+  ]).catch(() => { /* individual errors logged inside each warm-up method */ });
 
   if (mode === 'stdio') {
     const transport = new StdioServerTransport();

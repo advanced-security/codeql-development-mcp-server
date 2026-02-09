@@ -9,12 +9,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { Diagnostic, LanguageServerOptions } from '../../lib/language-server';
-import { LanguageServerConfig } from '../../lib/server-config';
-import { getServerManager } from '../../lib/server-manager';
 import { logger } from '../../utils/logger';
 import { getProjectTmpDir } from '../../utils/temp-dir';
-import { join, isAbsolute, resolve } from 'path';
+import { join } from 'path';
 import { pathToFileURL } from 'url';
+import { getInitializedLanguageServer } from './lsp-server-helper';
 
 export interface LspDiagnosticsParams {
   qlCode: string;
@@ -85,46 +84,6 @@ function getSeverityName(severity: number): string {
 }
 
 /**
- * Initialize or get existing language server instance via the server manager.
- *
- * - Respects `searchPath` and `workspaceUri` on every call
- * - Restarts the server when configuration changes
- * - Uses session-isolated cache directories
- */
-async function getLanguageServer(
-  options: LanguageServerOptions = {},
-  workspaceUri?: string,
-): Promise<import('../../lib/language-server').CodeQLLanguageServer> {
-  const { packageRootDir: pkgRoot } = await import('../../utils/package-paths');
-
-  const config: LanguageServerConfig = {
-    checkErrors: 'ON_CHANGE',
-    loglevel: options.loglevel ?? 'WARN',
-    searchPath: options.searchPath ?? resolve(pkgRoot, 'ql'),
-    synchronous: options.synchronous,
-    verbosity: options.verbosity,
-  };
-
-  const manager = getServerManager();
-  const languageServer = await manager.getLanguageServer(config);
-
-  // Normalize workspace URI: resolve relative / bare directory paths to
-  // file:// URIs against getUserWorkspaceDir() (respects CODEQL_MCP_WORKSPACE).
-  let effectiveUri = workspaceUri;
-  if (effectiveUri && !effectiveUri.startsWith('file://')) {
-    const { getUserWorkspaceDir } = await import('../../utils/package-paths');
-    const absWorkspace = isAbsolute(effectiveUri)
-      ? effectiveUri
-      : resolve(getUserWorkspaceDir(), effectiveUri);
-    effectiveUri = pathToFileURL(absWorkspace).href;
-  }
-  effectiveUri = effectiveUri ?? pathToFileURL(resolve(pkgRoot, 'ql')).href;
-  await languageServer.initialize(effectiveUri);
-
-  return languageServer;
-}
-
-/**
  * Evaluate QL code using the CodeQL Language Server and return diagnostics.
  */
 export async function lspDiagnostics({
@@ -135,7 +94,10 @@ export async function lspDiagnostics({
   try {
     logger.info('Evaluating QL code via Language Server...');
 
-    const languageServer = await getLanguageServer(serverOptions, workspaceUri);
+    const languageServer = await getInitializedLanguageServer({
+      serverOptions,
+      workspaceUri,
+    });
 
     // Generate unique URI for this evaluation
     const evalUri = pathToFileURL(join(getProjectTmpDir('lsp-eval'), `eval_${Date.now()}.ql`)).href;
@@ -172,6 +134,7 @@ export async function lspDiagnostics({
  * Shutdown the language server via the server manager.
  */
 export async function shutdownDiagnosticsServer(): Promise<void> {
+  const { getServerManager } = await import('../../lib/server-manager');
   const manager = getServerManager();
   await manager.shutdownServer('language');
 }

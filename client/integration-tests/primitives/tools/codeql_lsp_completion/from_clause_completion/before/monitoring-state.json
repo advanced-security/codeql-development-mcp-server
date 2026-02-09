@@ -1,9 +1,10 @@
 {
   "sessions": [],
   "parameters": {
+    "file_content": "import javascript\n\nfrom File f\nwh",
     "file_path": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
-    "line": 11,
-    "character": 5,
+    "line": 3,
+    "character": 2,
     "workspace_uri": "server/ql/javascript/examples"
   }
 }

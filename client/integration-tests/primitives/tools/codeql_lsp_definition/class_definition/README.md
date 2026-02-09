@@ -2,14 +2,18 @@
 
 ## PURPOSE
 
-Tests that `codeql_lsp_definition` returns definition locations when the cursor
-is on a class name used in a `from` clause.
+Tests that `codeql_lsp_definition` resolves the definition of the `javascript`
+library module from an `import` statement. The cursor is on `javascript`
+(line 0, character 10) which should resolve to the library module definition.
+Uses `file_content` to provide inline query text.
 
 ## INPUTS
 
+- **file_content**: Inline QL with `import javascript` statement
 - **file_path**: `server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql`
-- **line**: 12 (on the class name in the `from` clause)
-- **character**: 5 (cursor on the class name)
+- **line**: 0 (on the `import javascript` statement)
+- **character**: 10 (cursor on `javascript`)
+- **workspace_uri**: `server/ql/javascript/examples`
 
 ## EXPECTED OUTPUTS
 

@@ -33,6 +33,1306 @@ var init_logger = __esm({
   }
 });
 
+// src/lib/server-config.ts
+import { createHash } from "crypto";
+function computeConfigHash(type2, config) {
+  const sortKeys = (_key, value) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const sorted = {};
+      for (const k of Object.keys(value).sort()) {
+        sorted[k] = value[k];
+      }
+      return sorted;
+    }
+    return value;
+  };
+  const canonical = JSON.stringify({ config, type: type2 }, sortKeys);
+  return createHash("sha256").update(canonical).digest("hex");
+}
+function buildQueryServerArgs(config) {
+  const args = [
+    "execute",
+    "query-server2"
+  ];
+  if (config.searchPath) {
+    args.push(`--search-path=${config.searchPath}`);
+  }
+  if (config.commonCaches) {
+    args.push(`--common-caches=${config.commonCaches}`);
+  }
+  if (config.logdir) {
+    args.push(`--logdir=${config.logdir}`);
+  }
+  if (config.threads !== void 0) {
+    args.push(`--threads=${config.threads}`);
+  }
+  if (config.timeout !== void 0) {
+    args.push(`--timeout=${config.timeout}`);
+  }
+  if (config.maxDiskCache !== void 0) {
+    args.push(`--max-disk-cache=${config.maxDiskCache}`);
+  }
+  if (config.evaluatorLog) {
+    args.push(`--evaluator-log=${config.evaluatorLog}`);
+  }
+  if (config.debug) {
+    args.push("--debug");
+    args.push("--tuple-counting");
+  } else if (config.tupleCounting) {
+    args.push("--tuple-counting");
+  }
+  return args;
+}
+function buildCLIServerArgs(config) {
+  const args = [
+    "execute",
+    "cli-server"
+  ];
+  if (config.commonCaches) {
+    args.push(`--common-caches=${config.commonCaches}`);
+  }
+  if (config.logdir) {
+    args.push(`--logdir=${config.logdir}`);
+  }
+  return args;
+}
+var init_server_config = __esm({
+  "src/lib/server-config.ts"() {
+    "use strict";
+  }
+});
+
+// src/utils/package-paths.ts
+var package_paths_exports = {};
+__export(package_paths_exports, {
+  getPackageRootDir: () => getPackageRootDir,
+  getPackageVersion: () => getPackageVersion,
+  getUserWorkspaceDir: () => getUserWorkspaceDir,
+  getWorkspaceRootDir: () => getWorkspaceRootDir,
+  packageRootDir: () => packageRootDir,
+  resolveToolQueryPackPath: () => resolveToolQueryPackPath,
+  workspaceRootDir: () => workspaceRootDir
+});
+import { dirname, resolve } from "path";
+import { existsSync, readFileSync } from "fs";
+import { fileURLToPath } from "url";
+function isRunningFromSource(dir) {
+  const normalized = dir.replace(/\\/g, "/");
+  return /\/src(\/[^/]+)?$/.test(normalized);
+}
+function getPackageRootDir(currentDir = __dirname) {
+  return isRunningFromSource(currentDir) ? resolve(currentDir, "..", "..") : resolve(currentDir, "..");
+}
+function getWorkspaceRootDir(packageRoot) {
+  const pkgRoot = packageRoot ?? getPackageRootDir();
+  const parentDir = resolve(pkgRoot, "..");
+  try {
+    const parentPkgPath = resolve(parentDir, "package.json");
+    if (existsSync(parentPkgPath)) {
+      const parentPkg = JSON.parse(readFileSync(parentPkgPath, "utf8"));
+      if (parentPkg.workspaces) {
+        return parentDir;
+      }
+    }
+  } catch {
+  }
+  return pkgRoot;
+}
+function resolveToolQueryPackPath(language, packageRoot) {
+  const pkgRoot = packageRoot ?? getPackageRootDir();
+  return resolve(pkgRoot, "ql", language, "tools", "src");
+}
+function getPackageVersion() {
+  if (_cachedVersion !== void 0) return _cachedVersion;
+  try {
+    const pkgPath = resolve(getPackageRootDir(), "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+    _cachedVersion = pkg.version ?? "0.0.0";
+  } catch {
+    _cachedVersion = "0.0.0";
+  }
+  return _cachedVersion;
+}
+function getUserWorkspaceDir() {
+  if (process.env.CODEQL_MCP_WORKSPACE) {
+    return process.env.CODEQL_MCP_WORKSPACE;
+  }
+  if (workspaceRootDir === packageRootDir) {
+    return process.cwd();
+  }
+  return workspaceRootDir;
+}
+var __filename, __dirname, _cachedVersion, packageRootDir, workspaceRootDir;
+var init_package_paths = __esm({
+  "src/utils/package-paths.ts"() {
+    "use strict";
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = dirname(__filename);
+    packageRootDir = getPackageRootDir();
+    workspaceRootDir = getWorkspaceRootDir(packageRootDir);
+  }
+});
+
+// src/utils/temp-dir.ts
+import { mkdirSync, mkdtempSync } from "fs";
+import { isAbsolute, join, resolve as resolve2 } from "path";
+function getProjectTmpBase() {
+  mkdirSync(PROJECT_TMP_BASE, { recursive: true });
+  return PROJECT_TMP_BASE;
+}
+function createProjectTempDir(prefix) {
+  const base = getProjectTmpBase();
+  return mkdtempSync(join(base, prefix));
+}
+function getProjectTmpDir(name) {
+  const dir = join(getProjectTmpBase(), name);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+var PROJECT_TMP_BASE;
+var init_temp_dir = __esm({
+  "src/utils/temp-dir.ts"() {
+    "use strict";
+    init_package_paths();
+    PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR ? isAbsolute(process.env.CODEQL_MCP_TMP_DIR) ? process.env.CODEQL_MCP_TMP_DIR : resolve2(process.cwd(), process.env.CODEQL_MCP_TMP_DIR) : join(getPackageRootDir(), ".tmp");
+  }
+});
+
+// src/utils/process-ready.ts
+import { clearTimeout, setTimeout as setTimeout2 } from "timers";
+function waitForProcessReady(child, name, opts) {
+  const timeoutMs = opts?.timeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
+  return new Promise((resolve12, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      settled = true;
+      child.stderr?.removeListener("data", onStderr);
+      child.stdout?.removeListener("data", onStdout);
+      child.removeListener("error", onError);
+      child.removeListener("exit", onExit);
+      clearTimeout(timer);
+    };
+    const onStderr = () => {
+      if (settled) return;
+      logger.debug(`${name}: ready (stderr output detected)`);
+      cleanup();
+      resolve12();
+    };
+    const onStdout = () => {
+      if (settled) return;
+      logger.debug(`${name}: ready (stdout output detected)`);
+      cleanup();
+      resolve12();
+    };
+    const onError = (error) => {
+      if (settled) return;
+      cleanup();
+      reject(new Error(`${name} failed to start: ${error.message}`));
+    };
+    const onExit = (code) => {
+      if (settled) return;
+      cleanup();
+      reject(new Error(`${name} exited before becoming ready (code: ${code})`));
+    };
+    const timer = setTimeout2(() => {
+      if (settled) return;
+      logger.warn(`${name}: readiness timeout (${timeoutMs} ms) \u2014 proceeding anyway`);
+      cleanup();
+      resolve12();
+    }, timeoutMs);
+    child.stderr?.on("data", onStderr);
+    child.stdout?.on("data", onStdout);
+    child.on("error", onError);
+    child.on("exit", onExit);
+    if (child.killed || child.exitCode !== null) {
+      cleanup();
+      reject(new Error(`${name} is not running (exitCode: ${child.exitCode})`));
+    }
+  });
+}
+var DEFAULT_READY_TIMEOUT_MS;
+var init_process_ready = __esm({
+  "src/utils/process-ready.ts"() {
+    "use strict";
+    init_logger();
+    DEFAULT_READY_TIMEOUT_MS = 3e4;
+  }
+});
+
+// src/lib/language-server.ts
+import { spawn } from "child_process";
+import { EventEmitter } from "events";
+import { setTimeout as setTimeout3, clearTimeout as clearTimeout2 } from "timers";
+import { pathToFileURL } from "url";
+import { delimiter, join as join2 } from "path";
+var CodeQLLanguageServer;
+var init_language_server = __esm({
+  "src/lib/language-server.ts"() {
+    "use strict";
+    init_logger();
+    init_package_paths();
+    init_temp_dir();
+    init_cli_executor();
+    init_process_ready();
+    CodeQLLanguageServer = class extends EventEmitter {
+      constructor(_options = {}) {
+        super();
+        this._options = _options;
+      }
+      server = null;
+      messageId = 1;
+      pendingResponses = /* @__PURE__ */ new Map();
+      isInitialized = false;
+      currentWorkspaceUri;
+      messageBuffer = "";
+      async start() {
+        if (this.server) {
+          throw new Error("Language server is already running");
+        }
+        logger.info("Starting CodeQL Language Server...");
+        const args = [
+          "execute",
+          "language-server",
+          "--check-errors=ON_CHANGE"
+        ];
+        if (this._options.searchPath) {
+          args.push(`--search-path=${this._options.searchPath}`);
+        }
+        if (this._options.logdir) {
+          args.push(`--logdir=${this._options.logdir}`);
+        }
+        if (this._options.loglevel) {
+          args.push(`--loglevel=${this._options.loglevel}`);
+        }
+        if (this._options.synchronous) {
+          args.push("--synchronous");
+        }
+        if (this._options.verbosity) {
+          args.push(`--verbosity=${this._options.verbosity}`);
+        }
+        const spawnEnv = { ...process.env };
+        const codeqlDir = getResolvedCodeQLDir();
+        if (codeqlDir && spawnEnv.PATH) {
+          spawnEnv.PATH = `${codeqlDir}${delimiter}${spawnEnv.PATH}`;
+        } else if (codeqlDir) {
+          spawnEnv.PATH = codeqlDir;
+        }
+        this.server = spawn("codeql", args, {
+          stdio: ["pipe", "pipe", "pipe"],
+          env: spawnEnv
+        });
+        this.server.stderr?.on("data", (data) => {
+          logger.debug("CodeQL LS stderr:", data.toString());
+        });
+        this.server.stdout?.on("data", (data) => {
+          this.handleStdout(data);
+        });
+        this.server.on("error", (error) => {
+          logger.error("CodeQL Language Server error:", error);
+          this.emit("error", error);
+        });
+        this.server.on("exit", (code) => {
+          logger.info("CodeQL Language Server exited with code:", code);
+          this.server = null;
+          this.isInitialized = false;
+          this.emit("exit", code);
+        });
+        await waitForProcessReady(this.server, "CodeQL Language Server");
+      }
+      handleStdout(data) {
+        this.messageBuffer += data.toString();
+        let headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+        while (headerEnd !== -1) {
+          const header = this.messageBuffer.substring(0, headerEnd);
+          const contentLengthMatch = header.match(/Content-Length: (\d+)/);
+          if (contentLengthMatch) {
+            const contentLength = parseInt(contentLengthMatch[1]);
+            const messageStart = headerEnd + 4;
+            const messageEnd = messageStart + contentLength;
+            if (this.messageBuffer.length >= messageEnd) {
+              const messageContent = this.messageBuffer.substring(messageStart, messageEnd);
+              this.messageBuffer = this.messageBuffer.substring(messageEnd);
+              try {
+                const message = JSON.parse(messageContent);
+                this.handleMessage(message);
+              } catch (error) {
+                logger.error("Failed to parse LSP message:", error, messageContent);
+              }
+              headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+            } else {
+              break;
+            }
+          } else {
+            logger.error("Invalid LSP header:", header);
+            this.messageBuffer = "";
+            break;
+          }
+        }
+      }
+      handleMessage(message) {
+        logger.debug("Received LSP message:", message);
+        if (message.id !== void 0 && this.pendingResponses.has(Number(message.id))) {
+          const pending = this.pendingResponses.get(Number(message.id));
+          this.pendingResponses.delete(Number(message.id));
+          if (message.error) {
+            pending.reject(new Error(`LSP Error: ${message.error.message}`));
+          } else {
+            pending.resolve(message.result);
+          }
+          return;
+        }
+        if (message.method === "textDocument/publishDiagnostics") {
+          this.emit("diagnostics", message.params);
+        }
+      }
+      sendMessage(message) {
+        if (!this.server?.stdin) {
+          throw new Error("Language server is not running");
+        }
+        const messageStr = JSON.stringify(message);
+        const contentLength = Buffer.byteLength(messageStr, "utf8");
+        const header = `Content-Length: ${contentLength}\r
+\r
+`;
+        const fullMessage = header + messageStr;
+        logger.debug("Sending LSP message:", fullMessage);
+        this.server.stdin.write(fullMessage);
+      }
+      sendRequest(method, params) {
+        const id = this.messageId++;
+        const message = {
+          jsonrpc: "2.0",
+          id,
+          method,
+          params
+        };
+        return new Promise((resolve12, reject) => {
+          const timer = setTimeout3(() => {
+            if (this.pendingResponses.has(id)) {
+              this.pendingResponses.delete(id);
+              reject(new Error(`LSP request timeout for method: ${method}`));
+            }
+          }, 6e4);
+          this.pendingResponses.set(id, {
+            reject: (err) => {
+              clearTimeout2(timer);
+              reject(err);
+            },
+            resolve: (val) => {
+              clearTimeout2(timer);
+              resolve12(val);
+            }
+          });
+          this.sendMessage(message);
+        });
+      }
+      sendNotification(method, params) {
+        const message = {
+          jsonrpc: "2.0",
+          method,
+          params
+        };
+        this.sendMessage(message);
+      }
+      /**
+       * Initialize the language server with an optional workspace URI.
+       *
+       * If the server is already initialized with a different workspace, a
+       * `workspace/didChangeWorkspaceFolders` notification is sent to update
+       * the workspace context instead of requiring a full restart.
+       */
+      async initialize(workspaceUri) {
+        if (this.isInitialized) {
+          if (workspaceUri && workspaceUri !== this.currentWorkspaceUri) {
+            await this.updateWorkspace(workspaceUri);
+          }
+          return;
+        }
+        logger.info("Initializing CodeQL Language Server...");
+        const initParams = {
+          processId: process.pid,
+          clientInfo: {
+            name: "codeql-development-mcp-server",
+            version: getPackageVersion()
+          },
+          capabilities: {
+            textDocument: {
+              completion: { completionItem: { snippetSupport: false } },
+              definition: {},
+              publishDiagnostics: {},
+              references: {},
+              synchronization: {
+                didClose: true,
+                didChange: true,
+                didOpen: true
+              }
+            },
+            workspace: {
+              workspaceFolders: true
+            }
+          }
+        };
+        if (workspaceUri) {
+          initParams.workspaceFolders = [{
+            uri: workspaceUri,
+            name: "codeql-workspace"
+          }];
+        }
+        await this.sendRequest("initialize", initParams);
+        this.sendNotification("initialized", {});
+        this.currentWorkspaceUri = workspaceUri;
+        this.isInitialized = true;
+        logger.info("CodeQL Language Server initialized successfully");
+      }
+      /**
+       * Update the workspace folders on a running, initialized server.
+       */
+      async updateWorkspace(newUri) {
+        logger.info(`Updating workspace from ${this.currentWorkspaceUri} to ${newUri}`);
+        const removed = this.currentWorkspaceUri ? [{ uri: this.currentWorkspaceUri, name: "codeql-workspace" }] : [];
+        this.sendNotification("workspace/didChangeWorkspaceFolders", {
+          event: {
+            added: [{ uri: newUri, name: "codeql-workspace" }],
+            removed
+          }
+        });
+        this.currentWorkspaceUri = newUri;
+      }
+      /**
+       * Get the current workspace URI.
+       */
+      getWorkspaceUri() {
+        return this.currentWorkspaceUri;
+      }
+      async evaluateQL(qlCode, uri) {
+        if (!this.isInitialized) {
+          throw new Error("Language server is not initialized");
+        }
+        const documentUri = uri || pathToFileURL(join2(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
+        return new Promise((resolve12, reject) => {
+          let diagnosticsReceived = false;
+          const timeout = setTimeout3(() => {
+            if (!diagnosticsReceived) {
+              this.removeListener("diagnostics", diagnosticsHandler);
+              reject(new Error("Timeout waiting for diagnostics"));
+            }
+          }, 9e4);
+          const diagnosticsHandler = (params) => {
+            if (params.uri === documentUri) {
+              diagnosticsReceived = true;
+              clearTimeout2(timeout);
+              this.removeListener("diagnostics", diagnosticsHandler);
+              this.sendNotification("textDocument/didClose", {
+                textDocument: { uri: documentUri }
+              });
+              resolve12(params.diagnostics);
+            }
+          };
+          this.on("diagnostics", diagnosticsHandler);
+          this.sendNotification("textDocument/didOpen", {
+            textDocument: {
+              uri: documentUri,
+              languageId: "ql",
+              version: 1,
+              text: qlCode
+            }
+          });
+        });
+      }
+      // ---- LSP feature methods (issue #1) ----
+      /**
+       * Get code completions at a position in a document.
+       */
+      async getCompletions(params) {
+        if (!this.isInitialized) {
+          throw new Error("Language server is not initialized");
+        }
+        if (!this.isRunning()) {
+          throw new Error("Language server process is not running");
+        }
+        const result = await this.sendRequest("textDocument/completion", params);
+        if (result && typeof result === "object" && "items" in result) {
+          return result.items;
+        }
+        return result || [];
+      }
+      /**
+       * Find the definition(s) of a symbol at a position.
+       */
+      async getDefinition(params) {
+        if (!this.isInitialized) {
+          throw new Error("Language server is not initialized");
+        }
+        if (!this.isRunning()) {
+          throw new Error("Language server process is not running");
+        }
+        const result = await this.sendRequest("textDocument/definition", params);
+        return this.normalizeLocations(result);
+      }
+      /**
+       * Find all references to a symbol at a position.
+       */
+      async getReferences(params) {
+        if (!this.isInitialized) {
+          throw new Error("Language server is not initialized");
+        }
+        if (!this.isRunning()) {
+          throw new Error("Language server process is not running");
+        }
+        const result = await this.sendRequest("textDocument/references", {
+          ...params,
+          context: params.context ?? { includeDeclaration: true }
+        });
+        return this.normalizeLocations(result);
+      }
+      /**
+       * Open a text document in the language server.
+       * The document must be opened before requesting completions, definitions, etc.
+       */
+      openDocument(uri, text, languageId = "ql", version = 1) {
+        if (!this.isInitialized) {
+          throw new Error("Language server is not initialized");
+        }
+        this.sendNotification("textDocument/didOpen", {
+          textDocument: { uri, languageId, version, text }
+        });
+      }
+      /**
+       * Close a text document in the language server.
+       */
+      closeDocument(uri) {
+        if (!this.isInitialized) {
+          throw new Error("Language server is not initialized");
+        }
+        this.sendNotification("textDocument/didClose", {
+          textDocument: { uri }
+        });
+      }
+      /**
+       * Normalize a definition/references/implementation result to Location[].
+       * The LSP spec allows Location | Location[] | LocationLink[].
+       */
+      normalizeLocations(result) {
+        if (!result) return [];
+        if (Array.isArray(result)) {
+          return result.map((item) => {
+            if ("targetUri" in item) {
+              return { uri: item.targetUri, range: item.targetRange };
+            }
+            return item;
+          });
+        }
+        if (typeof result === "object" && "uri" in result) {
+          return [result];
+        }
+        return [];
+      }
+      async shutdown() {
+        if (!this.server) {
+          return;
+        }
+        logger.info("Shutting down CodeQL Language Server...");
+        try {
+          await this.sendRequest("shutdown", {});
+          if (this.server) {
+            this.sendNotification("exit", {});
+          }
+        } catch (error) {
+          logger.warn("Error during graceful shutdown:", error);
+        }
+        await new Promise((resolve12) => {
+          const timer = setTimeout3(() => {
+            if (this.server) {
+              this.server.kill("SIGTERM");
+            }
+            resolve12();
+          }, 1e3);
+          if (this.server) {
+            this.server.once("exit", () => {
+              clearTimeout2(timer);
+              this.server = null;
+              resolve12();
+            });
+          } else {
+            clearTimeout2(timer);
+            resolve12();
+          }
+        });
+        this.isInitialized = false;
+      }
+      isRunning() {
+        return this.server !== null && !this.server.killed;
+      }
+    };
+  }
+});
+
+// src/lib/query-server.ts
+import { spawn as spawn2 } from "child_process";
+import { delimiter as delimiter2 } from "path";
+import { EventEmitter as EventEmitter2 } from "events";
+import { clearTimeout as clearTimeout3, setTimeout as setTimeout4 } from "timers";
+var CodeQLQueryServer;
+var init_query_server = __esm({
+  "src/lib/query-server.ts"() {
+    "use strict";
+    init_server_config();
+    init_cli_executor();
+    init_logger();
+    init_process_ready();
+    CodeQLQueryServer = class extends EventEmitter2 {
+      messageBuffer = "";
+      messageId = 1;
+      pendingRequests = /* @__PURE__ */ new Map();
+      process = null;
+      config;
+      constructor(config) {
+        super();
+        this.config = config;
+      }
+      /**
+       * Start the query-server2 process.
+       */
+      async start() {
+        if (this.process) {
+          throw new Error("Query server is already running");
+        }
+        logger.info("Starting CodeQL Query Server (query-server2)...");
+        const args = buildQueryServerArgs(this.config);
+        const spawnEnv = { ...process.env };
+        const codeqlDir = getResolvedCodeQLDir();
+        if (codeqlDir && spawnEnv.PATH) {
+          spawnEnv.PATH = `${codeqlDir}${delimiter2}${spawnEnv.PATH}`;
+        } else if (codeqlDir) {
+          spawnEnv.PATH = codeqlDir;
+        }
+        this.process = spawn2("codeql", args, {
+          stdio: ["pipe", "pipe", "pipe"],
+          env: spawnEnv
+        });
+        this.process.stderr?.on("data", (data) => {
+          logger.debug("QueryServer2 stderr:", data.toString());
+        });
+        this.process.stdout?.on("data", (data) => {
+          this.handleStdout(data);
+        });
+        this.process.on("error", (error) => {
+          logger.error("Query server process error:", error);
+          this.emit("error", error);
+        });
+        this.process.on("exit", (code) => {
+          logger.info(`Query server exited with code: ${code}`);
+          this.rejectAllPending(new Error(`Query server exited with code: ${code}`));
+          this.process = null;
+          this.emit("exit", code);
+        });
+        await waitForProcessReady(this.process, "CodeQL Query Server");
+        logger.info("CodeQL Query Server started");
+      }
+      /**
+       * Send a request to the query server and await the response.
+       *
+       * @param method - The JSON-RPC method name.
+       * @param params - The method parameters.
+       * @param timeoutMs - Request timeout in milliseconds (default: 300000 = 5 min).
+       * @returns The result from the server.
+       */
+      sendRequest(method, params, timeoutMs = 3e5) {
+        const id = this.messageId++;
+        const message = {
+          id,
+          jsonrpc: "2.0",
+          method,
+          params
+        };
+        return new Promise((resolve12, reject) => {
+          this.pendingRequests.set(id, { reject, resolve: resolve12 });
+          try {
+            this.sendRaw(message);
+          } catch (error) {
+            this.pendingRequests.delete(id);
+            reject(error instanceof Error ? error : new Error(String(error)));
+            return;
+          }
+          const timer = setTimeout4(() => {
+            if (this.pendingRequests.has(id)) {
+              this.pendingRequests.delete(id);
+              reject(new Error(`Query server request timeout for method: ${method}`));
+            }
+          }, timeoutMs);
+          const originalResolve = resolve12;
+          const originalReject = reject;
+          const wrapped = {
+            reject: (err) => {
+              clearTimeout3(timer);
+              originalReject(err);
+            },
+            resolve: (val) => {
+              clearTimeout3(timer);
+              originalResolve(val);
+            }
+          };
+          this.pendingRequests.set(id, wrapped);
+        });
+      }
+      /**
+       * Gracefully shut down the query server.
+       */
+      async shutdown() {
+        if (!this.process) {
+          return;
+        }
+        logger.info("Shutting down CodeQL Query Server...");
+        try {
+          await this.sendRequest("shutdown", {}, 5e3);
+        } catch (error) {
+          logger.warn("Error during query server graceful shutdown:", error);
+        }
+        await new Promise((resolve12) => {
+          const timer = setTimeout4(() => {
+            if (this.process) {
+              this.process.kill("SIGTERM");
+              this.process = null;
+            }
+            resolve12();
+          }, 2e3);
+          if (this.process) {
+            this.process.once("exit", () => {
+              clearTimeout3(timer);
+              this.process = null;
+              resolve12();
+            });
+          } else {
+            clearTimeout3(timer);
+            resolve12();
+          }
+        });
+      }
+      /**
+       * Whether the query server process is running.
+       */
+      isRunning() {
+        return this.process !== null && !this.process.killed;
+      }
+      // ---- private helpers ----
+      handleStdout(data) {
+        this.messageBuffer += data.toString();
+        let headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+        while (headerEnd !== -1) {
+          const header = this.messageBuffer.substring(0, headerEnd);
+          const contentLengthMatch = header.match(/Content-Length: (\d+)/);
+          if (contentLengthMatch) {
+            const contentLength = parseInt(contentLengthMatch[1]);
+            const messageStart = headerEnd + 4;
+            const messageEnd = messageStart + contentLength;
+            if (this.messageBuffer.length >= messageEnd) {
+              const messageContent = this.messageBuffer.substring(messageStart, messageEnd);
+              this.messageBuffer = this.messageBuffer.substring(messageEnd);
+              try {
+                const message = JSON.parse(messageContent);
+                this.handleMessage(message);
+              } catch (error) {
+                logger.error("Failed to parse query server message:", error);
+              }
+              headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
+            } else {
+              break;
+            }
+          } else {
+            logger.error("Invalid query server header:", header);
+            this.messageBuffer = "";
+            break;
+          }
+        }
+      }
+      handleMessage(message) {
+        logger.debug("QueryServer2 message:", message);
+        if (message.id !== void 0 && this.pendingRequests.has(Number(message.id))) {
+          const pending = this.pendingRequests.get(Number(message.id));
+          this.pendingRequests.delete(Number(message.id));
+          if (message.error) {
+            pending.reject(new Error(`Query server error: ${message.error.message}`));
+          } else {
+            pending.resolve(message.result);
+          }
+          return;
+        }
+        if (message.method) {
+          this.emit("notification", { method: message.method, params: message.params });
+        }
+      }
+      rejectAllPending(error) {
+        for (const [id, pending] of this.pendingRequests) {
+          pending.reject(error);
+          this.pendingRequests.delete(id);
+        }
+      }
+      sendRaw(message) {
+        if (!this.process?.stdin) {
+          throw new Error("Query server is not running");
+        }
+        const body = JSON.stringify(message);
+        const contentLength = Buffer.byteLength(body, "utf8");
+        const frame = `Content-Length: ${contentLength}\r
+\r
+${body}`;
+        this.process.stdin.write(frame);
+      }
+    };
+  }
+});
+
+// src/lib/cli-server.ts
+import { spawn as spawn3 } from "child_process";
+import { delimiter as delimiter3 } from "path";
+import { EventEmitter as EventEmitter3 } from "events";
+import { clearTimeout as clearTimeout4, setTimeout as setTimeout5 } from "timers";
+var CodeQLCLIServer;
+var init_cli_server = __esm({
+  "src/lib/cli-server.ts"() {
+    "use strict";
+    init_server_config();
+    init_cli_executor();
+    init_logger();
+    init_process_ready();
+    CodeQLCLIServer = class extends EventEmitter3 {
+      commandInProgress = false;
+      commandQueue = [];
+      config;
+      currentReject = null;
+      currentResolve = null;
+      nullBuffer = Buffer.alloc(1);
+      process = null;
+      stdoutBuffer = "";
+      constructor(config) {
+        super();
+        this.config = config;
+      }
+      /**
+       * Start the cli-server process.
+       */
+      async start() {
+        if (this.process) {
+          throw new Error("CLI server is already running");
+        }
+        logger.info("Starting CodeQL CLI Server...");
+        const args = buildCLIServerArgs(this.config);
+        const spawnEnv = { ...process.env };
+        const codeqlDir = getResolvedCodeQLDir();
+        if (codeqlDir && spawnEnv.PATH) {
+          spawnEnv.PATH = `${codeqlDir}${delimiter3}${spawnEnv.PATH}`;
+        } else if (codeqlDir) {
+          spawnEnv.PATH = codeqlDir;
+        }
+        this.process = spawn3("codeql", args, {
+          stdio: ["pipe", "pipe", "pipe"],
+          env: spawnEnv
+        });
+        this.process.stdout?.on("data", (data) => {
+          this.handleStdout(data);
+        });
+        this.process.stderr?.on("data", (data) => {
+          logger.debug("CLIServer stderr:", data.toString());
+        });
+        this.process.on("error", (error) => {
+          logger.error("CLI server process error:", error);
+          if (this.currentReject) {
+            this.currentReject(error);
+            this.currentReject = null;
+            this.currentResolve = null;
+          }
+          this.emit("error", error);
+        });
+        this.process.on("exit", (code) => {
+          logger.info(`CLI server exited with code: ${code}`);
+          if (this.currentReject) {
+            this.currentReject(new Error(`CLI server exited unexpectedly with code: ${code}`));
+            this.currentReject = null;
+            this.currentResolve = null;
+          }
+          this.process = null;
+          this.emit("exit", code);
+        });
+        await waitForProcessReady(this.process, "CodeQL CLI Server");
+        logger.info("CodeQL CLI Server started");
+      }
+      /**
+       * Run a CodeQL CLI command through the persistent server.
+       *
+       * Commands are serialized and queued; only one command runs at a time.
+       *
+       * @param args - The full command arguments (e.g. `['resolve', 'qlpacks']`).
+       * @returns The stdout output from the command.
+       */
+      runCommand(args) {
+        return new Promise((resolve12, reject) => {
+          const execute = () => {
+            this.executeCommand({ args, reject, resolve: resolve12 });
+          };
+          if (this.commandInProgress) {
+            this.commandQueue.push(execute);
+          } else {
+            execute();
+          }
+        });
+      }
+      /**
+       * Gracefully shut down the CLI server.
+       */
+      async shutdown() {
+        if (!this.process) {
+          return;
+        }
+        logger.info("Shutting down CodeQL CLI Server...");
+        try {
+          this.process.stdin?.write(JSON.stringify(["shutdown"]), "utf8");
+          this.process.stdin?.write(this.nullBuffer);
+        } catch (error) {
+          logger.warn("Error during CLI server shutdown request:", error);
+        }
+        await new Promise((resolve12) => {
+          const timer = setTimeout5(() => {
+            if (this.process) {
+              this.process.kill("SIGTERM");
+              this.process = null;
+            }
+            resolve12();
+          }, 2e3);
+          if (this.process) {
+            this.process.once("exit", () => {
+              clearTimeout4(timer);
+              this.process = null;
+              resolve12();
+            });
+          } else {
+            clearTimeout4(timer);
+            resolve12();
+          }
+        });
+        this.commandInProgress = false;
+        this.commandQueue = [];
+        logger.info("CodeQL CLI Server stopped");
+      }
+      /**
+       * Whether the CLI server process is running.
+       */
+      isRunning() {
+        return this.process !== null && !this.process.killed;
+      }
+      // ---- private helpers ----
+      executeCommand(cmd) {
+        if (!this.process?.stdin) {
+          cmd.reject(new Error("CLI server is not running"));
+          return;
+        }
+        this.commandInProgress = true;
+        this.currentResolve = cmd.resolve;
+        this.currentReject = cmd.reject;
+        try {
+          this.process.stdin.write(JSON.stringify(cmd.args), "utf8");
+          this.process.stdin.write(this.nullBuffer);
+        } catch (error) {
+          this.commandInProgress = false;
+          this.currentResolve = null;
+          this.currentReject = null;
+          cmd.reject(error instanceof Error ? error : new Error(String(error)));
+          this.runNext();
+        }
+      }
+      handleStdout(data) {
+        this.stdoutBuffer += data.toString();
+        let nulIndex = this.stdoutBuffer.indexOf("\0");
+        while (nulIndex !== -1) {
+          const result = this.stdoutBuffer.substring(0, nulIndex);
+          this.stdoutBuffer = this.stdoutBuffer.substring(nulIndex + 1);
+          if (this.currentResolve) {
+            this.currentResolve(result);
+            this.currentResolve = null;
+            this.currentReject = null;
+          }
+          this.commandInProgress = false;
+          this.runNext();
+          nulIndex = this.stdoutBuffer.indexOf("\0");
+        }
+      }
+      runNext() {
+        const next = this.commandQueue.shift();
+        if (next) {
+          next();
+        }
+      }
+    };
+  }
+});
+
+// src/lib/server-manager.ts
+var server_manager_exports = {};
+__export(server_manager_exports, {
+  CodeQLServerManager: () => CodeQLServerManager,
+  getServerManager: () => getServerManager,
+  initServerManager: () => initServerManager,
+  resetServerManager: () => resetServerManager,
+  shutdownServerManager: () => shutdownServerManager
+});
+import { mkdirSync as mkdirSync2 } from "fs";
+import { join as join3 } from "path";
+import { randomUUID } from "crypto";
+function initServerManager(options) {
+  if (!globalServerManager) {
+    globalServerManager = new CodeQLServerManager(options);
+  }
+  return globalServerManager;
+}
+function getServerManager() {
+  if (!globalServerManager) {
+    globalServerManager = new CodeQLServerManager();
+  }
+  return globalServerManager;
+}
+async function shutdownServerManager() {
+  if (globalServerManager) {
+    await globalServerManager.shutdownAll();
+    globalServerManager = null;
+  }
+}
+function resetServerManager() {
+  globalServerManager = null;
+}
+var CodeQLServerManager, globalServerManager;
+var init_server_manager = __esm({
+  "src/lib/server-manager.ts"() {
+    "use strict";
+    init_server_config();
+    init_language_server();
+    init_query_server();
+    init_cli_server();
+    init_temp_dir();
+    init_logger();
+    CodeQLServerManager = class {
+      /** Keyed by `CodeQLServerType` — at most one per type at a time. */
+      servers = /* @__PURE__ */ new Map();
+      /** The session ID used for cache isolation. */
+      sessionId;
+      /** Root directory for session-specific caches. */
+      sessionCacheDir;
+      constructor(options) {
+        this.sessionId = options?.sessionId ?? randomUUID();
+        this.sessionCacheDir = join3(
+          getProjectTmpDir("codeql-cache"),
+          this.sessionId
+        );
+        for (const subdir of ["compilation-cache", "logs", "query-cache"]) {
+          mkdirSync2(join3(this.sessionCacheDir, subdir), { recursive: true });
+        }
+        logger.info(`CodeQLServerManager initialized (session: ${this.sessionId})`);
+      }
+      // ---- Public API ----
+      /**
+       * Get the current session ID.
+       */
+      getSessionId() {
+        return this.sessionId;
+      }
+      /**
+       * Get the session-specific cache directory.
+       */
+      getCacheDir() {
+        return this.sessionCacheDir;
+      }
+      /**
+       * Return the session-specific log directory.
+       */
+      getLogDir() {
+        return join3(this.sessionCacheDir, "logs");
+      }
+      /**
+       * Get or create a Language Server with the given configuration.
+       *
+       * If a language server is already running with the same config it is reused.
+       * If the config has changed the old server is shut down first.
+       */
+      async getLanguageServer(config) {
+        const enriched = this.enrichConfig(config);
+        return this.getOrRestart("language", enriched, () => {
+          return new CodeQLLanguageServer({
+            loglevel: enriched.loglevel,
+            logdir: enriched.logdir,
+            searchPath: enriched.searchPath,
+            synchronous: enriched.synchronous,
+            verbosity: enriched.verbosity
+          });
+        });
+      }
+      /**
+       * Get or create a Query Server with the given configuration.
+       */
+      async getQueryServer(config) {
+        const enriched = this.enrichConfig(config);
+        return this.getOrRestart("query", enriched, () => {
+          return new CodeQLQueryServer(enriched);
+        });
+      }
+      /**
+       * Get or create a CLI Server with the given configuration.
+       */
+      async getCLIServer(config) {
+        const enriched = this.enrichConfig(config);
+        return this.getOrRestart("cli", enriched, () => {
+          return new CodeQLCLIServer(enriched);
+        });
+      }
+      /**
+       * Shut down a specific server type.
+       */
+      async shutdownServer(type2) {
+        const managed = this.servers.get(type2);
+        if (!managed) return;
+        logger.info(`Shutting down ${type2} server (session: ${managed.sessionId})`);
+        await this.stopServer(managed);
+        this.servers.delete(type2);
+      }
+      /**
+       * Shut down all managed servers.
+       */
+      async shutdownAll() {
+        logger.info(`Shutting down all servers for session: ${this.sessionId}`);
+        const shutdownPromises = Array.from(this.servers.entries()).map(
+          async ([type2, managed]) => {
+            try {
+              await this.stopServer(managed);
+            } catch (error) {
+              logger.error(`Error shutting down ${type2} server:`, error);
+            }
+          }
+        );
+        await Promise.all(shutdownPromises);
+        this.servers.clear();
+        logger.info("All servers shut down");
+      }
+      /**
+       * Check whether a server of the given type is currently running.
+       */
+      isRunning(type2) {
+        const managed = this.servers.get(type2);
+        if (!managed) return false;
+        return managed.server.isRunning();
+      }
+      /**
+       * Get status information for all managed servers.
+       */
+      getStatus() {
+        const status = {
+          cli: null,
+          language: null,
+          query: null
+        };
+        for (const [type2, managed] of this.servers) {
+          status[type2] = {
+            configHash: managed.configHash,
+            running: managed.server.isRunning(),
+            sessionId: managed.sessionId
+          };
+        }
+        return status;
+      }
+      // ---- Private helpers ----
+      /**
+       * Eagerly start the language server so the JVM is warm when the first
+       * LSP tool call arrives.  Uses the default configuration that
+       * `lsp-handlers.ts` / `lsp-diagnostics.ts` would create on the first
+       * `getLanguageServer()` call.  The server is stored in the managed-servers
+       * map and reused by subsequent tool invocations.
+       *
+       * This is fire-and-forget: errors are logged but do not prevent the MCP
+       * server from starting.
+       */
+      async warmUpLanguageServer() {
+        try {
+          const { packageRootDir: packageRootDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
+          const { resolve: resolve12 } = await import("path");
+          const config = {
+            checkErrors: "ON_CHANGE",
+            loglevel: "WARN",
+            searchPath: resolve12(packageRootDir2, "ql")
+          };
+          logger.info("Warming up language server (background JVM start)...");
+          await this.getLanguageServer(config);
+          logger.info("Language server warm-up complete");
+        } catch (error) {
+          logger.warn("Language server warm-up failed (will retry on first tool call):", error);
+        }
+      }
+      /**
+       * Eagerly start the CLI server so the JVM is warm when the first
+       * `executeCodeQLCommand()` call routes through it.
+       *
+       * The CLI server uses only session-scoped `commonCaches` and `logdir`,
+       * both injected by `enrichConfig()`.  Passing an empty config is
+       * intentional — it matches what `executeCodeQLCommand()` will request.
+       *
+       * Fire-and-forget: errors are logged but do not block startup.
+       */
+      async warmUpCLIServer() {
+        try {
+          logger.info("Warming up CLI server (background JVM start)...");
+          await this.getCLIServer({});
+          logger.info("CLI server warm-up complete");
+        } catch (error) {
+          logger.warn("CLI server warm-up failed (will retry on first tool call):", error);
+        }
+      }
+      /**
+       * Enrich a config with session-specific defaults for commonCaches and logdir.
+       */
+      enrichConfig(config) {
+        return {
+          ...config,
+          commonCaches: config.commonCaches ?? this.sessionCacheDir,
+          logdir: config.logdir ?? this.getLogDir()
+        };
+      }
+      /**
+       * Get an existing server if its config matches, otherwise stop the old
+       * one and start a new server.
+       */
+      async getOrRestart(type2, config, factory) {
+        const hash = computeConfigHash(type2, config);
+        const existing = this.servers.get(type2);
+        if (existing && existing.configHash === hash && existing.server.isRunning()) {
+          logger.debug(`Reusing existing ${type2} server (hash: ${hash.substring(0, 8)})`);
+          return existing.server;
+        }
+        if (existing) {
+          logger.info(`${type2} server config changed or dead, restarting...`);
+          await this.stopServer(existing);
+          this.servers.delete(type2);
+        }
+        const server = factory();
+        await server.start();
+        this.servers.set(type2, {
+          configHash: hash,
+          server,
+          sessionId: this.sessionId,
+          type: type2
+        });
+        logger.info(`${type2} server started (hash: ${hash.substring(0, 8)})`);
+        return server;
+      }
+      /**
+       * Stop a managed server, ignoring errors.
+       */
+      async stopServer(managed) {
+        try {
+          await managed.server.shutdown();
+        } catch (error) {
+          logger.warn(`Error stopping ${managed.type} server:`, error);
+        }
+      }
+    };
+    globalServerManager = null;
+  }
+});
+
 // src/lib/cli-executor.ts
 var cli_executor_exports = {};
 __export(cli_executor_exports, {
@@ -53,8 +1353,8 @@ __export(cli_executor_exports, {
   validateCommandExists: () => validateCommandExists
 });
 import { execFile } from "child_process";
-import { existsSync } from "fs";
-import { basename, delimiter, dirname, isAbsolute } from "path";
+import { existsSync as existsSync2 } from "fs";
+import { basename, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute2 } from "path";
 import { promisify } from "util";
 function enableTestCommands() {
   testCommands = /* @__PURE__ */ new Set([
@@ -88,17 +1388,17 @@ function resolveCodeQLBinary() {
       `CODEQL_PATH must point to a CodeQL CLI binary (expected basename: codeql), got: ${base}`
     );
   }
-  if (!isAbsolute(envPath)) {
+  if (!isAbsolute2(envPath)) {
     throw new Error(
       `CODEQL_PATH must be an absolute path, got: ${envPath}`
     );
   }
-  if (!existsSync(envPath)) {
+  if (!existsSync2(envPath)) {
     throw new Error(
       `CODEQL_PATH points to a file that does not exist: ${envPath}`
     );
   }
-  resolvedCodeQLDir = dirname(envPath);
+  resolvedCodeQLDir = dirname2(envPath);
   resolvedBinaryResult = "codeql";
   logger.info(`CodeQL CLI resolved via CODEQL_PATH: ${envPath} (dir: ${resolvedCodeQLDir})`);
   return resolvedBinaryResult;
@@ -114,7 +1414,7 @@ async function validateCodeQLBinaryReachable() {
   const binary2 = resolvedBinaryResult ?? "codeql";
   const env = { ...process.env };
   if (resolvedCodeQLDir) {
-    env.PATH = resolvedCodeQLDir + delimiter + (env.PATH || "");
+    env.PATH = resolvedCodeQLDir + delimiter4 + (env.PATH || "");
   }
   try {
     const { stdout } = await execFileAsync(binary2, ["version", "--format=terse"], {
@@ -154,7 +1454,7 @@ function getSafeEnvironment(additionalEnv) {
     }
   }
   if (resolvedCodeQLDir && safeEnv.PATH) {
-    safeEnv.PATH = `${resolvedCodeQLDir}${delimiter}${safeEnv.PATH}`;
+    safeEnv.PATH = `${resolvedCodeQLDir}${delimiter4}${safeEnv.PATH}`;
   } else if (resolvedCodeQLDir) {
     safeEnv.PATH = resolvedCodeQLDir;
   }
@@ -253,6 +1553,41 @@ function buildQLTArgs(subcommand, options) {
 async function executeCodeQLCommand(subcommand, options, additionalArgs = [], cwd) {
   const args = buildCodeQLArgs(subcommand, options);
   args.push(...additionalArgs);
+  const canUseCLIServer = !FRESH_PROCESS_SUBCOMMANDS.has(subcommand) && !cwd;
+  if (canUseCLIServer) {
+    try {
+      const { getServerManager: getServerManager2 } = await Promise.resolve().then(() => (init_server_manager(), server_manager_exports));
+      const manager = getServerManager2();
+      if (manager.isRunning("cli")) {
+        const cliServer = await manager.getCLIServer({});
+        const sanitizedArgs = sanitizeCLIArguments(args);
+        logger.info(`Executing CodeQL command via cli-server: ${subcommand}`, { args: sanitizedArgs });
+        const stdout = await cliServer.runCommand(sanitizedArgs);
+        return {
+          stdout,
+          stderr: "",
+          success: true,
+          exitCode: 0
+        };
+      } else {
+        logger.debug(`cli-server not yet running for "${subcommand}", using fresh process`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("CLI server is not running") || message.includes("CLI server exited") || message.includes("failed to start")) {
+        logger.warn(`cli-server unavailable for "${subcommand}", falling back to fresh process: ${message}`);
+      } else {
+        logger.error(`cli-server command failed for "${subcommand}": ${message}`);
+        return {
+          stdout: "",
+          stderr: message,
+          success: false,
+          error: message,
+          exitCode: 1
+        };
+      }
+    }
+  }
   return executeCLICommand({
     command: "codeql",
     args,
@@ -286,7 +1621,7 @@ async function validateCommandExists(command) {
     return false;
   }
 }
-var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult;
+var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult, FRESH_PROCESS_SUBCOMMANDS;
 var init_cli_executor = __esm({
   "src/lib/cli-executor.ts"() {
     "use strict";
@@ -335,77 +1670,12 @@ var init_cli_executor = __esm({
     ];
     DANGEROUS_CONTROL_CHARS = /[\x01-\x08\x0B\x0C\x0E-\x1F]/;
     resolvedCodeQLDir = null;
-  }
-});
-
-// src/utils/package-paths.ts
-var package_paths_exports = {};
-__export(package_paths_exports, {
-  getPackageRootDir: () => getPackageRootDir,
-  getPackageVersion: () => getPackageVersion,
-  getUserWorkspaceDir: () => getUserWorkspaceDir,
-  getWorkspaceRootDir: () => getWorkspaceRootDir,
-  packageRootDir: () => packageRootDir,
-  resolveToolQueryPackPath: () => resolveToolQueryPackPath,
-  workspaceRootDir: () => workspaceRootDir
-});
-import { dirname as dirname3, resolve } from "path";
-import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
-import { fileURLToPath } from "url";
-function isRunningFromSource(dir) {
-  const normalized = dir.replace(/\\/g, "/");
-  return /\/src(\/[^/]+)?$/.test(normalized);
-}
-function getPackageRootDir(currentDir = __dirname) {
-  return isRunningFromSource(currentDir) ? resolve(currentDir, "..", "..") : resolve(currentDir, "..");
-}
-function getWorkspaceRootDir(packageRoot) {
-  const pkgRoot = packageRoot ?? getPackageRootDir();
-  const parentDir = resolve(pkgRoot, "..");
-  try {
-    const parentPkgPath = resolve(parentDir, "package.json");
-    if (existsSync2(parentPkgPath)) {
-      const parentPkg = JSON.parse(readFileSync2(parentPkgPath, "utf8"));
-      if (parentPkg.workspaces) {
-        return parentDir;
-      }
-    }
-  } catch {
-  }
-  return pkgRoot;
-}
-function resolveToolQueryPackPath(language, packageRoot) {
-  const pkgRoot = packageRoot ?? getPackageRootDir();
-  return resolve(pkgRoot, "ql", language, "tools", "src");
-}
-function getPackageVersion() {
-  if (_cachedVersion !== void 0) return _cachedVersion;
-  try {
-    const pkgPath = resolve(getPackageRootDir(), "package.json");
-    const pkg = JSON.parse(readFileSync2(pkgPath, "utf8"));
-    _cachedVersion = pkg.version ?? "0.0.0";
-  } catch {
-    _cachedVersion = "0.0.0";
-  }
-  return _cachedVersion;
-}
-function getUserWorkspaceDir() {
-  if (process.env.CODEQL_MCP_WORKSPACE) {
-    return process.env.CODEQL_MCP_WORKSPACE;
-  }
-  if (workspaceRootDir === packageRootDir) {
-    return process.cwd();
-  }
-  return workspaceRootDir;
-}
-var __filename, __dirname, _cachedVersion, packageRootDir, workspaceRootDir;
-var init_package_paths = __esm({
-  "src/utils/package-paths.ts"() {
-    "use strict";
-    __filename = fileURLToPath(import.meta.url);
-    __dirname = dirname3(__filename);
-    packageRootDir = getPackageRootDir();
-    workspaceRootDir = getWorkspaceRootDir(packageRootDir);
+    FRESH_PROCESS_SUBCOMMANDS = /* @__PURE__ */ new Set([
+      "database analyze",
+      "database create",
+      "test extract",
+      "test run"
+    ]);
   }
 });
 
@@ -417,7 +1687,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { resolve as resolve11 } from "path";
-import { pathToFileURL as pathToFileURL4 } from "url";
+import { pathToFileURL as pathToFileURL5 } from "url";
 
 // src/tools/codeql/bqrs-decode.ts
 import { z as z2 } from "zod";
@@ -430,9 +1700,9 @@ import { z } from "zod";
 // src/lib/query-results-evaluator.ts
 init_cli_executor();
 init_logger();
-import { writeFileSync, readFileSync } from "fs";
-import { dirname as dirname2, isAbsolute as isAbsolute2 } from "path";
-import { mkdirSync } from "fs";
+import { writeFileSync, readFileSync as readFileSync2 } from "fs";
+import { dirname as dirname3, isAbsolute as isAbsolute3 } from "path";
+import { mkdirSync as mkdirSync3 } from "fs";
 var BUILT_IN_EVALUATORS = {
   "json-decode": "JSON format decoder for query results",
   "csv-decode": "CSV format decoder for query results",
@@ -440,7 +1710,7 @@ var BUILT_IN_EVALUATORS = {
 };
 async function extractQueryMetadata(queryPath) {
   try {
-    const queryContent = readFileSync(queryPath, "utf-8");
+    const queryContent = readFileSync2(queryPath, "utf-8");
     const metadata = {};
     const kindMatch = queryContent.match(/@kind\s+([^\s]+)/);
     if (kindMatch) metadata.kind = kindMatch[1];
@@ -474,7 +1744,7 @@ async function evaluateWithJsonDecoder(bqrsPath, outputPath) {
       };
     }
     const defaultOutputPath = outputPath || bqrsPath.replace(".bqrs", ".json");
-    mkdirSync(dirname2(defaultOutputPath), { recursive: true });
+    mkdirSync3(dirname3(defaultOutputPath), { recursive: true });
     writeFileSync(defaultOutputPath, result.stdout);
     return {
       success: true,
@@ -502,7 +1772,7 @@ async function evaluateWithCsvDecoder(bqrsPath, outputPath) {
       };
     }
     const defaultOutputPath = outputPath || bqrsPath.replace(".bqrs", ".csv");
-    mkdirSync(dirname2(defaultOutputPath), { recursive: true });
+    mkdirSync3(dirname3(defaultOutputPath), { recursive: true });
     writeFileSync(defaultOutputPath, result.stdout);
     return {
       success: true,
@@ -548,7 +1818,7 @@ async function evaluateWithMermaidGraph(bqrsPath, queryPath, outputPath) {
     }
     const mermaidContent = generateMermaidFromGraphResults(queryResults, metadata);
     const defaultOutputPath = outputPath || bqrsPath.replace(".bqrs", ".md");
-    mkdirSync(dirname2(defaultOutputPath), { recursive: true });
+    mkdirSync3(dirname3(defaultOutputPath), { recursive: true });
     writeFileSync(defaultOutputPath, mermaidContent);
     return {
       success: true,
@@ -664,7 +1934,7 @@ async function evaluateQueryResults(bqrsPath, queryPath, evaluationFunction, out
       case "mermaid-graph":
         return await evaluateWithMermaidGraph(bqrsPath, queryPath, outputPath);
       default:
-        if (isAbsolute2(evalFunc)) {
+        if (isAbsolute3(evalFunc)) {
           return await evaluateWithCustomScript(bqrsPath, queryPath, evalFunc, outputPath);
         } else {
           return {
@@ -688,30 +1958,10 @@ async function evaluateWithCustomScript(_bqrsPath, _queryPath, _scriptPath, _out
 }
 
 // src/lib/log-directory-manager.ts
-import { mkdirSync as mkdirSync3, existsSync as existsSync3 } from "fs";
-import { join as join2, resolve as resolve3 } from "path";
+init_temp_dir();
+import { mkdirSync as mkdirSync4, existsSync as existsSync3 } from "fs";
+import { join as join4, resolve as resolve3 } from "path";
 import { randomBytes } from "crypto";
-
-// src/utils/temp-dir.ts
-init_package_paths();
-import { mkdirSync as mkdirSync2, mkdtempSync } from "fs";
-import { isAbsolute as isAbsolute3, join, resolve as resolve2 } from "path";
-var PROJECT_TMP_BASE = process.env.CODEQL_MCP_TMP_DIR ? isAbsolute3(process.env.CODEQL_MCP_TMP_DIR) ? process.env.CODEQL_MCP_TMP_DIR : resolve2(process.cwd(), process.env.CODEQL_MCP_TMP_DIR) : join(getPackageRootDir(), ".tmp");
-function getProjectTmpBase() {
-  mkdirSync2(PROJECT_TMP_BASE, { recursive: true });
-  return PROJECT_TMP_BASE;
-}
-function createProjectTempDir(prefix) {
-  const base = getProjectTmpBase();
-  return mkdtempSync(join(base, prefix));
-}
-function getProjectTmpDir(name) {
-  const dir = join(getProjectTmpBase(), name);
-  mkdirSync2(dir, { recursive: true });
-  return dir;
-}
-
-// src/lib/log-directory-manager.ts
 function ensurePathWithinBase(baseDir, targetPath) {
   const absBase = resolve3(baseDir);
   const absTarget = resolve3(targetPath);
@@ -725,24 +1975,25 @@ function getOrCreateLogDirectory(logDir) {
   if (logDir) {
     const absLogDir = ensurePathWithinBase(baseLogDir, logDir);
     if (!existsSync3(absLogDir)) {
-      mkdirSync3(absLogDir, { recursive: true });
+      mkdirSync4(absLogDir, { recursive: true });
     }
     return absLogDir;
   }
   if (!existsSync3(baseLogDir)) {
-    mkdirSync3(baseLogDir, { recursive: true });
+    mkdirSync4(baseLogDir, { recursive: true });
   }
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
   const uniqueId = randomBytes(4).toString("hex");
-  const uniqueLogDir = join2(baseLogDir, `query-run-${timestamp2}-${uniqueId}`);
-  mkdirSync3(uniqueLogDir, { recursive: true });
+  const uniqueLogDir = join4(baseLogDir, `query-run-${timestamp2}-${uniqueId}`);
+  mkdirSync4(uniqueLogDir, { recursive: true });
   return uniqueLogDir;
 }
 
 // src/lib/cli-tool-registry.ts
 init_package_paths();
-import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync4 } from "fs";
-import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join3, resolve as resolve4 } from "path";
+init_temp_dir();
+import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync5 } from "fs";
+import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join5, resolve as resolve4 } from "path";
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -911,7 +2162,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join3(tempDir, "selectedSourceFiles.csv");
+                csvPath = join5(tempDir, "selectedSourceFiles.csv");
                 const csvContent = filePaths.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -931,7 +2182,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join3(tempDir, "sourceFunction.csv");
+                csvPath = join5(tempDir, "sourceFunction.csv");
                 const csvContent = functionNames.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -951,7 +2202,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join3(tempDir, "targetFunction.csv");
+                csvPath = join5(tempDir, "targetFunction.csv");
                 const csvContent = functionNames.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -984,7 +2235,7 @@ function registerCLITool(server, definition) {
         if (name === "codeql_query_run" || name === "codeql_test_run") {
           queryLogDir = getOrCreateLogDirectory(customLogDir);
           logger.info(`Using log directory for ${name}: ${queryLogDir}`);
-          const timestampPath = join3(queryLogDir, "timestamp");
+          const timestampPath = join5(queryLogDir, "timestamp");
           writeFileSync2(timestampPath, Date.now().toString(), "utf8");
           options.logdir = queryLogDir;
           if (!options.verbosity) {
@@ -992,10 +2243,10 @@ function registerCLITool(server, definition) {
           }
           if (name === "codeql_query_run") {
             if (!options["evaluator-log"]) {
-              options["evaluator-log"] = join3(queryLogDir, "evaluator-log.jsonl");
+              options["evaluator-log"] = join5(queryLogDir, "evaluator-log.jsonl");
             }
             if (!options.output) {
-              options.output = join3(queryLogDir, "results.bqrs");
+              options.output = join5(queryLogDir, "results.bqrs");
             }
           }
         }
@@ -1022,7 +2273,7 @@ function registerCLITool(server, definition) {
         }
         if (name === "codeql_query_run" && result.success && queryLogDir) {
           const bqrsPath = options.output;
-          const sarifPath = join3(queryLogDir, "results.sarif");
+          const sarifPath = join5(queryLogDir, "results.sarif");
           if (existsSync4(bqrsPath)) {
             try {
               const sarifResult = await executeCodeQLCommand(
@@ -1201,7 +2452,7 @@ async function interpretBQRSFile(bqrsPath, queryPath, format, outputPath, logger
         error: `Format '${format}' is only compatible with @kind graph queries, but this query has @kind ${metadata.kind}`
       };
     }
-    mkdirSync4(dirname4(outputPath), { recursive: true });
+    mkdirSync5(dirname4(outputPath), { recursive: true });
     const params = {
       format,
       output: outputPath,
@@ -4583,8 +5834,8 @@ init_cli_executor();
 init_logger();
 import { z as z14 } from "zod";
 import { writeFileSync as writeFileSync3, readFileSync as readFileSync4, existsSync as existsSync6 } from "fs";
-import { join as join5, dirname as dirname6, basename as basename4 } from "path";
-import { mkdirSync as mkdirSync5 } from "fs";
+import { join as join7, dirname as dirname6, basename as basename4 } from "path";
+import { mkdirSync as mkdirSync6 } from "fs";
 function parseEvaluatorLog(logPath) {
   const logContent = readFileSync4(logPath, "utf-8");
   const jsonObjects = logContent.split("\n\n").filter((s) => s.trim());
@@ -4720,11 +5971,11 @@ function registerProfileCodeQLQueryTool(server) {
         let sarifPath;
         if (!logPath) {
           logger.info("No evaluator log provided, running query to generate one");
-          const defaultOutputDir = outputDir || join5(dirname6(query), "profile-output");
-          mkdirSync5(defaultOutputDir, { recursive: true });
-          logPath = join5(defaultOutputDir, "evaluator-log.jsonl");
-          bqrsPath = join5(defaultOutputDir, "query-results.bqrs");
-          sarifPath = join5(defaultOutputDir, "query-results.sarif");
+          const defaultOutputDir = outputDir || join7(dirname6(query), "profile-output");
+          mkdirSync6(defaultOutputDir, { recursive: true });
+          logPath = join7(defaultOutputDir, "evaluator-log.jsonl");
+          bqrsPath = join7(defaultOutputDir, "query-results.bqrs");
+          sarifPath = join7(defaultOutputDir, "query-results.sarif");
           const queryResult = await executeCodeQLCommand(
             "query run",
             {
@@ -4776,12 +6027,12 @@ function registerProfileCodeQLQueryTool(server) {
         logger.info(`Parsing evaluator log from: ${logPath}`);
         const profile = parseEvaluatorLog(logPath);
         const profileOutputDir = outputDir || dirname6(logPath);
-        mkdirSync5(profileOutputDir, { recursive: true });
-        const jsonPath = join5(profileOutputDir, "query-evaluation-profile.json");
+        mkdirSync6(profileOutputDir, { recursive: true });
+        const jsonPath = join7(profileOutputDir, "query-evaluation-profile.json");
         const jsonContent = formatAsJson(profile);
         writeFileSync3(jsonPath, jsonContent);
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join5(profileOutputDir, "query-evaluation-profile.md");
+        const mdPath = join7(profileOutputDir, "query-evaluation-profile.md");
         const mdContent = formatAsMermaid(profile);
         writeFileSync3(mdPath, mdContent);
         logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
@@ -4936,8 +6187,9 @@ var codeqlQueryRunTool = {
 
 // src/tools/codeql/quick-evaluate.ts
 import { z as z18 } from "zod";
-import { join as join6, resolve as resolve6 } from "path";
+import { join as join8, resolve as resolve6 } from "path";
 init_logger();
+init_temp_dir();
 async function quickEvaluate({
   file,
   db: _db,
@@ -4954,7 +6206,7 @@ async function quickEvaluate({
         throw new Error(`Symbol '${symbol}' not found as class or predicate in file: ${file}`);
       }
     }
-    const resolvedOutput = resolve6(output_path || join6(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
+    const resolvedOutput = resolve6(output_path || join8(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error) {
     throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -5535,34 +6787,34 @@ function registerCodeQLTools(server) {
 
 // src/lib/resources.ts
 import { readFileSync as readFileSync5 } from "fs";
-import { join as join8, dirname as dirname7 } from "path";
+import { join as join10, dirname as dirname7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = dirname7(__filename2);
 function getGettingStartedGuide() {
   try {
-    return readFileSync5(join8(__dirname2, "../resources/getting-started.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync5(join8(__dirname2, "../resources/query-basics.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync5(join8(__dirname2, "../resources/security-templates.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync5(join8(__dirname2, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync5(join10(__dirname2, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -5649,1116 +6901,41 @@ function registerCodeQLResources(server) {
 }
 
 // src/tools/lsp/lsp-diagnostics.ts
+init_logger();
+init_temp_dir();
 import { z as z31 } from "zod";
+import { join as join11 } from "path";
+import { pathToFileURL as pathToFileURL3 } from "url";
 
-// src/lib/server-manager.ts
-import { mkdirSync as mkdirSync7 } from "fs";
-import { join as join10 } from "path";
-import { randomUUID } from "crypto";
-
-// src/lib/server-config.ts
-import { createHash } from "crypto";
-function computeConfigHash(type2, config) {
-  const sortKeys = (_key, value) => {
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      const sorted = {};
-      for (const k of Object.keys(value).sort()) {
-        sorted[k] = value[k];
-      }
-      return sorted;
-    }
-    return value;
+// src/tools/lsp/lsp-server-helper.ts
+init_server_manager();
+init_logger();
+import { isAbsolute as isAbsolute5, resolve as resolve9 } from "path";
+import { pathToFileURL as pathToFileURL2 } from "url";
+async function getInitializedLanguageServer(opts = {}) {
+  const { packageRootDir: pkgRoot, getUserWorkspaceDir: getUserWorkspaceDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
+  const options = opts.serverOptions ?? {};
+  const config = {
+    checkErrors: "ON_CHANGE",
+    loglevel: options.loglevel ?? "WARN",
+    searchPath: options.searchPath ?? resolve9(pkgRoot, "ql"),
+    synchronous: options.synchronous,
+    verbosity: options.verbosity
   };
-  const canonical = JSON.stringify({ config, type: type2 }, sortKeys);
-  return createHash("sha256").update(canonical).digest("hex");
-}
-function buildQueryServerArgs(config) {
-  const args = [
-    "execute",
-    "query-server2"
-  ];
-  if (config.searchPath) {
-    args.push(`--search-path=${config.searchPath}`);
+  const manager = getServerManager();
+  const server = await manager.getLanguageServer(config);
+  let effectiveUri = opts.workspaceUri;
+  if (effectiveUri && !effectiveUri.startsWith("file://")) {
+    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve9(getUserWorkspaceDir2(), effectiveUri);
+    effectiveUri = pathToFileURL2(absWorkspace).href;
   }
-  if (config.commonCaches) {
-    args.push(`--common-caches=${config.commonCaches}`);
-  }
-  if (config.logdir) {
-    args.push(`--logdir=${config.logdir}`);
-  }
-  if (config.threads !== void 0) {
-    args.push(`--threads=${config.threads}`);
-  }
-  if (config.timeout !== void 0) {
-    args.push(`--timeout=${config.timeout}`);
-  }
-  if (config.maxDiskCache !== void 0) {
-    args.push(`--max-disk-cache=${config.maxDiskCache}`);
-  }
-  if (config.evaluatorLog) {
-    args.push(`--evaluator-log=${config.evaluatorLog}`);
-  }
-  if (config.debug) {
-    args.push("--debug");
-    args.push("--tuple-counting");
-  } else if (config.tupleCounting) {
-    args.push("--tuple-counting");
-  }
-  return args;
-}
-function buildCLIServerArgs(config) {
-  const args = [
-    "execute",
-    "cli-server"
-  ];
-  if (config.commonCaches) {
-    args.push(`--common-caches=${config.commonCaches}`);
-  }
-  if (config.logdir) {
-    args.push(`--logdir=${config.logdir}`);
-  }
-  return args;
-}
-
-// src/lib/language-server.ts
-init_logger();
-init_package_paths();
-import { spawn } from "child_process";
-import { EventEmitter } from "events";
-import { setTimeout as setTimeout3, clearTimeout as clearTimeout2 } from "timers";
-import { pathToFileURL } from "url";
-import { delimiter as delimiter2, join as join9 } from "path";
-init_cli_executor();
-
-// src/utils/process-ready.ts
-init_logger();
-import { clearTimeout, setTimeout as setTimeout2 } from "timers";
-var DEFAULT_READY_TIMEOUT_MS = 3e4;
-function waitForProcessReady(child, name, opts) {
-  const timeoutMs = opts?.timeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
-  return new Promise((resolve12, reject) => {
-    let settled = false;
-    const cleanup = () => {
-      settled = true;
-      child.stderr?.removeListener("data", onStderr);
-      child.stdout?.removeListener("data", onStdout);
-      child.removeListener("error", onError);
-      child.removeListener("exit", onExit);
-      clearTimeout(timer);
-    };
-    const onStderr = () => {
-      if (settled) return;
-      logger.debug(`${name}: ready (stderr output detected)`);
-      cleanup();
-      resolve12();
-    };
-    const onStdout = () => {
-      if (settled) return;
-      logger.debug(`${name}: ready (stdout output detected)`);
-      cleanup();
-      resolve12();
-    };
-    const onError = (error) => {
-      if (settled) return;
-      cleanup();
-      reject(new Error(`${name} failed to start: ${error.message}`));
-    };
-    const onExit = (code) => {
-      if (settled) return;
-      cleanup();
-      reject(new Error(`${name} exited before becoming ready (code: ${code})`));
-    };
-    const timer = setTimeout2(() => {
-      if (settled) return;
-      logger.warn(`${name}: readiness timeout (${timeoutMs} ms) \u2014 proceeding anyway`);
-      cleanup();
-      resolve12();
-    }, timeoutMs);
-    child.stderr?.on("data", onStderr);
-    child.stdout?.on("data", onStdout);
-    child.on("error", onError);
-    child.on("exit", onExit);
-    if (child.killed || child.exitCode !== null) {
-      cleanup();
-      reject(new Error(`${name} is not running (exitCode: ${child.exitCode})`));
-    }
-  });
-}
-
-// src/lib/language-server.ts
-var CodeQLLanguageServer = class extends EventEmitter {
-  constructor(_options = {}) {
-    super();
-    this._options = _options;
-  }
-  server = null;
-  messageId = 1;
-  pendingResponses = /* @__PURE__ */ new Map();
-  isInitialized = false;
-  currentWorkspaceUri;
-  messageBuffer = "";
-  async start() {
-    if (this.server) {
-      throw new Error("Language server is already running");
-    }
-    logger.info("Starting CodeQL Language Server...");
-    const args = [
-      "execute",
-      "language-server",
-      "--check-errors=ON_CHANGE"
-    ];
-    if (this._options.searchPath) {
-      args.push(`--search-path=${this._options.searchPath}`);
-    }
-    if (this._options.logdir) {
-      args.push(`--logdir=${this._options.logdir}`);
-    }
-    if (this._options.loglevel) {
-      args.push(`--loglevel=${this._options.loglevel}`);
-    }
-    if (this._options.synchronous) {
-      args.push("--synchronous");
-    }
-    if (this._options.verbosity) {
-      args.push(`--verbosity=${this._options.verbosity}`);
-    }
-    const spawnEnv = { ...process.env };
-    const codeqlDir = getResolvedCodeQLDir();
-    if (codeqlDir && spawnEnv.PATH) {
-      spawnEnv.PATH = `${codeqlDir}${delimiter2}${spawnEnv.PATH}`;
-    } else if (codeqlDir) {
-      spawnEnv.PATH = codeqlDir;
-    }
-    this.server = spawn("codeql", args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: spawnEnv
-    });
-    this.server.stderr?.on("data", (data) => {
-      logger.debug("CodeQL LS stderr:", data.toString());
-    });
-    this.server.stdout?.on("data", (data) => {
-      this.handleStdout(data);
-    });
-    this.server.on("error", (error) => {
-      logger.error("CodeQL Language Server error:", error);
-      this.emit("error", error);
-    });
-    this.server.on("exit", (code) => {
-      logger.info("CodeQL Language Server exited with code:", code);
-      this.server = null;
-      this.isInitialized = false;
-      this.emit("exit", code);
-    });
-    await waitForProcessReady(this.server, "CodeQL Language Server");
-  }
-  handleStdout(data) {
-    this.messageBuffer += data.toString();
-    let headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
-    while (headerEnd !== -1) {
-      const header = this.messageBuffer.substring(0, headerEnd);
-      const contentLengthMatch = header.match(/Content-Length: (\d+)/);
-      if (contentLengthMatch) {
-        const contentLength = parseInt(contentLengthMatch[1]);
-        const messageStart = headerEnd + 4;
-        const messageEnd = messageStart + contentLength;
-        if (this.messageBuffer.length >= messageEnd) {
-          const messageContent = this.messageBuffer.substring(messageStart, messageEnd);
-          this.messageBuffer = this.messageBuffer.substring(messageEnd);
-          try {
-            const message = JSON.parse(messageContent);
-            this.handleMessage(message);
-          } catch (error) {
-            logger.error("Failed to parse LSP message:", error, messageContent);
-          }
-          headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
-        } else {
-          break;
-        }
-      } else {
-        logger.error("Invalid LSP header:", header);
-        this.messageBuffer = "";
-        break;
-      }
-    }
-  }
-  handleMessage(message) {
-    logger.debug("Received LSP message:", message);
-    if (message.id !== void 0 && this.pendingResponses.has(Number(message.id))) {
-      const pending = this.pendingResponses.get(Number(message.id));
-      this.pendingResponses.delete(Number(message.id));
-      if (message.error) {
-        pending.reject(new Error(`LSP Error: ${message.error.message}`));
-      } else {
-        pending.resolve(message.result);
-      }
-      return;
-    }
-    if (message.method === "textDocument/publishDiagnostics") {
-      this.emit("diagnostics", message.params);
-    }
-  }
-  sendMessage(message) {
-    if (!this.server?.stdin) {
-      throw new Error("Language server is not running");
-    }
-    const messageStr = JSON.stringify(message);
-    const contentLength = Buffer.byteLength(messageStr, "utf8");
-    const header = `Content-Length: ${contentLength}\r
-\r
-`;
-    const fullMessage = header + messageStr;
-    logger.debug("Sending LSP message:", fullMessage);
-    this.server.stdin.write(fullMessage);
-  }
-  sendRequest(method, params) {
-    const id = this.messageId++;
-    const message = {
-      jsonrpc: "2.0",
-      id,
-      method,
-      params
-    };
-    return new Promise((resolve12, reject) => {
-      this.pendingResponses.set(id, { resolve: resolve12, reject });
-      this.sendMessage(message);
-      setTimeout3(() => {
-        if (this.pendingResponses.has(id)) {
-          this.pendingResponses.delete(id);
-          reject(new Error(`LSP request timeout for method: ${method}`));
-        }
-      }, 3e4);
-    });
-  }
-  sendNotification(method, params) {
-    const message = {
-      jsonrpc: "2.0",
-      method,
-      params
-    };
-    this.sendMessage(message);
-  }
-  /**
-   * Initialize the language server with an optional workspace URI.
-   *
-   * If the server is already initialized with a different workspace, a
-   * `workspace/didChangeWorkspaceFolders` notification is sent to update
-   * the workspace context instead of requiring a full restart.
-   */
-  async initialize(workspaceUri) {
-    if (this.isInitialized) {
-      if (workspaceUri && workspaceUri !== this.currentWorkspaceUri) {
-        await this.updateWorkspace(workspaceUri);
-      }
-      return;
-    }
-    logger.info("Initializing CodeQL Language Server...");
-    const initParams = {
-      processId: process.pid,
-      clientInfo: {
-        name: "codeql-development-mcp-server",
-        version: getPackageVersion()
-      },
-      capabilities: {
-        textDocument: {
-          completion: { completionItem: { snippetSupport: false } },
-          definition: {},
-          publishDiagnostics: {},
-          references: {},
-          synchronization: {
-            didClose: true,
-            didChange: true,
-            didOpen: true
-          }
-        },
-        workspace: {
-          workspaceFolders: true
-        }
-      }
-    };
-    if (workspaceUri) {
-      initParams.workspaceFolders = [{
-        uri: workspaceUri,
-        name: "codeql-workspace"
-      }];
-    }
-    await this.sendRequest("initialize", initParams);
-    this.sendNotification("initialized", {});
-    this.currentWorkspaceUri = workspaceUri;
-    this.isInitialized = true;
-    logger.info("CodeQL Language Server initialized successfully");
-  }
-  /**
-   * Update the workspace folders on a running, initialized server.
-   */
-  async updateWorkspace(newUri) {
-    logger.info(`Updating workspace from ${this.currentWorkspaceUri} to ${newUri}`);
-    const removed = this.currentWorkspaceUri ? [{ uri: this.currentWorkspaceUri, name: "codeql-workspace" }] : [];
-    this.sendNotification("workspace/didChangeWorkspaceFolders", {
-      event: {
-        added: [{ uri: newUri, name: "codeql-workspace" }],
-        removed
-      }
-    });
-    this.currentWorkspaceUri = newUri;
-  }
-  /**
-   * Get the current workspace URI.
-   */
-  getWorkspaceUri() {
-    return this.currentWorkspaceUri;
-  }
-  async evaluateQL(qlCode, uri) {
-    if (!this.isInitialized) {
-      throw new Error("Language server is not initialized");
-    }
-    const documentUri = uri || pathToFileURL(join9(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-    return new Promise((resolve12, reject) => {
-      let diagnosticsReceived = false;
-      const timeout = setTimeout3(() => {
-        if (!diagnosticsReceived) {
-          this.removeAllListeners("diagnostics");
-          reject(new Error("Timeout waiting for diagnostics"));
-        }
-      }, 3e4);
-      const diagnosticsHandler = (params) => {
-        if (params.uri === documentUri) {
-          diagnosticsReceived = true;
-          clearTimeout2(timeout);
-          this.removeListener("diagnostics", diagnosticsHandler);
-          this.sendNotification("textDocument/didClose", {
-            textDocument: { uri: documentUri }
-          });
-          resolve12(params.diagnostics);
-        }
-      };
-      this.on("diagnostics", diagnosticsHandler);
-      this.sendNotification("textDocument/didOpen", {
-        textDocument: {
-          uri: documentUri,
-          languageId: "ql",
-          version: 1,
-          text: qlCode
-        }
-      });
-    });
-  }
-  // ---- LSP feature methods (issue #1) ----
-  /**
-   * Get code completions at a position in a document.
-   */
-  async getCompletions(params) {
-    if (!this.isInitialized) {
-      throw new Error("Language server is not initialized");
-    }
-    if (!this.isRunning()) {
-      throw new Error("Language server process is not running");
-    }
-    const result = await this.sendRequest("textDocument/completion", params);
-    if (result && typeof result === "object" && "items" in result) {
-      return result.items;
-    }
-    return result || [];
-  }
-  /**
-   * Find the definition(s) of a symbol at a position.
-   */
-  async getDefinition(params) {
-    if (!this.isInitialized) {
-      throw new Error("Language server is not initialized");
-    }
-    if (!this.isRunning()) {
-      throw new Error("Language server process is not running");
-    }
-    const result = await this.sendRequest("textDocument/definition", params);
-    return this.normalizeLocations(result);
-  }
-  /**
-   * Find all references to a symbol at a position.
-   */
-  async getReferences(params) {
-    if (!this.isInitialized) {
-      throw new Error("Language server is not initialized");
-    }
-    if (!this.isRunning()) {
-      throw new Error("Language server process is not running");
-    }
-    const result = await this.sendRequest("textDocument/references", {
-      ...params,
-      context: params.context ?? { includeDeclaration: true }
-    });
-    return this.normalizeLocations(result);
-  }
-  /**
-   * Open a text document in the language server.
-   * The document must be opened before requesting completions, definitions, etc.
-   */
-  openDocument(uri, text, languageId = "ql", version = 1) {
-    if (!this.isInitialized) {
-      throw new Error("Language server is not initialized");
-    }
-    this.sendNotification("textDocument/didOpen", {
-      textDocument: { uri, languageId, version, text }
-    });
-  }
-  /**
-   * Close a text document in the language server.
-   */
-  closeDocument(uri) {
-    if (!this.isInitialized) {
-      throw new Error("Language server is not initialized");
-    }
-    this.sendNotification("textDocument/didClose", {
-      textDocument: { uri }
-    });
-  }
-  /**
-   * Normalize a definition/references/implementation result to Location[].
-   * The LSP spec allows Location | Location[] | LocationLink[].
-   */
-  normalizeLocations(result) {
-    if (!result) return [];
-    if (Array.isArray(result)) {
-      return result.map((item) => {
-        if ("targetUri" in item) {
-          return { uri: item.targetUri, range: item.targetRange };
-        }
-        return item;
-      });
-    }
-    if (typeof result === "object" && "uri" in result) {
-      return [result];
-    }
-    return [];
-  }
-  async shutdown() {
-    if (!this.server) {
-      return;
-    }
-    logger.info("Shutting down CodeQL Language Server...");
-    try {
-      await this.sendRequest("shutdown", {});
-      if (this.server) {
-        this.sendNotification("exit", {});
-      }
-    } catch (error) {
-      logger.warn("Error during graceful shutdown:", error);
-    }
-    await new Promise((resolve12) => {
-      const timer = setTimeout3(() => {
-        if (this.server) {
-          this.server.kill("SIGTERM");
-        }
-        resolve12();
-      }, 1e3);
-      if (this.server) {
-        this.server.once("exit", () => {
-          clearTimeout2(timer);
-          this.server = null;
-          resolve12();
-        });
-      } else {
-        clearTimeout2(timer);
-        resolve12();
-      }
-    });
-    this.isInitialized = false;
-  }
-  isRunning() {
-    return this.server !== null && !this.server.killed;
-  }
-};
-
-// src/lib/query-server.ts
-import { spawn as spawn2 } from "child_process";
-import { delimiter as delimiter3 } from "path";
-import { EventEmitter as EventEmitter2 } from "events";
-import { clearTimeout as clearTimeout3, setTimeout as setTimeout4 } from "timers";
-init_cli_executor();
-init_logger();
-var CodeQLQueryServer = class extends EventEmitter2 {
-  messageBuffer = "";
-  messageId = 1;
-  pendingRequests = /* @__PURE__ */ new Map();
-  process = null;
-  config;
-  constructor(config) {
-    super();
-    this.config = config;
-  }
-  /**
-   * Start the query-server2 process.
-   */
-  async start() {
-    if (this.process) {
-      throw new Error("Query server is already running");
-    }
-    logger.info("Starting CodeQL Query Server (query-server2)...");
-    const args = buildQueryServerArgs(this.config);
-    const spawnEnv = { ...process.env };
-    const codeqlDir = getResolvedCodeQLDir();
-    if (codeqlDir && spawnEnv.PATH) {
-      spawnEnv.PATH = `${codeqlDir}${delimiter3}${spawnEnv.PATH}`;
-    } else if (codeqlDir) {
-      spawnEnv.PATH = codeqlDir;
-    }
-    this.process = spawn2("codeql", args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: spawnEnv
-    });
-    this.process.stderr?.on("data", (data) => {
-      logger.debug("QueryServer2 stderr:", data.toString());
-    });
-    this.process.stdout?.on("data", (data) => {
-      this.handleStdout(data);
-    });
-    this.process.on("error", (error) => {
-      logger.error("Query server process error:", error);
-      this.emit("error", error);
-    });
-    this.process.on("exit", (code) => {
-      logger.info(`Query server exited with code: ${code}`);
-      this.rejectAllPending(new Error(`Query server exited with code: ${code}`));
-      this.process = null;
-      this.emit("exit", code);
-    });
-    await waitForProcessReady(this.process, "CodeQL Query Server");
-    logger.info("CodeQL Query Server started");
-  }
-  /**
-   * Send a request to the query server and await the response.
-   *
-   * @param method - The JSON-RPC method name.
-   * @param params - The method parameters.
-   * @param timeoutMs - Request timeout in milliseconds (default: 300000 = 5 min).
-   * @returns The result from the server.
-   */
-  sendRequest(method, params, timeoutMs = 3e5) {
-    const id = this.messageId++;
-    const message = {
-      id,
-      jsonrpc: "2.0",
-      method,
-      params
-    };
-    return new Promise((resolve12, reject) => {
-      this.pendingRequests.set(id, { reject, resolve: resolve12 });
-      try {
-        this.sendRaw(message);
-      } catch (error) {
-        this.pendingRequests.delete(id);
-        reject(error instanceof Error ? error : new Error(String(error)));
-        return;
-      }
-      const timer = setTimeout4(() => {
-        if (this.pendingRequests.has(id)) {
-          this.pendingRequests.delete(id);
-          reject(new Error(`Query server request timeout for method: ${method}`));
-        }
-      }, timeoutMs);
-      const originalResolve = resolve12;
-      const originalReject = reject;
-      const wrapped = {
-        reject: (err) => {
-          clearTimeout3(timer);
-          originalReject(err);
-        },
-        resolve: (val) => {
-          clearTimeout3(timer);
-          originalResolve(val);
-        }
-      };
-      this.pendingRequests.set(id, wrapped);
-    });
-  }
-  /**
-   * Gracefully shut down the query server.
-   */
-  async shutdown() {
-    if (!this.process) {
-      return;
-    }
-    logger.info("Shutting down CodeQL Query Server...");
-    try {
-      await this.sendRequest("shutdown", {}, 5e3);
-    } catch (error) {
-      logger.warn("Error during query server graceful shutdown:", error);
-    }
-    await new Promise((resolve12) => {
-      const timer = setTimeout4(() => {
-        if (this.process) {
-          this.process.kill("SIGTERM");
-          this.process = null;
-        }
-        resolve12();
-      }, 2e3);
-      if (this.process) {
-        this.process.once("exit", () => {
-          clearTimeout3(timer);
-          this.process = null;
-          resolve12();
-        });
-      } else {
-        clearTimeout3(timer);
-        resolve12();
-      }
-    });
-  }
-  /**
-   * Whether the query server process is running.
-   */
-  isRunning() {
-    return this.process !== null && !this.process.killed;
-  }
-  // ---- private helpers ----
-  handleStdout(data) {
-    this.messageBuffer += data.toString();
-    let headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
-    while (headerEnd !== -1) {
-      const header = this.messageBuffer.substring(0, headerEnd);
-      const contentLengthMatch = header.match(/Content-Length: (\d+)/);
-      if (contentLengthMatch) {
-        const contentLength = parseInt(contentLengthMatch[1]);
-        const messageStart = headerEnd + 4;
-        const messageEnd = messageStart + contentLength;
-        if (this.messageBuffer.length >= messageEnd) {
-          const messageContent = this.messageBuffer.substring(messageStart, messageEnd);
-          this.messageBuffer = this.messageBuffer.substring(messageEnd);
-          try {
-            const message = JSON.parse(messageContent);
-            this.handleMessage(message);
-          } catch (error) {
-            logger.error("Failed to parse query server message:", error);
-          }
-          headerEnd = this.messageBuffer.indexOf("\r\n\r\n");
-        } else {
-          break;
-        }
-      } else {
-        logger.error("Invalid query server header:", header);
-        this.messageBuffer = "";
-        break;
-      }
-    }
-  }
-  handleMessage(message) {
-    logger.debug("QueryServer2 message:", message);
-    if (message.id !== void 0 && this.pendingRequests.has(Number(message.id))) {
-      const pending = this.pendingRequests.get(Number(message.id));
-      this.pendingRequests.delete(Number(message.id));
-      if (message.error) {
-        pending.reject(new Error(`Query server error: ${message.error.message}`));
-      } else {
-        pending.resolve(message.result);
-      }
-      return;
-    }
-    if (message.method) {
-      this.emit("notification", { method: message.method, params: message.params });
-    }
-  }
-  rejectAllPending(error) {
-    for (const [id, pending] of this.pendingRequests) {
-      pending.reject(error);
-      this.pendingRequests.delete(id);
-    }
-  }
-  sendRaw(message) {
-    if (!this.process?.stdin) {
-      throw new Error("Query server is not running");
-    }
-    const body = JSON.stringify(message);
-    const contentLength = Buffer.byteLength(body, "utf8");
-    const frame = `Content-Length: ${contentLength}\r
-\r
-${body}`;
-    this.process.stdin.write(frame);
-  }
-};
-
-// src/lib/cli-server.ts
-import { spawn as spawn3 } from "child_process";
-import { delimiter as delimiter4 } from "path";
-import { EventEmitter as EventEmitter3 } from "events";
-import { clearTimeout as clearTimeout4, setTimeout as setTimeout5 } from "timers";
-init_cli_executor();
-init_logger();
-var CodeQLCLIServer = class extends EventEmitter3 {
-  commandInProgress = false;
-  commandQueue = [];
-  config;
-  currentReject = null;
-  currentResolve = null;
-  nullBuffer = Buffer.alloc(1);
-  process = null;
-  stdoutBuffer = "";
-  constructor(config) {
-    super();
-    this.config = config;
-  }
-  /**
-   * Start the cli-server process.
-   */
-  async start() {
-    if (this.process) {
-      throw new Error("CLI server is already running");
-    }
-    logger.info("Starting CodeQL CLI Server...");
-    const args = buildCLIServerArgs(this.config);
-    const spawnEnv = { ...process.env };
-    const codeqlDir = getResolvedCodeQLDir();
-    if (codeqlDir && spawnEnv.PATH) {
-      spawnEnv.PATH = `${codeqlDir}${delimiter4}${spawnEnv.PATH}`;
-    } else if (codeqlDir) {
-      spawnEnv.PATH = codeqlDir;
-    }
-    this.process = spawn3("codeql", args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: spawnEnv
-    });
-    this.process.stdout?.on("data", (data) => {
-      this.handleStdout(data);
-    });
-    this.process.stderr?.on("data", (data) => {
-      logger.debug("CLIServer stderr:", data.toString());
-    });
-    this.process.on("error", (error) => {
-      logger.error("CLI server process error:", error);
-      if (this.currentReject) {
-        this.currentReject(error);
-        this.currentReject = null;
-        this.currentResolve = null;
-      }
-      this.emit("error", error);
-    });
-    this.process.on("exit", (code) => {
-      logger.info(`CLI server exited with code: ${code}`);
-      if (this.currentReject) {
-        this.currentReject(new Error(`CLI server exited unexpectedly with code: ${code}`));
-        this.currentReject = null;
-        this.currentResolve = null;
-      }
-      this.process = null;
-      this.emit("exit", code);
-    });
-    await waitForProcessReady(this.process, "CodeQL CLI Server");
-    logger.info("CodeQL CLI Server started");
-  }
-  /**
-   * Run a CodeQL CLI command through the persistent server.
-   *
-   * Commands are serialized and queued; only one command runs at a time.
-   *
-   * @param args - The full command arguments (e.g. `['resolve', 'qlpacks']`).
-   * @returns The stdout output from the command.
-   */
-  runCommand(args) {
-    return new Promise((resolve12, reject) => {
-      const execute = () => {
-        this.executeCommand({ args, reject, resolve: resolve12 });
-      };
-      if (this.commandInProgress) {
-        this.commandQueue.push(execute);
-      } else {
-        execute();
-      }
-    });
-  }
-  /**
-   * Gracefully shut down the CLI server.
-   */
-  async shutdown() {
-    if (!this.process) {
-      return;
-    }
-    logger.info("Shutting down CodeQL CLI Server...");
-    try {
-      this.process.stdin?.write(JSON.stringify(["shutdown"]), "utf8");
-      this.process.stdin?.write(this.nullBuffer);
-    } catch (error) {
-      logger.warn("Error during CLI server shutdown request:", error);
-    }
-    await new Promise((resolve12) => {
-      const timer = setTimeout5(() => {
-        if (this.process) {
-          this.process.kill("SIGTERM");
-          this.process = null;
-        }
-        resolve12();
-      }, 2e3);
-      if (this.process) {
-        this.process.once("exit", () => {
-          clearTimeout4(timer);
-          this.process = null;
-          resolve12();
-        });
-      } else {
-        clearTimeout4(timer);
-        resolve12();
-      }
-    });
-    this.commandInProgress = false;
-    this.commandQueue = [];
-    logger.info("CodeQL CLI Server stopped");
-  }
-  /**
-   * Whether the CLI server process is running.
-   */
-  isRunning() {
-    return this.process !== null && !this.process.killed;
-  }
-  // ---- private helpers ----
-  executeCommand(cmd) {
-    if (!this.process?.stdin) {
-      cmd.reject(new Error("CLI server is not running"));
-      return;
-    }
-    this.commandInProgress = true;
-    this.currentResolve = cmd.resolve;
-    this.currentReject = cmd.reject;
-    this.stdoutBuffer = "";
-    try {
-      this.process.stdin.write(JSON.stringify(cmd.args), "utf8");
-      this.process.stdin.write(this.nullBuffer);
-    } catch (error) {
-      this.commandInProgress = false;
-      this.currentResolve = null;
-      this.currentReject = null;
-      cmd.reject(error instanceof Error ? error : new Error(String(error)));
-      this.runNext();
-    }
-  }
-  handleStdout(data) {
-    const str2 = data.toString();
-    const nulIndex = str2.indexOf("\0");
-    if (nulIndex === -1) {
-      this.stdoutBuffer += str2;
-      return;
-    }
-    this.stdoutBuffer += str2.substring(0, nulIndex);
-    const result = this.stdoutBuffer;
-    this.stdoutBuffer = "";
-    if (this.currentResolve) {
-      this.currentResolve(result);
-      this.currentResolve = null;
-      this.currentReject = null;
-    }
-    this.commandInProgress = false;
-    this.runNext();
-    const remainder = str2.substring(nulIndex + 1);
-    if (remainder.length > 0) {
-      this.stdoutBuffer = remainder;
-    }
-  }
-  runNext() {
-    const next = this.commandQueue.shift();
-    if (next) {
-      next();
-    }
-  }
-};
-
-// src/lib/server-manager.ts
-init_logger();
-var CodeQLServerManager = class {
-  /** Keyed by `CodeQLServerType` — at most one per type at a time. */
-  servers = /* @__PURE__ */ new Map();
-  /** The session ID used for cache isolation. */
-  sessionId;
-  /** Root directory for session-specific caches. */
-  sessionCacheDir;
-  constructor(options) {
-    this.sessionId = options?.sessionId ?? randomUUID();
-    this.sessionCacheDir = join10(
-      getProjectTmpDir("codeql-cache"),
-      this.sessionId
-    );
-    for (const subdir of ["compilation-cache", "logs", "query-cache"]) {
-      mkdirSync7(join10(this.sessionCacheDir, subdir), { recursive: true });
-    }
-    logger.info(`CodeQLServerManager initialized (session: ${this.sessionId})`);
-  }
-  // ---- Public API ----
-  /**
-   * Get the current session ID.
-   */
-  getSessionId() {
-    return this.sessionId;
-  }
-  /**
-   * Get the session-specific cache directory.
-   */
-  getCacheDir() {
-    return this.sessionCacheDir;
-  }
-  /**
-   * Return the session-specific log directory.
-   */
-  getLogDir() {
-    return join10(this.sessionCacheDir, "logs");
-  }
-  /**
-   * Get or create a Language Server with the given configuration.
-   *
-   * If a language server is already running with the same config it is reused.
-   * If the config has changed the old server is shut down first.
-   */
-  async getLanguageServer(config) {
-    const enriched = this.enrichConfig(config);
-    return this.getOrRestart("language", enriched, () => {
-      return new CodeQLLanguageServer({
-        loglevel: enriched.loglevel,
-        logdir: enriched.logdir,
-        searchPath: enriched.searchPath,
-        synchronous: enriched.synchronous,
-        verbosity: enriched.verbosity
-      });
-    });
-  }
-  /**
-   * Get or create a Query Server with the given configuration.
-   */
-  async getQueryServer(config) {
-    const enriched = this.enrichConfig(config);
-    return this.getOrRestart("query", enriched, () => {
-      return new CodeQLQueryServer(enriched);
-    });
-  }
-  /**
-   * Get or create a CLI Server with the given configuration.
-   */
-  async getCLIServer(config) {
-    const enriched = this.enrichConfig(config);
-    return this.getOrRestart("cli", enriched, () => {
-      return new CodeQLCLIServer(enriched);
-    });
-  }
-  /**
-   * Shut down a specific server type.
-   */
-  async shutdownServer(type2) {
-    const managed = this.servers.get(type2);
-    if (!managed) return;
-    logger.info(`Shutting down ${type2} server (session: ${managed.sessionId})`);
-    await this.stopServer(managed);
-    this.servers.delete(type2);
-  }
-  /**
-   * Shut down all managed servers.
-   */
-  async shutdownAll() {
-    logger.info(`Shutting down all servers for session: ${this.sessionId}`);
-    const shutdownPromises = Array.from(this.servers.entries()).map(
-      async ([type2, managed]) => {
-        try {
-          await this.stopServer(managed);
-        } catch (error) {
-          logger.error(`Error shutting down ${type2} server:`, error);
-        }
-      }
-    );
-    await Promise.all(shutdownPromises);
-    this.servers.clear();
-    logger.info("All servers shut down");
-  }
-  /**
-   * Check whether a server of the given type is currently running.
-   */
-  isRunning(type2) {
-    const managed = this.servers.get(type2);
-    if (!managed) return false;
-    return managed.server.isRunning();
-  }
-  /**
-   * Get status information for all managed servers.
-   */
-  getStatus() {
-    const status = {
-      cli: null,
-      language: null,
-      query: null
-    };
-    for (const [type2, managed] of this.servers) {
-      status[type2] = {
-        configHash: managed.configHash,
-        running: managed.server.isRunning(),
-        sessionId: managed.sessionId
-      };
-    }
-    return status;
-  }
-  // ---- Private helpers ----
-  /**
-   * Enrich a config with session-specific defaults for commonCaches and logdir.
-   */
-  enrichConfig(config) {
-    return {
-      ...config,
-      commonCaches: config.commonCaches ?? this.sessionCacheDir,
-      logdir: config.logdir ?? this.getLogDir()
-    };
-  }
-  /**
-   * Get an existing server if its config matches, otherwise stop the old
-   * one and start a new server.
-   */
-  async getOrRestart(type2, config, factory) {
-    const hash = computeConfigHash(type2, config);
-    const existing = this.servers.get(type2);
-    if (existing && existing.configHash === hash && existing.server.isRunning()) {
-      logger.debug(`Reusing existing ${type2} server (hash: ${hash.substring(0, 8)})`);
-      return existing.server;
-    }
-    if (existing) {
-      logger.info(`${type2} server config changed or dead, restarting...`);
-      await this.stopServer(existing);
-      this.servers.delete(type2);
-    }
-    const server = factory();
-    await server.start();
-    this.servers.set(type2, {
-      configHash: hash,
-      server,
-      sessionId: this.sessionId,
-      type: type2
-    });
-    logger.info(`${type2} server started (hash: ${hash.substring(0, 8)})`);
-    return server;
-  }
-  /**
-   * Stop a managed server, ignoring errors.
-   */
-  async stopServer(managed) {
-    try {
-      await managed.server.shutdown();
-    } catch (error) {
-      logger.warn(`Error stopping ${managed.type} server:`, error);
-    }
-  }
-};
-var globalServerManager = null;
-function initServerManager(options) {
-  if (!globalServerManager) {
-    globalServerManager = new CodeQLServerManager(options);
-  }
-  return globalServerManager;
-}
-function getServerManager() {
-  if (!globalServerManager) {
-    globalServerManager = new CodeQLServerManager();
-  }
-  return globalServerManager;
-}
-async function shutdownServerManager() {
-  if (globalServerManager) {
-    await globalServerManager.shutdownAll();
-    globalServerManager = null;
-  }
+  effectiveUri = effectiveUri ?? pathToFileURL2(resolve9(pkgRoot, "ql")).href;
+  await server.initialize(effectiveUri);
+  logger.debug(`Language server initialized with workspace: ${effectiveUri}`);
+  return server;
 }
 
 // src/tools/lsp/lsp-diagnostics.ts
-init_logger();
-import { join as join11, isAbsolute as isAbsolute5, resolve as resolve9 } from "path";
-import { pathToFileURL as pathToFileURL2 } from "url";
 function formatDiagnostics(diagnostics) {
   if (diagnostics.length === 0) {
     return "\u2705 No issues found in QL code";
@@ -6814,27 +6991,6 @@ function getSeverityName(severity) {
       return "Unknown";
   }
 }
-async function getLanguageServer(options = {}, workspaceUri) {
-  const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-  const config = {
-    checkErrors: "ON_CHANGE",
-    loglevel: options.loglevel ?? "WARN",
-    searchPath: options.searchPath ?? resolve9(pkgRoot, "ql"),
-    synchronous: options.synchronous,
-    verbosity: options.verbosity
-  };
-  const manager = getServerManager();
-  const languageServer = await manager.getLanguageServer(config);
-  let effectiveUri = workspaceUri;
-  if (effectiveUri && !effectiveUri.startsWith("file://")) {
-    const { getUserWorkspaceDir: getUserWorkspaceDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve9(getUserWorkspaceDir2(), effectiveUri);
-    effectiveUri = pathToFileURL2(absWorkspace).href;
-  }
-  effectiveUri = effectiveUri ?? pathToFileURL2(resolve9(pkgRoot, "ql")).href;
-  await languageServer.initialize(effectiveUri);
-  return languageServer;
-}
 async function lspDiagnostics({
   qlCode,
   workspaceUri,
@@ -6842,8 +6998,11 @@ async function lspDiagnostics({
 }) {
   try {
     logger.info("Evaluating QL code via Language Server...");
-    const languageServer = await getLanguageServer(serverOptions, workspaceUri);
-    const evalUri = pathToFileURL2(join11(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
+    const languageServer = await getInitializedLanguageServer({
+      serverOptions,
+      workspaceUri
+    });
+    const evalUri = pathToFileURL3(join11(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     const summary = {
       errorCount: diagnostics.filter((d) => d.severity === 1).length,
@@ -6929,32 +7088,20 @@ function registerLspDiagnosticsTool(server) {
 }
 
 // src/tools/lsp/lsp-handlers.ts
-import { readFile as readFile3 } from "fs/promises";
-import { isAbsolute as isAbsolute6, resolve as resolve10 } from "path";
-import { pathToFileURL as pathToFileURL3 } from "url";
 init_logger();
 init_package_paths();
+import { readFile as readFile3 } from "fs/promises";
+import { isAbsolute as isAbsolute6, resolve as resolve10 } from "path";
+import { pathToFileURL as pathToFileURL4 } from "url";
 async function getInitializedServer(params) {
-  const { packageRootDir: pkgRoot } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-  const config = {
-    checkErrors: "ON_CHANGE",
-    loglevel: "WARN",
-    searchPath: params.searchPath ?? resolve10(pkgRoot, "ql")
-  };
-  const manager = getServerManager();
-  const server = await manager.getLanguageServer(config);
-  let effectiveUri = params.workspaceUri;
-  if (effectiveUri && !effectiveUri.startsWith("file://")) {
-    const absWorkspace = isAbsolute6(effectiveUri) ? effectiveUri : resolve10(getUserWorkspaceDir(), effectiveUri);
-    effectiveUri = pathToFileURL3(absWorkspace).href;
-  }
-  effectiveUri = effectiveUri ?? pathToFileURL3(resolve10(pkgRoot, "ql")).href;
-  await server.initialize(effectiveUri);
-  return server;
+  return getInitializedLanguageServer({
+    serverOptions: { searchPath: params.searchPath },
+    workspaceUri: params.workspaceUri
+  });
 }
 function prepareDocumentPosition(params) {
   const absPath = isAbsolute6(params.filePath) ? params.filePath : resolve10(getUserWorkspaceDir(), params.filePath);
-  const docUri = pathToFileURL3(absPath).href;
+  const docUri = pathToFileURL4(absPath).href;
   return { absPath, docUri };
 }
 async function openDocumentForPosition(server, params, absPath, docUri) {
@@ -7887,6 +8034,7 @@ var JSONFileSync = class extends DataFileSync {
 };
 
 // src/lib/session-data-manager.ts
+init_temp_dir();
 import { mkdirSync as mkdirSync8, writeFileSync as writeFileSync6 } from "fs";
 import { join as join14 } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
@@ -9181,6 +9329,7 @@ function generateListRecommendations(sessions) {
 
 // src/codeql-development-mcp-server.ts
 init_cli_executor();
+init_server_manager();
 init_package_paths();
 init_logger();
 dotenv.config({ path: resolve11(packageRootDir, ".env") });
@@ -9203,7 +9352,12 @@ async function startServer(mode = "stdio") {
   registerWorkflowPrompts(server);
   registerMonitoringTools(server);
   await sessionDataManager.initialize();
-  initServerManager();
+  const manager = initServerManager();
+  Promise.all([
+    manager.warmUpLanguageServer(),
+    manager.warmUpCLIServer()
+  ]).catch(() => {
+  });
   if (mode === "stdio") {
     const transport = new StdioServerTransport();
     await server.connect(transport);
@@ -9275,7 +9429,7 @@ async function main() {
   }
 }
 var scriptPath = process.argv[1] ? resolve11(process.argv[1]) : void 0;
-if (scriptPath && import.meta.url === pathToFileURL4(scriptPath).href) {
+if (scriptPath && import.meta.url === pathToFileURL5(scriptPath).href) {
   main();
 }
 export {

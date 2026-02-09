@@ -148,7 +148,12 @@ export class IntegrationTestRunner {
         codeql_bqrs_decode: 3,
         codeql_bqrs_info: 3,
         codeql_database_analyze: 3,
-        codeql_resolve_database: 3
+        codeql_resolve_database: 3,
+
+        // Priority 3.5: LSP diagnostics runs before other LSP tools to warm up
+        // the language server JVM. Subsequent codeql_lsp_* tools reuse the
+        // running server and avoid the cold-start penalty.
+        codeql_lsp_diagnostics: 3.5
 
         // Priority 4: All other tools (default priority)
         // These tools don't have specific database dependencies
@@ -896,7 +901,7 @@ export class IntegrationTestRunner {
     const staticPath = this.getStaticFilesPath();
 
     if (toolName === "codeql_lsp_diagnostics") {
-      params.ql_code = "from DataFlow::Configuration cfg select cfg";
+      params.ql_code = 'from UndefinedType x where x = "test" select x, "semantic error"';
       // Skip workspace_uri for now as it's not needed for basic validation
     } else if (toolName === "codeql_bqrs_decode") {
       // Use static BQRS file

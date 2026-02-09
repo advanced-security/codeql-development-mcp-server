@@ -207,6 +207,43 @@ describe('CodeQLCLIServer', () => {
     });
   });
 
+  describe('handleStdout with multiple NUL delimiters', () => {
+    it('should handle two NUL-delimited responses in a single data chunk', async () => {
+      const server = new CodeQLCLIServer({});
+      await server.start();
+
+      const cmd1Promise = server.runCommand(['cmd1']);
+      const cmd2Promise = server.runCommand(['cmd2']);
+
+      // Send two NUL-delimited responses in a single data event
+      mockProc.stdout.emit('data', Buffer.from('result1\0result2\0'));
+
+      const result1 = await cmd1Promise;
+      const result2 = await cmd2Promise;
+
+      expect(result1).toBe('result1');
+      expect(result2).toBe('result2');
+    });
+
+    it('should handle a trailing NUL with more data after it', async () => {
+      const server = new CodeQLCLIServer({});
+      await server.start();
+
+      const cmd1Promise = server.runCommand(['cmd1']);
+      const cmd2Promise = server.runCommand(['cmd2']);
+
+      // First chunk contains cmd1 response and partial cmd2 response
+      mockProc.stdout.emit('data', Buffer.from('result1\0partial'));
+      const result1 = await cmd1Promise;
+      expect(result1).toBe('result1');
+
+      // Second chunk completes cmd2
+      mockProc.stdout.emit('data', Buffer.from('_more\0'));
+      const result2 = await cmd2Promise;
+      expect(result2).toBe('partial_more');
+    });
+  });
+
   describe('events', () => {
     it('should emit error event on process error', async () => {
       const server = new CodeQLCLIServer({});

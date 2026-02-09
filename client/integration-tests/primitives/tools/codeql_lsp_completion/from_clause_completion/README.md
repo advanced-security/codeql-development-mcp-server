@@ -2,16 +2,20 @@
 
 ## PURPOSE
 
-Tests that `codeql_lsp_completion` returns completion items when the cursor is
-positioned inside a `from` clause after an `import` statement.
+Tests that `codeql_lsp_completion` returns keyword completions when the cursor
+is positioned after a partial keyword `wh` following a `from` clause. Uses
+`file_content` to provide inline query text, producing a small set of
+completions (e.g. `where`) rather than an exhaustive type list.
 
 ## INPUTS
 
+- **file_content**: Inline QL with cursor after `wh` prefix
 - **file_path**: `server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql`
-- **line**: 11 (inside the `from` clause)
-- **character**: 5 (after keyword prefix)
+- **line**: 3 (after `wh`)
+- **character**: 2 (end of `wh` prefix)
+- **workspace_uri**: `server/ql/javascript/examples`
 
 ## EXPECTED OUTPUTS
 
-- A non-empty list of completion items with labels, documentation, and kind.
+- A list of completion items matching the `wh` prefix (e.g. `where`).
 - Monitoring state updated to record a successful `codeql_lsp_completion` call.
