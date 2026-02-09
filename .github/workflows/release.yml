@@ -27,6 +27,8 @@ jobs:
       - name: Release - Checkout repository
         uses: actions/checkout@v6
         with:
+          # Fetch tags so workflow_dispatch can resolve and checkout the target tag
+          fetch-tags: true
           # Explicitly checkout the tag ref to ensure we build the correct commit
           # For tag pushes: refs/tags/vX.Y.Z
           # For workflow_dispatch: refs/heads/<branch> (will be validated below)
