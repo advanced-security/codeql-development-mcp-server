@@ -738,7 +738,7 @@ describe('validateCodeQLBinaryReachable', () => {
 
     const version = await validateCodeQLBinaryReachable();
     expect(version).toBeTruthy();
-    // Version should be a semver-like string (e.g. "2.23.9")
+    // Version should be a semver-like string (e.g. "2.24.0")
     expect(version).toMatch(/^\d+\.\d+\.\d+/);
   });
 
