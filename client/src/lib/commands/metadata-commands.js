@@ -67,7 +67,9 @@ export async function executeQueriesMetadataCollectCommand(client, _options = {}
       // Write file with UTF-8 encoding
       await writeFile(outputFile, output, "utf-8");
     } catch (error) {
-      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`);
+      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`, {
+        cause: error
+      });
     }
 
     // Log summary to stderr
@@ -123,7 +125,9 @@ export async function executeQueriesMetadataProcessCommand(_client, _options = {
       // Write file with UTF-8 encoding
       await writeFile(outputFile, output, "utf-8");
     } catch (error) {
-      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`);
+      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`, {
+        cause: error
+      });
     }
   } else {
     throw new Error(
@@ -179,7 +183,9 @@ export async function executeQueriesMetadataFilterCommand(_client, _options = {}
     // Write file with UTF-8 encoding
     await writeFile(outputFile, output, "utf-8");
   } catch (error) {
-    throw new Error(`Failed to write output file ${outputFile}: ${error.message}`);
+    throw new Error(`Failed to write output file ${outputFile}: ${error.message}`, {
+      cause: error
+    });
   }
 
   // Log summary to stderr
@@ -232,7 +238,9 @@ export async function executeResolveAllQueriesCommand(client, _options = {}) {
       // Write file with UTF-8 encoding
       await writeFile(outputFile, output, "utf-8");
     } catch (error) {
-      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`);
+      throw new Error(`Failed to write output file ${outputFile}: ${error.message}`, {
+        cause: error
+      });
     }
 
     // Log summary to stderr

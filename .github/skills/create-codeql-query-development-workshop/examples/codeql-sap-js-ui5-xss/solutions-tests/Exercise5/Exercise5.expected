@@ -1,0 +1,40 @@
+edges
+| test.js:8:7:8:15 | userInput | test.js:10:25:10:33 | userInput | provenance |  |
+| test.js:8:19:8:42 | documen ... .search | test.js:8:7:8:15 | userInput | provenance |  |
+| test.js:17:7:17:15 | hashValue | test.js:18:18:18:26 | hashValue | provenance |  |
+| test.js:17:19:17:38 | window.location.hash | test.js:17:7:17:15 | hashValue | provenance |  |
+| test.js:25:7:25:12 | params [MapValue] | test.js:26:14:26:19 | params [MapValue] | provenance |  |
+| test.js:25:16:25:58 | new URL ... search) [MapValue] | test.js:25:7:25:12 | params [MapValue] | provenance |  |
+| test.js:25:36:25:57 | window. ... .search | test.js:25:16:25:58 | new URL ... search) [MapValue] | provenance |  |
+| test.js:26:7:26:10 | name | test.js:28:28:28:31 | name | provenance |  |
+| test.js:26:14:26:19 | params [MapValue] | test.js:26:14:26:31 | params.get("name") | provenance |  |
+| test.js:26:14:26:31 | params.get("name") | test.js:26:7:26:10 | name | provenance |  |
+| test.js:28:28:28:31 | name | test.js:28:18:28:42 | "<div>" ... </div>" | provenance |  |
+| test.js:55:7:55:10 | code | test.js:56:8:56:11 | code | provenance |  |
+| test.js:55:14:55:33 | window.location.hash | test.js:55:14:55:46 | window. ... ring(1) | provenance |  |
+| test.js:55:14:55:46 | window. ... ring(1) | test.js:55:7:55:10 | code | provenance |  |
+nodes
+| test.js:8:7:8:15 | userInput | semmle.label | userInput |
+| test.js:8:19:8:42 | documen ... .search | semmle.label | documen ... .search |
+| test.js:10:25:10:33 | userInput | semmle.label | userInput |
+| test.js:17:7:17:15 | hashValue | semmle.label | hashValue |
+| test.js:17:19:17:38 | window.location.hash | semmle.label | window.location.hash |
+| test.js:18:18:18:26 | hashValue | semmle.label | hashValue |
+| test.js:25:7:25:12 | params [MapValue] | semmle.label | params [MapValue] |
+| test.js:25:16:25:58 | new URL ... search) [MapValue] | semmle.label | new URL ... search) [MapValue] |
+| test.js:25:36:25:57 | window. ... .search | semmle.label | window. ... .search |
+| test.js:26:7:26:10 | name | semmle.label | name |
+| test.js:26:14:26:19 | params [MapValue] | semmle.label | params [MapValue] |
+| test.js:26:14:26:31 | params.get("name") | semmle.label | params.get("name") |
+| test.js:28:18:28:42 | "<div>" ... </div>" | semmle.label | "<div>" ... </div>" |
+| test.js:28:28:28:31 | name | semmle.label | name |
+| test.js:55:7:55:10 | code | semmle.label | code |
+| test.js:55:14:55:33 | window.location.hash | semmle.label | window.location.hash |
+| test.js:55:14:55:46 | window. ... ring(1) | semmle.label | window. ... ring(1) |
+| test.js:56:8:56:11 | code | semmle.label | code |
+subpaths
+#select
+| test.js:10:25:10:33 | userInput | test.js:8:19:8:42 | documen ... .search | test.js:10:25:10:33 | userInput | XSS vulnerability due to $@. | test.js:8:19:8:42 | documen ... .search | user-provided value |
+| test.js:18:18:18:26 | hashValue | test.js:17:19:17:38 | window.location.hash | test.js:18:18:18:26 | hashValue | XSS vulnerability due to $@. | test.js:17:19:17:38 | window.location.hash | user-provided value |
+| test.js:28:18:28:42 | "<div>" ... </div>" | test.js:25:36:25:57 | window. ... .search | test.js:28:18:28:42 | "<div>" ... </div>" | XSS vulnerability due to $@. | test.js:25:36:25:57 | window. ... .search | user-provided value |
+| test.js:56:8:56:11 | code | test.js:55:14:55:33 | window.location.hash | test.js:56:8:56:11 | code | XSS vulnerability due to $@. | test.js:55:14:55:33 | window.location.hash | user-provided value |

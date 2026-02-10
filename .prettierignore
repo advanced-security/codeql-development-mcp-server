@@ -7,10 +7,12 @@
 *.testproj/
 options
 
+.tmp/
 build
 client/**/after/
 client/**/before/
 coverage
 node_modules
 server/dist/
-
+query-results*
+workshops/

@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 ---
 
 # Evaluate SARIF Results for False Positives

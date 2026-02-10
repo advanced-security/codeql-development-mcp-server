@@ -154,7 +154,7 @@ Set the output format for `list` commands. Accepts `text` (default) or `json`.
 
 **Text Format** - Human-readable output:
 
-```
+```text
 codeql_bqrs_decode (tools/codeql_bqrs_decode) : Decode BQRS result files to human-readable formats
 ```
 
@@ -348,7 +348,7 @@ node src/ql-mcp-client.js list tools
 
 Output:
 
-```
+```text
 codeql_bqrs_decode (tools/codeql_bqrs_decode) : Decode BQRS result files to human-readable formats
 codeql_bqrs_info (tools/codeql_bqrs_info) : Get metadata and information about BQRS result files
 ...
@@ -451,7 +451,7 @@ The old CLI flags have been removed and new commands have been added:
   - New: `node src/ql-mcp-client.js` → shows help
   - To run integration tests: `node src/ql-mcp-client.js integration-tests`
 
-### New Features:
+### New Features
 
 - **`list` commands**: Discover MCP server primitives (auto-starts server if needed)
   - `list primitives` - List all primitives (prompts, resources, tools)
@@ -464,7 +464,7 @@ The old CLI flags have been removed and new commands have been added:
 - **`--format` option**: Control output format (text/json) for list commands
 - **Server auto-start**: List commands automatically start the server if not running
 
-### Script Replacement:
+### Script Replacement
 
 The new `server` commands replace the shell scripts:
 

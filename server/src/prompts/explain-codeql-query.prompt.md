@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 ---
 
 # Explain a CodeQL Query (Workshop Learning Content)
@@ -103,9 +103,11 @@ You MUST use the following MCP server tools in sequence to gather context before
   ```
 
 - [ ] **Step 8: Quick evaluate specific predicates** (as needed)
-  - Tool: `quick_evaluate`
-  - Parameters: Specific QL code snippets to understand predicate behavior
+  - First, locate the predicate: Tool: `find_predicate_position` with `file` and `name`
+  - Then evaluate: Tool: `quick_evaluate` with `file`, `db`, and `symbol`
   - Use when: You need more context on how a specific predicate or class behaves
+  - Note: `find_class_position` finds `class` definitions only, not `module` definitions
+  - Note: `find_predicate_position` returns 1-based positions; LSP tools use 0-based
 
 ### Phase 5: Generate Explanation
 

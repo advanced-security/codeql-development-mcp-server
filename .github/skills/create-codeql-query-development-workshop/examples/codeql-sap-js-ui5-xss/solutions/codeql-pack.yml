@@ -1,0 +1,5 @@
+name: codeql-sap-js-ui5-xss-solutions
+version: 0.0.1
+library: false
+dependencies:
+  codeql/javascript-all: 2.6.19

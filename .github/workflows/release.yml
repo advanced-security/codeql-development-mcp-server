@@ -6,6 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      publish_codeql_packs:
+        default: true
+        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist.'
+        required: false
+        type: boolean
       version:
         description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
         required: true
@@ -27,6 +32,8 @@ jobs:
       - name: Release - Checkout repository
         uses: actions/checkout@v6
         with:
+          # Fetch tags so workflow_dispatch can resolve and checkout the target tag
+          fetch-tags: true
           # Explicitly checkout the tag ref to ensure we build the correct commit
           # For tag pushes: refs/tags/vX.Y.Z
           # For workflow_dispatch: refs/heads/<branch> (will be validated below)
@@ -56,7 +63,7 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
 
-      - name: Release - Checkout tag for workflow_dispatch
+      - name: Release - Checkout or create tag for workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
         run: |
           # For workflow_dispatch, we need to checkout the specific tag
@@ -65,8 +72,11 @@ jobs:
             echo "Checking out existing tag: ${TAG}"
             git checkout "refs/tags/${TAG}"
           else
-            echo "::error::Tag '${TAG}' does not exist. Create the tag first before running this workflow."
-            exit 1
+            echo "Tag '${TAG}' does not exist. Creating it now..."
+            CURRENT_SHA=$(git rev-parse HEAD)
+            git tag "${TAG}" "${CURRENT_SHA}"
+            git push origin "${TAG}"
+            echo "✅ Created and pushed tag: ${TAG} at commit ${CURRENT_SHA:0:8}"
           fi
 
       - name: Release - Verify checkout matches expected version
@@ -85,20 +95,31 @@ jobs:
             echo "::warning::Tag ${TAG} not found, building from current checkout at ${CURRENT_SHA:0:8}"
           fi
 
+      - name: Release - Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          add-to-path: true
+          install-language-runtimes: false
+
+      - name: Release - Update release version
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.release_name }}"
+          echo "Updating all version-bearing files to '${TAG_VERSION}'..."
+          ./server/scripts/update-release-version.sh "${TAG_VERSION}"
+
       - name: Release - Install dependencies
-        run: npm ci --include=optional
+        run: npm install --include=optional
 
       - name: Release - Build server
         run: npm run build -w server
 
-      - name: Release - Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript
-          tools: latest
+      - name: Release - Install CodeQL pack dependencies
+        run: server/scripts/install-packs.sh
 
       - name: Release - Publish CodeQL tool query packs
-        if: startsWith(github.ref, 'refs/tags/')
+        if: |
+          (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+          && (github.event_name != 'workflow_dispatch' || inputs.publish_codeql_packs)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -115,8 +136,36 @@ jobs:
             fi
           done
 
+      - name: Release - Skip CodeQL tool query pack publishing
+        if: github.event_name == 'workflow_dispatch' && !inputs.publish_codeql_packs
+        run: echo "⏭️ CodeQL tool query pack publishing disabled via workflow input"
+
+      - name: Release - Bundle CodeQL tool query packs
+        run: |
+          mkdir -p dist-packs
+          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
+          echo "Bundling CodeQL tool query packs..."
+          for lang in ${LANGUAGES}; do
+            PACK_DIR="server/ql/${lang}/tools/src"
+            if [ -d "${PACK_DIR}" ]; then
+              PACK_NAME="ql-mcp-${lang}-tools-src"
+              OUTPUT="dist-packs/${PACK_NAME}.tar.gz"
+              echo "📦 Bundling ${PACK_DIR} -> ${OUTPUT}..."
+              codeql pack bundle --threads=-1 --output="${OUTPUT}" -- "${PACK_DIR}"
+              echo "✅ Bundled ${PACK_NAME}"
+            fi
+          done
+          echo "Bundled packs:"
+          ls -lh dist-packs/
+
+      - name: Release - Upload CodeQL pack artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: codeql-tool-query-packs-${{ steps.version.outputs.version }}
+          path: dist-packs/*.tar.gz
+
       - name: Release - Publish npm package
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         working-directory: server
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -135,9 +184,6 @@ jobs:
           cp -r server/ql dist-package/server/
           cp server/package.json dist-package/server/
 
-          # Copy root package-lock.json for npm ci (monorepo lockfile)
-          cp package-lock.json dist-package/server/
-
           # Copy root files
           cp README.md dist-package/
           cp LICENSE dist-package/
@@ -152,7 +198,7 @@ jobs:
 
       - name: Release - Install production dependencies
         working-directory: dist-package/server
-        run: npm ci --omit=dev --include=optional
+        run: npm install --omit=dev --include=optional
 
       - name: Release - Create archive
         run: |
@@ -165,21 +211,31 @@ jobs:
           path: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
 
       - name: Release - Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
-          files: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+          files: |
+            codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+            dist-packs/*.tar.gz
           generate_release_notes: true
+          tag_name: ${{ steps.version.outputs.version }}
 
       - name: Release - Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Server built successfully" >> $GITHUB_STEP_SUMMARY
-          echo "✅ npm package published to GitHub Packages" >> $GITHUB_STEP_SUMMARY
-          echo "✅ CodeQL tool query packs published to GHCR" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Distribution package created" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Production dependencies installed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Archive created: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Server build | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version validation | ✅ All files match ${{ steps.version.outputs.release_name }} |" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish_codeql_packs }}" != "true" ]]; then
+            echo "| CodeQL pack publish | ⏭️ Skipped (disabled via input) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| CodeQL pack publish | ✅ Published to GHCR |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| npm package | ✅ Published to GitHub Packages |" >> $GITHUB_STEP_SUMMARY
+          echo "| Distribution archive | ✅ Created |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL pack bundles | ✅ Bundled |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Package Contents" >> $GITHUB_STEP_SUMMARY
           echo "- \`server/dist/\` - Bundled JavaScript output" >> $GITHUB_STEP_SUMMARY

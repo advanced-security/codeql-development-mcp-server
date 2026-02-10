@@ -1,9 +1,9 @@
 ---
-applyTo: '**/*.prompt.md'
+applyTo: '.github/prompts/*.prompt.md'
 description: 'Instructions for managing .prompt.md files throughout the advanced-security/codeql-development-mcp-server repository.'
 ---
 
-# Instructions for managing `*.prompt.md` files
+# Instructions for managing `.github/prompts/*.prompt.md` files
 
 ## PURPOSE
 
@@ -27,13 +27,11 @@ That higher-level component should link (i.e. point) to at least one `.github/pr
 - ALWAYS follow best practices for writing markdown files, including proper use of headings, lists, links, and code blocks. This explicitly includes inserting a newline before and after code blocks, lists, and headings.
 - ALWAYS check formatting with `npm run lint && npm run format:check` from the repo root directory to ensure consistent formatting after making changes.
 - ALWAYS fix linting and formatting errors by running `npm run lint:fix && npm run format` from the repo root directory before committing changes.
-- ALWAYS start each `*.prompt.md` file with the following YAML block of frontmatter:
-
-  ```yaml
-  ---
-  mode: agent
-  ---
-  ```
+- ALWAYS start each `*.prompt.md` file with a YAML front-matter block containing, at minimum, values for fields such as:
+  - `agent` -> pointing to the name of the agent this prompt is intended for (e.g. `agent: ql-mcp-tool-tester`)
+  - `name` -> a unique name for the prompt (e.g. `name: validate-ql-mcp-tools-via-workshop`)
+  - `description` -> a concise description of the prompt's purpose and functionality
+  - `argument-hint` -> a brief hint about the expected arguments for the prompt
 
 ## PREFERENCES
 
