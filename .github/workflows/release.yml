@@ -58,7 +58,7 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
 
-      - name: Release - Checkout tag for workflow_dispatch
+      - name: Release - Checkout or create tag for workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
         run: |
           # For workflow_dispatch, we need to checkout the specific tag
@@ -67,8 +67,11 @@ jobs:
             echo "Checking out existing tag: ${TAG}"
             git checkout "refs/tags/${TAG}"
           else
-            echo "::error::Tag '${TAG}' does not exist. Create the tag first before running this workflow."
-            exit 1
+            echo "Tag '${TAG}' does not exist. Creating it now..."
+            CURRENT_SHA=$(git rev-parse HEAD)
+            git tag "${TAG}" "${CURRENT_SHA}"
+            git push origin "${TAG}"
+            echo "✅ Created and pushed tag: ${TAG} at commit ${CURRENT_SHA:0:8}"
           fi
 
       - name: Release - Verify checkout matches expected version
