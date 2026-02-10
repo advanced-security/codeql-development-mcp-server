@@ -1,0 +1,183 @@
+name: Release Tag - Create Version Tag
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
+        required: true
+        type: string
+    outputs:
+      release_name:
+        description: 'The release name without "v" prefix (e.g., X.Y.Z)'
+        value: ${{ jobs.create-tag.outputs.release_name }}
+      tag_sha:
+        description: 'The commit SHA that the tag points to'
+        value: ${{ jobs.create-tag.outputs.tag_sha }}
+      version:
+        description: 'The full version string with "v" prefix (e.g., vX.Y.Z)'
+        value: ${{ jobs.create-tag.outputs.version }}
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  create-tag:
+    name: Create Version Tag
+    runs-on: ubuntu-latest
+
+    environment: release-tag
+
+    permissions:
+      contents: write
+
+    outputs:
+      release_name: ${{ steps.version.outputs.release_name }}
+      tag_sha: ${{ steps.create-tag.outputs.tag_sha }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Tag - Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Tag - Validate and parse version
+        id: version
+        run: |
+          VERSION="${{ inputs.version }}"
+          # Validate version starts with 'v'
+          if [[ ! "${VERSION}" =~ ^v ]]; then
+            echo "::error::Version '${VERSION}' must start with 'v'"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Tag - Check if tag already exists
+        id: check-tag
+        run: |
+          TAG="${{ steps.version.outputs.version }}"
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            TAG_SHA=$(git rev-parse "refs/tags/${TAG}^{commit}" 2>/dev/null || git rev-parse "refs/tags/${TAG}")
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "tag_sha=${TAG_SHA}" >> $GITHUB_OUTPUT
+            echo "ℹ️ Tag ${TAG} already exists at commit ${TAG_SHA:0:8}"
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Tag ${TAG} does not exist yet"
+          fi
+
+      - name: Tag - Setup CodeQL environment
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          add-to-path: true
+          install-language-runtimes: false
+
+      - name: Tag - Setup Node.js
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Tag - Update release version
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.release_name }}"
+          echo "Updating all version-bearing files to '${TAG_VERSION}'..."
+          ./server/scripts/update-release-version.sh "${TAG_VERSION}"
+
+      - name: Tag - Install dependencies
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        run: npm install --include=optional
+
+      - name: Tag - Install CodeQL pack dependencies
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        run: server/scripts/install-packs.sh
+
+      - name: Tag - Tidy (lint and format)
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        run: npm run tidy
+
+      - name: Tag - Build server
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        run: npm run build -w server
+
+      - name: Tag - Run tests
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        run: npm run test:server
+
+      - name: Tag - Commit version changes and create tag
+        id: create-tag
+        if: steps.check-tag.outputs.tag_exists != 'true'
+        run: |
+          TAG="${{ steps.version.outputs.version }}"
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage version-bearing files and lockfile changes
+          git add -A
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "ℹ️ No changes to commit (versions already up to date)"
+            CURRENT_SHA=$(git rev-parse HEAD)
+          else
+            git commit -m "Release ${TAG}: update versions to ${RELEASE_NAME}"
+            CURRENT_SHA=$(git rev-parse HEAD)
+            git push origin HEAD
+            echo "✅ Committed version changes at ${CURRENT_SHA:0:8}"
+          fi
+
+          # Create and push the tag
+          git tag -a "${TAG}" -m "Release ${TAG}" "${CURRENT_SHA}"
+          git push origin "${TAG}"
+          echo "✅ Created and pushed tag ${TAG} at commit ${CURRENT_SHA:0:8}"
+          echo "tag_sha=${CURRENT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Tag - Output existing tag SHA
+        id: existing-tag
+        if: steps.check-tag.outputs.tag_exists == 'true'
+        run: |
+          echo "tag_sha=${{ steps.check-tag.outputs.tag_sha }}" >> $GITHUB_OUTPUT
+
+      - name: Tag - Set final tag SHA output
+        id: final-sha
+        run: |
+          if [ "${{ steps.check-tag.outputs.tag_exists }}" == "true" ]; then
+            SHA="${{ steps.check-tag.outputs.tag_sha }}"
+          else
+            SHA="${{ steps.create-tag.outputs.tag_sha }}"
+          fi
+          echo "tag_sha=${SHA}" >> $GITHUB_OUTPUT
+
+      - name: Tag - Summary
+        run: |
+          TAG="${{ steps.version.outputs.version }}"
+          echo "## Release Tag Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-tag.outputs.tag_exists }}" == "true" ]; then
+            echo "ℹ️ Tag \`${TAG}\` already existed at \`${{ steps.check-tag.outputs.tag_sha }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Created tag \`${TAG}\` at \`${{ steps.create-tag.outputs.tag_sha }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
+            echo "| Version update | ✅ All files updated to ${{ steps.version.outputs.release_name }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Tidy (lint + format) | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Build | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+            echo "| Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Tag creation | ✅ ${TAG} |" >> $GITHUB_STEP_SUMMARY
+          fi
