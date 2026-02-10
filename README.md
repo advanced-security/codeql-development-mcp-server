@@ -12,11 +12,40 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - **Test-Driven Development** - Integrated testing tools for validating query accuracy with expected results
 - **Flexible Transport** - Supports both stdio and HTTP transport modes for different integration scenarios
 
+## Supported Code Languages
+
+| Language              | CodeQL Identifier |
+| --------------------- | ----------------- |
+| GitHub Actions        | `actions`         |
+| C/C++                 | `cpp`             |
+| C#                    | `csharp`          |
+| Go                    | `go`              |
+| Java/Kotlin           | `java`            |
+| JavaScript/TypeScript | `javascript`      |
+| Python                | `python`          |
+| Ruby                  | `ruby`            |
+| Swift                 | `swift`           |
+
 ## Limitations
 
-- Requires CodeQL CLI to be installed separately
-- Performance depends on the size of CodeQL databases being analyzed
-- Some advanced CodeQL CLI features may not yet be exposed as tools
+- Requires matching version of the CodeQL CLI to be installed separately.
+- Only a subset of CodeQL CLI features are exposed as tools.
+- Performance depends on the size of CodeQL databases being analyzed.
+
+## Alternative CodeQL MCP Servers
+
+This project is partially inspired by [`JordyZomer/codeql-mcp`](https://github.com/JordyZomer/codeql-mcp) -- which remains a great alternative to `codeql-development-mcp-server`.
+
+Another alternative is the [CodeQL MCP server bundled with GitHubSecurityLab/seclab-taskflow-agent](https://github.com/GitHubSecurityLab/seclab-taskflow-agent/tree/main/src/seclab_taskflow_agent/mcp_servers/codeql). The `CallGraphFrom` and `CallGraphTo` queries provided by this repository were inspired by the [`GitHubSecurityLab/seclab-taskflow-agent`](https://github.com/GitHubSecurityLab/seclab-taskflow-agent).
+
+## Documentation
+
+- [Public Installation Guide](docs/public.md) - Install and run without cloning the repository
+- [Getting Started Guide](docs/getting-started.md) - Detailed installation and setup instructions
+- [Tools Reference](docs/ql-mcp/tools.md) - Complete list of available MCP tools
+- [Prompts Reference](docs/ql-mcp/prompts.md) - MCP prompts for CodeQL development workflows
+- [Resources Reference](docs/ql-mcp/resources.md) - MCP resources for CodeQL learning and reference
+- [Testing Strategy](docs/testing.md) - Multi-layer testing approach
 
 ## Project Status
 
@@ -119,29 +148,6 @@ npm install && npm run build
 2. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 3. Run "GitHub Copilot: List MCP Servers"
 4. Confirm `ql-mcp` appears
-
-## Supported Languages
-
-| Language              | CodeQL Identifier |
-| --------------------- | ----------------- |
-| GitHub Actions        | `actions`         |
-| C/C++                 | `cpp`             |
-| C#                    | `csharp`          |
-| Go                    | `go`              |
-| Java/Kotlin           | `java`            |
-| JavaScript/TypeScript | `javascript`      |
-| Python                | `python`          |
-| Ruby                  | `ruby`            |
-| Swift                 | `swift`           |
-
-## Documentation
-
-- [Public Installation Guide](docs/public.md) - Install and run without cloning the repository
-- [Getting Started Guide](docs/getting-started.md) - Detailed installation and setup instructions
-- [Tools Reference](docs/ql-mcp/tools.md) - Complete list of available MCP tools
-- [Prompts Reference](docs/ql-mcp/prompts.md) - MCP prompts for CodeQL development workflows
-- [Resources Reference](docs/ql-mcp/resources.md) - MCP resources for CodeQL learning and reference
-- [Testing Strategy](docs/testing.md) - Multi-layer testing approach
 
 ## License
 
