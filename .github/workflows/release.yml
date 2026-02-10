@@ -123,6 +123,30 @@ jobs:
             fi
           done
 
+      - name: Release - Bundle CodeQL tool query packs
+        run: |
+          mkdir -p dist-packs
+          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
+          echo "Bundling CodeQL tool query packs..."
+          for lang in ${LANGUAGES}; do
+            PACK_DIR="server/ql/${lang}/tools/src"
+            if [ -d "${PACK_DIR}" ]; then
+              PACK_NAME="ql-mcp-${lang}-tools-src"
+              OUTPUT="dist-packs/${PACK_NAME}.tar.gz"
+              echo "📦 Bundling ${PACK_DIR} -> ${OUTPUT}..."
+              codeql pack bundle --threads=-1 --output="${OUTPUT}" -- "${PACK_DIR}"
+              echo "✅ Bundled ${PACK_NAME}"
+            fi
+          done
+          echo "Bundled packs:"
+          ls -lh dist-packs/
+
+      - name: Release - Upload CodeQL pack artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: codeql-tool-query-packs-${{ steps.version.outputs.version }}
+          path: dist-packs/*.tar.gz
+
       - name: Release - Publish npm package
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         working-directory: server
@@ -173,7 +197,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
-          files: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+          files: |
+            codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+            dist-packs/*.tar.gz
           generate_release_notes: true
           tag_name: ${{ steps.version.outputs.version }}
 
@@ -186,6 +212,7 @@ jobs:
           echo "✅ Distribution package created" >> $GITHUB_STEP_SUMMARY
           echo "✅ Production dependencies installed" >> $GITHUB_STEP_SUMMARY
           echo "✅ Archive created: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "✅ CodeQL tool query pack archives bundled" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Package Contents" >> $GITHUB_STEP_SUMMARY
           echo "- \`server/dist/\` - Bundled JavaScript output" >> $GITHUB_STEP_SUMMARY
