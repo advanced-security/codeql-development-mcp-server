@@ -701,19 +701,15 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should coerce non-numeric string for numStages to NaN (fails validation)', () => {
-      // z.coerce.number() on a non-numeric string produces NaN
+    it('should reject non-numeric string for numStages (NaN coercion)', () => {
+      // z.coerce.number() on a non-numeric string produces NaN, which Zod
+      // rejects because NaN is not a valid finite number.
       const result = workshopCreationWorkflowSchema.safeParse({
         queryPath: '/q.ql',
         language: 'java',
         numStages: 'abc',
       });
-      // NaN coercion: z.coerce.number() turns 'abc' into NaN, which is still
-      // type number, so Zod may accept it. Verify the actual behavior:
-      if (result.success) {
-        expect(result.data.numStages).toBeNaN();
-      }
-      // Either way, the test documents the behavior for slash command edge cases.
+      expect(result.success).toBe(false);
     });
   });
 
@@ -727,7 +723,7 @@ describe('Workflow Prompts', () => {
      */
     const schemaSpecs: Array<{
       name: string;
-       
+
       schema: any;
       required: string[];
       optional: string[];
@@ -798,7 +794,7 @@ describe('Workflow Prompts', () => {
 
     it.each(schemaSpecs)(
       '$name — required fields must cause rejection when omitted individually',
-      ({ schema, required, optional }) => {
+      ({ schema, required, optional: _optional }) => {
         // Build a fully-valid object first
         const validObj: Record<string, string | number> = {};
         for (const key of required) {
@@ -811,7 +807,7 @@ describe('Workflow Prompts', () => {
           }
         }
         // Leave optional keys out — valid object with only required keys
-        void optional;
+        void _optional;
 
         // Verify the base valid object passes
         const baseResult = schema.safeParse(validObj);
@@ -873,7 +869,7 @@ describe('Workflow Prompts', () => {
       '%s — every field should have a non-empty description',
       (_name, schema) => {
         for (const [key, zodType] of Object.entries(schema.shape)) {
-           
+
           const desc = (zodType as any).description ?? (zodType as any)._def?.description;
           expect(
             desc,
