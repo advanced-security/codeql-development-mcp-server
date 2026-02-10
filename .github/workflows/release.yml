@@ -58,7 +58,7 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
 
-      - name: Release - Checkout tag for workflow_dispatch
+      - name: Release - Checkout or create tag for workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
         run: |
           # For workflow_dispatch, we need to checkout the specific tag
@@ -67,8 +67,11 @@ jobs:
             echo "Checking out existing tag: ${TAG}"
             git checkout "refs/tags/${TAG}"
           else
-            echo "::error::Tag '${TAG}' does not exist. Create the tag first before running this workflow."
-            exit 1
+            echo "Tag '${TAG}' does not exist. Creating it now..."
+            CURRENT_SHA=$(git rev-parse HEAD)
+            git tag "${TAG}" "${CURRENT_SHA}"
+            git push origin "${TAG}"
+            echo "✅ Created and pushed tag: ${TAG} at commit ${CURRENT_SHA:0:8}"
           fi
 
       - name: Release - Verify checkout matches expected version
@@ -98,6 +101,9 @@ jobs:
         with:
           add-to-path: true
           install-language-runtimes: false
+
+      - name: Release - Install CodeQL pack dependencies
+        run: server/scripts/install-packs.sh
 
       - name: Release - Publish CodeQL tool query packs
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -137,9 +143,6 @@ jobs:
           cp -r server/ql dist-package/server/
           cp server/package.json dist-package/server/
 
-          # Copy root package-lock.json for npm ci (monorepo lockfile)
-          cp package-lock.json dist-package/server/
-
           # Copy root files
           cp README.md dist-package/
           cp LICENSE dist-package/
@@ -154,7 +157,7 @@ jobs:
 
       - name: Release - Install production dependencies
         working-directory: dist-package/server
-        run: npm ci --omit=dev --include=optional
+        run: npm install --omit=dev --include=optional
 
       - name: Release - Create archive
         run: |
