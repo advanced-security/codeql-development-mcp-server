@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 ---
 
 # Document a CodeQL Query
@@ -64,8 +64,15 @@ Use the following MCP server tools to gather context before creating documentati
   - Tool: `validate_codeql_query`
   - Parameters: `query` = query source code
   - Gather: Structural validation, suggestions
+  - Note: This is a heuristic check only — for full validation, use `codeql_query_compile`
 
-- [ ] **Step 5: Run tests** (if tests exist from Step 1)
+- [ ] **Step 5: Explore query types** (if deeper understanding needed)
+  - Tool: `codeql_lsp_definition` — navigate to class/predicate definitions
+  - Tool: `codeql_lsp_completion` — explore member predicates on types used in the query
+  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri` (pack root)
+  - Run `codeql_pack_install` first — LSP tools require resolved dependencies
+
+- [ ] **Step 6: Run tests** (if tests exist from Step 1)
   - Tool: `codeql_test_run`
   - Parameters: `tests` = test directories
   - Gather: Pass/fail status, confirms query behavior

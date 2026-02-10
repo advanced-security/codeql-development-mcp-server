@@ -187,3 +187,21 @@ Use the gathered information to inform your query:
 | `codeql_lsp_completion`   | Explore available types after seeing AST class names |
 | `codeql_lsp_definition`   | Navigate to class definitions to see predicates      |
 | `codeql_lsp_references`   | Find usage examples of a class or predicate          |
+
+### Using LSP Tools After AST Analysis
+
+After running PrintAST and identifying relevant AST class names, use the LSP tools
+to explore those classes in your query file:
+
+1. **Write the class name** in your query's `from` clause and save the file
+2. **Run `codeql_lsp_completion`** after the dot to see member predicates:
+   - `file_path`: your query file, `line`/`character`: 0-based position after the dot
+   - `workspace_uri`: the pack root directory (containing `codeql-pack.yml`)
+3. **Run `codeql_lsp_definition`** on an AST class name to see its full API
+4. **Run `codeql_lsp_references`** to find usage examples in the pack
+
+> **Note**: LSP tools use 0-based line/character positions. Run `codeql_pack_install`
+> before using them — they require resolved dependencies. Set `workspace_uri` to
+> a plain directory path (not a `file://` URI).
+
+For the full iterative LSP development workflow, see: `codeql://prompts/ql_lsp_iterative_development`

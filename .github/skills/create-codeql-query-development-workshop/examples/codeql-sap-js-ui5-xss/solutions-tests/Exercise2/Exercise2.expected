@@ -1,0 +1,12 @@
+| test.js:8:19:8:35 | document.location | User-controlled input: Window location |
+| test.js:8:19:8:42 | documen ... .search | User-controlled input: Window location |
+| test.js:17:19:17:33 | window.location | User-controlled input: Window location |
+| test.js:17:19:17:38 | window.location.hash | User-controlled input: Window location |
+| test.js:25:36:25:50 | window.location | User-controlled input: Window location |
+| test.js:25:36:25:57 | window. ... .search | User-controlled input: Window location |
+| test.js:36:19:36:35 | document.location | User-controlled input: Window location |
+| test.js:36:19:36:42 | documen ... .search | User-controlled input: Window location |
+| test.js:55:14:55:28 | window.location | User-controlled input: Window location |
+| test.js:55:14:55:33 | window.location.hash | User-controlled input: Window location |
+| test.js:64:19:64:35 | document.location | User-controlled input: Window location |
+| test.js:64:19:64:42 | documen ... .search | User-controlled input: Window location |

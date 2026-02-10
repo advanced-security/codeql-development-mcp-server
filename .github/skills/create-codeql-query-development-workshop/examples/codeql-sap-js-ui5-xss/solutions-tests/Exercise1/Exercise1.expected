@@ -1,0 +1,7 @@
+| test.js:10:25:10:33 | userInput | Potential XSS sink |
+| test.js:18:18:18:26 | hashValue | Potential XSS sink |
+| test.js:28:18:28:42 | "<div>" ... </div>" | Potential XSS sink |
+| test.js:39:25:39:29 | clean | Potential XSS sink |
+| test.js:48:25:48:59 | "<p>Wel ... on</p>" | Potential XSS sink |
+| test.js:56:8:56:11 | code | Potential XSS sink |
+| test.js:67:25:67:31 | encoded | Potential XSS sink |

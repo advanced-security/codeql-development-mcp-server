@@ -1,0 +1,5 @@
+name: codeql-sap-js-ui5-xss-solutions-tests
+version: 0.0.1
+dependencies:
+  codeql-sap-js-ui5-xss-solutions: '*'
+extractor: javascript

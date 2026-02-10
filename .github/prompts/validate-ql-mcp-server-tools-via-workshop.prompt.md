@@ -3,7 +3,7 @@ agent: mcp-enabled-ql-workshop-developer
 name: validate-ql-mcp-server-tools-via-workshop
 description: 'A prompt for validating the real-world functionality of the CodeQL Development MCP Server tools by creating a CodeQL query development workshop from scratch using an existing, production-grade CodeQL query as the workshop "solution".'
 argument-hint: 'Provide the absolute or relative path to a local ".ql" or ".qlref" file associated with a production-grade CodeQL query to be used as the "solution" for the last stage of the to-be-created workshop.'
-model: Claude Opus 4.5 (copilot)
+model: Claude Opus 4.6 (copilot)
 ---
 
 # `validate-ql-mcp-server-tools-via-workshop` Prompt

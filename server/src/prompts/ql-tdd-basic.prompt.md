@@ -52,14 +52,20 @@ For detailed guidance, reference the MCP resource: `codeql://learning/test-drive
   - Review AST structure and identify relevant classes
 
 - [ ] **Explore Available Classes and Predicates**
-  - Tool: `codeql_lsp_completion` at cursor position in `from` clause
-  - Set `workspace_uri` to the pack root for dependency resolution
-  - Browse completions with documentation to discover relevant types
+  - Tool: `codeql_lsp_completion` at the position in the `from` clause
+  - Parameters: `file_path`, `line` (0-based), `character` (0-based)
+  - Set `workspace_uri` to the pack root directory (containing `codeql-pack.yml`)
+  - Request completions after a dot (e.g., `pw.`) to see member predicates with docs
+  - Tip: Run `codeql_pack_install` first — LSP tools require resolved dependencies
 
 - [ ] **Navigate to Type Definitions**
   - Tool: `codeql_lsp_definition` on a class or predicate name
-  - Review the definition to understand available member predicates
-  - Tool: `codeql_lsp_references` to find usage examples in the pack
+  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri`
+  - Returns file URI and line range — even into library pack files
+  - Read the definition source to understand available member predicates
+  - Tool: `codeql_lsp_references` to find usage examples across the pack
+
+  For the full iterative LSP workflow, see: `codeql://prompts/ql_lsp_iterative_development`
 
 - [ ] **Reference Language Documentation**
   - Resource: `codeql://languages/{language}/ast`
@@ -206,6 +212,7 @@ codeql_test_accept: {
 - ❌ Skipping compilation step
 - ❌ Not using PrintAST to understand test code
 - ❌ Not using `codeql_lsp_completion` to discover available types
+- ❌ Not setting `workspace_uri` when using LSP tools (completions will be empty)
 - ❌ Creating tests that are too complex
 - ❌ Ignoring false positives in results
 - ❌ Not refactoring after tests pass

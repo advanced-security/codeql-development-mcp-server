@@ -143,7 +143,13 @@ workshop-name/
 
 ### Phase 5: Create Solution Queries
 
-For each stage, create a complete solution query:
+For each stage, create a complete solution query. Use the iterative LSP tools
+for efficient development (see `codeql://prompts/ql_lsp_iterative_development`):
+
+- Use `codeql_lsp_completion` to explore types and member predicates while writing queries
+- Use `codeql_lsp_definition` to navigate to library class definitions
+- Use `find_predicate_position` + `quick_evaluate` to test predicates in isolation
+- Set `workspace_uri` to the solutions pack root for dependency resolution
 
 - [ ] **Stage 1 Solution**: Simplest working version
   - Basic import statements
@@ -261,19 +267,24 @@ When creating workshops outside the MCP server repository:
 
 ## MCP Tools and Prompts Reference
 
-| Tool/Prompt               | Type   | Purpose                                                      |
-| ------------------------- | ------ | ------------------------------------------------------------ |
-| `find_codeql_query_files` | Tool   | Locate query and related files                               |
-| `explain_codeql_query`    | Prompt | Generate detailed explanations for workshop learning content |
-| `document_codeql_query`   | Prompt | Create/update query documentation files                      |
-| `codeql_query_run`        | Tool   | Run tools queries (PrintAST, PrintCFG, etc.)                 |
-| `codeql_test_run`         | Tool   | Validate tests pass                                          |
-| `codeql_test_accept`      | Tool   | Accept test results as expected baseline                     |
-| `codeql_query_compile`    | Tool   | Verify queries compile                                       |
-| `codeql_pack_install`     | Tool   | Install pack dependencies                                    |
-| `codeql_resolve_metadata` | Tool   | Extract query metadata                                       |
-| `profile_codeql_query`    | Tool   | Profile query execution to understand evaluation order       |
-| `create_codeql_query`     | Tool   | Scaffold new query structure                                 |
+| Tool/Prompt                    | Type   | Purpose                                                      |
+| ------------------------------ | ------ | ------------------------------------------------------------ |
+| `find_codeql_query_files`      | Tool   | Locate query and related files                               |
+| `explain_codeql_query`         | Prompt | Generate detailed explanations for workshop learning content |
+| `document_codeql_query`        | Prompt | Create/update query documentation files                      |
+| `ql_lsp_iterative_development` | Prompt | Iterative query development with LSP tools                   |
+| `codeql_query_run`             | Tool   | Run tools queries (PrintAST, PrintCFG, etc.)                 |
+| `codeql_test_run`              | Tool   | Validate tests pass                                          |
+| `codeql_test_accept`           | Tool   | Accept test results as expected baseline                     |
+| `codeql_query_compile`         | Tool   | Verify queries compile                                       |
+| `codeql_pack_install`          | Tool   | Install pack dependencies                                    |
+| `codeql_resolve_metadata`      | Tool   | Extract query metadata                                       |
+| `codeql_lsp_completion`        | Tool   | Explore types and member predicates during query writing     |
+| `codeql_lsp_definition`        | Tool   | Navigate to class/predicate definitions in library code      |
+| `find_predicate_position`      | Tool   | Locate predicate positions for quick_evaluate                |
+| `quick_evaluate`               | Tool   | Test individual predicates against a database                |
+| `profile_codeql_query`         | Tool   | Profile query execution to understand evaluation order       |
+| `create_codeql_query`          | Tool   | Scaffold new query structure                                 |
 
 ## Troubleshooting
 

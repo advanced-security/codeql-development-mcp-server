@@ -1,0 +1,4 @@
+| test.js:10:25:10:33 | userInput | XSS vulnerability from $@. | test.js:8:19:8:42 | documen ... .search | user input |
+| test.js:18:18:18:26 | hashValue | XSS vulnerability from $@. | test.js:17:19:17:38 | window.location.hash | user input |
+| test.js:28:18:28:42 | "<div>" ... </div>" | XSS vulnerability from $@. | test.js:25:36:25:57 | window. ... .search | user input |
+| test.js:56:8:56:11 | code | XSS vulnerability from $@. | test.js:55:14:55:33 | window.location.hash | user input |

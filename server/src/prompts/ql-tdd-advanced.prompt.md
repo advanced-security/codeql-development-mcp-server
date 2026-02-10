@@ -82,6 +82,7 @@ quick_evaluate: {
 }
 
 // Or evaluate a specific class
+// NOTE: find_class_position finds `class` definitions only, not `module` definitions
 find_class_position: {
   file: "/path/to/Query.ql",
   name: "ThrowingMethodCall"
@@ -102,17 +103,17 @@ Use the LSP tools for real-time code exploration during query development:
 // Discover available types after `import javascript`
 codeql_lsp_completion: {
   file_path: "/path/to/Query.ql",
-  line: 5,       // line with `from` clause
-  character: 5,   // cursor position
-  workspace_uri: "file:///path/to/pack-root"  // REQUIRED for dependency resolution
+  line: 5,       // 0-based line with `from` clause
+  character: 5,   // 0-based column position
+  workspace_uri: "/path/to/pack-root"  // REQUIRED: directory containing codeql-pack.yml
 }
 
 // Navigate to a class definition to see its predicates
 codeql_lsp_definition: {
   file_path: "/path/to/Query.ql",
-  line: 5,       // line containing the class name
-  character: 10,  // cursor on the class name
-  workspace_uri: "file:///path/to/pack-root"
+  line: 5,       // 0-based line containing the class name
+  character: 10,  // 0-based column on the class name
+  workspace_uri: "/path/to/pack-root"
 }
 
 // Find all usages of a predicate across the pack
@@ -120,11 +121,17 @@ codeql_lsp_references: {
   file_path: "/path/to/Query.ql",
   line: 8,
   character: 5,
-  workspace_uri: "file:///path/to/pack-root"
+  workspace_uri: "/path/to/pack-root"
 }
 ```
 
-**Important**: Always set `workspace_uri` to the pack or workspace root. Without it, completions for imported library types will be empty.
+**Important LSP tool notes**:
+
+- `workspace_uri` must be a **plain directory path** (not a `file://` URI) pointing to the pack root containing `codeql-pack.yml`
+- All LSP tools use **0-based** line/character positions
+- `find_predicate_position` and `find_class_position` return **1-based** positions — subtract 1 before passing to LSP tools
+- Run `codeql_pack_install` before using LSP tools — they require resolved dependencies
+- Request completions **after a dot** (e.g., `pw.`) to see all member predicates with full documentation
 
 ### 4. Query File Discovery with `find_codeql_query_files`
 
