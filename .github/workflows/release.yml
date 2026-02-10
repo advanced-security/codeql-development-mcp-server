@@ -100,7 +100,7 @@ jobs:
           install-language-runtimes: false
 
       - name: Release - Publish CodeQL tool query packs
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -118,7 +118,7 @@ jobs:
           done
 
       - name: Release - Publish npm package
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         working-directory: server
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,11 +167,12 @@ jobs:
           path: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
 
       - name: Release - Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           files: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
           generate_release_notes: true
+          tag_name: ${{ steps.version.outputs.version }}
 
       - name: Release - Summary
         run: |
