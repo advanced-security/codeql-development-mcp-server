@@ -97,7 +97,7 @@ Decompose the query into 4-8 incremental stages using these strategies:
 
 Standard workshop directory layout:
 
-```
+```text
 workshop-name/
 ├── codeql-workspace.yml      # CodeQL workspace configuration
 ├── README.md                 # Workshop guide with instructions

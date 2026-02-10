@@ -1,4 +1,4 @@
-# Print CFG for C#
+# Print CFG for `csharp` Source Files
 
 Produces a representation of a file's Control Flow Graph (CFG) for specified source files.
 

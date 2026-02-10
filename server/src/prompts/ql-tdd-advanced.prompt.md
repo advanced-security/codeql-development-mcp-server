@@ -191,6 +191,7 @@ Before writing any query logic:
    - Identify which nodes correspond to your test cases
 
 4. **Generate CFG if analyzing control flow**:
+
    ```typescript
    codeql_query_run: {
      queryName: "PrintCFG",
@@ -245,6 +246,7 @@ Instead of writing the full query at once:
    ```
 
 3. **Use find_codeql_query_files** to track all related files:
+
    ```typescript
    find_codeql_query_files: {
      queryPath: '/path/to/Query.ql';
@@ -369,6 +371,7 @@ class ThrowingMethod extends Method {
    ```
 
 3. **Profile the query**:
+
    ```typescript
    profile_codeql_query: {
      query: "/path/to/Query.ql",
@@ -413,11 +416,13 @@ When your query produces correct results but differs from the `.expected` file:
 
 1. **Review the `.actual` file** to verify results are correct
 2. **Accept the results** to update the expected baseline:
+
    ```typescript
    codeql_test_accept: {
      tests: ['/path/to/test/QueryTest'];
    }
    ```
+
 3. **Re-run tests** to confirm they now pass
 
 **Warning**: Only accept results after careful review. Don't blindly accept to make tests pass.

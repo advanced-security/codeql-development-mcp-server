@@ -85,12 +85,12 @@ Based on gathered context, create or update the documentation file.
 
 The documentation file (`QueryFileBaseName.md`) should follow this standardized format with these sections:
 
-**Section 1: Title and Description**
+### Section 1: Title and Description
 
 - H1 heading with the query name from @name metadata
 - One paragraph description from @description, expanded if needed
 
-**Section 2: Metadata Table**
+### Section 2: Metadata Table
 
 A table with these rows:
 
@@ -100,15 +100,15 @@ A table with these rows:
 - Precision: The @precision value
 - Tags: The @tags values
 
-**Section 3: Overview**
+### Section 3: Overview
 
 Concise explanation of what vulnerability/issue this query detects and why it matters. 2-4 sentences.
 
-**Section 4: Recommendation**
+### Section 4: Recommendation
 
 Brief guidance on how developers should fix issues flagged by this query. Include code patterns to use or avoid.
 
-**Section 5: Example**
+### Section 5: Example
 
 Two subsections:
 
@@ -117,7 +117,7 @@ Two subsections:
 
 Use the appropriate language identifier for the code blocks (e.g., `javascript`, `python`, `java`).
 
-**Section 6: References**
+### Section 6: References
 
 A list of links to:
 

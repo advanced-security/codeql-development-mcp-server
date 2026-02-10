@@ -9,7 +9,7 @@ These "iterative" tools work entirely through file paths and numeric positions.
 Every operation is expressible as a tool call with explicit `file_path`, `line`, and `character` parameters.
 Thus, this prompt can be used in any environment where the query files are on disk, and it does not require any special editor integration.
 
-## Use This Prompt When...
+## Use This Prompt When
 
 - Exploring unfamiliar CodeQL libraries to discover available classes and predicates
 - Incrementally building a query clause-by-clause with real-time feedback

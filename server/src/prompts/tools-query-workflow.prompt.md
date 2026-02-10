@@ -60,7 +60,7 @@ The PrintAST query outputs a hierarchical tree of AST nodes with labels.
 
 **Example AST output structure:**
 
-```
+```text
 TopLevelFunction
 ├── FunctionDeclarationEntry
 ├── Block
@@ -91,7 +91,7 @@ The PrintCFG query outputs control flow nodes and edges.
 
 **Example CFG output structure:**
 
-```
+```text
 nodes
 | node | semmle.label |
 | ... | entry: processData |
@@ -141,7 +141,7 @@ Use the gathered information to inform your query:
 
 ### Pattern 1: Finding All Function Calls
 
-```
+```text
 1. Run PrintAST on your source file
 2. Look for FunctionCall, MethodAccess, or similar nodes
 3. Note the parent/child relationships
@@ -150,7 +150,7 @@ Use the gathered information to inform your query:
 
 ### Pattern 2: Tracing Data Through Functions
 
-```
+```text
 1. Run CallGraphFrom on your entry point function
 2. Identify which functions are called
 3. Run CallGraphTo on sink functions
@@ -159,7 +159,7 @@ Use the gathered information to inform your query:
 
 ### Pattern 3: Understanding Loop Structures
 
-```
+```text
 1. Run PrintAST to find loop constructs (ForStmt, WhileStmt, etc.)
 2. Run PrintCFG on the containing function
 3. Identify back edges that represent loop iteration
