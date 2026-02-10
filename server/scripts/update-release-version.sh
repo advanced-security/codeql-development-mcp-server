@@ -10,6 +10,7 @@ set -euo pipefail
 ##   package.json                                         (X.Y.Z format)
 ##   client/package.json                                  (X.Y.Z format)
 ##   server/package.json                                  (X.Y.Z format)
+##   server/src/codeql-development-mcp-server.ts          (X.Y.Z format)
 ##   server/ql/*/tools/src/codeql-pack.yml                (X.Y.Z format)
 ##   server/ql/*/tools/test/codeql-pack.yml               (X.Y.Z format)
 ##
@@ -93,6 +94,16 @@ collect_versions() {
 			echo "WARNING: ${pkg_file} not found" >&2
 		fi
 	done
+
+	## server runtime version constant
+	local server_ts="${REPO_ROOT}/server/src/codeql-development-mcp-server.ts"
+	if [[ -f "${server_ts}" ]]; then
+		local runtime_version
+		runtime_version=$(grep -m1 "^const VERSION = " "${server_ts}" | sed "s/.*VERSION = '\([^']*\)'.*/\1/")
+		versions+=("server/src/codeql-development-mcp-server.ts|${runtime_version}")
+	else
+		echo "WARNING: server/src/codeql-development-mcp-server.ts not found" >&2
+	fi
 
 	## codeql-pack.yml files (src and test packs for each language)
 	for lang in "${LANGUAGES[@]}"; do
@@ -288,6 +299,21 @@ update_versions() {
 			updated_count=$((updated_count + 1))
 		fi
 	done
+
+	## 2.5. Update server runtime version constant
+	local server_ts="${REPO_ROOT}/server/src/codeql-development-mcp-server.ts"
+	if [[ -f "${server_ts}" ]]; then
+		local old_version
+		old_version=$(grep -m1 "^const VERSION = " "${server_ts}" | sed "s/.*VERSION = '\([^']*\)'.*/\1/")
+		if [[ "${dry_run}" == true ]]; then
+			echo "  [DRY RUN] server/src/codeql-development-mcp-server.ts: ${old_version} -> ${new_version}"
+		else
+			sed -i.bak "s/^const VERSION = '.*';/const VERSION = '${new_version}';/" "${server_ts}"
+			rm -f "${server_ts}.bak"
+			echo "  ✅ server/src/codeql-development-mcp-server.ts: ${old_version} -> ${new_version}"
+		fi
+		updated_count=$((updated_count + 1))
+	fi
 
 	## 3. Update codeql-pack.yml files (src and test packs for each language)
 	for lang in "${LANGUAGES[@]}"; do
