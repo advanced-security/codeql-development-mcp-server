@@ -69,17 +69,25 @@ gh codeql set-version vX.XX.Y
 codeql version  # Verify installation
 ```
 
-#### 1.3 Update package.json Versions
+#### 1.3 Update All Version-Bearing Files
 
-All `package.json` files must have their `version` field set to match the CLI version (without the "v" prefix):
+Use the `update-release-version.sh` script to deterministically update `.codeql-version`, all `package.json` files, and all `codeql-pack.yml` files in a single command:
 
-| File                  | Field to Update |
-| --------------------- | --------------- |
-| `package.json`        | `version`       |
-| `client/package.json` | `version`       |
-| `server/package.json` | `version`       |
+```bash
+./server/scripts/update-release-version.sh X.XX.Y
+```
 
-Example: If `.codeql-version` is `v2.24.1`, set all `package.json` versions to `"version": "2.24.1"`.
+This updates all 22 version-bearing files. Preview changes first with `--dry-run`:
+
+```bash
+./server/scripts/update-release-version.sh --dry-run X.XX.Y
+```
+
+Verify consistency with `--check`:
+
+```bash
+./server/scripts/update-release-version.sh --check X.XX.Y
+```
 
 After updating, regenerate the lock file:
 
@@ -124,6 +132,8 @@ gh codeql pack download "codeql/{language}-all@{older-version}"
 Then re-verify the `cliVersion` is compatible.
 
 ### Phase 3: Update codeql-pack.yml Files
+
+> **Note**: The `version` field in all `codeql-pack.yml` files is already updated by the `update-release-version.sh` script in Phase 1.3. This phase focuses on updating `codeql/*-all` **dependency versions** for compatibility.
 
 #### 3.1 Files to Update
 
