@@ -6,6 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      publish_codeql_packs:
+        default: true
+        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist.'
+        required: false
+        type: boolean
       version:
         description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
         required: true
@@ -90,23 +95,31 @@ jobs:
             echo "::warning::Tag ${TAG} not found, building from current checkout at ${CURRENT_SHA:0:8}"
           fi
 
-      - name: Release - Install dependencies
-        run: npm ci --include=optional
-
-      - name: Release - Build server
-        run: npm run build -w server
-
       - name: Release - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment
         with:
           add-to-path: true
           install-language-runtimes: false
 
+      - name: Release - Update release version
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.release_name }}"
+          echo "Updating all version-bearing files to '${TAG_VERSION}'..."
+          ./server/scripts/update-release-version.sh "${TAG_VERSION}"
+
+      - name: Release - Install dependencies
+        run: npm install --include=optional
+
+      - name: Release - Build server
+        run: npm run build -w server
+
       - name: Release - Install CodeQL pack dependencies
         run: server/scripts/install-packs.sh
 
       - name: Release - Publish CodeQL tool query packs
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        if: |
+          (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+          && (github.event_name != 'workflow_dispatch' || inputs.publish_codeql_packs)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -122,6 +135,10 @@ jobs:
               echo "⚠️ Skipping ${lang}: ${PACK_DIR} not found"
             fi
           done
+
+      - name: Release - Skip CodeQL tool query pack publishing
+        if: github.event_name == 'workflow_dispatch' && !inputs.publish_codeql_packs
+        run: echo "⏭️ CodeQL tool query pack publishing disabled via workflow input"
 
       - name: Release - Bundle CodeQL tool query packs
         run: |
@@ -206,13 +223,19 @@ jobs:
       - name: Release - Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Server built successfully" >> $GITHUB_STEP_SUMMARY
-          echo "✅ npm package published to GitHub Packages" >> $GITHUB_STEP_SUMMARY
-          echo "✅ CodeQL tool query packs published to GHCR" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Distribution package created" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Production dependencies installed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Archive created: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz" >> $GITHUB_STEP_SUMMARY
-          echo "✅ CodeQL tool query pack archives bundled" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Server build | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version validation | ✅ All files match ${{ steps.version.outputs.release_name }} |" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish_codeql_packs }}" != "true" ]]; then
+            echo "| CodeQL pack publish | ⏭️ Skipped (disabled via input) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| CodeQL pack publish | ✅ Published to GHCR |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| npm package | ✅ Published to GitHub Packages |" >> $GITHUB_STEP_SUMMARY
+          echo "| Distribution archive | ✅ Created |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL pack bundles | ✅ Bundled |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Package Contents" >> $GITHUB_STEP_SUMMARY
           echo "- \`server/dist/\` - Bundled JavaScript output" >> $GITHUB_STEP_SUMMARY
