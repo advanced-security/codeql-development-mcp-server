@@ -102,6 +102,9 @@ jobs:
           add-to-path: true
           install-language-runtimes: false
 
+      - name: Release - Install CodeQL pack dependencies
+        run: server/scripts/install-packs.sh
+
       - name: Release - Publish CodeQL tool query packs
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         env:
@@ -140,9 +143,6 @@ jobs:
           cp -r server/ql dist-package/server/
           cp server/package.json dist-package/server/
 
-          # Copy root package-lock.json for npm ci (monorepo lockfile)
-          cp package-lock.json dist-package/server/
-
           # Copy root files
           cp README.md dist-package/
           cp LICENSE dist-package/
@@ -157,7 +157,7 @@ jobs:
 
       - name: Release - Install production dependencies
         working-directory: dist-package/server
-        run: npm ci --omit=dev --include=optional
+        run: npm install --omit=dev --include=optional
 
       - name: Release - Create archive
         run: |
