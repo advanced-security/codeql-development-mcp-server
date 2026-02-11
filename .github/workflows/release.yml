@@ -6,9 +6,19 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      create_github_release:
+        default: true
+        description: 'Create GitHub Release with distribution archive and CodeQL pack bundles. Disable to only publish packages without creating a release.'
+        required: false
+        type: boolean
       publish_codeql_packs:
         default: true
         description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist.'
+        required: false
+        type: boolean
+      publish_npm:
+        default: true
+        description: 'Publish npm package to npmjs.org via OIDC trusted publishing. Disable for pre-release or re-run scenarios where the npm package already exists.'
         required: false
         type: boolean
       version:
@@ -32,7 +42,9 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
+      create_github_release: ${{ steps.resolve.outputs.create_github_release }}
       publish_codeql_packs: ${{ steps.resolve.outputs.publish_codeql_packs }}
+      publish_npm: ${{ steps.resolve.outputs.publish_npm }}
       release_name: ${{ steps.resolve.outputs.release_name }}
       version: ${{ steps.resolve.outputs.version }}
 
@@ -52,16 +64,22 @@ jobs:
             exit 1
           fi
 
-          # Resolve publish_codeql_packs (default true for tag pushes)
+          # Resolve publish flags (default true for tag pushes)
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            CREATE_RELEASE="${{ github.event.inputs.create_github_release }}"
             PUBLISH_PACKS="${{ github.event.inputs.publish_codeql_packs }}"
+            PUBLISH_NPM="${{ github.event.inputs.publish_npm }}"
           else
+            CREATE_RELEASE="true"
             PUBLISH_PACKS="true"
+            PUBLISH_NPM="true"
           fi
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "create_github_release=${CREATE_RELEASE}" >> $GITHUB_OUTPUT
           echo "publish_codeql_packs=${PUBLISH_PACKS}" >> $GITHUB_OUTPUT
+          echo "publish_npm=${PUBLISH_NPM}" >> $GITHUB_OUTPUT
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Step 2: Ensure the release tag exists
@@ -83,15 +101,20 @@ jobs:
   # Step 3a: Build and publish the npm package
   #
   # Checks out the clean tag (no CodeQL pack artifacts), builds with `npm ci`,
-  # and publishes to GitHub Packages. Runs in parallel with CodeQL pack
-  # publishing since they are independent.
+  # and publishes to npmjs.org via OIDC trusted publishing. Runs in parallel
+  # with CodeQL pack publishing since they are independent.
+  #
+  # The trusted publisher on npmjs.com is configured with workflow "release.yml"
+  # and environment "release-npm". The id-token:write permission is required for
+  # OIDC authentication — no npm tokens are used.
   # ─────────────────────────────────────────────────────────────────────────────
   publish-npm:
     name: Publish npm Package
+    if: needs.resolve-version.outputs.publish_npm == 'true'
     needs: [resolve-version, ensure-tag]
     permissions:
       contents: read
-      packages: write
+      id-token: write
     uses: ./.github/workflows/release-npm.yml
     with:
       version: ${{ needs.resolve-version.outputs.version }}
@@ -104,6 +127,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   publish-codeql:
     name: Publish CodeQL Packs
+    if: needs.resolve-version.outputs.publish_codeql_packs == 'true'
     needs: [resolve-version, ensure-tag]
     permissions:
       contents: read
@@ -118,11 +142,18 @@ jobs:
   #
   # Downloads the clean build artifact (from npm workflow) and pack bundles
   # (from CodeQL workflow), assembles the distribution archive, and creates the
-  # GitHub Release.
+  # GitHub Release. Only runs for full releases (all publish steps enabled and
+  # create_github_release is true). Partial workflows (e.g., re-publishing only
+  # npm or only CodeQL packs) skip this step.
   # ─────────────────────────────────────────────────────────────────────────────
   create-release:
     name: Create GitHub Release
-    needs: [resolve-version, publish-npm, publish-codeql]
+    if: >-
+      always() && !failure() && !cancelled()
+      && needs.resolve-version.outputs.create_github_release == 'true'
+      && needs.resolve-version.outputs.publish_npm == 'true'
+      && needs.resolve-version.outputs.publish_codeql_packs == 'true'
+    needs: [resolve-version, ensure-tag, publish-npm, publish-codeql]
     runs-on: ubuntu-latest
 
     permissions:
@@ -162,11 +193,6 @@ jobs:
           # Remove test and examples directories from ql folders (only keep src)
           find dist-package/server/ql -type d \( -name "test" -o -name "examples" \) -prune -exec rm -rf {} \;
 
-      - name: Release - Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.node-version'
-
       - name: Release - Install production dependencies
         working-directory: dist-package/server
         run: npm install --omit=dev --include=optional
@@ -194,7 +220,6 @@ jobs:
         run: |
           VERSION="${{ needs.resolve-version.outputs.version }}"
           RELEASE_NAME="${{ needs.resolve-version.outputs.release_name }}"
-          PUBLISH_PACKS="${{ needs.resolve-version.outputs.publish_codeql_packs }}"
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
@@ -202,14 +227,10 @@ jobs:
           echo "| Tag | ✅ ${VERSION} |" >> $GITHUB_STEP_SUMMARY
           echo "| Server build | ✅ Success |" >> $GITHUB_STEP_SUMMARY
           echo "| Version validation | ✅ All files match ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
-          if [ "${PUBLISH_PACKS}" != "true" ]; then
-            echo "| CodeQL pack publish | ⏭️ Skipped (disabled via input) |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| CodeQL pack publish | ✅ Published to GHCR |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "| npm package | ✅ Published to GitHub Packages |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm publish | ✅ Published to npmjs.org |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL pack publish | ✅ Published to GHCR |" >> $GITHUB_STEP_SUMMARY
           echo "| Distribution archive | ✅ Created |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL pack bundles | ✅ Bundled |" >> $GITHUB_STEP_SUMMARY
+          echo "| GitHub Release | ✅ Created |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Package Contents" >> $GITHUB_STEP_SUMMARY
           echo "- \`server/dist/\` - Bundled JavaScript output" >> $GITHUB_STEP_SUMMARY

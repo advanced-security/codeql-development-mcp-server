@@ -14,12 +14,14 @@ on:
       version:
         description: 'The full version string with "v" prefix (e.g., vX.Y.Z)'
         value: ${{ jobs.publish-npm.outputs.version }}
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version tag (e.g., vX.Y.Z). Must start with "v". Tag must already exist.'
-        required: true
-        type: string
+
+# Note: This workflow is called exclusively via workflow_call from release.yml.
+# It does NOT have a workflow_dispatch trigger because npm Trusted Publishing
+# validates the *calling* workflow filename for OIDC. The trusted publisher on
+# npmjs.com is configured with workflow "release.yml" and environment
+# "release-npm". Direct dispatch would present "release-npm.yml" as the workflow
+# name, causing OIDC authentication to fail. To re-publish the npm package
+# standalone, use workflow_dispatch on release.yml instead.
 
 permissions:
   contents: read
@@ -33,7 +35,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write
+      id-token: write
 
     outputs:
       release_name: ${{ steps.version.outputs.release_name }}
@@ -61,8 +63,7 @@ jobs:
         with:
           cache: 'npm'
           node-version-file: '.node-version'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@advanced-security'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: npm - Install dependencies
         run: npm ci --include=optional
@@ -72,12 +73,10 @@ jobs:
 
       - name: npm - Publish npm package
         working-directory: server
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Publishing @advanced-security/codeql-development-mcp-server to GitHub Packages..."
+          echo "Publishing codeql-development-mcp-server to npmjs.org via OIDC trusted publishing..."
           npm publish
-          echo "✅ Published npm package to GitHub Packages"
+          echo "✅ Published npm package to npmjs.org (with provenance)"
 
       - name: npm - Upload release build artifact
         uses: actions/upload-artifact@v6
@@ -100,7 +99,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
           echo "| ------ | ----- |" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | \`@advanced-security/codeql-development-mcp-server\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | \`codeql-development-mcp-server\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Registry | GitHub Packages |" >> $GITHUB_STEP_SUMMARY
+          echo "| Registry | npmjs.org |" >> $GITHUB_STEP_SUMMARY
           echo "| Tag | ${VERSION} |" >> $GITHUB_STEP_SUMMARY

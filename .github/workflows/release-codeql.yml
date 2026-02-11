@@ -19,17 +19,12 @@ on:
       version:
         description: 'The full version string with "v" prefix (e.g., vX.Y.Z)'
         value: ${{ jobs.publish-codeql-packs.outputs.version }}
-  workflow_dispatch:
-    inputs:
-      publish_codeql_packs:
-        default: true
-        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist.'
-        required: false
-        type: boolean
-      version:
-        description: 'Release version tag (e.g., vX.Y.Z). Must start with "v". Tag must already exist.'
-        required: true
-        type: string
+
+# Note: This workflow is called exclusively via workflow_call from release.yml.
+# It does NOT have a workflow_dispatch trigger to keep release.yml as the single
+# entry point for all release operations. To re-publish CodeQL packs standalone,
+# use workflow_dispatch on release.yml with publish_npm=false and
+# create_github_release=false.
 
 permissions:
   contents: read

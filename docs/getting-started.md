@@ -12,22 +12,23 @@ This guide covers installation, configuration, and usage of the CodeQL Developme
 
 ### From npm (recommended)
 
-The package is published to [GitHub Packages](https://github.com/advanced-security/codeql-development-mcp-server/pkgs/npm/codeql-development-mcp-server). Configure npm once, then install:
+The package is published to the [public npm registry](https://www.npmjs.com/package/codeql-development-mcp-server). No authentication or special configuration is needed:
 
 ```bash
-# One-time: route @advanced-security scope to GitHub Packages and authenticate
-npm config set @advanced-security:registry https://npm.pkg.github.com
-npm login --registry=https://npm.pkg.github.com
-
 # Install globally
-npm install -g @advanced-security/codeql-development-mcp-server
+npm install -g codeql-development-mcp-server
+
+# Install CodeQL pack dependencies (required on first use)
+codeql-development-mcp-server-setup-packs
 ```
 
 Or use `npx` to run without a global install:
 
 ```bash
-npx -y @advanced-security/codeql-development-mcp-server
+npx -y codeql-development-mcp-server
 ```
+
+> **Note:** The npm package bundles the tool query source packs (`.ql` files and lock files), but their CodeQL library dependencies (e.g., `codeql/javascript-all`) must be fetched from GHCR on first use. Run `codeql-development-mcp-server-setup-packs` once after installing to download them (`~/.codeql/packages/`). If you skip this step, the `codeql_pack_install` MCP tool can install dependencies on demand for individual packs.
 
 ### From GitHub Releases
 
@@ -59,7 +60,7 @@ Add to your `mcp.json` file:
   "servers": {
     "ql-mcp": {
       "command": "npx",
-      "args": ["-y", "@advanced-security/codeql-development-mcp-server"],
+      "args": ["-y", "codeql-development-mcp-server"],
       "type": "stdio"
     }
   }
@@ -98,6 +99,7 @@ Add to your `mcp.json` file:
 
 ## Troubleshooting
 
+- **Tool query errors (e.g., PrintAST fails)**: Run `codeql-development-mcp-server-setup-packs` to install CodeQL pack dependencies
 - **Server not listed**: Verify absolute path in `mcp.json`, restart VS Code
 - **CodeQL errors**: Run `codeql --version` to confirm CLI is installed
 - **Permission denied**: Check file permissions on server directory

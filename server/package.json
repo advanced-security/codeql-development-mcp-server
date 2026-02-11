@@ -1,11 +1,12 @@
 {
-  "name": "@advanced-security/codeql-development-mcp-server",
+  "name": "codeql-development-mcp-server",
   "version": "2.24.1",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
   "main": "dist/codeql-development-mcp-server.js",
   "type": "module",
   "bin": {
-    "codeql-development-mcp-server": "./dist/codeql-development-mcp-server.js"
+    "codeql-development-mcp-server": "./dist/codeql-development-mcp-server.js",
+    "codeql-development-mcp-server-setup-packs": "./scripts/setup-packs.sh"
   },
   "files": [
     "dist/",
@@ -18,12 +19,13 @@
     "ql/python/tools/src/",
     "ql/ruby/tools/src/",
     "ql/swift/tools/src/",
+    "scripts/setup-packs.sh",
     "package.json",
     "README.md"
   ],
   "publishConfig": {
     "access": "public",
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org"
   },
   "keywords": [
     "codeql",

@@ -17,12 +17,10 @@ on:
       version:
         description: 'The full version string with "v" prefix (e.g., vX.Y.Z)'
         value: ${{ jobs.create-tag.outputs.version }}
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
-        required: true
-        type: string
+
+# Note: This workflow is called exclusively via workflow_call from release.yml.
+# It does NOT have a workflow_dispatch trigger to keep release.yml as the single
+# entry point for all release operations.
 
 permissions:
   contents: read
@@ -39,7 +37,7 @@ jobs:
 
     outputs:
       release_name: ${{ steps.version.outputs.release_name }}
-      tag_sha: ${{ steps.create-tag.outputs.tag_sha }}
+      tag_sha: ${{ steps.final-sha.outputs.tag_sha }}
       version: ${{ steps.version.outputs.version }}
 
     steps:
@@ -129,6 +127,9 @@ jobs:
 
           # Stage version-bearing files and lockfile changes
           git add -A
+          # Ensure CodeQL-generated artifacts are not staged for commit
+          git restore --staged .codeql || true
+          git restore --staged '*.qlx' || true
 
           # Check if there are changes to commit
           if git diff --cached --quiet; then
