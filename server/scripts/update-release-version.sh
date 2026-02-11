@@ -120,6 +120,12 @@ check_versions() {
 	echo "=== Version Consistency Check ==="
 	echo ""
 
+	# Extract base version for .codeql-version comparison
+	local expected_base_version=""
+	if [[ -n "${expected_version}" ]]; then
+		expected_base_version=$(extract_base_version "${expected_version}")
+	fi
+
 	while IFS='|' read -r file version; do
 		file_count=$((file_count + 1))
 
@@ -128,10 +134,16 @@ check_versions() {
 		fi
 
 		if [[ -n "${expected_version}" ]]; then
-			if [[ "${version}" == "${expected_version}" ]]; then
+			# .codeql-version stores base version only, compare against base
+			local version_to_check="${expected_version}"
+			if [[ "${file}" == ".codeql-version" ]]; then
+				version_to_check="${expected_base_version}"
+			fi
+
+			if [[ "${version}" == "${version_to_check}" ]]; then
 				echo "  ✅ ${file}: ${version}"
 			else
-				echo "  ❌ ${file}: ${version} (expected ${expected_version})"
+				echo "  ❌ ${file}: ${version} (expected ${version_to_check})"
 				all_consistent=false
 			fi
 		else
