@@ -24,14 +24,6 @@ This is a compatibility issue between the CodeQL CLI version being used and the 
 - Some pack dependency resolution warnings are expected in test environment
 - Exit code 1 for `codeql query format --check-only` indicates "file would change" and is considered success
 
-## Current Status
-
-- ✅ Basic HTTP connectivity testing
-- ✅ TypeScript project setup with testing infrastructure
-- ✅ Build pipeline with ESBuild
-- ✅ GitHub Actions workflow for integration testing
-- ⚠️ Full MCP SDK integration pending (SDK import issues being resolved)
-
 ## Usage
 
 ### CLI Interface

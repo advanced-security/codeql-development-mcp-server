@@ -1,31 +1,114 @@
-# advanced-security/codeql-development-mcp-server:server/README.md
+# codeql-development-mcp-server
 
-This README provides documentation for the `server` subproject of the `advanced-security/codeql-development-mcp-server` repository.
-The `server` subproject implements the actual Model Context Protocol (MCP) server for CodeQL development and is the main component of the repository.
+> An [MCP](https://modelcontextprotocol.io/) server for AI-assisted CodeQL query development — providing tools, prompts, and resources for writing, testing, and optimizing CodeQL queries.
 
-## For End Users
+## Quick Start
 
-If you're using the distributed release package (downloaded from GitHub Releases), the server is ready to use. See the [Getting Started Guide](../docs/getting-started.md) for setup instructions.
+### Prerequisites
 
-### Running the Server
+- **Node.js** v24.13.0+ ([nodejs.org](https://nodejs.org/))
+- **CodeQL CLI** ([github.com/github/codeql-cli-binaries](https://github.com/github/codeql-cli-binaries/releases))
+- **VS Code** with GitHub Copilot extension (only required for this "Quick Start" guide)
 
-The server can run in two modes:
+### Install and configure
 
-**STDIO Mode (recommended for VS Code):**
+1. Add to your VS Code `mcp.json`:
 
-```bash
-node dist/codeql-development-mcp-server.js
-```
+   | OS      | Location                                           |
+   | ------- | -------------------------------------------------- |
+   | macOS   | `~/Library/Application Support/Code/User/mcp.json` |
+   | Windows | `%APPDATA%\Code\User\mcp.json`                     |
+   | Linux   | `~/.config/Code/User/mcp.json`                     |
 
-**HTTP Mode (for debugging):**
+   ```json
+   {
+     "servers": {
+       "ql-mcp": {
+         "command": "npx",
+         "args": ["-y", "codeql-development-mcp-server"],
+         "type": "stdio"
+       }
+     }
+   }
+   ```
 
-```bash
-TRANSPORT_MODE=http node dist/codeql-development-mcp-server.js
-```
+2. Install CodeQL pack dependencies:
 
-### Configuration
+   ```bash
+   npm install -g codeql-development-mcp-server
+   codeql-development-mcp-server-setup-packs
+   ```
 
-Configure the server using environment variables:
+   > **Windows:** The setup-packs command requires a Bash-compatible shell (e.g., Git Bash or WSL).
+
+3. Open Command Palette in VS Code → **"MCP: List MCP Servers"** → confirm `ql-mcp` appears. Use the options available via "MCP: List MCP Servers" to start, stop, restart, and/or reconfigure the `ql-mcp` server in VS Code.
+
+See the [Getting Started Guide](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/getting-started.md) for detailed instructions and alternative installation methods.
+
+## What's Included
+
+### 34 Tools
+
+Wraps the full CodeQL development lifecycle as MCP tools:
+
+| Category              | Tools                                                                                                             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Query execution**   | `codeql_query_run`, `codeql_query_compile`, `codeql_database_analyze`, `codeql_database_create`                   |
+| **Testing**           | `codeql_test_run`, `codeql_test_extract`, `codeql_test_accept`                                                    |
+| **BQRS results**      | `codeql_bqrs_decode`, `codeql_bqrs_info`, `codeql_bqrs_interpret`                                                 |
+| **Pack management**   | `codeql_pack_install`, `codeql_pack_ls`                                                                           |
+| **Code navigation**   | `codeql_lsp_completion`, `codeql_lsp_definition`, `codeql_lsp_diagnostics`, `codeql_lsp_references`               |
+| **Query scaffolding** | `create_codeql_query`, `find_codeql_query_files`, `validate_codeql_query`, `quick_evaluate`                       |
+| **Profiling**         | `profile_codeql_query`, `codeql_generate_log-summary`                                                             |
+| **Resolution**        | `codeql_resolve_database`, `codeql_resolve_languages`, `codeql_resolve_queries`, `codeql_resolve_tests`, and more |
+
+Full reference: [Tools](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/ql-mcp/tools.md)
+
+### 10 Prompts
+
+Guided workflows for common CodeQL development tasks:
+
+| Prompt                         | Description                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------------- |
+| `test_driven_development`      | End-to-end TDD workflow for CodeQL queries                                      |
+| `ql_tdd_basic`                 | Write tests first, implement query, iterate until tests pass                    |
+| `ql_tdd_advanced`              | TDD with AST visualization, control flow, and call graph analysis               |
+| `tools_query_workflow`         | Use PrintAST, PrintCFG, CallGraphFrom, CallGraphTo to understand code structure |
+| `ql_lsp_iterative_development` | Interactive development with LSP completions, navigation, and diagnostics       |
+| `sarif_rank_false_positives`   | Identify likely false positives in query results                                |
+| `sarif_rank_true_positives`    | Identify likely true positives in query results                                 |
+| `explain_codeql_query`         | Generate explanations and Mermaid evaluation diagrams                           |
+| `document_codeql_query`        | Generate standardized markdown documentation for a query                        |
+| `workshop_creation_workflow`   | Create multi-exercise workshops for teaching CodeQL query development           |
+
+Full reference: [Prompts](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/ql-mcp/prompts.md)
+
+### Resources
+
+Static learning materials and per-language references served to AI assistants:
+
+- **CodeQL Getting Started** / **Query Basics** — Introductory guides
+- **Security Templates** / **Performance Patterns** — Ready-to-use templates and best practices
+- **Language AST References** — For actions, cpp, csharp, go, java, javascript, python, ql, ruby
+- **Language Security Patterns** — For cpp, csharp, go, javascript, python
+
+Full reference: [Resources](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/ql-mcp/resources.md)
+
+## Supported Languages
+
+| Language              | CodeQL Identifier |
+| --------------------- | ----------------- |
+| GitHub Actions        | `actions`         |
+| C/C++                 | `cpp`             |
+| C#                    | `csharp`          |
+| Go                    | `go`              |
+| Java/Kotlin           | `java`            |
+| JavaScript/TypeScript | `javascript`      |
+| Python                | `python`          |
+| Ruby                  | `ruby`            |
+| Swift                 | `swift`           |
+
+## Configuration
 
 | Variable         | Description                            | Default  |
 | ---------------- | -------------------------------------- | -------- |
@@ -34,80 +117,20 @@ Configure the server using environment variables:
 | `HTTP_PORT`      | HTTP port (when using HTTP mode)       | `3000`   |
 | `DEBUG`          | Enable debug logging                   | `false`  |
 
-## Subproject Structure
-
-The `server` subproject is structured as follows:
-
-```text
-server/
-├── dist/                    # Base directory for compiled output
-│   ├── codeql-development-mcp-server.js     # Compiled, bundled MCP server entry point
-│   └── codeql-development-mcp-server.js.map # Source map for the bundled MCP server
-├── src/                     # TypeScript source library code
-│   ├── codeql-development-mcp-server.ts     # MCP server entry point
-│   ├── lib/                 # Core library code
-│   ├── tools/               # Implementation of MCP tools
-├── test/                    # Base directory for tests
-│   ├── src/                 # Base directory for test source files
-│   │   ├── lib/             # Test files for core library code
-│   │   ├── tools/           # Test files for MCP tools
-├── eslint.config.mjs        # ESLint configuration
-├── esbuild.config.js        # esbuild configuration for bundling
-├── package.json             # NPM package configuration
-├── tsconfig.json            # TypeScript configuration
-└── README.md                # This README file
-```
-
 ## Troubleshooting
 
-### Server Won't Start
+- **Tool query errors (e.g., PrintAST fails):** Run `codeql-development-mcp-server-setup-packs` to install CodeQL pack dependencies
+- **Server not listed in VS Code:** Verify `mcp.json` configuration, restart VS Code
+- **CodeQL errors:** Run `codeql --version` to confirm CLI is installed and in PATH
+- **Permission denied:** Check file permissions on the package directory
 
-1. **Check Node.js version**: The server requires Node.js v24.13.0 or later
+## Documentation
 
-   ```bash
-   node --version
-   ```
+- [Getting Started Guide](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/getting-started.md)
+- [Tools Reference](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/ql-mcp/tools.md)
+- [Prompts Reference](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/ql-mcp/prompts.md)
+- [Resources Reference](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/ql-mcp/resources.md)
 
-2. **Verify the entry point exists**:
+## License
 
-   ```bash
-   ls dist/codeql-development-mcp-server.js
-   ```
-
-3. **Check for missing dependencies**: If using the distributed package, ensure `node_modules` is present
-
-### CodeQL Tools Return Errors
-
-1. **Verify CodeQL CLI is installed**:
-
-   ```bash
-   codeql --version
-   ```
-
-2. **Check CodeQL is in PATH**: The server expects `codeql` to be available in the system PATH, or set `CODEQL_PATH` to the absolute path of the CodeQL CLI binary
-
-3. **Ensure you have a valid database**: Most query tools require a CodeQL database
-
-### HTTP Mode Not Working
-
-1. **Check if port is in use**:
-
-   ```bash
-   lsof -i :3000
-   ```
-
-2. **Try a different port**:
-
-   ```bash
-   TRANSPORT_MODE=http HTTP_PORT=8080 node dist/codeql-development-mcp-server.js
-   ```
-
-### VS Code Integration Issues
-
-See the [Getting Started Guide](../docs/getting-started.md#troubleshooting) for troubleshooting steps.
-
-## References
-
-- [MCP Architecture](https://modelcontextprotocol.io/docs/learn/architecture)
-- [Getting Started Guide](../docs/getting-started.md)
-- [Tools Reference](../docs/tools-reference.md)
+See [LICENSE](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/LICENSE).
