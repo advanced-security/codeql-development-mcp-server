@@ -5,8 +5,8 @@
   "main": "dist/codeql-development-mcp-server.js",
   "type": "module",
   "bin": {
-    "codeql-development-mcp-server": "./dist/codeql-development-mcp-server.js",
-    "codeql-development-mcp-server-setup-packs": "./scripts/setup-packs.sh"
+    "codeql-development-mcp-server": "dist/codeql-development-mcp-server.js",
+    "codeql-development-mcp-server-setup-packs": "scripts/setup-packs.sh"
   },
   "files": [
     "dist/",
@@ -43,7 +43,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "https://github.com/advanced-security/codeql-development-mcp-server.git",
+    "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git",
     "directory": "server"
   },
   "homepage": "https://github.com/advanced-security/codeql-development-mcp-server#readme",

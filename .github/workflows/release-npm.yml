@@ -74,8 +74,22 @@ jobs:
       - name: npm - Publish npm package
         working-directory: server
         run: |
-          echo "Publishing codeql-development-mcp-server to npmjs.org via OIDC trusted publishing..."
-          npm publish
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
+          echo "Publishing codeql-development-mcp-server@${RELEASE_NAME} to npmjs.org via OIDC trusted publishing..."
+
+          # Prerelease versions (containing a hyphen) must use a dist-tag other
+          # than "latest" — npm enforces this to prevent prereleases from being
+          # installed by default.
+          if [[ "${RELEASE_NAME}" == *-* ]]; then
+            # Extract the prerelease identifier before any dot
+            # e.g., "2.24.1-prerelease" -> "prerelease", "2.24.1-beta.1" -> "beta"
+            PRERELEASE_ID="${RELEASE_NAME#*-}"
+            PRERELEASE_ID="${PRERELEASE_ID%%.*}"
+            echo "Detected prerelease version — publishing with --tag ${PRERELEASE_ID}"
+            npm publish --tag "${PRERELEASE_ID}"
+          else
+            npm publish
+          fi
           echo "✅ Published npm package to npmjs.org (with provenance)"
 
       - name: npm - Upload release build artifact
