@@ -181,6 +181,10 @@ jobs:
           cp -r server/ql dist-package/server/
           cp server/package.json dist-package/server/
 
+          # Copy scripts (setup-packs.sh is referenced by the bin field)
+          mkdir -p dist-package/server/scripts
+          cp server/scripts/setup-packs.sh dist-package/server/scripts/
+
           # Copy root files
           cp README.md dist-package/
           cp LICENSE dist-package/

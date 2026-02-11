@@ -101,6 +101,7 @@ jobs:
             server/dist/
             server/ql/
             server/package.json
+            server/scripts/setup-packs.sh
             README.md
             LICENSE
             docs/

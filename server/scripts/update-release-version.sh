@@ -258,16 +258,20 @@ update_versions() {
 	echo "=== Updating Release Version to ${new_version} ==="
 	echo ""
 
-	## 1. Update .codeql-version (uses v prefix)
+	## 1. Update .codeql-version (uses v prefix, base version only)
+	## .codeql-version stores the CodeQL CLI version (X.Y.Z), NOT the project
+	## release version. For prerelease tags like 2.24.1-beta, we write v2.24.1.
+	local base_version
+	base_version=$(extract_base_version "${new_version}")
 	local codeql_version_file="${REPO_ROOT}/.codeql-version"
 	if [[ -f "${codeql_version_file}" ]]; then
 		local old_version
 		old_version=$(tr -d '[:space:]' < "${codeql_version_file}")
 		if [[ "${dry_run}" == true ]]; then
-			echo "  [DRY RUN] .codeql-version: ${old_version} -> v${new_version}"
+			echo "  [DRY RUN] .codeql-version: ${old_version} -> v${base_version}"
 		else
-			printf "v%s\n" "${new_version}" > "${codeql_version_file}"
-			echo "  ✅ .codeql-version: ${old_version} -> v${new_version}"
+			printf "v%s\n" "${base_version}" > "${codeql_version_file}"
+			echo "  ✅ .codeql-version: ${old_version} -> v${base_version}"
 		fi
 		updated_count=$((updated_count + 1))
 	fi

@@ -22,6 +22,10 @@ npm install -g codeql-development-mcp-server
 codeql-development-mcp-server-setup-packs
 ```
 
+> **Note (Windows):** The `codeql-development-mcp-server-setup-packs` command
+> requires a Bash-compatible shell (e.g., Git Bash or WSL). On Windows without
+> Bash, run `setup-packs.sh` directly from the package's `scripts/` directory.
+
 Or use `npx` to run without a global install:
 
 ```bash

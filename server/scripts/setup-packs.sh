@@ -85,7 +85,18 @@ fi
 ## Works from both:
 ##   npm layout:     <pkg>/scripts/setup-packs.sh  → <pkg>/ql/
 ##   monorepo layout: server/scripts/setup-packs.sh → server/ql/
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+## When invoked via npm bin shim/symlink, BASH_SOURCE[0] may point to the
+## .bin/ directory. Resolve the real path first to find the actual package root.
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if command -v realpath &> /dev/null; then
+  SCRIPT_PATH="$(realpath "${SCRIPT_PATH}")"
+elif command -v readlink &> /dev/null; then
+  # macOS readlink doesn't support -f, use a loop
+  while [ -L "${SCRIPT_PATH}" ]; do
+    SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+  done
+fi
+SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
 PACKAGE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 QL_ROOT="${PACKAGE_ROOT}/ql"
 
