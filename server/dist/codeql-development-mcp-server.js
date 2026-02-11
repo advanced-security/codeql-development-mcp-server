@@ -1716,6 +1716,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { realpathSync } from "fs";
 import { resolve as resolve11 } from "path";
 import { pathToFileURL as pathToFileURL5 } from "url";
 
@@ -9362,7 +9363,7 @@ init_cli_executor();
 init_server_manager();
 init_package_paths();
 init_logger();
-dotenv.config({ path: resolve11(packageRootDir, ".env") });
+dotenv.config({ path: resolve11(packageRootDir, ".env"), quiet: true });
 var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.24.1";
 async function startServer(mode = "stdio") {
@@ -9458,7 +9459,7 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? resolve11(process.argv[1]) : void 0;
+var scriptPath = process.argv[1] ? realpathSync(resolve11(process.argv[1])) : void 0;
 if (scriptPath && import.meta.url === pathToFileURL5(scriptPath).href) {
   main();
 }

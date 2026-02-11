@@ -336,7 +336,7 @@ When the STDIO transport receives an immediate EOF on stdin (e.g., via `</dev/nu
 
 ### npm Package Includes Tool Query Source Packs
 
-The published npm package (`@advanced-security/codeql-development-mcp-server`) bundles all tool query source packs under `ql/*/tools/src/`. These are the same `.ql`, `.qll`, `.md`, `codeql-pack.yml`, and `codeql-pack.lock.yml` files — but **never** compiled `.qlx` bytecode (excluded by `server/.npmignore`).
+The published npm package (`codeql-development-mcp-server`) bundles all tool query source packs under `ql/*/tools/src/`. These are the same `.ql`, `.qll`, `.md`, `codeql-pack.yml`, and `codeql-pack.lock.yml` files — but **never** compiled `.qlx` bytecode (excluded by `server/.npmignore`).
 
 ## Success Criteria
 

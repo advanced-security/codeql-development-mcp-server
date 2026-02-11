@@ -57,21 +57,17 @@ Please note that this project is released with a [Contributor Code of Conduct](C
 
 ### Install via npm (recommended)
 
-No repository clone needed — install from [GitHub Packages](https://github.com/advanced-security/codeql-development-mcp-server/pkgs/npm/codeql-development-mcp-server):
+No repository clone needed — install from [npmjs.org](https://www.npmjs.com/package/codeql-development-mcp-server):
 
 ```bash
-# One-time: route @advanced-security scope to GitHub Packages and authenticate
-npm config set @advanced-security:registry https://npm.pkg.github.com
-npm login --registry=https://npm.pkg.github.com
-
 # Install globally
-npm install -g @advanced-security/codeql-development-mcp-server
+npm install -g codeql-development-mcp-server
 ```
 
 Or run on-demand without installing globally:
 
 ```bash
-npx -y @advanced-security/codeql-development-mcp-server
+npx -y codeql-development-mcp-server
 ```
 
 ### VS Code Configuration
@@ -89,7 +85,7 @@ Add to your `mcp.json` file:
   "servers": {
     "ql-mcp": {
       "command": "npx",
-      "args": ["-y", "@advanced-security/codeql-development-mcp-server"],
+      "args": ["-y", "codeql-development-mcp-server"],
       "type": "stdio"
     }
   }

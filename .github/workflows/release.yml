@@ -6,9 +6,19 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      create_github_release:
+        default: true
+        description: 'Create GitHub Release with distribution archive and CodeQL pack bundles. Disable to only publish packages without creating a release.'
+        required: false
+        type: boolean
       publish_codeql_packs:
         default: true
-        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist.'
+        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist. Packs are always bundled as release artifacts regardless of this setting.'
+        required: false
+        type: boolean
+      publish_npm:
+        default: true
+        description: 'Publish npm package to npmjs.org via OIDC trusted publishing. Disable for pre-release or re-run scenarios where the npm package already exists.'
         required: false
         type: boolean
       version:
@@ -20,159 +30,146 @@ permissions:
   contents: read
 
 jobs:
-  build-and-release:
-    name: Build and Release
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 1: Determine the release version
+  #
+  # Resolves the version from either the tag push event or the workflow_dispatch
+  # input, and validates the format. This output is consumed by all downstream
+  # jobs.
+  # ─────────────────────────────────────────────────────────────────────────────
+  resolve-version:
+    name: Resolve Release Version
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      packages: write
+    outputs:
+      create_github_release: ${{ steps.resolve.outputs.create_github_release }}
+      publish_codeql_packs: ${{ steps.resolve.outputs.publish_codeql_packs }}
+      publish_npm: ${{ steps.resolve.outputs.publish_npm }}
+      release_name: ${{ steps.resolve.outputs.release_name }}
+      version: ${{ steps.resolve.outputs.version }}
 
     steps:
-      - name: Release - Checkout repository
-        uses: actions/checkout@v6
-        with:
-          # Fetch tags so workflow_dispatch can resolve and checkout the target tag
-          fetch-tags: true
-          # Explicitly checkout the tag ref to ensure we build the correct commit
-          # For tag pushes: refs/tags/vX.Y.Z
-          # For workflow_dispatch: refs/heads/<branch> (will be validated below)
-          ref: ${{ github.ref }}
-
-      - name: Release - Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          cache: 'npm'
-          node-version-file: '.node-version'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@advanced-security'
-
-      - name: Release - Determine version
-        id: version
+      - name: Version - Resolve and validate
+        id: resolve
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
           else
             VERSION="${{ github.ref_name }}"
           fi
+
           # Validate version starts with 'v'
           if [[ ! "${VERSION}" =~ ^v ]]; then
             echo "::error::Version '${VERSION}' must start with 'v'"
             exit 1
           fi
+
+          # Resolve publish flags (default true for tag pushes)
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            CREATE_RELEASE="${{ github.event.inputs.create_github_release }}"
+            PUBLISH_PACKS="${{ github.event.inputs.publish_codeql_packs }}"
+            PUBLISH_NPM="${{ github.event.inputs.publish_npm }}"
+          else
+            CREATE_RELEASE="true"
+            PUBLISH_PACKS="true"
+            PUBLISH_NPM="true"
+          fi
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "create_github_release=${CREATE_RELEASE}" >> $GITHUB_OUTPUT
+          echo "publish_codeql_packs=${PUBLISH_PACKS}" >> $GITHUB_OUTPUT
+          echo "publish_npm=${PUBLISH_NPM}" >> $GITHUB_OUTPUT
 
-      - name: Release - Checkout or create tag for workflow_dispatch
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          # For workflow_dispatch, we need to checkout the specific tag
-          TAG="${{ steps.version.outputs.version }}"
-          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "Checking out existing tag: ${TAG}"
-            git checkout "refs/tags/${TAG}"
-          else
-            echo "Tag '${TAG}' does not exist. Creating it now..."
-            CURRENT_SHA=$(git rev-parse HEAD)
-            git tag "${TAG}" "${CURRENT_SHA}"
-            git push origin "${TAG}"
-            echo "✅ Created and pushed tag: ${TAG} at commit ${CURRENT_SHA:0:8}"
-          fi
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 2: Ensure the release tag exists
+  #
+  # For workflow_dispatch, ensures a properly validated tag exists. For tag push
+  # events, this is a no-op (tag already exists). The release-tag workflow
+  # handles version updates, `npm install`, tidy, build, test, and tag creation.
+  # ─────────────────────────────────────────────────────────────────────────────
+  ensure-tag:
+    name: Ensure Release Tag
+    needs: resolve-version
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-tag.yml
+    with:
+      version: ${{ needs.resolve-version.outputs.version }}
 
-      - name: Release - Verify checkout matches expected version
-        run: |
-          # Verify we're on the correct commit for the release
-          CURRENT_SHA=$(git rev-parse HEAD)
-          TAG="${{ steps.version.outputs.version }}"
-          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
-            TAG_SHA=$(git rev-parse "refs/tags/${TAG}^{commit}" 2>/dev/null || git rev-parse "refs/tags/${TAG}")
-            if [ "${CURRENT_SHA}" != "${TAG_SHA}" ]; then
-              echo "::error::Current checkout (${CURRENT_SHA}) does not match tag ${TAG} (${TAG_SHA})"
-              exit 1
-            fi
-            echo "✅ Verified: Building from tag ${TAG} at commit ${CURRENT_SHA:0:8}"
-          else
-            echo "::warning::Tag ${TAG} not found, building from current checkout at ${CURRENT_SHA:0:8}"
-          fi
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 3a: Build and publish the npm package
+  #
+  # Checks out the clean tag (no CodeQL pack artifacts), builds with `npm ci`,
+  # and publishes to npmjs.org via OIDC trusted publishing. Runs in parallel
+  # with CodeQL pack publishing since they are independent.
+  #
+  # The trusted publisher on npmjs.com is configured with workflow "release.yml"
+  # and environment "release-npm". The id-token:write permission is required for
+  # OIDC authentication — no npm tokens are used.
+  # ─────────────────────────────────────────────────────────────────────────────
+  publish-npm:
+    name: Publish npm Package
+    if: needs.resolve-version.outputs.publish_npm == 'true'
+    needs: [resolve-version, ensure-tag]
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/release-npm.yml
+    with:
+      version: ${{ needs.resolve-version.outputs.version }}
 
-      - name: Release - Setup CodeQL environment
-        uses: ./.github/actions/setup-codeql-environment
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 3b: Bundle and optionally publish CodeQL packs
+  #
+  # Checks out the clean tag, installs CodeQL, and bundles packs for release.
+  # Publishing to GHCR is controlled by the publish_codeql_packs flag; bundling
+  # always runs so that pack artifacts are available for the GitHub Release.
+  # Runs in parallel with npm publishing since they are independent.
+  # ─────────────────────────────────────────────────────────────────────────────
+  publish-codeql:
+    name: Publish CodeQL Packs
+    needs: [resolve-version, ensure-tag]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/release-codeql.yml
+    with:
+      publish_codeql_packs: ${{ needs.resolve-version.outputs.publish_codeql_packs == 'true' }}
+      version: ${{ needs.resolve-version.outputs.version }}
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 4: Create GitHub Release
+  #
+  # Downloads the clean build artifact (from npm workflow) and pack bundles
+  # (from CodeQL workflow), assembles the distribution archive, and creates the
+  # GitHub Release. Requires npm publishing and create_github_release to be
+  # enabled. CodeQL packs are always bundled as release artifacts regardless of
+  # the publish_codeql_packs flag.
+  # ─────────────────────────────────────────────────────────────────────────────
+  create-release:
+    name: Create GitHub Release
+    if: >-
+      always() && !failure() && !cancelled()
+      && needs.resolve-version.outputs.create_github_release == 'true'
+      && needs.resolve-version.outputs.publish_npm == 'true'
+    needs: [resolve-version, ensure-tag, publish-npm, publish-codeql]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Release - Download release build artifact
+        uses: actions/download-artifact@v6
         with:
-          add-to-path: true
-          install-language-runtimes: false
+          name: release-build-${{ needs.resolve-version.outputs.version }}
 
-      - name: Release - Update release version
-        run: |
-          TAG_VERSION="${{ steps.version.outputs.release_name }}"
-          echo "Updating all version-bearing files to '${TAG_VERSION}'..."
-          ./server/scripts/update-release-version.sh "${TAG_VERSION}"
-
-      - name: Release - Install dependencies
-        run: npm install --include=optional
-
-      - name: Release - Build server
-        run: npm run build -w server
-
-      - name: Release - Install CodeQL pack dependencies
-        run: server/scripts/install-packs.sh
-
-      - name: Release - Publish CodeQL tool query packs
-        if: |
-          (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
-          && (github.event_name != 'workflow_dispatch' || inputs.publish_codeql_packs)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
-          echo "Publishing CodeQL tool query packs..."
-          for lang in ${LANGUAGES}; do
-            PACK_DIR="server/ql/${lang}/tools/src"
-            if [ -d "${PACK_DIR}" ]; then
-              echo "📦 Publishing ${PACK_DIR}..."
-              codeql pack publish --threads=-1 -- "${PACK_DIR}"
-              echo "✅ Published ${lang} tool query pack"
-            else
-              echo "⚠️ Skipping ${lang}: ${PACK_DIR} not found"
-            fi
-          done
-
-      - name: Release - Skip CodeQL tool query pack publishing
-        if: github.event_name == 'workflow_dispatch' && !inputs.publish_codeql_packs
-        run: echo "⏭️ CodeQL tool query pack publishing disabled via workflow input"
-
-      - name: Release - Bundle CodeQL tool query packs
-        run: |
-          mkdir -p dist-packs
-          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
-          echo "Bundling CodeQL tool query packs..."
-          for lang in ${LANGUAGES}; do
-            PACK_DIR="server/ql/${lang}/tools/src"
-            if [ -d "${PACK_DIR}" ]; then
-              PACK_NAME="ql-mcp-${lang}-tools-src"
-              OUTPUT="dist-packs/${PACK_NAME}.tar.gz"
-              echo "📦 Bundling ${PACK_DIR} -> ${OUTPUT}..."
-              codeql pack bundle --threads=-1 --output="${OUTPUT}" -- "${PACK_DIR}"
-              echo "✅ Bundled ${PACK_NAME}"
-            fi
-          done
-          echo "Bundled packs:"
-          ls -lh dist-packs/
-
-      - name: Release - Upload CodeQL pack artifacts
-        uses: actions/upload-artifact@v6
+      - name: Release - Download CodeQL pack artifacts
+        uses: actions/download-artifact@v6
         with:
-          name: codeql-tool-query-packs-${{ steps.version.outputs.version }}
-          path: dist-packs/*.tar.gz
-
-      - name: Release - Publish npm package
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-        working-directory: server
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Publishing @advanced-security/codeql-development-mcp-server to GitHub Packages..."
-          npm publish
-          echo "✅ Published npm package to GitHub Packages"
+          name: codeql-tool-query-packs-${{ needs.resolve-version.outputs.version }}
+          path: dist-packs
 
       - name: Release - Create distribution directory
         run: |
@@ -183,6 +180,10 @@ jobs:
           cp -r server/dist dist-package/server/
           cp -r server/ql dist-package/server/
           cp server/package.json dist-package/server/
+
+          # Copy scripts (setup-packs.sh is referenced by the bin field)
+          mkdir -p dist-package/server/scripts
+          cp server/scripts/setup-packs.sh dist-package/server/scripts/
 
           # Copy root files
           cp README.md dist-package/
@@ -202,40 +203,42 @@ jobs:
 
       - name: Release - Create archive
         run: |
-          tar -czvf codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz -C dist-package .
+          tar -czvf codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.tar.gz -C dist-package .
 
       - name: Release - Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: codeql-development-mcp-server-${{ steps.version.outputs.version }}
-          path: codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+          name: codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}
+          path: codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.tar.gz
 
       - name: Release - Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           files: |
-            codeql-development-mcp-server-${{ steps.version.outputs.version }}.tar.gz
+            codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.tar.gz
             dist-packs/*.tar.gz
           generate_release_notes: true
-          tag_name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ needs.resolve-version.outputs.version }}
 
       - name: Release - Summary
         run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          RELEASE_NAME="${{ needs.resolve-version.outputs.release_name }}"
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
           echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | ✅ ${VERSION} |" >> $GITHUB_STEP_SUMMARY
           echo "| Server build | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Version validation | ✅ All files match ${{ steps.version.outputs.release_name }} |" >> $GITHUB_STEP_SUMMARY
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish_codeql_packs }}" != "true" ]]; then
-            echo "| CodeQL pack publish | ⏭️ Skipped (disabled via input) |" >> $GITHUB_STEP_SUMMARY
-          else
+          echo "| Version validation | ✅ All files match ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm publish | ✅ Published to npmjs.org |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.resolve-version.outputs.publish_codeql_packs }}" == "true" ]; then
             echo "| CodeQL pack publish | ✅ Published to GHCR |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| CodeQL pack publish | ⏭️ Skipped (packs bundled only) |" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "| npm package | ✅ Published to GitHub Packages |" >> $GITHUB_STEP_SUMMARY
           echo "| Distribution archive | ✅ Created |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL pack bundles | ✅ Bundled |" >> $GITHUB_STEP_SUMMARY
+          echo "| GitHub Release | ✅ Created |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Package Contents" >> $GITHUB_STEP_SUMMARY
           echo "- \`server/dist/\` - Bundled JavaScript output" >> $GITHUB_STEP_SUMMARY
@@ -249,5 +252,5 @@ jobs:
           echo "| Pack | Version |" >> $GITHUB_STEP_SUMMARY
           echo "| ---- | ------- |" >> $GITHUB_STEP_SUMMARY
           for lang in actions cpp csharp go java javascript python ruby swift; do
-            echo "| \`advanced-security/ql-mcp-${lang}-tools-src\` | ${{ steps.version.outputs.release_name }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`advanced-security/ql-mcp-${lang}-tools-src\` | ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
           done

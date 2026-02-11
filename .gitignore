@@ -33,6 +33,11 @@ codeql-development-mcp-server.code-workspace
 # But do not ignore the config file
 !.ql-mcp-tracking/config.json
 
+# CodeQL pack install generates .codeql cache/dependency directories
+.codeql/
+# CodeQL pack compile generates compiled query plan files
+*.qlx
+
 # The 'codeql test run` command generates `<QueryBaseName>.actual` files
 *.actual
 # The 'codeql test run` command generates `<QueryBaseName>.testproj` test database directories

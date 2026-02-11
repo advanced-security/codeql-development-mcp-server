@@ -4,7 +4,7 @@
 
 ## Overview
 
-The **CodeQL Development MCP Server** (`@advanced-security/codeql-development-mcp-server`) is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that provides AI assistants with tools, prompts, and resources for developing CodeQL queries. It is published as a public npm package and its companion CodeQL tool query packs are published to the GitHub Container Registry (GHCR).
+The **CodeQL Development MCP Server** (`codeql-development-mcp-server`) is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that provides AI assistants with tools, prompts, and resources for developing CodeQL queries. It is published as a public npm package and its companion CodeQL tool query packs are published to the GitHub Container Registry (GHCR).
 
 Users install the server via `npm` and the tool query packs via `codeql pack download` — no repository clone required.
 
@@ -27,24 +27,14 @@ codeql --version # any recent release
 
 ### 1. Install the MCP Server (npm)
 
-The server is published as a scoped package on [GitHub Packages](https://github.com/advanced-security/codeql-development-mcp-server/pkgs/npm/codeql-development-mcp-server). Before installing, configure npm to fetch `@advanced-security` packages from GitHub Packages:
-
-```bash
-# One-time setup: route the @advanced-security scope to GitHub Packages
-npm config set @advanced-security:registry https://npm.pkg.github.com
-
-# Authenticate (requires a GitHub PAT with read:packages scope)
-npm login --registry=https://npm.pkg.github.com
-```
-
-Then install:
+The server is published as a public package on [npmjs.org](https://www.npmjs.com/package/codeql-development-mcp-server). No authentication or special configuration is needed:
 
 ```bash
 # Global install (makes the `codeql-development-mcp-server` command available)
-npm install -g @advanced-security/codeql-development-mcp-server
+npm install -g codeql-development-mcp-server
 
 # Or run on-demand without installing globally
-npx -y @advanced-security/codeql-development-mcp-server
+npx -y codeql-development-mcp-server
 ```
 
 The package ships the bundled server (`dist/codeql-development-mcp-server.js`), production dependencies, and the CodeQL tool query source packs (`ql/*/tools/src/`).
@@ -91,7 +81,7 @@ Add the server to your VS Code MCP configuration (`mcp.json`):
   "servers": {
     "ql-mcp": {
       "command": "npx",
-      "args": ["-y", "@advanced-security/codeql-development-mcp-server"],
+      "args": ["-y", "codeql-development-mcp-server"],
       "type": "stdio"
     }
   }
@@ -120,7 +110,7 @@ Create a `.vscode/mcp.json` in your project root to share the configuration with
   "servers": {
     "ql-mcp": {
       "command": "npx",
-      "args": ["-y", "@advanced-security/codeql-development-mcp-server"],
+      "args": ["-y", "codeql-development-mcp-server"],
       "type": "stdio"
     }
   }
@@ -150,7 +140,7 @@ Or configure it directly in your `mcp.json`:
   "servers": {
     "ql-mcp": {
       "command": "npx",
-      "args": ["-y", "@advanced-security/codeql-development-mcp-server"],
+      "args": ["-y", "codeql-development-mcp-server"],
       "type": "stdio",
       "env": {
         "CODEQL_PATH": "/path/to/codeql-cli/codeql"
@@ -201,11 +191,11 @@ Each pack contains the following tool queries used by the server:
 
 ```bash
 # If installed globally
-npm update -g @advanced-security/codeql-development-mcp-server
+npm update -g codeql-development-mcp-server
 
 # If using npx, the latest version is fetched automatically
 # (clear the npx cache to force a refresh)
-npx -y @advanced-security/codeql-development-mcp-server@latest
+npx -y codeql-development-mcp-server@latest
 ```
 
 ### Update the Tool Query Packs
@@ -221,13 +211,14 @@ The server and its tool query packs follow [Semantic Versioning](https://semver.
 
 ### npm Package
 
-| Field       | Value                                                                                                                        |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Name        | `@advanced-security/codeql-development-mcp-server`                                                                           |
-| Registry    | [GitHub Packages](https://github.com/advanced-security/codeql-development-mcp-server/pkgs/npm/codeql-development-mcp-server) |
-| Binary      | `codeql-development-mcp-server`                                                                                              |
-| Entry Point | `dist/codeql-development-mcp-server.js`                                                                                      |
-| License     | [GitHub CodeQL Terms and Conditions](https://github.com/github/codeql-cli-binaries/blob/main/LICENSE.md)                     |
+| Field       | Value                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------------- |
+| Name        | `codeql-development-mcp-server`                                                                          |
+| Registry    | [npmjs.org](https://www.npmjs.com/package/codeql-development-mcp-server)                                 |
+| Publishing  | [Trusted Publishing (OIDC)](https://docs.npmjs.com/trusted-publishers) with provenance attestations      |
+| Binary      | `codeql-development-mcp-server`                                                                          |
+| Entry Point | `dist/codeql-development-mcp-server.js`                                                                  |
+| License     | [GitHub CodeQL Terms and Conditions](https://github.com/github/codeql-cli-binaries/blob/main/LICENSE.md) |
 
 ### CodeQL Packs (GHCR)
 
@@ -244,14 +235,14 @@ dependencies:
 
 ## Troubleshooting
 
-| Problem                      | Solution                                                                                                 |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Server not listed in VS Code | Verify your `mcp.json` syntax, ensure Node.js is on PATH, and restart VS Code.                           |
-| `npx` times out or fails     | Run `npm cache clean --force` and retry. Ensure `.npmrc` routes `@advanced-security` to GitHub Packages. |
-| CodeQL CLI errors            | Run `codeql --version` to confirm the CLI is installed and on PATH. Set `CODEQL_PATH` if needed.         |
-| Tool query pack not found    | Run `codeql pack download advanced-security/ql-mcp-<language>-tools-src` to fetch it from GHCR.          |
-| Permission denied            | On macOS/Linux, check file permissions or use `sudo` for global npm installs.                            |
-| Version mismatch warnings    | Ensure the server npm package version matches the tool query pack versions.                              |
+| Problem                      | Solution                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| Server not listed in VS Code | Verify your `mcp.json` syntax, ensure Node.js is on PATH, and restart VS Code.                   |
+| `npx` times out or fails     | Run `npm cache clean --force` and retry.                                                         |
+| CodeQL CLI errors            | Run `codeql --version` to confirm the CLI is installed and on PATH. Set `CODEQL_PATH` if needed. |
+| Tool query pack not found    | Run `codeql pack download advanced-security/ql-mcp-<language>-tools-src` to fetch it from GHCR.  |
+| Permission denied            | On macOS/Linux, check file permissions or use `sudo` for global npm installs.                    |
+| Version mismatch warnings    | Ensure the server npm package version matches the tool query pack versions.                      |
 
 ## Further Reading
 

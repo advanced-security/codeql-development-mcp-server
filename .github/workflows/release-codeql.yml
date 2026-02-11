@@ -1,0 +1,143 @@
+name: Release CodeQL - Publish and Bundle CodeQL Packs
+
+on:
+  workflow_call:
+    inputs:
+      publish_codeql_packs:
+        default: true
+        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist.'
+        required: false
+        type: boolean
+      version:
+        description: 'Release version tag (e.g., vX.Y.Z). Must start with "v".'
+        required: true
+        type: string
+    outputs:
+      release_name:
+        description: 'The release name without "v" prefix (e.g., X.Y.Z)'
+        value: ${{ jobs.publish-codeql-packs.outputs.release_name }}
+      version:
+        description: 'The full version string with "v" prefix (e.g., vX.Y.Z)'
+        value: ${{ jobs.publish-codeql-packs.outputs.version }}
+
+# Note: This workflow is called exclusively via workflow_call from release.yml.
+# It does NOT have a workflow_dispatch trigger to keep release.yml as the single
+# entry point for all release operations. To re-publish CodeQL packs standalone,
+# use workflow_dispatch on release.yml with publish_npm=false and
+# create_github_release=false.
+
+permissions:
+  contents: read
+
+jobs:
+  publish-codeql-packs:
+    name: Publish and Bundle CodeQL Packs
+    runs-on: ubuntu-latest
+
+    environment: release-codeql
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      release_name: ${{ steps.version.outputs.release_name }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: CodeQL - Validate and parse version
+        id: version
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! "${VERSION}" =~ ^v ]]; then
+            echo "::error::Version '${VERSION}' must start with 'v'"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: CodeQL - Checkout tag
+        uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ steps.version.outputs.version }}
+
+      - name: CodeQL - Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          add-to-path: true
+          install-language-runtimes: false
+
+      - name: CodeQL - Install CodeQL pack dependencies
+        run: server/scripts/install-packs.sh
+
+      - name: CodeQL - Validate version consistency
+        run: |
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
+          echo "Validating all version-bearing files match ${RELEASE_NAME}..."
+          ./server/scripts/update-release-version.sh --check "${RELEASE_NAME}"
+
+      - name: CodeQL - Publish CodeQL tool query packs
+        if: inputs.publish_codeql_packs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
+          echo "Publishing CodeQL tool query packs..."
+          for lang in ${LANGUAGES}; do
+            PACK_DIR="server/ql/${lang}/tools/src"
+            if [ -d "${PACK_DIR}" ]; then
+              echo "📦 Publishing ${PACK_DIR}..."
+              codeql pack publish --threads=-1 -- "${PACK_DIR}"
+              echo "✅ Published ${lang} tool query pack"
+            else
+              echo "⚠️ Skipping ${lang}: ${PACK_DIR} not found"
+            fi
+          done
+
+      - name: CodeQL - Skip CodeQL tool query pack publishing
+        if: '!inputs.publish_codeql_packs'
+        run: echo "⏭️ CodeQL tool query pack publishing disabled via workflow input"
+
+      - name: CodeQL - Bundle CodeQL tool query packs
+        run: |
+          mkdir -p dist-packs
+          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
+          echo "Bundling CodeQL tool query packs..."
+          for lang in ${LANGUAGES}; do
+            PACK_DIR="server/ql/${lang}/tools/src"
+            if [ -d "${PACK_DIR}" ]; then
+              PACK_NAME="ql-mcp-${lang}-tools-src"
+              OUTPUT="dist-packs/${PACK_NAME}.tar.gz"
+              echo "📦 Bundling ${PACK_DIR} -> ${OUTPUT}..."
+              codeql pack bundle --threads=-1 --output="${OUTPUT}" -- "${PACK_DIR}"
+              echo "✅ Bundled ${PACK_NAME}"
+            fi
+          done
+          echo "Bundled packs:"
+          ls -lh dist-packs/
+
+      - name: CodeQL - Upload CodeQL pack artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: codeql-tool-query-packs-${{ steps.version.outputs.version }}
+          path: dist-packs/*.tar.gz
+
+      - name: CodeQL - Summary
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
+          echo "## CodeQL Packs Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.publish_codeql_packs }}" == "true" ]; then
+            echo "✅ Published CodeQL tool query packs to GHCR" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ CodeQL tool query pack publishing was disabled" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "✅ Bundled CodeQL tool query packs as artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Published CodeQL Packs" >> $GITHUB_STEP_SUMMARY
+          echo "| Pack | Version |" >> $GITHUB_STEP_SUMMARY
+          echo "| ---- | ------- |" >> $GITHUB_STEP_SUMMARY
+          for lang in actions cpp csharp go java javascript python ruby swift; do
+            echo "| \`advanced-security/ql-mcp-${lang}-tools-src\` | ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
+          done

@@ -37,9 +37,9 @@ describe('getPackageRootDir', () => {
   });
 
   it('should resolve from npm install (<pkg>/dist/) to <pkg>/', () => {
-    const npmPath = '/usr/lib/node_modules/@advanced-security/codeql-development-mcp-server/dist';
+    const npmPath = '/usr/lib/node_modules/codeql-development-mcp-server/dist';
     const result = getPackageRootDir(npmPath);
-    expect(result).toBe(resolve('/usr/lib/node_modules/@advanced-security/codeql-development-mcp-server'));
+    expect(result).toBe(resolve('/usr/lib/node_modules/codeql-development-mcp-server'));
   });
 
   it('should handle Windows-style paths with backslashes', () => {
@@ -48,7 +48,7 @@ describe('getPackageRootDir', () => {
       // this test is only meaningful on Windows where they are separators.
       return;
     }
-    const winPath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\@advanced-security\\codeql-development-mcp-server\\dist';
+    const winPath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\codeql-development-mcp-server\\dist';
     const result = getPackageRootDir(winPath);
     expect(result).toContain('codeql-development-mcp-server');
     expect(result).not.toContain('dist');
@@ -92,7 +92,7 @@ describe('resolveToolQueryPackPath', () => {
   });
 
   it('should resolve correctly for npm install layout', () => {
-    const npmPkgRoot = '/usr/lib/node_modules/@advanced-security/codeql-development-mcp-server';
+    const npmPkgRoot = '/usr/lib/node_modules/codeql-development-mcp-server';
     const result = resolveToolQueryPackPath('python', npmPkgRoot);
     expect(result).toBe(resolve(npmPkgRoot, 'ql/python/tools/src'));
     // Critically: no 'server/' prefix in the path

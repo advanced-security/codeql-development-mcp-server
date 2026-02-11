@@ -9,6 +9,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { realpathSync } from 'fs';
 import { resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { registerCodeQLTools, registerCodeQLResources } from './tools';
@@ -25,7 +26,9 @@ import { logger } from './utils/logger';
 // Load environment variables from a .env file co-located with the package root.
 // Uses the package directory (not CWD) so that npm-installed users don't
 // accidentally inherit a .env from their project.
-dotenv.config({ path: resolve(packageRootDir, '.env') });
+// Set DOTENV_CONFIG_QUIET to suppress the dotenv banner that would otherwise
+// leak to stdout and corrupt the MCP stdio JSON-RPC channel.
+dotenv.config({ path: resolve(packageRootDir, '.env'), quiet: true });
 
 const PACKAGE_NAME = 'codeql-development-mcp-server';
 const VERSION = '2.24.1';
@@ -173,8 +176,10 @@ async function main(): Promise<void> {
   }
 }
 
-// Start the server if this file is run directly
-const scriptPath = process.argv[1] ? resolve(process.argv[1]) : undefined;
+// Start the server if this file is run directly.
+// Use realpathSync to resolve npm/npx symlinks so the guard works for both
+// direct invocation and globally-installed npm bin entries.
+const scriptPath = process.argv[1] ? realpathSync(resolve(process.argv[1])) : undefined;
 if (scriptPath && import.meta.url === pathToFileURL(scriptPath).href) {
   main();
 }
