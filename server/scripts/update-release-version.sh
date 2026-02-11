@@ -127,18 +127,30 @@ check_versions() {
 			first_version="${version}"
 		fi
 
+		## .codeql-version stores only the base version (X.Y.Z) even for
+		## prerelease tags. Compare it against the base version of the expected
+		## value or the first version to avoid false mismatches.
+		local effective_expected effective_first
+		if [[ "${file}" == ".codeql-version" ]]; then
+			effective_expected="${expected_version%%-*}"
+			effective_first="${first_version%%-*}"
+		else
+			effective_expected="${expected_version}"
+			effective_first="${first_version}"
+		fi
+
 		if [[ -n "${expected_version}" ]]; then
-			if [[ "${version}" == "${expected_version}" ]]; then
+			if [[ "${version}" == "${effective_expected}" ]]; then
 				echo "  ✅ ${file}: ${version}"
 			else
-				echo "  ❌ ${file}: ${version} (expected ${expected_version})"
+				echo "  ❌ ${file}: ${version} (expected ${effective_expected})"
 				all_consistent=false
 			fi
 		else
-			if [[ "${version}" == "${first_version}" ]]; then
+			if [[ "${version}" == "${effective_first}" ]]; then
 				echo "  ✅ ${file}: ${version}"
 			else
-				echo "  ❌ ${file}: ${version} (differs from ${first_version})"
+				echo "  ❌ ${file}: ${version} (differs from ${effective_first})"
 				all_consistent=false
 			fi
 		fi

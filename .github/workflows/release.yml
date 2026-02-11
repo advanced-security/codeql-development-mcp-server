@@ -13,7 +13,7 @@ on:
         type: boolean
       publish_codeql_packs:
         default: true
-        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist.'
+        description: 'Publish CodeQL tool query packs to GHCR. Disable for pre-release or re-run scenarios where packs already exist. Packs are always bundled as release artifacts regardless of this setting.'
         required: false
         type: boolean
       publish_npm:
@@ -120,14 +120,15 @@ jobs:
       version: ${{ needs.resolve-version.outputs.version }}
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Step 3b: Publish and bundle CodeQL packs
+  # Step 3b: Bundle and optionally publish CodeQL packs
   #
-  # Checks out the clean tag, installs CodeQL, and publishes + bundles packs.
+  # Checks out the clean tag, installs CodeQL, and bundles packs for release.
+  # Publishing to GHCR is controlled by the publish_codeql_packs flag; bundling
+  # always runs so that pack artifacts are available for the GitHub Release.
   # Runs in parallel with npm publishing since they are independent.
   # ─────────────────────────────────────────────────────────────────────────────
   publish-codeql:
     name: Publish CodeQL Packs
-    if: needs.resolve-version.outputs.publish_codeql_packs == 'true'
     needs: [resolve-version, ensure-tag]
     permissions:
       contents: read
@@ -142,9 +143,9 @@ jobs:
   #
   # Downloads the clean build artifact (from npm workflow) and pack bundles
   # (from CodeQL workflow), assembles the distribution archive, and creates the
-  # GitHub Release. Only runs for full releases (all publish steps enabled and
-  # create_github_release is true). Partial workflows (e.g., re-publishing only
-  # npm or only CodeQL packs) skip this step.
+  # GitHub Release. Requires npm publishing and create_github_release to be
+  # enabled. CodeQL packs are always bundled as release artifacts regardless of
+  # the publish_codeql_packs flag.
   # ─────────────────────────────────────────────────────────────────────────────
   create-release:
     name: Create GitHub Release
@@ -152,7 +153,6 @@ jobs:
       always() && !failure() && !cancelled()
       && needs.resolve-version.outputs.create_github_release == 'true'
       && needs.resolve-version.outputs.publish_npm == 'true'
-      && needs.resolve-version.outputs.publish_codeql_packs == 'true'
     needs: [resolve-version, ensure-tag, publish-npm, publish-codeql]
     runs-on: ubuntu-latest
 
@@ -232,7 +232,11 @@ jobs:
           echo "| Server build | ✅ Success |" >> $GITHUB_STEP_SUMMARY
           echo "| Version validation | ✅ All files match ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
           echo "| npm publish | ✅ Published to npmjs.org |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL pack publish | ✅ Published to GHCR |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.resolve-version.outputs.publish_codeql_packs }}" == "true" ]; then
+            echo "| CodeQL pack publish | ✅ Published to GHCR |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| CodeQL pack publish | ⏭️ Skipped (packs bundled only) |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| Distribution archive | ✅ Created |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub Release | ✅ Created |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

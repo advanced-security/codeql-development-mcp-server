@@ -41,6 +41,11 @@ EOF
 while [[ $# -gt 0 ]]; do
   case $1 in
     --language)
+      if [[ $# -lt 2 || "$2" =~ ^- ]]; then
+        echo "Error: --language requires a value" >&2
+        usage >&2
+        exit 1
+      fi
       LANGUAGE="$2"
       shift 2
       ;;
@@ -91,9 +96,14 @@ SCRIPT_PATH="${BASH_SOURCE[0]}"
 if command -v realpath &> /dev/null; then
   SCRIPT_PATH="$(realpath "${SCRIPT_PATH}")"
 elif command -v readlink &> /dev/null; then
-  # macOS readlink doesn't support -f, use a loop
+  # macOS readlink doesn't support -f, use a loop to resolve symlinks
   while [ -L "${SCRIPT_PATH}" ]; do
-    SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+    LINK_TARGET="$(readlink "${SCRIPT_PATH}")"
+    # Resolve relative targets against the symlink's directory
+    if [[ "${LINK_TARGET}" != /* ]]; then
+      LINK_TARGET="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)/${LINK_TARGET}"
+    fi
+    SCRIPT_PATH="${LINK_TARGET}"
   done
 fi
 SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"

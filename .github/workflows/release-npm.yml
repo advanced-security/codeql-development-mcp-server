@@ -71,6 +71,12 @@ jobs:
       - name: npm - Build server
         run: npm run build -w server
 
+      - name: npm - Validate version consistency
+        run: |
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
+          echo "Validating all version-bearing files match ${RELEASE_NAME}..."
+          ./server/scripts/update-release-version.sh --check "${RELEASE_NAME}"
+
       - name: npm - Publish npm package
         working-directory: server
         run: |
