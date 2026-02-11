@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-actions-tools-test
-version: 2.24.1-prerelease
+version: 2.24.1-beta
 dependencies:
   advanced-security/ql-mcp-actions-tools-src: ${workspace}
 extractor: actions
