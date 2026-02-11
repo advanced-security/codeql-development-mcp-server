@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-python-tools-src
-version: 2.24.1
+version: 2.24.1-prerelease
 description: 'Queries for codeql-development-mcp-server tools for python language'
 library: false
 dependencies:
