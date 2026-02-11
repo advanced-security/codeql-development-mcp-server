@@ -1,6 +1,6 @@
 {
   "name": "codeql-development-mcp-server",
-  "version": "2.24.1-beta",
+  "version": "2.24.1",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
   "main": "dist/codeql-development-mcp-server.js",
   "type": "module",

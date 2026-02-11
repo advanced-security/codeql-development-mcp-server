@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-java-tools-test
-version: 2.24.1-beta
+version: 2.24.1
 dependencies:
   advanced-security/ql-mcp-java-tools-src: ${workspace}
 extractor: java
