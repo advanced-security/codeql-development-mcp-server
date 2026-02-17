@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extensions/vscode/dist/**/*.js",
+        "${workspaceFolder}/extensions/vscode/dist/**/*.cjs"
+      ],
+      "preLaunchTask": "npm: bundle - extensions/vscode",
+      "sourceMaps": true
+    },
+    {
+      "name": "Extension Tests",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode",
+        "--extensionTestsPath=${workspaceFolder}/extensions/vscode/dist/test/suite/index.cjs"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extensions/vscode/dist/**/*.js",
+        "${workspaceFolder}/extensions/vscode/dist/**/*.cjs"
+      ],
+      "preLaunchTask": "npm: bundle - extensions/vscode",
+      "sourceMaps": true
+    }
+  ]
+}

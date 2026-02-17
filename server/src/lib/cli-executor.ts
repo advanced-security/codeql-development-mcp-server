@@ -548,10 +548,14 @@ export async function executeCodeQLCommand(
 
   // Fresh-process execution (for FRESH_PROCESS_SUBCOMMANDS, CWD-specific
   // calls, or as a fallback when the cli-server is unavailable).
+  // Use 0 (no timeout) because CodeQL operations such as query evaluation,
+  // database analysis, profiling, and test runs are inherently long-running
+  // and should not be killed by a process timeout.
   return executeCLICommand({
     command: 'codeql',
     args,
-    cwd
+    cwd,
+    timeout: 0
   });
 }
 

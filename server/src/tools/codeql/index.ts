@@ -13,6 +13,8 @@ export { registerFindCodeQLQueryFilesTool } from './find-query-files';
 export { codeqlGenerateLogSummaryTool } from './generate-log-summary';
 export { codeqlGenerateQueryHelpTool } from './generate-query-help';
 // codeql_lsp_diagnostics has moved to server/src/tools/lsp/lsp-diagnostics.ts
+export { registerListDatabasesTool } from './list-databases';
+export { registerListQueryRunResultsTool } from './list-query-run-results';
 export { codeqlPackInstallTool } from './pack-install';
 export { codeqlPackLsTool } from './pack-ls';
 export { registerProfileCodeQLQueryTool } from './profile-codeql-query';

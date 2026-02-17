@@ -1,0 +1,138 @@
+{
+  "name": "codeql-development-mcp-server-vscode",
+  "displayName": "CodeQL Development MCP Server",
+  "description": "Automatically installs, configures, and manages the CodeQL Development MCP Server in VS Code.",
+  "version": "2.24.1",
+  "publisher": "advanced-security",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git",
+    "directory": "extensions/vscode"
+  },
+  "type": "module",
+  "homepage": "https://github.com/advanced-security/codeql-development-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
+  },
+  "engines": {
+    "vscode": "^1.99.0",
+    "node": ">=24.13.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "codeql",
+    "mcp",
+    "model-context-protocol",
+    "static-analysis",
+    "security"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.cjs",
+  "extensionDependencies": [
+    "GitHub.vscode-codeql"
+  ],
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "ql-mcp",
+        "label": "CodeQL Development MCP Server"
+      }
+    ],
+    "configuration": {
+      "title": "CodeQL MCP Server",
+      "properties": {
+        "codeql-mcp.autoInstall": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically install and update the CodeQL Development MCP Server on activation."
+        },
+        "codeql-mcp.serverVersion": {
+          "type": "string",
+          "default": "latest",
+          "description": "The npm version of codeql-development-mcp-server to install. Use 'latest' for the most recent release."
+        },
+        "codeql-mcp.serverCommand": {
+          "type": "string",
+          "default": "npx",
+          "description": "Command to launch the MCP server. Override to 'node' for local development builds."
+        },
+        "codeql-mcp.serverArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Custom arguments for the MCP server command. When empty, defaults to ['-y', 'codeql-development-mcp-server']. Set to e.g. ['/path/to/server/dist/codeql-development-mcp-server.js'] when using serverCommand='node' for local development."
+        },
+        "codeql-mcp.watchCodeqlExtension": {
+          "type": "boolean",
+          "default": true,
+          "description": "Watch for CodeQL databases and query results created by the CodeQL extension."
+        },
+        "codeql-mcp.additionalEnv": {
+          "type": "object",
+          "default": {},
+          "description": "Additional environment variables to pass to the MCP server process.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "codeql-mcp.reinstallServer",
+        "title": "Reinstall MCP Server",
+        "category": "CodeQL MCP"
+      },
+      {
+        "command": "codeql-mcp.reinstallPacks",
+        "title": "Reinstall CodeQL Tool Query Packs",
+        "category": "CodeQL MCP"
+      },
+      {
+        "command": "codeql-mcp.showStatus",
+        "title": "Show Status",
+        "category": "CodeQL MCP"
+      },
+      {
+        "command": "codeql-mcp.showLogs",
+        "title": "Show Logs",
+        "category": "CodeQL MCP"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "npm run clean && npm run lint && npm run bundle",
+    "bundle": "node esbuild.config.js",
+    "clean": "rm -rf dist",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint src/ test/ --fix",
+    "test": "vitest --run",
+    "test:coverage": "vitest --run --coverage",
+    "test:watch": "vitest --watch",
+    "watch": "node esbuild.config.js --watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.0",
+    "@types/vscode": "^1.99.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "esbuild": "^0.27.3",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "glob": "^11.0.2",
+    "mocha": "^11.2.2",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^4.0.18"
+  }
+}

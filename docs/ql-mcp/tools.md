@@ -4,9 +4,9 @@
 
 ## Overview
 
-The server exposes **34 always-on tools** and **11 optional monitoring tools**. Always-on tools are available in every session; monitoring tools require explicit opt-in (see [Monitoring and Reporting](../mcp-server-monitoring-and-reporting.md)).
+The server exposes **36 default tools** and **11 opt-in monitoring tools**. Default tools are registered on startup; monitoring tools require explicit opt-in (see [Monitoring and Reporting](../mcp-server-monitoring-and-reporting.md)). Users control which tools are enabled in their MCP client configuration.
 
-## Always-On Tools
+## Default Tools
 
 ### CodeQL CLI Tools
 
@@ -52,6 +52,8 @@ The server exposes **34 always-on tools** and **11 optional monitoring tools**. 
 | `find_class_position`     | Find the start/end line and column of a class for quick evaluation                                                 |
 | `find_codeql_query_files` | Find and track all files and directories related to a CodeQL query, including resolved metadata                    |
 | `find_predicate_position` | Find the start/end line and column of a predicate for quick evaluation                                             |
+| `list_codeql_databases`   | List CodeQL databases discovered in configured base directories (`CODEQL_DATABASES_BASE_DIRS`)                     |
+| `list_query_run_results`  | List discovered query run result directories with artifact inventory (`CODEQL_QUERY_RUN_RESULTS_DIRS`)             |
 | `profile_codeql_query`    | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log JSON file |
 | `quick_evaluate`          | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                       |
 | `register_database`       | Register a CodeQL database given a local path to the database directory                                            |

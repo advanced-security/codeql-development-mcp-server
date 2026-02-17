@@ -31,6 +31,8 @@ describe('registerCodeQLTools', () => {
     expect(toolNames).toContain('create_codeql_query');
     expect(toolNames).toContain('find_class_position');
     expect(toolNames).toContain('find_predicate_position');
+    expect(toolNames).toContain('list_codeql_databases');
+    expect(toolNames).toContain('list_query_run_results');
     expect(toolNames).toContain('quick_evaluate');
     expect(toolNames).toContain('register_database');
     
@@ -39,9 +41,9 @@ describe('registerCodeQLTools', () => {
     // rank_sarif_results has been removed in favor of SARIF prompts
     expect(toolNames).not.toContain('rank_sarif_results');
     
-    // Total tools registered: 2 high-level helpers + 6 specialized tools + 22 CLI tools = 30
+    // Total tools registered: 2 high-level helpers + 8 specialized tools + 22 CLI tools = 32
     // (codeql_lsp_diagnostics moved to registerLSPTools in tools/lsp/)
-    expect(mockServer.tool).toHaveBeenCalledTimes(30);
+    expect(mockServer.tool).toHaveBeenCalledTimes(32);
   });
 
   it('should register validate_codeql_query with correct parameters', () => {

@@ -34,6 +34,8 @@ import {
   registerFindClassPositionTool,
   registerFindCodeQLQueryFilesTool,
   registerFindPredicatePositionTool,
+  registerListDatabasesTool,
+  registerListQueryRunResultsTool,
   registerProfileCodeQLQueryTool,
   registerQuickEvaluateTool,
   registerRegisterDatabaseTool
@@ -158,6 +160,8 @@ export function registerCodeQLTools(server: McpServer): void {
   registerFindClassPositionTool(server);
   registerFindCodeQLQueryFilesTool(server);
   registerFindPredicatePositionTool(server);
+  registerListDatabasesTool(server);
+  registerListQueryRunResultsTool(server);
   registerProfileCodeQLQueryTool(server);
   registerQuickEvaluateTool(server);
   registerRegisterDatabaseTool(server);

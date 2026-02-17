@@ -15,6 +15,9 @@
   "references": [
     {
       "path": "./server"
+    },
+    {
+      "path": "./extensions/vscode"
     }
   ]
 }
