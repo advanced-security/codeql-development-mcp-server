@@ -1,0 +1,159 @@
+name: Update CodeQL CLI Dependencies
+
+on:
+  workflow_dispatch:
+  # Nightly check for new CodeQL CLI releases
+  schedule:
+    - cron: '30 5 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 1: Detect new CodeQL CLI version
+  #
+  # Compares the current CodeQL CLI version in .codeql-version against the
+  # latest release from github/codeql-cli-binaries. If a newer version is
+  # available, downstream jobs orchestrate the update and PR creation.
+  # ─────────────────────────────────────────────────────────────────────────────
+  detect-update:
+    name: Detect CodeQL CLI Update
+    runs-on: ubuntu-latest
+
+    outputs:
+      current_version: ${{ steps.check-version.outputs.current_version }}
+      latest_version: ${{ steps.check-version.outputs.latest_version }}
+      update_needed: ${{ steps.check-version.outputs.update_needed }}
+      version: ${{ steps.check-version.outputs.version }}
+
+    steps:
+      - name: Detect - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Detect - Check latest CodeQL CLI version
+        id: check-version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Checking latest CodeQL CLI version..."
+
+          # Read current version from .codeql-version (stores vX.Y.Z)
+          current_version_raw=$(cat .codeql-version | tr -d '[:space:]')
+          current_version="${current_version_raw#v}"
+
+          # Get latest release from codeql-cli-binaries
+          latest_tag=$(gh release list --repo github/codeql-cli-binaries --json 'tagName,isLatest' --jq '.[] | select(.isLatest == true) | .tagName')
+          latest_clean="${latest_tag#v}"
+
+          echo "Current CodeQL CLI version: ${current_version}"
+          echo "Latest CodeQL CLI version: ${latest_clean}"
+
+          if [ "${latest_clean}" != "${current_version}" ]; then
+            echo "✅ Update available: ${current_version} → ${latest_clean}"
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "current_version=${current_version}" >> $GITHUB_OUTPUT
+            echo "latest_version=${latest_clean}" >> $GITHUB_OUTPUT
+            echo "version=v${latest_clean}" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ CodeQL CLI is already up-to-date at version ${current_version}"
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Detect - Summary
+        run: |
+          echo "## CodeQL CLI Update Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-version.outputs.update_needed }}" == "true" ]; then
+            echo "✅ Update available: ${{ steps.check-version.outputs.current_version }} → ${{ steps.check-version.outputs.latest_version }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Initiating update pipeline for \`${{ steps.check-version.outputs.version }}\`..." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ CodeQL CLI is already up-to-date. No changes needed." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 2: Update version, build, test, and create PR
+  #
+  # Updates all version-bearing files, installs dependencies, runs the full
+  # build-and-test suite, and creates a pull request with the changes.
+  # ─────────────────────────────────────────────────────────────────────────────
+  create-pr:
+    name: Create Update Pull Request
+    needs: detect-update
+    if: needs.detect-update.outputs.update_needed == 'true'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Update - Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Update - Update .codeql-version
+        run: |
+          printf "v%s\n" "${{ needs.detect-update.outputs.latest_version }}" > .codeql-version
+          echo "Updated .codeql-version to ${{ needs.detect-update.outputs.version }}"
+
+      - name: Update - Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          add-to-path: true
+          install-language-runtimes: false
+
+      - name: Update - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Update - Update version in all files
+        run: |
+          LATEST="${{ needs.detect-update.outputs.latest_version }}"
+          echo "Updating all version-bearing files to ${LATEST}..."
+          ./server/scripts/update-release-version.sh --skip-cli-validation "${LATEST}"
+
+      - name: Update - Install dependencies
+        run: npm install --include=optional
+
+      - name: Update - Install CodeQL pack dependencies
+        run: server/scripts/install-packs.sh
+
+      - name: Update - Build and test
+        run: npm run build-and-test
+
+      - name: Update - Create Pull Request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          title: 'Upgrade CodeQL CLI dependency to ${{ needs.detect-update.outputs.version }}'
+          body: |
+            This PR upgrades the CodeQL CLI version to ${{ needs.detect-update.outputs.version }}.
+
+            **Changes made:**
+            - Updated `.codeql-version` to `${{ needs.detect-update.outputs.version }}`
+            - Updated all version-bearing files (package.json, codeql-pack.yml) to `${{ needs.detect-update.outputs.latest_version }}`
+            - Regenerated `package-lock.json`
+            - Installed CodeQL pack dependencies
+            - Build and tests passed ✅
+          commit-message: 'Upgrade CodeQL CLI dependency to ${{ needs.detect-update.outputs.version }}'
+          delete-branch: true
+          branch: 'codeql/upgrade-to-${{ needs.detect-update.outputs.version }}'
+
+      - name: Update - Summary
+        run: |
+          VERSION="${{ needs.detect-update.outputs.version }}"
+          CURRENT="${{ needs.detect-update.outputs.current_version }}"
+          LATEST="${{ needs.detect-update.outputs.latest_version }}"
+          echo "## CodeQL CLI Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by CodeQL CLI update: ${CURRENT} → ${LATEST}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Old Value | New Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| -------- | --------- | --------- |" >> $GITHUB_STEP_SUMMARY
+          echo "| .codeql-version | v${CURRENT} | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
+          echo "| package.json versions | ${CURRENT} | ${LATEST} |" >> $GITHUB_STEP_SUMMARY
+          echo "| codeql-pack.yml versions | ${CURRENT} | ${LATEST} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "A pull request has been created with these changes." >> $GITHUB_STEP_SUMMARY
