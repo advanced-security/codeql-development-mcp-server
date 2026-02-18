@@ -1,8 +1,10 @@
 /**
- * Discovery configuration for locating CodeQL databases and query run results.
+ * Discovery configuration for locating CodeQL databases, query run results,
+ * and MRVA (Multi-Repository Variant Analysis) run results.
  *
  * Reads colon-separated directory lists from environment variables:
  * - `CODEQL_DATABASES_BASE_DIRS` — directories to search for CodeQL databases
+ * - `CODEQL_MRVA_RUN_RESULTS_DIRS` — directories containing MRVA run result subdirectories
  * - `CODEQL_QUERY_RUN_RESULTS_DIRS` — directories containing per-run query result subdirectories
  *
  * The VS Code extension sets these automatically from vscode-codeql storage paths.
@@ -32,6 +34,20 @@ function parsePathList(envValue: string | undefined): string[] {
  */
 export function getDatabaseBaseDirs(): string[] {
   return parsePathList(process.env.CODEQL_DATABASES_BASE_DIRS);
+}
+
+/**
+ * Get the list of directories containing MRVA run result subdirectories.
+ *
+ * Each directory is expected to contain numeric subdirectories (run IDs),
+ * each holding `timestamp`, `repo_states.json`, and per-repository
+ * subdirectories with `repo_task.json`, `results/results.sarif`, and
+ * `results/results.bqrs`.
+ *
+ * Set via `CODEQL_MRVA_RUN_RESULTS_DIRS` (colon-separated).
+ */
+export function getMrvaRunResultsDirs(): string[] {
+  return parsePathList(process.env.CODEQL_MRVA_RUN_RESULTS_DIRS);
 }
 
 /**

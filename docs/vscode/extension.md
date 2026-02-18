@@ -39,8 +39,12 @@ On activation the extension:
    `mcp.json` edits.
 5. **Bridges the CodeQL extension** — watches for databases and query results
    created by the CodeQL extension and passes their locations to the MCP server
-   via `CODEQL_DATABASES_BASE_DIRS` and `CODEQL_QUERY_RUN_RESULTS_DIRS`
-   environment variables.
+   via environment variables:
+   - `CODEQL_ADDITIONAL_PACKS` — workspace folders and vscode-codeql database storage
+   - `CODEQL_QUERY_RUN_RESULTS_DIRS` — vscode-codeql query result directories
+     (enables `list_query_run_results` and `profile_codeql_query_from_logs`)
+   - `CODEQL_MRVA_RUN_RESULTS_DIRS` — vscode-codeql variant analysis result
+     directories (enables `list_mrva_run_results`)
 
 ## Settings
 

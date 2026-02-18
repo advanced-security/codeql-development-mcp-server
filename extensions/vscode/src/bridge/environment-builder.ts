@@ -78,6 +78,15 @@ export class EnvironmentBuilder extends DisposableObject {
 
     env.CODEQL_ADDITIONAL_PACKS = additionalPaths.join(':');
 
+    // Database discovery directory for list_codeql_databases
+    env.CODEQL_DATABASES_BASE_DIRS = this.storagePaths.getDatabaseStoragePath();
+
+    // MRVA run results directory for variant analysis discovery
+    env.CODEQL_MRVA_RUN_RESULTS_DIRS = this.storagePaths.getVariantAnalysisStoragePath();
+
+    // Query run results directory for query history discovery
+    env.CODEQL_QUERY_RUN_RESULTS_DIRS = this.storagePaths.getQueryStoragePath();
+
     // User-configured additional environment variables
     const config = vscode.workspace.getConfiguration('codeql-mcp');
     const additionalEnv = config.get<Record<string, string>>('additionalEnv', {});

@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   getDatabaseBaseDirs,
+  getMrvaRunResultsDirs,
   getQueryRunResultsDirs,
 } from '../../../src/lib/discovery-config';
 
@@ -49,6 +50,38 @@ describe('Discovery Configuration', () => {
     it('should filter out empty segments from consecutive colons', () => {
       process.env.CODEQL_DATABASES_BASE_DIRS = '/path/one::/path/two';
       expect(getDatabaseBaseDirs()).toEqual(['/path/one', '/path/two']);
+    });
+  });
+
+  describe('getMrvaRunResultsDirs', () => {
+    it('should return empty array when env var is not set', () => {
+      delete process.env.CODEQL_MRVA_RUN_RESULTS_DIRS;
+      expect(getMrvaRunResultsDirs()).toEqual([]);
+    });
+
+    it('should return empty array when env var is empty string', () => {
+      process.env.CODEQL_MRVA_RUN_RESULTS_DIRS = '';
+      expect(getMrvaRunResultsDirs()).toEqual([]);
+    });
+
+    it('should parse single directory', () => {
+      process.env.CODEQL_MRVA_RUN_RESULTS_DIRS = '/path/to/variant-analyses';
+      expect(getMrvaRunResultsDirs()).toEqual(['/path/to/variant-analyses']);
+    });
+
+    it('should parse colon-separated directories', () => {
+      process.env.CODEQL_MRVA_RUN_RESULTS_DIRS = '/global/mrva:/workspace/mrva';
+      expect(getMrvaRunResultsDirs()).toEqual(['/global/mrva', '/workspace/mrva']);
+    });
+
+    it('should trim whitespace from paths', () => {
+      process.env.CODEQL_MRVA_RUN_RESULTS_DIRS = ' /path/one : /path/two ';
+      expect(getMrvaRunResultsDirs()).toEqual(['/path/one', '/path/two']);
+    });
+
+    it('should filter out empty segments from consecutive colons', () => {
+      process.env.CODEQL_MRVA_RUN_RESULTS_DIRS = '/path/one::/path/two';
+      expect(getMrvaRunResultsDirs()).toEqual(['/path/one', '/path/two']);
     });
   });
 
