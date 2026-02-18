@@ -83,8 +83,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Separate positional arguments from named options
         // Extract tool-specific parameters that should not be passed to CLI
         // Note: format is extracted for tools that use it internally but not on CLI
-        // For codeql_bqrs_interpret, codeql_bqrs_decode, codeql_generate_query-help, and codeql_database_analyze, format should be passed to CLI
-        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze';
+        // For codeql_bqrs_interpret, codeql_bqrs_decode, codeql_bqrs_info, codeql_generate_query-help, and codeql_database_analyze, format should be passed to CLI
+        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_bqrs_info' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze';
         
         const extractedParams = formatShouldBePassedToCLI
           ? {
@@ -384,6 +384,12 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               options.output = join(queryLogDir, 'results.bqrs');
             }
           }
+
+          // Ensure the parent directory of --output exists (the CLI will not create it)
+          if (options.output && typeof options.output === 'string') {
+            const outputDir = dirname(options.output);
+            mkdirSync(outputDir, { recursive: true });
+          }
         }
 
         let result: CLIExecutionResult;
@@ -425,24 +431,33 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Post-execution processing for codeql_query_run
         if (name === 'codeql_query_run' && result.success && queryLogDir) {
-          // Generate SARIF interpretation if results.bqrs exists
+          // Generate SARIF interpretation if results.bqrs exists and query path is known
           const bqrsPath = options.output as string;
-          const sarifPath = join(queryLogDir, 'results.sarif');
+          const sarifPath = join(queryLogDir, 'results-interpreted.sarif');
 
-          if (existsSync(bqrsPath)) {
+          // The query file path is the last positional argument (set during query resolution)
+          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : undefined;
+
+          if (existsSync(bqrsPath) && queryFilePath) {
             try {
-              const sarifResult = await executeCodeQLCommand(
-                'bqrs interpret',
-                { format: 'sarif-latest', output: sarifPath },
-                [bqrsPath]
+              const sarifResult = await interpretBQRSFile(
+                bqrsPath,
+                queryFilePath,
+                'sarif-latest',
+                sarifPath,
+                logger
               );
 
               if (sarifResult.success) {
                 logger.info(`Generated SARIF interpretation at ${sarifPath}`);
+              } else {
+                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
               }
             } catch (error) {
               logger.warn(`Failed to generate SARIF interpretation: ${error}`);
             }
+          } else if (existsSync(bqrsPath) && !queryFilePath) {
+            logger.warn('Skipping SARIF interpretation: query file path not available');
           }
 
           // Process evaluation results

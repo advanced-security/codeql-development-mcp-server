@@ -87,12 +87,15 @@ Add to your `mcp.json` file:
 
 ## Environment Variables
 
-| Variable         | Description                            | Default  |
-| ---------------- | -------------------------------------- | -------- |
-| `CODEQL_PATH`    | Absolute path to the CodeQL CLI binary | `codeql` |
-| `TRANSPORT_MODE` | `stdio` or `http`                      | `stdio`  |
-| `HTTP_PORT`      | HTTP port                              | `3000`   |
-| `DEBUG`          | Enable debug logging                   | `false`  |
+| Variable                        | Description                                                                | Default  |
+| ------------------------------- | -------------------------------------------------------------------------- | -------- |
+| `CODEQL_PATH`                   | Absolute path to the CodeQL CLI binary                                     | `codeql` |
+| `TRANSPORT_MODE`                | `stdio` or `http`                                                          | `stdio`  |
+| `HTTP_PORT`                     | HTTP port                                                                  | `3000`   |
+| `DEBUG`                         | Enable debug logging                                                       | `false`  |
+| `CODEQL_DATABASES_BASE_DIRS`    | Colon-separated directories to search for CodeQL databases                 | —        |
+| `CODEQL_QUERY_RUN_RESULTS_DIRS` | Colon-separated directories containing per-run query result subdirectories | —        |
+| `CODEQL_MRVA_RUN_RESULTS_DIRS`  | Colon-separated directories containing MRVA run result subdirectories      | —        |
 
 ## Verification
 

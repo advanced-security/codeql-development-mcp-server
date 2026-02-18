@@ -7,7 +7,10 @@ import { CLIToolDefinition, createCodeQLSchemas } from '../../lib/cli-tool-regis
 
 export const codeqlQueryRunTool: CLIToolDefinition = {
   name: 'codeql_query_run',
-  description: 'Execute a CodeQL query against a database. Use either "query" parameter for direct file path OR "queryName" + "queryLanguage" for pre-defined tool queries.',
+  description:
+    'Execute a CodeQL query against a database. Use either "query" parameter for direct file path OR "queryName" + "queryLanguage" for pre-defined tool queries. ' +
+    'Produces evaluator logs and BQRS results in a log directory. ' +
+    'Use list_codeql_databases to discover databases, list_query_run_results to find previous results, and codeql_bqrs_decode to inspect BQRS output.',
   command: 'codeql',
   subcommand: 'query run',
   inputSchema: {

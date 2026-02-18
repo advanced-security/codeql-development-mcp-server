@@ -12,10 +12,10 @@ The server exposes **38 default tools** and **11 opt-in monitoring tools**. Defa
 
 | Tool                          | Description                                                                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats                                                                           |
-| `codeql_bqrs_info`            | Get metadata and information about BQRS result files                                                                         |
+| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats (text, csv, json). Supports `--result-set`, `--rows` for pagination       |
+| `codeql_bqrs_info`            | Get metadata about BQRS result files: result sets, column types, row counts. Supports `--format=json` and pagination offsets |
 | `codeql_bqrs_interpret`       | Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats) |
-| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases                                                                         |
+| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS, and SARIF output                        |
 | `codeql_database_create`      | Create a CodeQL database from source code                                                                                    |
 | `codeql_generate_log-summary` | Create a summary of a structured JSON evaluator event log file                                                               |
 | `codeql_generate_query-help`  | Generate query help documentation from QLDoc comments                                                                        |
@@ -52,9 +52,9 @@ The server exposes **38 default tools** and **11 opt-in monitoring tools**. Defa
 | `find_class_position`            | Find the start/end line and column of a class for quick evaluation                                                 |
 | `find_codeql_query_files`        | Find and track all files and directories related to a CodeQL query, including resolved metadata                    |
 | `find_predicate_position`        | Find the start/end line and column of a predicate for quick evaluation                                             |
-| `list_codeql_databases`          | List CodeQL databases discovered in configured base directories (`CODEQL_DATABASES_BASE_DIRS`)                     |
+| `list_codeql_databases`          | List CodeQL databases discovered in configured base directories (`CODEQL_DATABASES_BASE_DIRS`). Filter by language |
 | `list_mrva_run_results`          | List MRVA (Multi-Repository Variant Analysis) run results with per-repo details (`CODEQL_MRVA_RUN_RESULTS_DIRS`)   |
-| `list_query_run_results`         | List discovered query run result directories with artifact inventory (`CODEQL_QUERY_RUN_RESULTS_DIRS`)             |
+| `list_query_run_results`         | List query run result directories with artifact inventory. Filter by `queryName`, `language`, or `queryPath`       |
 | `profile_codeql_query`           | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log JSON file |
 | `profile_codeql_query_from_logs` | Parse existing CodeQL evaluator logs into a performance profile without re-running the query                       |
 | `quick_evaluate`                 | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                       |

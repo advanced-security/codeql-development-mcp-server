@@ -127,7 +127,7 @@ export async function discoverDatabases(
 export function registerListDatabasesTool(server: McpServer): void {
   server.tool(
     'list_codeql_databases',
-    'List CodeQL databases discovered in configured base directories (set via CODEQL_DATABASES_BASE_DIRS env var). Returns path, language, CLI version, and creation time for each database.',
+    'List CodeQL databases discovered in configured base directories (set via CODEQL_DATABASES_BASE_DIRS env var). Returns path, language, CLI version, and creation time for each database. Use the returned database paths with codeql_query_run or codeql_database_analyze to run queries against them.',
     {
       language: z
         .string()

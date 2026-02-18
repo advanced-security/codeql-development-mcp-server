@@ -41,6 +41,8 @@ On activation the extension:
    created by the CodeQL extension and passes their locations to the MCP server
    via environment variables:
    - `CODEQL_ADDITIONAL_PACKS` — workspace folders and vscode-codeql database storage
+   - `CODEQL_DATABASES_BASE_DIRS` — vscode-codeql database storage directory
+     (enables `list_codeql_databases`)
    - `CODEQL_QUERY_RUN_RESULTS_DIRS` — vscode-codeql query result directories
      (enables `list_query_run_results` and `profile_codeql_query_from_logs`)
    - `CODEQL_MRVA_RUN_RESULTS_DIRS` — vscode-codeql variant analysis result

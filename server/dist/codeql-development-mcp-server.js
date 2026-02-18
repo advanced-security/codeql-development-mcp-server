@@ -2063,7 +2063,7 @@ function registerCLITool(server, definition) {
       const tempDirsToCleanup = [];
       try {
         logger.info(`Executing CLI tool: ${name}`, { command, subcommand, params });
-        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_generate_query-help" || name === "codeql_database_analyze";
+        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_bqrs_info" || name === "codeql_generate_query-help" || name === "codeql_database_analyze";
         const extractedParams = formatShouldBePassedToCLI ? {
           _positional: params._positional || [],
           files: params.files,
@@ -2284,6 +2284,10 @@ function registerCLITool(server, definition) {
               options.output = join5(queryLogDir, "results.bqrs");
             }
           }
+          if (options.output && typeof options.output === "string") {
+            const outputDir = dirname4(options.output);
+            mkdirSync5(outputDir, { recursive: true });
+          }
         }
         let result;
         if (command === "codeql") {
@@ -2308,20 +2312,27 @@ function registerCLITool(server, definition) {
         }
         if (name === "codeql_query_run" && result.success && queryLogDir) {
           const bqrsPath = options.output;
-          const sarifPath = join5(queryLogDir, "results.sarif");
-          if (existsSync4(bqrsPath)) {
+          const sarifPath = join5(queryLogDir, "results-interpreted.sarif");
+          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : void 0;
+          if (existsSync4(bqrsPath) && queryFilePath) {
             try {
-              const sarifResult = await executeCodeQLCommand(
-                "bqrs interpret",
-                { format: "sarif-latest", output: sarifPath },
-                [bqrsPath]
+              const sarifResult = await interpretBQRSFile(
+                bqrsPath,
+                queryFilePath,
+                "sarif-latest",
+                sarifPath,
+                logger
               );
               if (sarifResult.success) {
                 logger.info(`Generated SARIF interpretation at ${sarifPath}`);
+              } else {
+                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
               }
             } catch (error) {
               logger.warn(`Failed to generate SARIF interpretation: ${error}`);
             }
+          } else if (existsSync4(bqrsPath) && !queryFilePath) {
+            logger.warn("Skipping SARIF interpretation: query file path not available");
           }
           result = await processQueryRunResults(result, params, logger);
         }
@@ -2658,22 +2669,28 @@ Warning: Query processing error - ${error}`
 // src/tools/codeql/bqrs-decode.ts
 var codeqlBqrsDecodeTool = {
   name: "codeql_bqrs_decode",
-  description: "Decode BQRS result files to human-readable formats",
+  description: "Decode BQRS result files to human-readable formats (text, csv, json). Typical workflow: (1) use list_query_run_results to find BQRS paths from previous codeql_query_run or codeql_database_analyze runs, (2) use codeql_bqrs_info to discover result sets and column schemas, (3) decode specific result sets with this tool. For large result sets, use --rows to paginate.",
   command: "codeql",
   subcommand: "bqrs decode",
   inputSchema: {
     files: z2.array(z2.string()).describe("BQRS file(s) to decode"),
     output: createCodeQLSchemas.output(),
-    format: z2.enum(["csv", "json"]).optional().describe("Output format"),
-    "max-paths": z2.number().optional().describe("Maximum number of paths to output"),
-    "start-at": z2.number().optional().describe("Start output at result number"),
-    "max-results": z2.number().optional().describe("Maximum number of results"),
+    format: z2.enum(["csv", "json", "text", "bqrs"]).optional().describe("Output format: text (human-readable table, default), csv, json (streaming JSON), or bqrs (binary, requires --output)"),
+    "result-set": z2.string().optional().describe("Decode a specific result set by name (use codeql_bqrs_info to list available sets). If omitted, all result sets are decoded."),
+    "sort-key": z2.string().optional().describe("Sort by column(s): comma-separated column indices (0-based)"),
+    "sort-direction": z2.string().optional().describe('Sort direction(s): comma-separated "asc" or "desc" per column'),
+    "no-titles": z2.boolean().optional().describe("Omit column titles for text and csv formats"),
+    entities: z2.string().optional().describe("Control entity column display: comma-separated list of url, string, id, all"),
+    rows: z2.number().optional().describe("Maximum number of rows to output (for pagination). Use with --start-at for paging."),
+    "start-at": z2.number().optional().describe('Byte offset to start decoding from (get from codeql_bqrs_info or previous JSON output "next" pointer). Must be used with --rows.'),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
   examples: [
     "codeql bqrs decode --format=csv --output=results.csv results.bqrs",
-    "codeql bqrs decode --format=json --max-results=100 results.bqrs"
+    "codeql bqrs decode --format=json --rows=100 results.bqrs",
+    "codeql bqrs decode --result-set=#select --format=csv results.bqrs",
+    "codeql bqrs decode --format=json --entities=url,string results.bqrs"
   ],
   resultProcessor: createBQRSResultProcessor()
 };
@@ -2682,17 +2699,21 @@ var codeqlBqrsDecodeTool = {
 import { z as z3 } from "zod";
 var codeqlBqrsInfoTool = {
   name: "codeql_bqrs_info",
-  description: "Get metadata and information about BQRS result files",
+  description: 'Get metadata about BQRS result files: lists result sets, column names/types, and row counts. Use before codeql_bqrs_decode to discover available result sets (e.g., "#select", "edges", "nodes"). BQRS files are found at <runDir>/results.bqrs \u2014 use list_query_run_results to discover them. Use --format=json with --paginate-rows to get byte offsets for paginated decoding with codeql_bqrs_decode --start-at.',
   command: "codeql",
   subcommand: "bqrs info",
   inputSchema: {
     files: z3.array(z3.string()).describe("BQRS file(s) to examine"),
+    format: z3.enum(["text", "json"]).optional().describe("Output format: text (default) or json. Use json for machine-readable output and pagination offset computation."),
+    "paginate-rows": z3.number().optional().describe("Compute byte offsets for pagination at intervals of this many rows. Use with --format=json. Offsets can be passed to codeql_bqrs_decode --start-at."),
+    "paginate-result-set": z3.string().optional().describe("Compute pagination offsets only for this result set name"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
   examples: [
     "codeql bqrs info results.bqrs",
-    "codeql bqrs info --verbose results.bqrs"
+    "codeql bqrs info --format=json results.bqrs",
+    "codeql bqrs info --format=json --paginate-rows=100 --paginate-result-set=#select results.bqrs"
   ],
   resultProcessor: createBQRSResultProcessor()
 };
@@ -2737,7 +2758,7 @@ var codeqlBqrsInterpretTool = {
 import { z as z5 } from "zod";
 var codeqlDatabaseAnalyzeTool = {
   name: "codeql_database_analyze",
-  description: "Run queries or query suites against CodeQL databases",
+  description: "Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS results, and optionally SARIF output. Use list_codeql_databases to discover available databases, and register_database to register new ones. After analysis completes, use list_query_run_results to find result artifacts, then codeql_bqrs_info and codeql_bqrs_decode to inspect results.",
   command: "codeql",
   subcommand: "database analyze",
   inputSchema: {
@@ -2753,13 +2774,14 @@ var codeqlDatabaseAnalyzeTool = {
     "evaluator-log": z5.string().optional().describe("Path to save evaluator log. If not provided and logDir is set, defaults to <logDir>/evaluator-log.jsonl"),
     "tuple-counting": z5.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
     "evaluator-log-level": z5.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
+    rerun: z5.boolean().optional().describe("Force re-evaluation of queries even if BQRS results already exist in the database. Without this, cached results are reused."),
     verbose: z5.boolean().optional().describe("Enable verbose output"),
     additionalArgs: z5.array(z5.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif",
     "codeql database analyze mydb codeql/java-queries --format=csv",
-    "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif --log-dir=/path/to/logs --tuple-counting"
+    "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif --rerun --tuple-counting"
   ]
 };
 
@@ -5938,7 +5960,7 @@ async function discoverDatabases(baseDirs, language) {
 function registerListDatabasesTool(server) {
   server.tool(
     "list_codeql_databases",
-    "List CodeQL databases discovered in configured base directories (set via CODEQL_DATABASES_BASE_DIRS env var). Returns path, language, CLI version, and creation time for each database.",
+    "List CodeQL databases discovered in configured base directories (set via CODEQL_DATABASES_BASE_DIRS env var). Returns path, language, CLI version, and creation time for each database. Use the returned database paths with codeql_query_run or codeql_database_analyze to run queries against them.",
     {
       language: z12.string().optional().describe('Filter databases by language (e.g., "javascript", "python")')
     },
@@ -6192,7 +6214,37 @@ import { join as join9 } from "path";
 import { z as z14 } from "zod";
 init_logger();
 var QUERY_RUN_DIR_PATTERN = /^(.+\.ql)-(.+)$/;
-async function discoverQueryRunResults(resultsDirs, queryName) {
+var RUN_QUERY_PATTERN = /runQuery called with\s+(\S+)/;
+var DBSCHEME_DB_PATH_PATTERN = /--dbscheme=(.+?)\/db-(\w+)\//;
+var DBSCHEME_LANGUAGE_PATTERN = /semmlecode\.(\w+)\.dbscheme/;
+var QLPACK_LANGUAGE_PATTERN = /codeql\/(\w+)-all\//;
+function parseQueryLogMetadata(logContent) {
+  const metadata = {};
+  const runQueryMatch = RUN_QUERY_PATTERN.exec(logContent);
+  if (runQueryMatch) {
+    metadata.queryPath = runQueryMatch[1];
+  }
+  const dbPathMatch = DBSCHEME_DB_PATH_PATTERN.exec(logContent);
+  if (dbPathMatch) {
+    metadata.databasePath = dbPathMatch[1];
+    metadata.language = dbPathMatch[2];
+  }
+  if (!metadata.language) {
+    const langMatch = DBSCHEME_LANGUAGE_PATTERN.exec(logContent);
+    if (langMatch) {
+      metadata.language = langMatch[1];
+    }
+  }
+  if (!metadata.language) {
+    const packMatch = QLPACK_LANGUAGE_PATTERN.exec(logContent);
+    if (packMatch) {
+      metadata.language = packMatch[1];
+    }
+  }
+  return metadata;
+}
+async function discoverQueryRunResults(resultsDirs, filter) {
+  const normalizedFilter = typeof filter === "string" ? { queryName: filter } : filter;
   const results = [];
   for (const dir of resultsDirs) {
     if (!existsSync8(dir)) {
@@ -6218,12 +6270,14 @@ async function discoverQueryRunResults(resultsDirs, queryName) {
         continue;
       }
       const [, name, runId] = match;
-      if (queryName && name !== queryName) {
+      if (normalizedFilter?.queryName && name !== normalizedFilter.queryName) {
         continue;
       }
       const hasEvaluatorLog = existsSync8(join9(entryPath, "evaluator-log.jsonl"));
       const hasBqrs = existsSync8(join9(entryPath, "results.bqrs"));
       const hasSarif = existsSync8(join9(entryPath, "results-interpreted.sarif"));
+      const hasQueryLog = existsSync8(join9(entryPath, "query.log"));
+      const hasSummaryLog = existsSync8(join9(entryPath, "evaluator-log.summary.jsonl"));
       let timestamp2;
       const timestampPath = join9(entryPath, "timestamp");
       if (existsSync8(timestampPath)) {
@@ -6232,12 +6286,44 @@ async function discoverQueryRunResults(resultsDirs, queryName) {
         } catch {
         }
       }
+      let metadata = {};
+      if (hasQueryLog) {
+        try {
+          const logContent = readFileSync6(join9(entryPath, "query.log"), "utf-8");
+          metadata = parseQueryLogMetadata(logContent);
+        } catch {
+        }
+      }
+      if (normalizedFilter?.language && metadata.language !== normalizedFilter.language) {
+        continue;
+      }
+      if (normalizedFilter?.queryPath) {
+        if (!metadata.queryPath) {
+          continue;
+        }
+        const filterPath = normalizedFilter.queryPath;
+        const isExact = filterPath.startsWith("/");
+        if (isExact) {
+          if (metadata.queryPath !== filterPath) {
+            continue;
+          }
+        } else {
+          if (!metadata.queryPath.toLowerCase().includes(filterPath.toLowerCase())) {
+            continue;
+          }
+        }
+      }
       results.push({
+        databasePath: metadata.databasePath,
         hasBqrs,
         hasEvaluatorLog,
+        hasQueryLog,
         hasSarif,
+        hasSummaryLog,
+        language: metadata.language,
         path: entryPath,
         queryName: name,
+        queryPath: metadata.queryPath,
         runId,
         timestamp: timestamp2
       });
@@ -6248,11 +6334,17 @@ async function discoverQueryRunResults(resultsDirs, queryName) {
 function registerListQueryRunResultsTool(server) {
   server.tool(
     "list_query_run_results",
-    "List discovered query run result directories (set via CODEQL_QUERY_RUN_RESULTS_DIRS env var). Returns path, query name, timestamp, and available artifacts for each run.",
+    "List discovered query run result directories (set via CODEQL_QUERY_RUN_RESULTS_DIRS env var). Returns path, query name, timestamp, language, query file path, and available artifacts (evaluator-log, bqrs, sarif, query.log, summary) for each run. Filter by queryName, language, or queryPath to narrow results. Use the returned BQRS paths with codeql_bqrs_decode or codeql_bqrs_info to inspect query results.",
     {
-      queryName: z14.string().optional().describe('Filter results by query name (e.g., "UI5Xss.ql")')
+      language: z14.string().optional().describe(
+        'Filter by CodeQL language (e.g., "javascript", "python", "java"). Extracted from the database path in query.log. Runs without a query.log are excluded when this filter is set.'
+      ),
+      queryName: z14.string().optional().describe('Filter results by query name (e.g., "UI5Xss.ql")'),
+      queryPath: z14.string().optional().describe(
+        "Filter by query file path. Absolute paths match exactly; relative paths/substrings match case-insensitively. Requires query.log to be present."
+      )
     },
-    async ({ queryName }) => {
+    async ({ language, queryName, queryPath }) => {
       try {
         const resultsDirs = getQueryRunResultsDirs();
         if (resultsDirs.length === 0) {
@@ -6265,9 +6357,20 @@ function registerListQueryRunResultsTool(server) {
             ]
           };
         }
-        const runs = await discoverQueryRunResults(resultsDirs, queryName);
+        const filter = {};
+        if (queryName) filter.queryName = queryName;
+        if (language) filter.language = language;
+        if (queryPath) filter.queryPath = queryPath;
+        const runs = await discoverQueryRunResults(
+          resultsDirs,
+          Object.keys(filter).length > 0 ? filter : void 0
+        );
         if (runs.length === 0) {
-          const filterMsg = queryName ? ` for query "${queryName}"` : "";
+          const filterParts = [];
+          if (queryName) filterParts.push(`query "${queryName}"`);
+          if (language) filterParts.push(`language "${language}"`);
+          if (queryPath) filterParts.push(`path "${queryPath}"`);
+          const filterMsg = filterParts.length > 0 ? ` for ${filterParts.join(", ")}` : "";
           return {
             content: [
               {
@@ -6283,12 +6386,18 @@ function registerListQueryRunResultsTool(server) {
           ...runs.map((run) => {
             const artifacts = [];
             if (run.hasEvaluatorLog) artifacts.push("evaluator-log");
+            if (run.hasSummaryLog) artifacts.push("summary-log");
             if (run.hasBqrs) artifacts.push("bqrs");
             if (run.hasSarif) artifacts.push("sarif");
+            if (run.hasQueryLog) artifacts.push("query-log");
             const parts = [`  ${run.queryName} (${run.runId})`];
             parts.push(`    Path: ${run.path}`);
             if (run.timestamp) parts.push(`    Timestamp: ${run.timestamp}`);
+            if (run.language) parts.push(`    Language: ${run.language}`);
+            if (run.queryPath) parts.push(`    Query: ${run.queryPath}`);
+            if (run.databasePath) parts.push(`    Database: ${run.databasePath}`);
             parts.push(`    Artifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "none"}`);
+            if (run.hasBqrs) parts.push(`    BQRS: ${join9(run.path, "results.bqrs")}`);
             return parts.join("\n");
           })
         ];
@@ -7114,7 +7223,7 @@ var codeqlQueryFormatTool = {
 import { z as z21 } from "zod";
 var codeqlQueryRunTool = {
   name: "codeql_query_run",
-  description: 'Execute a CodeQL query against a database. Use either "query" parameter for direct file path OR "queryName" + "queryLanguage" for pre-defined tool queries.',
+  description: 'Execute a CodeQL query against a database. Use either "query" parameter for direct file path OR "queryName" + "queryLanguage" for pre-defined tool queries. Produces evaluator logs and BQRS results in a log directory. Use list_codeql_databases to discover databases, list_query_run_results to find previous results, and codeql_bqrs_decode to inspect BQRS output.',
   command: "codeql",
   subcommand: "query run",
   inputSchema: {
