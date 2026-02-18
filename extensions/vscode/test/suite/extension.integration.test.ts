@@ -9,7 +9,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 
-const EXTENSION_ID = 'advanced-security.codeql-development-mcp-server-vscode';
+const EXTENSION_ID = 'advanced-security.vscode-codeql-development-mcp-server';
 
 suite('Extension Integration Tests', () => {
   test('Extension should be present', () => {

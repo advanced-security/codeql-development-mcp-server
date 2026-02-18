@@ -101,6 +101,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'esbuild.config.js'],
+    ignores: ['dist/', 'node_modules/', 'esbuild.config.js', 'scripts/'],
   },
 ];

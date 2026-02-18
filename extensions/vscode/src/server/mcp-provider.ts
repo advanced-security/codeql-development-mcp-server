@@ -8,8 +8,9 @@ import type { EnvironmentBuilder } from '../bridge/environment-builder';
  * Implements `McpServerDefinitionProvider` to programmatically register
  * the `codeql-development-mcp-server` as an MCP server in VS Code.
  *
- * The server is launched via `npx -y codeql-development-mcp-server` by default,
- * using the **published** npm package — not any local development build.
+ * The server is launched from the bundled copy inside the VSIX by default
+ * (`node server/dist/codeql-development-mcp-server.js`). Falls back to
+ * `npx -y codeql-development-mcp-server` if the bundle is missing.
  * Override via `codeql-mcp.serverCommand` / `codeql-mcp.serverArgs` settings.
  */
 export class McpProvider

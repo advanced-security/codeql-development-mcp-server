@@ -23,7 +23,7 @@ export class StoragePaths extends DisposableObject {
   constructor(private readonly context: vscode.ExtensionContext) {
     super();
     // Our extension's globalStorageUri is something like:
-    //   .../<vscode-global-storage>/advanced-security.codeql-development-mcp-server-vscode/
+    //   .../<vscode-global-storage>/advanced-security.vscode-codeql-development-mcp-server/
     // The parent directory is the vscode global storage root.
     this.vsCodeGlobalStorageRoot = dirname(context.globalStorageUri.fsPath);
   }

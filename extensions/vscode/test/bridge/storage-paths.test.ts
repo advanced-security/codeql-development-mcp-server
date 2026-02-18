@@ -5,8 +5,8 @@ import { StoragePaths } from '../../src/bridge/storage-paths';
 
 function createMockContext() {
   return {
-    globalStorageUri: { fsPath: '/mock/global-storage/advanced-security.codeql-development-mcp-server-vscode' },
-    storageUri: { fsPath: '/mock/workspace-storage/advanced-security.codeql-development-mcp-server-vscode' },
+    globalStorageUri: { fsPath: '/mock/global-storage/advanced-security.vscode-codeql-development-mcp-server' },
+    storageUri: { fsPath: '/mock/workspace-storage/advanced-security.vscode-codeql-development-mcp-server' },
   } as any;
 }
 

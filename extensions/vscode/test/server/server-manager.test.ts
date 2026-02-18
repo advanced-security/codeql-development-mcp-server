@@ -11,11 +11,18 @@ vi.mock('fs/promises', () => ({
   mkdir: vi.fn(),
 }));
 
+vi.mock('fs', () => ({
+  accessSync: vi.fn(),
+  constants: { R_OK: 4 },
+}));
+
 import { execFile } from 'child_process';
 import { access, readFile } from 'fs/promises';
+import { accessSync } from 'fs';
 
 function createMockContext() {
   return {
+    extensionUri: { fsPath: '/mock/extension' },
     globalStorageUri: { fsPath: '/mock/global-storage' },
     globalState: {
       get: vi.fn(),
@@ -79,18 +86,27 @@ describe('ServerManager', () => {
     expect(installed).toBe(true);
   });
 
-  it('should default command to npx', () => {
+  it('should default command to npx when bundle is missing', () => {
+    vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
     expect(manager.getCommand()).toBe('npx');
   });
 
-  it('should default args to npx -y codeql-development-mcp-server', () => {
+  it('should default args to npx -y codeql-development-mcp-server when bundle is missing', () => {
+    vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
     const args = manager.getArgs();
     expect(args).toEqual(['-y', 'codeql-development-mcp-server']);
   });
 
   it('should provide a human-readable description', () => {
+    vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
     const desc = manager.getDescription();
     expect(desc).toBe('npx -y codeql-development-mcp-server');
+  });
+
+  it('should use node with bundled server path when bundle exists', () => {
+    vi.mocked(accessSync).mockImplementation(() => undefined);
+    expect(manager.getCommand()).toBe('node');
+    expect(manager.getArgs()).toEqual(['/mock/extension/server/dist/codeql-development-mcp-server.js']);
   });
 
   it('should run npm install when installing', async () => {

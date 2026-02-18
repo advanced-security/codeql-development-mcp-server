@@ -1,0 +1,136 @@
+name: Release VSIX - Build and Package VS Code Extension
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Release version tag (e.g., vX.Y.Z). Must start with "v".'
+        required: true
+        type: string
+    outputs:
+      release_name:
+        description: 'The release name without "v" prefix (e.g., X.Y.Z)'
+        value: ${{ jobs.publish-vsix.outputs.release_name }}
+      version:
+        description: 'The full version string with "v" prefix (e.g., vX.Y.Z)'
+        value: ${{ jobs.publish-vsix.outputs.version }}
+      vsix_name:
+        description: 'The VSIX filename (e.g., codeql-development-mcp-server.vsix)'
+        value: ${{ jobs.publish-vsix.outputs.vsix_name }}
+
+# Note: This workflow is called exclusively via workflow_call from release.yml.
+# It does NOT have a workflow_dispatch trigger to keep release.yml as the single
+# entry point for all release operations. To re-build the VSIX standalone,
+# use workflow_dispatch on release.yml with publish_npm=false and
+# publish_codeql_packs=false.
+
+permissions:
+  contents: read
+
+jobs:
+  publish-vsix:
+    name: Build and Package VSIX Extension
+    runs-on: ubuntu-latest
+
+    environment: release-vsix
+
+    permissions:
+      contents: read
+
+    outputs:
+      release_name: ${{ steps.version.outputs.release_name }}
+      version: ${{ steps.version.outputs.version }}
+      vsix_name: ${{ steps.package.outputs.vsix_name }}
+
+    steps:
+      - name: VSIX - Validate and parse version
+        id: version
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! "${VERSION}" =~ ^v ]]; then
+            echo "::error::Version '${VERSION}' must start with 'v'"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: VSIX - Checkout tag
+        uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ steps.version.outputs.version }}
+
+      - name: VSIX - Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: VSIX - Install dependencies
+        run: npm ci --include=optional
+
+      - name: VSIX - Validate version consistency
+        run: |
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
+          EXTENSION_VERSION=$(node -e "console.log(require('./extensions/vscode/package.json').version)")
+          if [ "${EXTENSION_VERSION}" != "${RELEASE_NAME}" ]; then
+            echo "::error::Extension version (${EXTENSION_VERSION}) does not match release (${RELEASE_NAME})"
+            exit 1
+          fi
+          echo "✅ Extension version matches release: ${RELEASE_NAME}"
+
+      - name: VSIX - Build server
+        run: npm run build -w server
+
+      - name: VSIX - Package VSIX
+        id: package
+        working-directory: extensions/vscode
+        run: |
+          VSIX_NAME="codeql-development-mcp-server.vsix"
+          npx @vscode/vsce package --out "${VSIX_NAME}"
+          echo "vsix_name=${VSIX_NAME}" >> $GITHUB_OUTPUT
+          echo "✅ Packaged ${VSIX_NAME}"
+
+      - name: VSIX - Verify VSIX contents
+        working-directory: extensions/vscode
+        run: |
+          echo "Verifying bundled server and tool query packs..."
+          npx @vscode/vsce ls 2>&1 | tee /tmp/vsix-contents.txt
+
+          # Verify critical files are included
+          for required in \
+            "dist/extension.cjs" \
+            "server/dist/codeql-development-mcp-server.js" \
+            "server/package.json" \
+            "server/ql/javascript/tools/src/PrintAST/PrintAST.ql"; do
+            if grep -q "${required}" /tmp/vsix-contents.txt; then
+              echo "  ✅ ${required}"
+            else
+              echo "  ❌ Missing: ${required}"
+              exit 1
+            fi
+          done
+
+      - name: VSIX - Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: codeql-development-mcp-server-vsix-${{ steps.version.outputs.version }}
+          path: extensions/vscode/${{ steps.package.outputs.vsix_name }}
+
+      - name: VSIX - Summary
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VSIX_NAME="${{ steps.package.outputs.vsix_name }}"
+          VSIX_SIZE=$(du -h "extensions/vscode/${VSIX_NAME}" | cut -f1)
+          echo "## VSIX Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| -------- | ----- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
+          echo "| VSIX | \`${VSIX_NAME}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Size | ${VSIX_SIZE} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Bundled Contents" >> $GITHUB_STEP_SUMMARY
+          echo "- \`dist/extension.cjs\` — Extension entry point" >> $GITHUB_STEP_SUMMARY
+          echo "- \`server/dist/\` — Bundled MCP server" >> $GITHUB_STEP_SUMMARY
+          echo "- \`server/ql/*/tools/src/\` — CodeQL tool query packs" >> $GITHUB_STEP_SUMMARY
+          echo "- \`server/package.json\` — Server package metadata" >> $GITHUB_STEP_SUMMARY

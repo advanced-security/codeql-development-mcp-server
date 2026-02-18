@@ -1,5 +1,5 @@
 {
-  "name": "codeql-development-mcp-server-vscode",
+  "name": "vscode-codeql-development-mcp-server",
   "displayName": "CodeQL Development MCP Server",
   "description": "Automatically installs, configures, and manages the CodeQL Development MCP Server in VS Code.",
   "version": "2.24.1",
@@ -60,14 +60,14 @@
         },
         "codeql-mcp.serverCommand": {
           "type": "string",
-          "default": "npx",
-          "description": "Command to launch the MCP server. Override to 'node' for local development builds."
+          "default": "node",
+          "description": "Command to launch the MCP server. The default 'node' runs the bundled server. Override to 'npx' to download from npm, or provide a custom path."
         },
         "codeql-mcp.serverArgs": {
           "type": "array",
           "items": { "type": "string" },
           "default": [],
-          "description": "Custom arguments for the MCP server command. When empty, defaults to ['-y', 'codeql-development-mcp-server']. Set to e.g. ['/path/to/server/dist/codeql-development-mcp-server.js'] when using serverCommand='node' for local development."
+          "description": "Custom arguments for the MCP server command. When empty, the bundled server entry point is used automatically. Set to e.g. ['/path/to/server/dist/codeql-development-mcp-server.js'] for local development."
         },
         "codeql-mcp.watchCodeqlExtension": {
           "type": "boolean",
@@ -110,12 +110,15 @@
   "scripts": {
     "build": "npm run clean && npm run lint && npm run bundle",
     "bundle": "node esbuild.config.js",
+    "bundle:server": "node scripts/bundle-server.js",
     "clean": "rm -rf dist",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
+    "package": "vsce package --out codeql-development-mcp-server.vsix",
     "test": "vitest --run",
     "test:coverage": "vitest --run --coverage",
     "test:watch": "vitest --watch",
+    "vscode:prepublish": "npm run clean && npm run lint && npm run bundle && npm run bundle:server",
     "watch": "node esbuild.config.js --watch"
   },
   "devDependencies": {
@@ -124,6 +127,7 @@
     "@types/node": "^22.15.0",
     "@types/vscode": "^1.99.0",
     "@vitest/coverage-v8": "^4.0.18",
+    "@vscode/vsce": "^3.3.2",
     "esbuild": "^0.27.3",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",

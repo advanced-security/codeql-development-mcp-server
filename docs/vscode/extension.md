@@ -54,6 +54,7 @@ On activation the extension:
 | --------------------------------- | ---------- | -------------------------------------------------------------- |
 | `codeql-mcp.autoInstall`          | `true`     | Automatically install/update the MCP server on activation      |
 | `codeql-mcp.serverVersion`        | `"latest"` | npm version to install (`"latest"` or a specific version)      |
+| `codeql-mcp.serverCommand`        | `"node"`   | Command to launch the MCP server (override for local dev)      |
 | `codeql-mcp.watchCodeqlExtension` | `true`     | Discover databases and query results from the CodeQL extension |
 | `codeql-mcp.additionalEnv`        | `{}`       | Extra environment variables for the MCP server process         |
 

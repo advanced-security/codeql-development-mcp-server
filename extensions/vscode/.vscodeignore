@@ -2,6 +2,7 @@
 .vscode-test/**
 src/**
 test/**
+scripts/**
 node_modules/**
 .gitignore
 tsconfig.json
@@ -13,3 +14,7 @@ esbuild.config.js
 **/*.test.js
 **/*.map
 coverage/**
+
+# Include server/ bundle but exclude test/examples content
+server/ql/*/tools/test/**
+server/ql/*/examples/**
