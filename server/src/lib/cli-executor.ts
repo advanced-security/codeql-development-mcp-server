@@ -215,7 +215,8 @@ export async function validateCodeQLBinaryReachable(): Promise<string> {
     throw new Error(
       `CodeQL CLI is not reachable (binary: ${binary}). ` +
       `Ensure codeql is on PATH or set the CODEQL_PATH environment variable ` +
-      `to the absolute path of the CodeQL CLI binary. Details: ${message}`
+      `to the absolute path of the CodeQL CLI binary. Details: ${message}`,
+      { cause: err }
     );
   }
 }

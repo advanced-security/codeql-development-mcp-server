@@ -126,7 +126,7 @@ export async function lspDiagnostics({
 
   } catch (error) {
     logger.error('Error evaluating QL code:', error);
-    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
   }
 }
 

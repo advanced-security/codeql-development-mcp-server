@@ -679,7 +679,7 @@ async function resolveQueryPath(
       resolvedQueries = JSON.parse(resolveResult.stdout);
     } catch (parseError) {
       logger.error('Failed to parse resolve queries output:', parseError);
-      throw new Error('Failed to parse resolve queries output');
+      throw new Error('Failed to parse resolve queries output', { cause: parseError });
     }
     
     // Find the query that matches the requested name exactly

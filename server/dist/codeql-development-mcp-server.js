@@ -1455,7 +1455,8 @@ async function validateCodeQLBinaryReachable() {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(
-      `CodeQL CLI is not reachable (binary: ${binary2}). Ensure codeql is on PATH or set the CODEQL_PATH environment variable to the absolute path of the CodeQL CLI binary. Details: ${message}`
+      `CodeQL CLI is not reachable (binary: ${binary2}). Ensure codeql is on PATH or set the CODEQL_PATH environment variable to the absolute path of the CodeQL CLI binary. Details: ${message}`,
+      { cause: err }
     );
   }
 }
@@ -2472,7 +2473,7 @@ async function resolveQueryPath(params, logger2) {
       resolvedQueries = JSON.parse(resolveResult.stdout);
     } catch (parseError) {
       logger2.error("Failed to parse resolve queries output:", parseError);
-      throw new Error("Failed to parse resolve queries output");
+      throw new Error("Failed to parse resolve queries output", { cause: parseError });
     }
     const matchingQuery = resolvedQueries.find((queryPath) => {
       const fileName = basename2(queryPath);
@@ -2843,7 +2844,7 @@ async function findClassPosition(filepath, className) {
     if (error instanceof Error && error.message.includes("not found in file")) {
       throw error;
     }
-    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerFindClassPositionTool(server) {
@@ -2911,7 +2912,7 @@ async function findPredicatePosition(filepath, predicateName) {
     if (error instanceof Error && error.message.includes("not found in file")) {
       throw error;
     }
-    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerFindPredicatePositionTool(server) {
@@ -7284,7 +7285,7 @@ async function quickEvaluate({
     const resolvedOutput = resolve6(output_path || join12(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error) {
-    throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerQuickEvaluateTool(server) {
@@ -7356,15 +7357,15 @@ async function registerDatabase(dbPath) {
       const errorCode = error.code;
       if (errorCode === "ENOENT") {
         if (error.message.includes("codeql-database.yml")) {
-          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`);
+          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`, { cause: error });
         }
-        throw new Error(`Database path does not exist: ${dbPath}`);
+        throw new Error(`Database path does not exist: ${dbPath}`, { cause: error });
       }
       if (errorCode === "EACCES") {
-        throw new Error(`Database path does not exist: ${dbPath}`);
+        throw new Error(`Database path does not exist: ${dbPath}`, { cause: error });
       }
     }
-    throw new Error(`Failed to register database: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to register database: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerRegisterDatabaseTool(server) {
@@ -7745,7 +7746,7 @@ function createCodeQLQuery(options) {
       filesCreated
     };
   } catch (error) {
-    throw new Error(`Failed to create query scaffolding: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to create query scaffolding: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 
@@ -8100,7 +8101,7 @@ async function lspDiagnostics({
     };
   } catch (error) {
     logger.error("Error evaluating QL code:", error);
-    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerLspDiagnosticsTool(server) {
@@ -8191,7 +8192,7 @@ async function openDocumentForPosition(server, params, absPath, docUri) {
     try {
       text = await readFile3(absPath, "utf-8");
     } catch (error) {
-      throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`);
+      throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`, { cause: error });
     }
   }
   server.openDocument(docUri, text);
