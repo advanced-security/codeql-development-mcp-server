@@ -54,6 +54,11 @@ jobs:
 
           latest_clean="${latest_tag#v}"
 
+          if [ -z "${latest_tag}" ]; then
+            echo "❌ ERROR: Failed to determine latest CodeQL CLI release. 'gh release list' returned no results or no release is marked as latest." >&2
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
           echo "Current CodeQL CLI version: ${current_version}"
           echo "Latest CodeQL CLI version: ${latest_clean}"
 
