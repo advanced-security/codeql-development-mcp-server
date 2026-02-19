@@ -7,8 +7,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git",
-    "directory": "extensions/vscode"
+    "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git"
   },
   "type": "module",
   "homepage": "https://github.com/advanced-security/codeql-development-mcp-server#readme",
@@ -132,7 +131,7 @@
     "clean": "rm -rf dist server *.vsix",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
-    "package": "vsce package --out codeql-development-mcp-server.vsix",
+    "package": "vsce package --no-dependencies --out codeql-development-mcp-server.vsix",
     "test": "vitest --run",
     "test:coverage": "vitest --run --coverage",
     "test:watch": "vitest --watch",

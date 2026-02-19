@@ -86,7 +86,7 @@ jobs:
         working-directory: extensions/vscode
         run: |
           VSIX_NAME="codeql-development-mcp-server.vsix"
-          npx @vscode/vsce package --out "${VSIX_NAME}"
+          npx @vscode/vsce package --no-dependencies --out "${VSIX_NAME}"
           echo "vsix_name=${VSIX_NAME}" >> $GITHUB_OUTPUT
           echo "✅ Packaged ${VSIX_NAME}"
 
@@ -94,7 +94,7 @@ jobs:
         working-directory: extensions/vscode
         run: |
           echo "Verifying bundled server and tool query packs..."
-          npx @vscode/vsce ls 2>&1 | tee /tmp/vsix-contents.txt
+          npx @vscode/vsce ls --no-dependencies 2>&1 | tee /tmp/vsix-contents.txt
 
           # Verify critical files are included
           for required in \

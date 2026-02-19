@@ -1,19 +1,26 @@
+# Source and config (not needed at runtime)
 .vscode/**
 .vscode-test/**
 src/**
 test/**
 scripts/**
+__mocks__/**
 node_modules/**
 tsconfig.json
 test/tsconfig.json
 vitest.config.ts
 eslint.config.mjs
 esbuild.config.js
-**/*.test.ts
-**/*.test.js
-**/*.map
+.gitignore
 coverage/**
 
-# Include server/ bundle but exclude test/examples content
+# Build artifacts that shouldn't be in the VSIX
+**/*.test.ts
+**/*.test.js
+**/*.test.cjs
+**/*.map
+dist/test/**
+
+# Bundled server: exclude test/examples content
 server/ql/*/tools/test/**
 server/ql/*/examples/**

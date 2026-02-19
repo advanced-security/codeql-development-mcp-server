@@ -35,7 +35,7 @@ if (existsSync(targetServerDir)) {
   rmSync(targetServerDir, { recursive: true, force: true });
 }
 
-// --- Server dist ---
+// --- Server dist (JS only, no source maps) ---
 const serverDist = join(serverRoot, 'dist');
 const targetDist = join(targetServerDir, 'dist');
 if (!existsSync(serverDist)) {
@@ -43,8 +43,11 @@ if (!existsSync(serverDist)) {
   process.exit(1);
 }
 mkdirSync(targetDist, { recursive: true });
-cpSync(serverDist, targetDist, { recursive: true });
-console.log('✅ Copied server/dist/');
+// Copy only the JS bundle, not the source map (which contains ../../ paths
+// that cause vsce to traverse the entire monorepo)
+const serverJs = join(serverDist, 'codeql-development-mcp-server.js');
+cpSync(serverJs, join(targetDist, 'codeql-development-mcp-server.js'));
+console.log('✅ Copied server/dist/codeql-development-mcp-server.js');
 
 // --- Server package.json ---
 const serverPkg = join(serverRoot, 'package.json');
