@@ -177,12 +177,12 @@ jobs:
 
     steps:
       - name: Release - Download release build artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: release-build-${{ needs.resolve-version.outputs.version }}
 
       - name: Release - Download CodeQL pack artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: codeql-tool-query-packs-${{ needs.resolve-version.outputs.version }}
           path: dist-packs
