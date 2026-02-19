@@ -113,7 +113,7 @@ jobs:
         run: |
           LATEST="${{ needs.detect-update.outputs.latest_version }}"
           echo "Updating all version-bearing files to ${LATEST}..."
-          ./server/scripts/update-release-version.sh --skip-cli-validation "${LATEST}"
+          ./server/scripts/update-release-version.sh "${LATEST}"
 
       - name: Update - Install dependencies
         run: npm install --include=optional
