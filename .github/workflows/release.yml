@@ -188,7 +188,7 @@ jobs:
           path: dist-packs
 
       - name: Release - Download VSIX artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: codeql-development-mcp-server-vsix-${{ needs.resolve-version.outputs.version }}
           path: dist-vsix

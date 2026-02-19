@@ -31,3 +31,8 @@ updates:
     ignore:
       - dependency-name: 'zod'
     versioning-strategy: 'increase'
+  - package-ecosystem: 'npm'
+    directory: '/extensions/vscode/'
+    schedule:
+      interval: 'weekly'
+    versioning-strategy: 'increase'
