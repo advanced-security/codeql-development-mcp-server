@@ -25,6 +25,10 @@ function createMockEnvBuilder() {
     build: vi.fn().mockResolvedValue({
       CODEQL_PATH: '/usr/local/bin/codeql',
       CODEQL_MCP_WORKSPACE: '/mock/workspace',
+      CODEQL_DATABASES_BASE_DIRS: '/mock/databases',
+      CODEQL_QUERY_RUN_RESULTS_DIRS: '/mock/queries',
+      CODEQL_MRVA_RUN_RESULTS_DIRS: '/mock/variant-analyses',
+      TRANSPORT_MODE: 'stdio',
     }),
     invalidate: vi.fn(),
     dispose: vi.fn(),
@@ -81,7 +85,21 @@ describe('McpProvider', () => {
     expect(definitions![0].env).toEqual({
       CODEQL_PATH: '/usr/local/bin/codeql',
       CODEQL_MCP_WORKSPACE: '/mock/workspace',
+      CODEQL_DATABASES_BASE_DIRS: '/mock/databases',
+      CODEQL_QUERY_RUN_RESULTS_DIRS: '/mock/queries',
+      CODEQL_MRVA_RUN_RESULTS_DIRS: '/mock/variant-analyses',
+      TRANSPORT_MODE: 'stdio',
     });
+  });
+
+  it('should pass discovery env vars through to the MCP server definition', async () => {
+    const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+    const definitions = await provider.provideMcpServerDefinitions(token as any);
+    const env = definitions![0].env;
+
+    expect(env.CODEQL_DATABASES_BASE_DIRS).toBe('/mock/databases');
+    expect(env.CODEQL_QUERY_RUN_RESULTS_DIRS).toBe('/mock/queries');
+    expect(env.CODEQL_MRVA_RUN_RESULTS_DIRS).toBe('/mock/variant-analyses');
   });
 
   it('should always provide a definition (npx handles download)', async () => {

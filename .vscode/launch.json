@@ -2,33 +2,98 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Extension",
+      "name": "Run Extension (vscode-codeql-development-mcp-server)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode"
+        "--extensionDevelopmentPath=${workspaceFolder:codeql-development-mcp-server}/extensions/vscode"
       ],
       "outFiles": [
-        "${workspaceFolder}/extensions/vscode/dist/**/*.js",
-        "${workspaceFolder}/extensions/vscode/dist/**/*.cjs"
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.js",
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.cjs"
       ],
       "preLaunchTask": "npm: bundle - extensions/vscode",
       "sourceMaps": true
     },
     {
-      "name": "Extension Tests",
+      "name": "Extension Host Tests - No Workspace (vscode-codeql-development-mcp-server)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode",
-        "--extensionTestsPath=${workspaceFolder}/extensions/vscode/dist/test/suite/index.cjs"
+        "--extensionDevelopmentPath=${workspaceFolder:codeql-development-mcp-server}/extensions/vscode",
+        "--extensionTestsPath=${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/test/suite/index.cjs"
       ],
       "outFiles": [
-        "${workspaceFolder}/extensions/vscode/dist/**/*.js",
-        "${workspaceFolder}/extensions/vscode/dist/**/*.cjs"
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.js",
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.cjs"
       ],
       "preLaunchTask": "npm: bundle - extensions/vscode",
       "sourceMaps": true
+    },
+    {
+      "name": "Extension Host Tests - Single Folder (vscode-codeql-development-mcp-server)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder:codeql-development-mcp-server}/extensions/vscode",
+        "--extensionTestsPath=${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/test/suite/index.cjs",
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/test/fixtures/single-folder-workspace"
+      ],
+      "outFiles": [
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.js",
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.cjs"
+      ],
+      "preLaunchTask": "npm: bundle - extensions/vscode",
+      "sourceMaps": true
+    },
+    {
+      "name": "Extension Host Tests - Multi-Root (vscode-codeql-development-mcp-server)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder:codeql-development-mcp-server}/extensions/vscode",
+        "--extensionTestsPath=${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/test/suite/index.cjs",
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/test/fixtures/multi-root-workspace/test.code-workspace"
+      ],
+      "outFiles": [
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.js",
+        "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode/dist/**/*.cjs"
+      ],
+      "preLaunchTask": "npm: bundle - extensions/vscode",
+      "sourceMaps": true
+    },
+    {
+      "name": "Unit Tests (vscode-codeql-development-mcp-server)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vitest", "--run"],
+      "cwd": "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode",
+      "sourceMaps": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Unit Test - Current File (vscode-codeql-development-mcp-server)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vitest", "--run", "${relativeFile}"],
+      "cwd": "${workspaceFolder:codeql-development-mcp-server}/extensions/vscode",
+      "sourceMaps": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Server Unit Tests (vscode-codeql-development-mcp-server)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vitest", "--run"],
+      "cwd": "${workspaceFolder:codeql-development-mcp-server}/server",
+      "sourceMaps": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     }
   ]
 }

@@ -4,7 +4,6 @@ src/**
 test/**
 scripts/**
 node_modules/**
-.gitignore
 tsconfig.json
 test/tsconfig.json
 vitest.config.ts

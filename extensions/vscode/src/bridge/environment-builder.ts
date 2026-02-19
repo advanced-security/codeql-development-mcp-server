@@ -42,6 +42,9 @@ export class EnvironmentBuilder extends DisposableObject {
 
     const env: Record<string, string> = {};
 
+    // User configuration
+    const config = vscode.workspace.getConfiguration('codeql-mcp');
+
     // Transport mode is always stdio when launched from VS Code
     env.TRANSPORT_MODE = 'stdio';
 
@@ -78,17 +81,26 @@ export class EnvironmentBuilder extends DisposableObject {
 
     env.CODEQL_ADDITIONAL_PACKS = additionalPaths.join(':');
 
-    // Database discovery directory for list_codeql_databases
-    env.CODEQL_DATABASES_BASE_DIRS = this.storagePaths.getDatabaseStoragePath();
+    // Database discovery directories for list_codeql_databases
+    // Includes: global storage, workspace storage, and user-configured dirs
+    const dbDirs = [...this.storagePaths.getAllDatabaseStoragePaths()];
+    const userDbDirs = config.get<string[]>('additionalDatabaseDirs', []);
+    dbDirs.push(...userDbDirs);
+    env.CODEQL_DATABASES_BASE_DIRS = dbDirs.join(':');
 
     // MRVA run results directory for variant analysis discovery
-    env.CODEQL_MRVA_RUN_RESULTS_DIRS = this.storagePaths.getVariantAnalysisStoragePath();
+    const mrvaDirs = [this.storagePaths.getVariantAnalysisStoragePath()];
+    const userMrvaDirs = config.get<string[]>('additionalMrvaRunResultsDirs', []);
+    mrvaDirs.push(...userMrvaDirs);
+    env.CODEQL_MRVA_RUN_RESULTS_DIRS = mrvaDirs.join(':');
 
     // Query run results directory for query history discovery
-    env.CODEQL_QUERY_RUN_RESULTS_DIRS = this.storagePaths.getQueryStoragePath();
+    const queryDirs = [this.storagePaths.getQueryStoragePath()];
+    const userQueryDirs = config.get<string[]>('additionalQueryRunResultsDirs', []);
+    queryDirs.push(...userQueryDirs);
+    env.CODEQL_QUERY_RUN_RESULTS_DIRS = queryDirs.join(':');
 
     // User-configured additional environment variables
-    const config = vscode.workspace.getConfiguration('codeql-mcp');
     const additionalEnv = config.get<Record<string, string>>('additionalEnv', {});
     for (const [key, value] of Object.entries(additionalEnv)) {
       env[key] = value;

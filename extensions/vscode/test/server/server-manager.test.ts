@@ -109,6 +109,19 @@ describe('ServerManager', () => {
     expect(manager.getArgs()).toEqual(['/mock/extension/server/dist/codeql-development-mcp-server.js']);
   });
 
+  it('should fall back to monorepo server path when VSIX bundle is missing', () => {
+    let callCount = 0;
+    vi.mocked(accessSync).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) throw new Error('ENOENT'); // VSIX path missing
+      return undefined; // monorepo path exists
+    });
+    expect(manager.getCommand()).toBe('node');
+    // monorepo path: /mock/extension/../../server/dist/...
+    const args = manager.getArgs();
+    expect(args[0]).toContain('server/dist/codeql-development-mcp-server.js');
+  });
+
   it('should run npm install when installing', async () => {
     vi.mocked(execFile).mockImplementation(
       (_cmd: any, _args: any, _opts: any, callback: any) => {

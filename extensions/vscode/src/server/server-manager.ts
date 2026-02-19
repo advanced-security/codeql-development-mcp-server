@@ -129,16 +129,33 @@ export class ServerManager extends DisposableObject {
   // ---------------------------------------------------------------------------
 
   /**
-   * Absolute path to the bundled MCP server entry point inside the extension.
-   * Returns `undefined` if the bundled server is not present (e.g. dev build
-   * that hasn't run `vscode:prepublish` yet).
+   * Absolute path to the MCP server entry point.
+   *
+   * Checks two locations:
+   * 1. **VSIX layout**: `<extensionRoot>/server/dist/codeql-development-mcp-server.js`
+   *    (created by `bundle:server` during `vscode:prepublish`)
+   * 2. **Monorepo dev layout**: `<extensionRoot>/../../server/dist/codeql-development-mcp-server.js`
+   *    (the adjacent server build when running from Extension Development Host)
+   *
+   * Returns `undefined` if neither location exists.
    */
   getBundledServerPath(): string | undefined {
     const extensionRoot = this.context.extensionUri.fsPath;
-    const candidate = join(extensionRoot, BUNDLED_SERVER_ENTRY);
+
+    // VSIX layout: server files bundled inside the extension
+    const vsixCandidate = join(extensionRoot, BUNDLED_SERVER_ENTRY);
     try {
-      accessSync(candidate, constants.R_OK);
-      return candidate;
+      accessSync(vsixCandidate, constants.R_OK);
+      return vsixCandidate;
+    } catch {
+      // Not in VSIX layout — try monorepo
+    }
+
+    // Monorepo dev layout: extensions/vscode/../../server/dist/...
+    const monorepoCandidate = join(extensionRoot, '..', '..', BUNDLED_SERVER_ENTRY);
+    try {
+      accessSync(monorepoCandidate, constants.R_OK);
+      return monorepoCandidate;
     } catch {
       return undefined;
     }

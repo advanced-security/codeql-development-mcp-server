@@ -44,6 +44,34 @@ describe('StoragePaths', () => {
     expect(result).toContain('variant-analyses');
   });
 
+  it('should compute the workspace database storage path', () => {
+    const result = paths.getWorkspaceDatabaseStoragePath();
+    expect(result).toBeDefined();
+    expect(result).toContain('workspace-storage');
+    expect(result).toContain('GitHub.vscode-codeql');
+  });
+
+  it('should return undefined workspace database path when no workspace is open', () => {
+    const noWorkspaceCtx = { globalStorageUri: ctx.globalStorageUri } as any;
+    const noWorkspacePaths = new StoragePaths(noWorkspaceCtx);
+    expect(noWorkspacePaths.getWorkspaceDatabaseStoragePath()).toBeUndefined();
+  });
+
+  it('should return all database storage paths including workspace', () => {
+    const all = paths.getAllDatabaseStoragePaths();
+    expect(all).toHaveLength(2);
+    expect(all[0]).toContain('global-storage');
+    expect(all[1]).toContain('workspace-storage');
+  });
+
+  it('should return only global path in getAllDatabaseStoragePaths when no workspace', () => {
+    const noWorkspaceCtx = { globalStorageUri: ctx.globalStorageUri } as any;
+    const noWorkspacePaths = new StoragePaths(noWorkspaceCtx);
+    const all = noWorkspacePaths.getAllDatabaseStoragePaths();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toContain('global-storage');
+  });
+
   it('should be disposable', () => {
     expect(() => paths.dispose()).not.toThrow();
   });

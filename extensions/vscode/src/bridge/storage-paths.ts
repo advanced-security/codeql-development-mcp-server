@@ -19,6 +19,7 @@ const VSCODE_CODEQL_EXTENSION_ID = 'GitHub.vscode-codeql';
  */
 export class StoragePaths extends DisposableObject {
   private readonly vsCodeGlobalStorageRoot: string;
+  private readonly vsCodeWorkspaceStorageRoot: string | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     super();
@@ -26,6 +27,13 @@ export class StoragePaths extends DisposableObject {
     //   .../<vscode-global-storage>/advanced-security.vscode-codeql-development-mcp-server/
     // The parent directory is the vscode global storage root.
     this.vsCodeGlobalStorageRoot = dirname(context.globalStorageUri.fsPath);
+
+    // Our extension's storageUri (workspace-scoped) is something like:
+    //   .../<vscode-workspace-storage>/<workspace-id>/advanced-security.vscode-codeql-development-mcp-server/
+    // The parent directory is this workspace's storage root.
+    if (context.storageUri) {
+      this.vsCodeWorkspaceStorageRoot = dirname(context.storageUri.fsPath);
+    }
   }
 
   /** Global storage directory for the vscode-codeql extension. */
@@ -34,11 +42,34 @@ export class StoragePaths extends DisposableObject {
   }
 
   /**
-   * Directory where vscode-codeql stores downloaded/managed databases.
-   * Databases are stored directly under the global storage path.
+   * Directory where vscode-codeql stores downloaded/managed databases
+   * at the global level (e.g. databases added from GitHub).
    */
   getDatabaseStoragePath(): string {
     return this.getCodeqlGlobalStoragePath();
+  }
+
+  /**
+   * Directory where vscode-codeql stores workspace-scoped databases
+   * (e.g. databases created from repos in the current workspace).
+   * Returns `undefined` if no workspace is open.
+   */
+  getWorkspaceDatabaseStoragePath(): string | undefined {
+    if (!this.vsCodeWorkspaceStorageRoot) return undefined;
+    return join(this.vsCodeWorkspaceStorageRoot, VSCODE_CODEQL_EXTENSION_ID);
+  }
+
+  /**
+   * All database storage paths: global + workspace-scoped.
+   * Suitable for colon-joining into `CODEQL_DATABASES_BASE_DIRS`.
+   */
+  getAllDatabaseStoragePaths(): string[] {
+    const paths = [this.getDatabaseStoragePath()];
+    const workspacePath = this.getWorkspaceDatabaseStoragePath();
+    if (workspacePath) {
+      paths.push(workspacePath);
+    }
+    return paths;
   }
 
   /**

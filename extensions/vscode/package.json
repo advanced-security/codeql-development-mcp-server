@@ -81,6 +81,24 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "codeql-mcp.additionalDatabaseDirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional directories to search for CodeQL databases. Appended to CODEQL_DATABASES_BASE_DIRS alongside the vscode-codeql storage paths."
+        },
+        "codeql-mcp.additionalMrvaRunResultsDirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional directories containing MRVA run result subdirectories. Appended to CODEQL_MRVA_RUN_RESULTS_DIRS alongside the vscode-codeql variant analysis storage path."
+        },
+        "codeql-mcp.additionalQueryRunResultsDirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional directories containing query run result subdirectories. Appended to CODEQL_QUERY_RUN_RESULTS_DIRS alongside the vscode-codeql query storage path."
         }
       }
     },
@@ -111,7 +129,7 @@
     "build": "npm run clean && npm run lint && npm run bundle",
     "bundle": "node esbuild.config.js",
     "bundle:server": "node scripts/bundle-server.js",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist server *.vsix",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
     "package": "vsce package --out codeql-development-mcp-server.vsix",

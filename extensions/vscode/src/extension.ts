@@ -187,7 +187,7 @@ export async function activate(
   }
 
   logger.info('CodeQL Development MCP Server extension activated.');
-  return { mcpProvider };
+  return { environmentBuilder: envBuilder, mcpProvider, serverManager };
 }
 
 export function deactivate(): void {
