@@ -44,6 +44,14 @@ jobs:
 
           # Get latest release from codeql-cli-binaries
           latest_tag=$(gh release list --repo github/codeql-cli-binaries --json 'tagName,isLatest' --jq '.[] | select(.isLatest == true) | .tagName')
+
+          # Validate that we found a latest release
+          if [ -z "${latest_tag}" ]; then
+            echo "❌ Error: Could not determine latest CodeQL CLI version from github/codeql-cli-binaries" >&2
+            echo "No release marked as 'latest' was found. This may indicate an API issue or repository change." >&2
+            exit 1
+          fi
+
           latest_clean="${latest_tag#v}"
 
           echo "Current CodeQL CLI version: ${current_version}"
