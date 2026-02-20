@@ -5,6 +5,7 @@
   "version": "2.24.1",
   "publisher": "advanced-security",
   "license": "SEE LICENSE IN LICENSE",
+  "icon": "media/codeql-icon.png",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git"
