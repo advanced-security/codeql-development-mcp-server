@@ -69,7 +69,7 @@ export async function findPredicatePosition(filepath: string, predicateName: str
     if (error instanceof Error && error.message.includes('not found in file')) {
       throw error;
     }
-    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
   }
 }
 

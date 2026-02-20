@@ -1455,7 +1455,8 @@ async function validateCodeQLBinaryReachable() {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(
-      `CodeQL CLI is not reachable (binary: ${binary2}). Ensure codeql is on PATH or set the CODEQL_PATH environment variable to the absolute path of the CodeQL CLI binary. Details: ${message}`
+      `CodeQL CLI is not reachable (binary: ${binary2}). Ensure codeql is on PATH or set the CODEQL_PATH environment variable to the absolute path of the CodeQL CLI binary. Details: ${message}`,
+      { cause: err }
     );
   }
 }
@@ -1621,7 +1622,8 @@ async function executeCodeQLCommand(subcommand, options, additionalArgs = [], cw
   return executeCLICommand({
     command: "codeql",
     args,
-    cwd
+    cwd,
+    timeout: 0
   });
 }
 async function executeQLTCommand(subcommand, options, additionalArgs = []) {
@@ -2062,7 +2064,7 @@ function registerCLITool(server, definition) {
       const tempDirsToCleanup = [];
       try {
         logger.info(`Executing CLI tool: ${name}`, { command, subcommand, params });
-        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_generate_query-help" || name === "codeql_database_analyze";
+        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_bqrs_info" || name === "codeql_generate_query-help" || name === "codeql_database_analyze";
         const extractedParams = formatShouldBePassedToCLI ? {
           _positional: params._positional || [],
           files: params.files,
@@ -2263,7 +2265,7 @@ function registerCLITool(server, definition) {
             break;
         }
         let queryLogDir;
-        if (name === "codeql_query_run" || name === "codeql_test_run") {
+        if (name === "codeql_query_run" || name === "codeql_test_run" || name === "codeql_database_analyze") {
           queryLogDir = getOrCreateLogDirectory(customLogDir);
           logger.info(`Using log directory for ${name}: ${queryLogDir}`);
           const timestampPath = join5(queryLogDir, "timestamp");
@@ -2272,13 +2274,20 @@ function registerCLITool(server, definition) {
           if (!options.verbosity) {
             options.verbosity = "progress+";
           }
+          if (!options["evaluator-log"]) {
+            options["evaluator-log"] = join5(queryLogDir, "evaluator-log.jsonl");
+          }
+          if (options["tuple-counting"] === void 0) {
+            options["tuple-counting"] = true;
+          }
           if (name === "codeql_query_run") {
-            if (!options["evaluator-log"]) {
-              options["evaluator-log"] = join5(queryLogDir, "evaluator-log.jsonl");
-            }
             if (!options.output) {
               options.output = join5(queryLogDir, "results.bqrs");
             }
+          }
+          if (options.output && typeof options.output === "string") {
+            const outputDir = dirname4(options.output);
+            mkdirSync5(outputDir, { recursive: true });
           }
         }
         let result;
@@ -2290,7 +2299,7 @@ function registerCLITool(server, definition) {
           }
           const defaultExamplesPath = resolve4(packageRootDir, "ql", "javascript", "examples");
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
-          if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile")) {
+          if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile" || name === "codeql_database_analyze")) {
             options["additional-packs"] = additionalPacksPath;
           }
           if (name === "codeql_test_run") {
@@ -2304,22 +2313,47 @@ function registerCLITool(server, definition) {
         }
         if (name === "codeql_query_run" && result.success && queryLogDir) {
           const bqrsPath = options.output;
-          const sarifPath = join5(queryLogDir, "results.sarif");
-          if (existsSync4(bqrsPath)) {
+          const sarifPath = join5(queryLogDir, "results-interpreted.sarif");
+          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : void 0;
+          if (existsSync4(bqrsPath) && queryFilePath) {
             try {
-              const sarifResult = await executeCodeQLCommand(
-                "bqrs interpret",
-                { format: "sarif-latest", output: sarifPath },
-                [bqrsPath]
+              const sarifResult = await interpretBQRSFile(
+                bqrsPath,
+                queryFilePath,
+                "sarif-latest",
+                sarifPath,
+                logger
               );
               if (sarifResult.success) {
                 logger.info(`Generated SARIF interpretation at ${sarifPath}`);
+              } else {
+                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
               }
             } catch (error) {
               logger.warn(`Failed to generate SARIF interpretation: ${error}`);
             }
+          } else if (existsSync4(bqrsPath) && !queryFilePath) {
+            logger.warn("Skipping SARIF interpretation: query file path not available");
           }
           result = await processQueryRunResults(result, params, logger);
+        }
+        if ((name === "codeql_query_run" || name === "codeql_database_analyze") && result.success && queryLogDir) {
+          const evalLogPath = options["evaluator-log"];
+          if (evalLogPath && existsSync4(evalLogPath)) {
+            try {
+              const summaryPath = evalLogPath.replace(/\.jsonl$/, ".summary.jsonl");
+              const summaryResult = await executeCodeQLCommand(
+                "generate log-summary",
+                { format: "predicates" },
+                [evalLogPath, summaryPath]
+              );
+              if (summaryResult.success) {
+                logger.info(`Generated evaluator log summary at ${summaryPath}`);
+              }
+            } catch (error) {
+              logger.warn(`Failed to generate evaluator log summary: ${error}`);
+            }
+          }
         }
         const processedResult = resultProcessor(result, params);
         return {
@@ -2439,7 +2473,7 @@ async function resolveQueryPath(params, logger2) {
       resolvedQueries = JSON.parse(resolveResult.stdout);
     } catch (parseError) {
       logger2.error("Failed to parse resolve queries output:", parseError);
-      throw new Error("Failed to parse resolve queries output");
+      throw new Error("Failed to parse resolve queries output", { cause: parseError });
     }
     const matchingQuery = resolvedQueries.find((queryPath) => {
       const fileName = basename2(queryPath);
@@ -2636,22 +2670,28 @@ Warning: Query processing error - ${error}`
 // src/tools/codeql/bqrs-decode.ts
 var codeqlBqrsDecodeTool = {
   name: "codeql_bqrs_decode",
-  description: "Decode BQRS result files to human-readable formats",
+  description: "Decode BQRS result files to human-readable formats (text, csv, json). Typical workflow: (1) use list_query_run_results to find BQRS paths from previous codeql_query_run or codeql_database_analyze runs, (2) use codeql_bqrs_info to discover result sets and column schemas, (3) decode specific result sets with this tool. For large result sets, use --rows to paginate.",
   command: "codeql",
   subcommand: "bqrs decode",
   inputSchema: {
     files: z2.array(z2.string()).describe("BQRS file(s) to decode"),
     output: createCodeQLSchemas.output(),
-    format: z2.enum(["csv", "json"]).optional().describe("Output format"),
-    "max-paths": z2.number().optional().describe("Maximum number of paths to output"),
-    "start-at": z2.number().optional().describe("Start output at result number"),
-    "max-results": z2.number().optional().describe("Maximum number of results"),
+    format: z2.enum(["csv", "json", "text", "bqrs"]).optional().describe("Output format: text (human-readable table, default), csv, json (streaming JSON), or bqrs (binary, requires --output)"),
+    "result-set": z2.string().optional().describe("Decode a specific result set by name (use codeql_bqrs_info to list available sets). If omitted, all result sets are decoded."),
+    "sort-key": z2.string().optional().describe("Sort by column(s): comma-separated column indices (0-based)"),
+    "sort-direction": z2.string().optional().describe('Sort direction(s): comma-separated "asc" or "desc" per column'),
+    "no-titles": z2.boolean().optional().describe("Omit column titles for text and csv formats"),
+    entities: z2.string().optional().describe("Control entity column display: comma-separated list of url, string, id, all"),
+    rows: z2.number().optional().describe("Maximum number of rows to output (for pagination). Use with --start-at for paging."),
+    "start-at": z2.number().optional().describe('Byte offset to start decoding from (get from codeql_bqrs_info or previous JSON output "next" pointer). Must be used with --rows.'),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
   examples: [
     "codeql bqrs decode --format=csv --output=results.csv results.bqrs",
-    "codeql bqrs decode --format=json --max-results=100 results.bqrs"
+    "codeql bqrs decode --format=json --rows=100 results.bqrs",
+    "codeql bqrs decode --result-set=#select --format=csv results.bqrs",
+    "codeql bqrs decode --format=json --entities=url,string results.bqrs"
   ],
   resultProcessor: createBQRSResultProcessor()
 };
@@ -2660,17 +2700,21 @@ var codeqlBqrsDecodeTool = {
 import { z as z3 } from "zod";
 var codeqlBqrsInfoTool = {
   name: "codeql_bqrs_info",
-  description: "Get metadata and information about BQRS result files",
+  description: 'Get metadata about BQRS result files: lists result sets, column names/types, and row counts. Use before codeql_bqrs_decode to discover available result sets (e.g., "#select", "edges", "nodes"). BQRS files are found at <runDir>/results.bqrs \u2014 use list_query_run_results to discover them. Use --format=json with --paginate-rows to get byte offsets for paginated decoding with codeql_bqrs_decode --start-at.',
   command: "codeql",
   subcommand: "bqrs info",
   inputSchema: {
     files: z3.array(z3.string()).describe("BQRS file(s) to examine"),
+    format: z3.enum(["text", "json"]).optional().describe("Output format: text (default) or json. Use json for machine-readable output and pagination offset computation."),
+    "paginate-rows": z3.number().optional().describe("Compute byte offsets for pagination at intervals of this many rows. Use with --format=json. Offsets can be passed to codeql_bqrs_decode --start-at."),
+    "paginate-result-set": z3.string().optional().describe("Compute pagination offsets only for this result set name"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
   examples: [
     "codeql bqrs info results.bqrs",
-    "codeql bqrs info --verbose results.bqrs"
+    "codeql bqrs info --format=json results.bqrs",
+    "codeql bqrs info --format=json --paginate-rows=100 --paginate-result-set=#select results.bqrs"
   ],
   resultProcessor: createBQRSResultProcessor()
 };
@@ -2715,7 +2759,7 @@ var codeqlBqrsInterpretTool = {
 import { z as z5 } from "zod";
 var codeqlDatabaseAnalyzeTool = {
   name: "codeql_database_analyze",
-  description: "Run queries or query suites against CodeQL databases",
+  description: "Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS results, and optionally SARIF output. Use list_codeql_databases to discover available databases, and register_database to register new ones. After analysis completes, use list_query_run_results to find result artifacts, then codeql_bqrs_info and codeql_bqrs_decode to inspect results.",
   command: "codeql",
   subcommand: "database analyze",
   inputSchema: {
@@ -2727,12 +2771,18 @@ var codeqlDatabaseAnalyzeTool = {
     threads: z5.number().optional().describe("Number of threads to use"),
     ram: z5.number().optional().describe("Amount of RAM to use (MB)"),
     timeout: z5.number().optional().describe("Timeout in seconds"),
+    logDir: z5.string().optional().describe("Custom directory for analysis execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
+    "evaluator-log": z5.string().optional().describe("Path to save evaluator log. If not provided and logDir is set, defaults to <logDir>/evaluator-log.jsonl"),
+    "tuple-counting": z5.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
+    "evaluator-log-level": z5.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
+    rerun: z5.boolean().optional().describe("Force re-evaluation of queries even if BQRS results already exist in the database. Without this, cached results are reused."),
     verbose: z5.boolean().optional().describe("Enable verbose output"),
     additionalArgs: z5.array(z5.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif",
-    "codeql database analyze mydb codeql/java-queries --format=csv"
+    "codeql database analyze mydb codeql/java-queries --format=csv",
+    "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif --rerun --tuple-counting"
   ]
 };
 
@@ -2794,7 +2844,7 @@ async function findClassPosition(filepath, className) {
     if (error instanceof Error && error.message.includes("not found in file")) {
       throw error;
     }
-    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerFindClassPositionTool(server) {
@@ -2862,7 +2912,7 @@ async function findPredicatePosition(filepath, predicateName) {
     if (error instanceof Error && error.message.includes("not found in file")) {
       throw error;
     }
-    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to read or parse file ${filepath}: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerFindPredicatePositionTool(server) {
@@ -5817,17 +5867,571 @@ var codeqlGenerateQueryHelpTool = {
   resultProcessor: defaultCLIResultProcessor
 };
 
-// src/tools/codeql/pack-install.ts
+// src/tools/codeql/list-databases.ts
+import { existsSync as existsSync6, readdirSync as readdirSync2, readFileSync as readFileSync4, statSync as statSync2 } from "fs";
+import { join as join7 } from "path";
 import { z as z12 } from "zod";
+
+// src/lib/discovery-config.ts
+function parsePathList(envValue) {
+  if (!envValue) {
+    return [];
+  }
+  return envValue.split(":").map((p) => p.trim()).filter((p) => p.length > 0);
+}
+function getDatabaseBaseDirs() {
+  return parsePathList(process.env.CODEQL_DATABASES_BASE_DIRS);
+}
+function getMrvaRunResultsDirs() {
+  return parsePathList(process.env.CODEQL_MRVA_RUN_RESULTS_DIRS);
+}
+function getQueryRunResultsDirs() {
+  return parsePathList(process.env.CODEQL_QUERY_RUN_RESULTS_DIRS);
+}
+
+// src/tools/codeql/list-databases.ts
+init_logger();
+function parseDatabaseYml(ymlPath) {
+  try {
+    const content = readFileSync4(ymlPath, "utf-8");
+    const info = {};
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      const colonIdx = trimmed.indexOf(":");
+      if (colonIdx === -1) continue;
+      const key = trimmed.substring(0, colonIdx).trim();
+      const value = trimmed.substring(colonIdx + 1).trim().replace(/^["']|["']$/g, "");
+      switch (key) {
+        case "primaryLanguage":
+          info.language = value;
+          break;
+        case "cliVersion":
+          info.cliVersion = value;
+          break;
+        case "creationTime":
+          info.creationTime = value;
+          break;
+      }
+    }
+    return info;
+  } catch {
+    return {};
+  }
+}
+async function discoverDatabases(baseDirs, language) {
+  const databases = [];
+  for (const baseDir of baseDirs) {
+    if (!existsSync6(baseDir)) {
+      continue;
+    }
+    let entries;
+    try {
+      entries = readdirSync2(baseDir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = join7(baseDir, entry);
+      try {
+        if (!statSync2(entryPath).isDirectory()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      const ymlPath = join7(entryPath, "codeql-database.yml");
+      if (!existsSync6(ymlPath)) {
+        continue;
+      }
+      const metadata = parseDatabaseYml(ymlPath);
+      if (language && metadata.language !== language) {
+        continue;
+      }
+      databases.push({
+        cliVersion: metadata.cliVersion,
+        creationTime: metadata.creationTime,
+        language: metadata.language,
+        name: entry,
+        path: entryPath
+      });
+    }
+  }
+  return databases;
+}
+function registerListDatabasesTool(server) {
+  server.tool(
+    "list_codeql_databases",
+    "List CodeQL databases discovered in configured base directories (set via CODEQL_DATABASES_BASE_DIRS env var). Returns path, language, CLI version, and creation time for each database. Use the returned database paths with codeql_query_run or codeql_database_analyze to run queries against them.",
+    {
+      language: z12.string().optional().describe('Filter databases by language (e.g., "javascript", "python")')
+    },
+    async ({ language }) => {
+      try {
+        const baseDirs = getDatabaseBaseDirs();
+        if (baseDirs.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "No database base directories configured. Set the CODEQL_DATABASES_BASE_DIRS environment variable to a colon-separated list of directories to search."
+              }
+            ]
+          };
+        }
+        const databases = await discoverDatabases(baseDirs, language);
+        if (databases.length === 0) {
+          const filterMsg = language ? ` for language "${language}"` : "";
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No CodeQL databases found${filterMsg} in: ${baseDirs.join(", ")}`
+              }
+            ]
+          };
+        }
+        const lines = [
+          `Found ${databases.length} CodeQL database(s):`,
+          "",
+          ...databases.map((db) => {
+            const parts = [`  ${db.name}`];
+            parts.push(`    Path: ${db.path}`);
+            if (db.language) parts.push(`    Language: ${db.language}`);
+            if (db.cliVersion) parts.push(`    CLI Version: ${db.cliVersion}`);
+            if (db.creationTime) parts.push(`    Created: ${db.creationTime}`);
+            return parts.join("\n");
+          })
+        ];
+        return {
+          content: [{ type: "text", text: lines.join("\n") }]
+        };
+      } catch (error) {
+        logger.error("Error listing databases:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
+// src/tools/codeql/list-mrva-run-results.ts
+import { existsSync as existsSync7, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync3 } from "fs";
+import { join as join8 } from "path";
+import { z as z13 } from "zod";
+init_logger();
+var NUMERIC_DIR_PATTERN = /^\d+$/;
+var SKIP_DIRS = /* @__PURE__ */ new Set([".DS_Store", "exported-results"]);
+async function discoverMrvaRunResults(resultsDirs, runId) {
+  const results = [];
+  for (const dir of resultsDirs) {
+    if (!existsSync7(dir)) {
+      continue;
+    }
+    let entries;
+    try {
+      entries = readdirSync3(dir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = join8(dir, entry);
+      try {
+        if (!statSync3(entryPath).isDirectory()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      if (!NUMERIC_DIR_PATTERN.test(entry)) {
+        continue;
+      }
+      if (runId && entry !== runId) {
+        continue;
+      }
+      let timestamp2;
+      const timestampPath = join8(entryPath, "timestamp");
+      if (existsSync7(timestampPath)) {
+        try {
+          timestamp2 = readFileSync5(timestampPath, "utf-8").trim();
+        } catch {
+        }
+      }
+      const repositories = discoverRepoResults(entryPath);
+      results.push({
+        path: entryPath,
+        repositories,
+        runId: entry,
+        timestamp: timestamp2
+      });
+    }
+  }
+  return results;
+}
+function discoverRepoResults(runPath) {
+  const repos = [];
+  let ownerEntries;
+  try {
+    ownerEntries = readdirSync3(runPath);
+  } catch {
+    return repos;
+  }
+  for (const ownerEntry of ownerEntries) {
+    if (SKIP_DIRS.has(ownerEntry)) {
+      continue;
+    }
+    const ownerPath = join8(runPath, ownerEntry);
+    try {
+      if (!statSync3(ownerPath).isDirectory()) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    let repoEntries;
+    try {
+      repoEntries = readdirSync3(ownerPath);
+    } catch {
+      continue;
+    }
+    for (const repoEntry of repoEntries) {
+      const repoPath = join8(ownerPath, repoEntry);
+      try {
+        if (!statSync3(repoPath).isDirectory()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      const fullName = `${ownerEntry}/${repoEntry}`;
+      let analysisStatus;
+      let resultCount;
+      const repoTaskPath = join8(repoPath, "repo_task.json");
+      if (existsSync7(repoTaskPath)) {
+        try {
+          const raw = readFileSync5(repoTaskPath, "utf-8");
+          const task = JSON.parse(raw);
+          if (typeof task.analysisStatus === "string") {
+            analysisStatus = task.analysisStatus;
+          }
+          if (typeof task.resultCount === "number") {
+            resultCount = task.resultCount;
+          }
+        } catch {
+        }
+      }
+      const hasSarif = existsSync7(join8(repoPath, "results", "results.sarif"));
+      const hasBqrs = existsSync7(join8(repoPath, "results", "results.bqrs"));
+      repos.push({
+        analysisStatus,
+        fullName,
+        hasBqrs,
+        hasSarif,
+        resultCount
+      });
+    }
+  }
+  return repos;
+}
+function registerListMrvaRunResultsTool(server) {
+  server.tool(
+    "list_mrva_run_results",
+    "List discovered MRVA (Multi-Repository Variant Analysis) run results (set via CODEQL_MRVA_RUN_RESULTS_DIRS env var). Returns run ID, timestamp, repositories scanned, analysis status, and available artifacts for each run.",
+    {
+      runId: z13.string().optional().describe('Filter results by run ID (e.g., "20442")')
+    },
+    async ({ runId }) => {
+      try {
+        const resultsDirs = getMrvaRunResultsDirs();
+        if (resultsDirs.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "No MRVA run results directories configured. Set the CODEQL_MRVA_RUN_RESULTS_DIRS environment variable to a colon-separated list of directories to search."
+              }
+            ]
+          };
+        }
+        const runs = await discoverMrvaRunResults(resultsDirs, runId);
+        if (runs.length === 0) {
+          const filterMsg = runId ? ` for run ID "${runId}"` : "";
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No MRVA run results found${filterMsg} in: ${resultsDirs.join(", ")}`
+              }
+            ]
+          };
+        }
+        const lines = [
+          `Found ${runs.length} MRVA run result(s):`,
+          "",
+          ...runs.map((run) => {
+            const parts = [`  Run ${run.runId}`];
+            parts.push(`    Path: ${run.path}`);
+            if (run.timestamp) parts.push(`    Timestamp: ${run.timestamp}`);
+            parts.push(`    Repositories: ${run.repositories.length}`);
+            for (const repo of run.repositories) {
+              const artifacts = [];
+              if (repo.hasSarif) artifacts.push("sarif");
+              if (repo.hasBqrs) artifacts.push("bqrs");
+              const status = repo.analysisStatus ?? "unknown";
+              const count = repo.resultCount !== void 0 ? `, ${repo.resultCount} result(s)` : "";
+              parts.push(`      ${repo.fullName} [${status}${count}] artifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "none"}`);
+            }
+            return parts.join("\n");
+          })
+        ];
+        return {
+          content: [{ type: "text", text: lines.join("\n") }]
+        };
+      } catch (error) {
+        logger.error("Error listing MRVA run results:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
+// src/tools/codeql/list-query-run-results.ts
+import { existsSync as existsSync8, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync4 } from "fs";
+import { join as join9 } from "path";
+import { z as z14 } from "zod";
+init_logger();
+var QUERY_RUN_DIR_PATTERN = /^(.+\.ql)-(.+)$/;
+var RUN_QUERY_PATTERN = /runQuery called with\s+(\S+)/;
+var DBSCHEME_DB_PATH_PATTERN = /--dbscheme=(.+?)\/db-(\w+)\//;
+var DBSCHEME_LANGUAGE_PATTERN = /semmlecode\.(\w+)\.dbscheme/;
+var QLPACK_LANGUAGE_PATTERN = /codeql\/(\w+)-all\//;
+function parseQueryLogMetadata(logContent) {
+  const metadata = {};
+  const runQueryMatch = RUN_QUERY_PATTERN.exec(logContent);
+  if (runQueryMatch) {
+    metadata.queryPath = runQueryMatch[1];
+  }
+  const dbPathMatch = DBSCHEME_DB_PATH_PATTERN.exec(logContent);
+  if (dbPathMatch) {
+    metadata.databasePath = dbPathMatch[1];
+    metadata.language = dbPathMatch[2];
+  }
+  if (!metadata.language) {
+    const langMatch = DBSCHEME_LANGUAGE_PATTERN.exec(logContent);
+    if (langMatch) {
+      metadata.language = langMatch[1];
+    }
+  }
+  if (!metadata.language) {
+    const packMatch = QLPACK_LANGUAGE_PATTERN.exec(logContent);
+    if (packMatch) {
+      metadata.language = packMatch[1];
+    }
+  }
+  return metadata;
+}
+async function discoverQueryRunResults(resultsDirs, filter) {
+  const normalizedFilter = typeof filter === "string" ? { queryName: filter } : filter;
+  const results = [];
+  for (const dir of resultsDirs) {
+    if (!existsSync8(dir)) {
+      continue;
+    }
+    let entries;
+    try {
+      entries = readdirSync4(dir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = join9(dir, entry);
+      try {
+        if (!statSync4(entryPath).isDirectory()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      const match = QUERY_RUN_DIR_PATTERN.exec(entry);
+      if (!match) {
+        continue;
+      }
+      const [, name, runId] = match;
+      if (normalizedFilter?.queryName && name !== normalizedFilter.queryName) {
+        continue;
+      }
+      const hasEvaluatorLog = existsSync8(join9(entryPath, "evaluator-log.jsonl"));
+      const hasBqrs = existsSync8(join9(entryPath, "results.bqrs"));
+      const hasSarif = existsSync8(join9(entryPath, "results-interpreted.sarif"));
+      const hasQueryLog = existsSync8(join9(entryPath, "query.log"));
+      const hasSummaryLog = existsSync8(join9(entryPath, "evaluator-log.summary.jsonl"));
+      let timestamp2;
+      const timestampPath = join9(entryPath, "timestamp");
+      if (existsSync8(timestampPath)) {
+        try {
+          timestamp2 = readFileSync6(timestampPath, "utf-8").trim();
+        } catch {
+        }
+      }
+      let metadata = {};
+      if (hasQueryLog) {
+        try {
+          const logContent = readFileSync6(join9(entryPath, "query.log"), "utf-8");
+          metadata = parseQueryLogMetadata(logContent);
+        } catch {
+        }
+      }
+      if (normalizedFilter?.language && metadata.language !== normalizedFilter.language) {
+        continue;
+      }
+      if (normalizedFilter?.queryPath) {
+        if (!metadata.queryPath) {
+          continue;
+        }
+        const filterPath = normalizedFilter.queryPath;
+        const isExact = filterPath.startsWith("/");
+        if (isExact) {
+          if (metadata.queryPath !== filterPath) {
+            continue;
+          }
+        } else {
+          if (!metadata.queryPath.toLowerCase().includes(filterPath.toLowerCase())) {
+            continue;
+          }
+        }
+      }
+      results.push({
+        databasePath: metadata.databasePath,
+        hasBqrs,
+        hasEvaluatorLog,
+        hasQueryLog,
+        hasSarif,
+        hasSummaryLog,
+        language: metadata.language,
+        path: entryPath,
+        queryName: name,
+        queryPath: metadata.queryPath,
+        runId,
+        timestamp: timestamp2
+      });
+    }
+  }
+  return results;
+}
+function registerListQueryRunResultsTool(server) {
+  server.tool(
+    "list_query_run_results",
+    "List discovered query run result directories (set via CODEQL_QUERY_RUN_RESULTS_DIRS env var). Returns path, query name, timestamp, language, query file path, and available artifacts (evaluator-log, bqrs, sarif, query.log, summary) for each run. Filter by queryName, language, or queryPath to narrow results. Use the returned BQRS paths with codeql_bqrs_decode or codeql_bqrs_info to inspect query results.",
+    {
+      language: z14.string().optional().describe(
+        'Filter by CodeQL language (e.g., "javascript", "python", "java"). Extracted from the database path in query.log. Runs without a query.log are excluded when this filter is set.'
+      ),
+      queryName: z14.string().optional().describe('Filter results by query name (e.g., "UI5Xss.ql")'),
+      queryPath: z14.string().optional().describe(
+        "Filter by query file path. Absolute paths match exactly; relative paths/substrings match case-insensitively. Requires query.log to be present."
+      )
+    },
+    async ({ language, queryName, queryPath }) => {
+      try {
+        const resultsDirs = getQueryRunResultsDirs();
+        if (resultsDirs.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "No query run results directories configured. Set the CODEQL_QUERY_RUN_RESULTS_DIRS environment variable to a colon-separated list of directories to search."
+              }
+            ]
+          };
+        }
+        const filter = {};
+        if (queryName) filter.queryName = queryName;
+        if (language) filter.language = language;
+        if (queryPath) filter.queryPath = queryPath;
+        const runs = await discoverQueryRunResults(
+          resultsDirs,
+          Object.keys(filter).length > 0 ? filter : void 0
+        );
+        if (runs.length === 0) {
+          const filterParts = [];
+          if (queryName) filterParts.push(`query "${queryName}"`);
+          if (language) filterParts.push(`language "${language}"`);
+          if (queryPath) filterParts.push(`path "${queryPath}"`);
+          const filterMsg = filterParts.length > 0 ? ` for ${filterParts.join(", ")}` : "";
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No query run results found${filterMsg} in: ${resultsDirs.join(", ")}`
+              }
+            ]
+          };
+        }
+        const lines = [
+          `Found ${runs.length} query run result(s):`,
+          "",
+          ...runs.map((run) => {
+            const artifacts = [];
+            if (run.hasEvaluatorLog) artifacts.push("evaluator-log");
+            if (run.hasSummaryLog) artifacts.push("summary-log");
+            if (run.hasBqrs) artifacts.push("bqrs");
+            if (run.hasSarif) artifacts.push("sarif");
+            if (run.hasQueryLog) artifacts.push("query-log");
+            const parts = [`  ${run.queryName} (${run.runId})`];
+            parts.push(`    Path: ${run.path}`);
+            if (run.timestamp) parts.push(`    Timestamp: ${run.timestamp}`);
+            if (run.language) parts.push(`    Language: ${run.language}`);
+            if (run.queryPath) parts.push(`    Query: ${run.queryPath}`);
+            if (run.databasePath) parts.push(`    Database: ${run.databasePath}`);
+            parts.push(`    Artifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "none"}`);
+            if (run.hasBqrs) parts.push(`    BQRS: ${join9(run.path, "results.bqrs")}`);
+            return parts.join("\n");
+          })
+        ];
+        return {
+          content: [{ type: "text", text: lines.join("\n") }]
+        };
+      } catch (error) {
+        logger.error("Error listing query run results:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
+// src/tools/codeql/pack-install.ts
+import { z as z15 } from "zod";
 var codeqlPackInstallTool = {
   name: "codeql_pack_install",
   description: "Install CodeQL pack dependencies",
   command: "codeql",
   subcommand: "pack install",
   inputSchema: {
-    packDir: z12.string().optional().describe("Directory containing qlpack.yml (default: current)"),
-    force: z12.boolean().optional().describe("Force reinstall of dependencies"),
-    "no-strict-mode": z12.boolean().optional().describe("Allow non-strict dependency resolution"),
+    packDir: z15.string().optional().describe("Directory containing qlpack.yml (default: current)"),
+    force: z15.boolean().optional().describe("Force reinstall of dependencies"),
+    "no-strict-mode": z15.boolean().optional().describe("Allow non-strict dependency resolution"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5839,16 +6443,16 @@ var codeqlPackInstallTool = {
 };
 
 // src/tools/codeql/pack-ls.ts
-import { z as z13 } from "zod";
+import { z as z16 } from "zod";
 var codeqlPackLsTool = {
   name: "codeql_pack_ls",
   description: "List CodeQL packs under some local directory path",
   command: "codeql",
   subcommand: "pack ls",
   inputSchema: {
-    dir: z13.string().optional().describe("The root directory of the package or workspace, defaults to the current working directory"),
-    format: z13.enum(["text", "json"]).optional().describe("Output format: text (default) or json"),
-    groups: z13.string().optional().describe("List of CodeQL pack groups to include or exclude"),
+    dir: z16.string().optional().describe("The root directory of the package or workspace, defaults to the current working directory"),
+    format: z16.enum(["text", "json"]).optional().describe("Output format: text (default) or json"),
+    groups: z16.string().optional().describe("List of CodeQL pack groups to include or exclude"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -5860,15 +6464,456 @@ var codeqlPackLsTool = {
   resultProcessor: defaultCLIResultProcessor
 };
 
+// src/tools/codeql/profile-codeql-query-from-logs.ts
+import { existsSync as existsSync9, mkdirSync as mkdirSync6, writeFileSync as writeFileSync3 } from "fs";
+import { basename as basename4, dirname as dirname6, join as join10 } from "path";
+import { z as z17 } from "zod";
+
+// src/lib/evaluator-log-parser.ts
+init_logger();
+import { readFileSync as readFileSync7 } from "fs";
+function detectLogFormat(firstEvent) {
+  if (typeof firstEvent.type === "string") {
+    return "raw";
+  }
+  return "summary";
+}
+function splitJsonObjects(content) {
+  const trimmed = content.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+  const parts = trimmed.split(/\n\}\s*\n\s*\{/);
+  if (parts.length === 1) {
+    return [trimmed];
+  }
+  return parts.map((part, idx) => {
+    if (idx === 0) {
+      return part + "\n}";
+    }
+    if (idx === parts.length - 1) {
+      return "{\n" + part;
+    }
+    return "{\n" + part + "\n}";
+  });
+}
+function parseJsonObjects(logPath) {
+  const content = readFileSync7(logPath, "utf-8");
+  const objectStrings = splitJsonObjects(content);
+  const results = [];
+  for (const objStr of objectStrings) {
+    try {
+      results.push(JSON.parse(objStr));
+    } catch {
+      logger.warn(
+        `Failed to parse evaluator log object: ${objStr.substring(0, 120)}...`
+      );
+    }
+  }
+  return results;
+}
+function parseRawEvaluatorLog(logPath) {
+  const events = parseJsonObjects(logPath);
+  let codeqlVersion;
+  const queryStartEvents = /* @__PURE__ */ new Map();
+  const predicateStartEvents = /* @__PURE__ */ new Map();
+  const queryPredicates = /* @__PURE__ */ new Map();
+  const queryEndNanoTimes = /* @__PURE__ */ new Map();
+  const queryCacheHits = /* @__PURE__ */ new Map();
+  let firstQueryEventId;
+  for (const event of events) {
+    const eventType = event.type;
+    switch (eventType) {
+      case "LOG_HEADER": {
+        codeqlVersion = event.codeqlVersion;
+        break;
+      }
+      case "QUERY_STARTED": {
+        const eid = event.eventId;
+        const qName = event.queryName || "unknown";
+        queryStartEvents.set(eid, {
+          queryName: qName,
+          nanoTime: event.nanoTime
+        });
+        queryPredicates.set(eid, []);
+        queryCacheHits.set(eid, 0);
+        if (firstQueryEventId === void 0) {
+          firstQueryEventId = eid;
+        }
+        break;
+      }
+      case "QUERY_COMPLETED": {
+        const startEid = event.startEvent;
+        queryEndNanoTimes.set(startEid, event.nanoTime);
+        break;
+      }
+      case "PREDICATE_STARTED": {
+        const eid = event.eventId;
+        const deps = event.dependencies;
+        predicateStartEvents.set(eid, {
+          predicateName: event.predicateName || "unknown",
+          position: event.position,
+          predicateType: event.predicateType,
+          dependencies: deps ? Object.keys(deps) : [],
+          queryCausingWork: event.queryCausingWork,
+          nanoTime: event.nanoTime,
+          pipelineCount: 0
+        });
+        break;
+      }
+      case "PIPELINE_COMPLETED": {
+        const pipelineStartEid = event.startEvent;
+        const pipelineStartEvt = events.find(
+          (e) => e.type === "PIPELINE_STARTED" && e.eventId === pipelineStartEid
+        );
+        if (pipelineStartEvt) {
+          const predEid = pipelineStartEvt.predicateStartEvent;
+          const predStart = predicateStartEvents.get(predEid);
+          if (predStart) {
+            predStart.pipelineCount += 1;
+          }
+        }
+        break;
+      }
+      case "PREDICATE_COMPLETED": {
+        const startEid = event.startEvent;
+        const predStart = predicateStartEvents.get(startEid);
+        if (predStart) {
+          const durationNs = event.nanoTime - predStart.nanoTime;
+          const durationMs = durationNs / 1e6;
+          const profile = {
+            predicateName: predStart.predicateName,
+            position: predStart.position,
+            durationMs,
+            resultSize: event.resultSize,
+            pipelineCount: predStart.pipelineCount > 0 ? predStart.pipelineCount : void 0,
+            evaluationStrategy: predStart.predicateType,
+            dependencies: predStart.dependencies
+          };
+          const qEid = predStart.queryCausingWork ?? firstQueryEventId;
+          if (qEid !== void 0) {
+            let arr = queryPredicates.get(qEid);
+            if (!arr) {
+              arr = [];
+              queryPredicates.set(qEid, arr);
+            }
+            arr.push(profile);
+          }
+        }
+        break;
+      }
+      case "CACHE_LOOKUP": {
+        const qEid = event.queryCausingWork ?? firstQueryEventId;
+        if (qEid !== void 0) {
+          queryCacheHits.set(qEid, (queryCacheHits.get(qEid) ?? 0) + 1);
+        }
+        break;
+      }
+    }
+  }
+  const queries = [];
+  for (const [qEid, startInfo] of queryStartEvents) {
+    const predicates = queryPredicates.get(qEid) ?? [];
+    const endNano = queryEndNanoTimes.get(qEid);
+    const totalDurationMs = endNano !== void 0 ? (endNano - startInfo.nanoTime) / 1e6 : predicates.reduce((sum, p) => sum + p.durationMs, 0);
+    queries.push({
+      queryName: startInfo.queryName,
+      totalDurationMs,
+      predicateCount: predicates.length,
+      predicates,
+      cacheHits: queryCacheHits.get(qEid) ?? 0
+    });
+  }
+  return {
+    codeqlVersion,
+    logFormat: "raw",
+    queries,
+    totalEvents: events.length
+  };
+}
+function parseSummaryLog(logPath) {
+  const events = parseJsonObjects(logPath);
+  let codeqlVersion;
+  const queryPredicatesMap = /* @__PURE__ */ new Map();
+  const queryTotalMs = /* @__PURE__ */ new Map();
+  const queryCacheHits = /* @__PURE__ */ new Map();
+  for (const event of events) {
+    if (event.summaryLogVersion !== void 0) {
+      codeqlVersion = event.codeqlVersion;
+      continue;
+    }
+    const strategy = event.evaluationStrategy;
+    if (strategy === "SENTINEL_EMPTY") {
+      continue;
+    }
+    if (event.millis === void 0) {
+      continue;
+    }
+    const predicateName = event.predicateName || "unknown";
+    const millis = event.millis;
+    const queryName = event.queryCausingWork || "unknown";
+    const deps = event.dependencies;
+    const pipelineRuns = event.pipelineRuns;
+    const profile = {
+      predicateName,
+      position: event.position,
+      durationMs: millis,
+      resultSize: event.resultSize,
+      pipelineCount: pipelineRuns,
+      evaluationStrategy: strategy,
+      dependencies: deps ? Object.keys(deps) : []
+    };
+    if (event.isCached === true || strategy === "CACHEHIT") {
+      queryCacheHits.set(
+        queryName,
+        (queryCacheHits.get(queryName) ?? 0) + 1
+      );
+    }
+    let arr = queryPredicatesMap.get(queryName);
+    if (!arr) {
+      arr = [];
+      queryPredicatesMap.set(queryName, arr);
+    }
+    arr.push(profile);
+    queryTotalMs.set(
+      queryName,
+      (queryTotalMs.get(queryName) ?? 0) + millis
+    );
+  }
+  const queries = [];
+  for (const [queryName, predicates] of queryPredicatesMap) {
+    queries.push({
+      queryName,
+      totalDurationMs: queryTotalMs.get(queryName) ?? 0,
+      predicateCount: predicates.length,
+      predicates,
+      cacheHits: queryCacheHits.get(queryName) ?? 0
+    });
+  }
+  return {
+    codeqlVersion,
+    logFormat: "summary",
+    queries,
+    totalEvents: events.length
+  };
+}
+function parseEvaluatorLog(logPath) {
+  const events = parseJsonObjects(logPath);
+  if (events.length === 0) {
+    return {
+      logFormat: "raw",
+      queries: [],
+      totalEvents: 0
+    };
+  }
+  const format = detectLogFormat(events[0]);
+  if (format === "raw") {
+    return parseRawEvaluatorLog(logPath);
+  }
+  return parseSummaryLog(logPath);
+}
+
+// src/tools/codeql/profile-codeql-query-from-logs.ts
+init_logger();
+function formatAsJson(profile) {
+  return JSON.stringify(profile, null, 2);
+}
+function formatAsMermaid(profile, topN) {
+  const lines = [];
+  lines.push("```mermaid");
+  lines.push("graph TD");
+  lines.push("");
+  if (profile.queries.length <= 1) {
+    const query = profile.queries[0] ?? {
+      queryName: "unknown",
+      totalDurationMs: 0,
+      predicates: [],
+      predicateCount: 0,
+      cacheHits: 0
+    };
+    const qLabel = sanitizeMermaid(basename4(query.queryName));
+    lines.push(
+      `  QUERY["${qLabel}<br/>Total: ${query.totalDurationMs.toFixed(2)}ms<br/>Predicates: ${query.predicateCount}"]`
+    );
+    lines.push("");
+    const topPredicates = getTopPredicates(query.predicates, topN);
+    topPredicates.forEach((pred, idx) => {
+      const nodeId = `P${idx}`;
+      const name = sanitizeMermaid(pred.predicateName).substring(0, 50);
+      const dur = pred.durationMs.toFixed(2);
+      const size = pred.resultSize !== void 0 ? String(pred.resultSize) : "?";
+      lines.push(
+        `  ${nodeId}["${name}<br/>${dur}ms | ${size} results"]`
+      );
+    });
+    lines.push("");
+    topPredicates.forEach((_pred, idx) => {
+      lines.push(`  QUERY --> P${idx}`);
+    });
+  } else {
+    lines.push(
+      `  ROOT["Evaluation Log<br/>${profile.queries.length} queries"]`
+    );
+    lines.push("");
+    profile.queries.forEach((query, qIdx) => {
+      const qNodeId = `Q${qIdx}`;
+      const qLabel = sanitizeMermaid(basename4(query.queryName));
+      lines.push(
+        `  ${qNodeId}["${qLabel}<br/>${query.totalDurationMs.toFixed(2)}ms<br/>Predicates: ${query.predicateCount}"]`
+      );
+      lines.push(`  ROOT --> ${qNodeId}`);
+      const topPredicates = getTopPredicates(query.predicates, topN);
+      topPredicates.forEach((pred, pIdx) => {
+        const nodeId = `Q${qIdx}P${pIdx}`;
+        const name = sanitizeMermaid(pred.predicateName).substring(0, 50);
+        const dur = pred.durationMs.toFixed(2);
+        const size = pred.resultSize !== void 0 ? String(pred.resultSize) : "?";
+        lines.push(
+          `  ${nodeId}["${name}<br/>${dur}ms | ${size} results"]`
+        );
+        lines.push(`  ${qNodeId} --> ${nodeId}`);
+      });
+      lines.push("");
+    });
+  }
+  lines.push("");
+  lines.push(
+    "  classDef default fill:#e1f5ff,stroke:#333,stroke-width:2px"
+  );
+  lines.push(
+    "  classDef query fill:#ffe1e1,stroke:#333,stroke-width:3px"
+  );
+  lines.push("  class QUERY query");
+  lines.push("```");
+  return lines.join("\n");
+}
+function sanitizeMermaid(text) {
+  return text.replace(/[<>"]/g, "");
+}
+function getTopPredicates(predicates, topN) {
+  return [...predicates].sort((a, b) => b.durationMs - a.durationMs).slice(0, topN);
+}
+function buildTextSummary(profile, topN, outputFiles) {
+  const sections = [];
+  sections.push("Query log profiling completed successfully!");
+  sections.push("");
+  sections.push("Output Files:");
+  for (const f of outputFiles) {
+    sections.push(`  - ${f}`);
+  }
+  sections.push("");
+  sections.push(`Log Format: ${profile.logFormat}`);
+  if (profile.codeqlVersion) {
+    sections.push(`CodeQL Version: ${profile.codeqlVersion}`);
+  }
+  sections.push(`Total Events: ${profile.totalEvents}`);
+  sections.push(`Queries: ${profile.queries.length}`);
+  for (const query of profile.queries) {
+    sections.push("");
+    sections.push(`--- ${basename4(query.queryName)} ---`);
+    sections.push(`  Total Duration: ${query.totalDurationMs.toFixed(2)} ms`);
+    sections.push(`  Predicates Evaluated: ${query.predicateCount}`);
+    sections.push(`  Cache Hits: ${query.cacheHits}`);
+    const top = getTopPredicates(query.predicates, topN);
+    if (top.length > 0) {
+      sections.push(`  Top ${top.length} Most Expensive Predicates:`);
+      top.forEach((pred, idx) => {
+        const sizeStr = pred.resultSize !== void 0 ? `, ${pred.resultSize} results` : "";
+        sections.push(
+          `    ${idx + 1}. ${pred.predicateName} (${pred.durationMs.toFixed(2)} ms${sizeStr})`
+        );
+      });
+    }
+  }
+  return sections.join("\n");
+}
+function registerProfileCodeQLQueryFromLogsTool(server) {
+  server.tool(
+    "profile_codeql_query_from_logs",
+    "Parse CodeQL query evaluation logs into a performance profile without re-running the query. Works with logs from codeql query run, codeql database analyze, or vscode-codeql query history.",
+    {
+      evaluatorLog: z17.string().describe(
+        "Path to evaluator-log.jsonl or evaluator-log.summary.jsonl"
+      ),
+      outputDir: z17.string().optional().describe(
+        "Directory to write profile output files (defaults to same directory as log)"
+      ),
+      topN: z17.number().optional().describe(
+        "Number of most expensive predicates to highlight (default: 20)"
+      )
+    },
+    async (params) => {
+      try {
+        const { evaluatorLog, outputDir, topN } = params;
+        const effectiveTopN = topN ?? 20;
+        if (!existsSync9(evaluatorLog)) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Evaluator log not found at: ${evaluatorLog}`
+              }
+            ],
+            isError: true
+          };
+        }
+        logger.info(`Parsing evaluator log from: ${evaluatorLog}`);
+        const profile = parseEvaluatorLog(evaluatorLog);
+        const profileOutputDir = outputDir ?? dirname6(evaluatorLog);
+        mkdirSync6(profileOutputDir, { recursive: true });
+        const jsonPath = join10(
+          profileOutputDir,
+          "query-evaluation-profile.json"
+        );
+        writeFileSync3(jsonPath, formatAsJson(profile));
+        logger.info(`Profile JSON written to: ${jsonPath}`);
+        const mdPath = join10(
+          profileOutputDir,
+          "query-evaluation-profile.md"
+        );
+        writeFileSync3(mdPath, formatAsMermaid(profile, effectiveTopN));
+        logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
+        const outputFilesList = [
+          `Profile JSON: ${jsonPath}`,
+          `Profile Mermaid: ${mdPath}`,
+          `Evaluator Log: ${evaluatorLog}`
+        ];
+        const responseText = buildTextSummary(
+          profile,
+          effectiveTopN,
+          outputFilesList
+        );
+        return {
+          content: [{ type: "text", text: responseText }]
+        };
+      } catch (error) {
+        logger.error(
+          "Error profiling CodeQL query from logs:",
+          error
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to profile query from logs: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
 // src/tools/codeql/profile-codeql-query.ts
 init_cli_executor();
 init_logger();
-import { z as z14 } from "zod";
-import { writeFileSync as writeFileSync3, readFileSync as readFileSync4, existsSync as existsSync6 } from "fs";
-import { join as join7, dirname as dirname6, basename as basename4 } from "path";
-import { mkdirSync as mkdirSync6 } from "fs";
-function parseEvaluatorLog(logPath) {
-  const logContent = readFileSync4(logPath, "utf-8");
+import { z as z18 } from "zod";
+import { writeFileSync as writeFileSync4, readFileSync as readFileSync8, existsSync as existsSync10 } from "fs";
+import { join as join11, dirname as dirname7, basename as basename5 } from "path";
+import { mkdirSync as mkdirSync7 } from "fs";
+function parseEvaluatorLog2(logPath) {
+  const logContent = readFileSync8(logPath, "utf-8");
   const jsonObjects = logContent.split("\n\n").filter((s) => s.trim());
   const events = jsonObjects.map((obj) => {
     try {
@@ -5946,15 +6991,15 @@ function parseEvaluatorLog(logPath) {
     pipelines
   };
 }
-function formatAsJson(profile) {
+function formatAsJson2(profile) {
   return JSON.stringify(profile, null, 2);
 }
-function formatAsMermaid(profile) {
+function formatAsMermaid2(profile) {
   const lines = [];
   lines.push("```mermaid");
   lines.push("graph TD");
   lines.push("");
-  lines.push(`  QUERY["${basename4(profile.queryName)}<br/>Total: ${profile.totalDuration.toFixed(2)}ms"]`);
+  lines.push(`  QUERY["${basename5(profile.queryName)}<br/>Total: ${profile.totalDuration.toFixed(2)}ms"]`);
   lines.push("");
   profile.pipelines.forEach((pipeline) => {
     const nodeId = `P${pipeline.eventId}`;
@@ -5987,12 +7032,12 @@ function registerProfileCodeQLQueryTool(server) {
     "profile_codeql_query",
     "Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log JSON file",
     {
-      query: z14.string().describe("Path to the .ql query file"),
-      database: z14.string().describe("Path to the CodeQL database directory"),
-      evaluatorLog: z14.string().optional().describe(
+      query: z18.string().describe("Path to the .ql query file"),
+      database: z18.string().describe("Path to the CodeQL database directory"),
+      evaluatorLog: z18.string().optional().describe(
         "Path to an existing structured JSON log (e.g., evaluator-log.jsonl) file. If not provided, the tool will run the query to generate one."
       ),
-      outputDir: z14.string().optional().describe("Directory to write profiling data files (defaults to same directory as evaluator log)")
+      outputDir: z18.string().optional().describe("Directory to write profiling data files (defaults to same directory as evaluator log)")
     },
     async (params) => {
       try {
@@ -6002,11 +7047,11 @@ function registerProfileCodeQLQueryTool(server) {
         let sarifPath;
         if (!logPath) {
           logger.info("No evaluator log provided, running query to generate one");
-          const defaultOutputDir = outputDir || join7(dirname6(query), "profile-output");
-          mkdirSync6(defaultOutputDir, { recursive: true });
-          logPath = join7(defaultOutputDir, "evaluator-log.jsonl");
-          bqrsPath = join7(defaultOutputDir, "query-results.bqrs");
-          sarifPath = join7(defaultOutputDir, "query-results.sarif");
+          const defaultOutputDir = outputDir || join11(dirname7(query), "profile-output");
+          mkdirSync7(defaultOutputDir, { recursive: true });
+          logPath = join11(defaultOutputDir, "evaluator-log.jsonl");
+          bqrsPath = join11(defaultOutputDir, "query-results.bqrs");
+          sarifPath = join11(defaultOutputDir, "query-results.sarif");
           const queryResult = await executeCodeQLCommand(
             "query run",
             {
@@ -6029,7 +7074,7 @@ function registerProfileCodeQLQueryTool(server) {
               isError: true
             };
           }
-          if (existsSync6(bqrsPath)) {
+          if (existsSync10(bqrsPath)) {
             try {
               const sarifResult = await executeCodeQLCommand(
                 "bqrs interpret",
@@ -6044,7 +7089,7 @@ function registerProfileCodeQLQueryTool(server) {
             }
           }
         }
-        if (!existsSync6(logPath)) {
+        if (!existsSync10(logPath)) {
           return {
             content: [
               {
@@ -6056,16 +7101,16 @@ function registerProfileCodeQLQueryTool(server) {
           };
         }
         logger.info(`Parsing evaluator log from: ${logPath}`);
-        const profile = parseEvaluatorLog(logPath);
-        const profileOutputDir = outputDir || dirname6(logPath);
-        mkdirSync6(profileOutputDir, { recursive: true });
-        const jsonPath = join7(profileOutputDir, "query-evaluation-profile.json");
-        const jsonContent = formatAsJson(profile);
-        writeFileSync3(jsonPath, jsonContent);
+        const profile = parseEvaluatorLog2(logPath);
+        const profileOutputDir = outputDir || dirname7(logPath);
+        mkdirSync7(profileOutputDir, { recursive: true });
+        const jsonPath = join11(profileOutputDir, "query-evaluation-profile.json");
+        const jsonContent = formatAsJson2(profile);
+        writeFileSync4(jsonPath, jsonContent);
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join7(profileOutputDir, "query-evaluation-profile.md");
-        const mdContent = formatAsMermaid(profile);
-        writeFileSync3(mdPath, mdContent);
+        const mdPath = join11(profileOutputDir, "query-evaluation-profile.md");
+        const mdContent = formatAsMermaid2(profile);
+        writeFileSync4(mdPath, mdContent);
         logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
         const outputFiles = [
           `Profile JSON: ${jsonPath}`,
@@ -6075,7 +7120,7 @@ function registerProfileCodeQLQueryTool(server) {
         if (bqrsPath) {
           outputFiles.push(`Query Results (BQRS): ${bqrsPath}`);
         }
-        if (sarifPath && existsSync6(sarifPath)) {
+        if (sarifPath && existsSync10(sarifPath)) {
           outputFiles.push(`Query Results (SARIF): ${sarifPath}`);
         }
         const responseText = [
@@ -6085,7 +7130,7 @@ function registerProfileCodeQLQueryTool(server) {
           ...outputFiles.map((f) => `  - ${f}`),
           "",
           "Profile Summary:",
-          `  - Query: ${basename4(profile.queryName)}`,
+          `  - Query: ${basename5(profile.queryName)}`,
           `  - Total Duration: ${profile.totalDuration.toFixed(2)} ms`,
           `  - Total Pipelines: ${profile.pipelines.length}`,
           `  - Total Events: ${profile.totalEvents}`,
@@ -6120,20 +7165,20 @@ function registerProfileCodeQLQueryTool(server) {
 }
 
 // src/tools/codeql/query-compile.ts
-import { z as z15 } from "zod";
+import { z as z19 } from "zod";
 var codeqlQueryCompileTool = {
   name: "codeql_query_compile",
   description: "Compile and validate CodeQL queries",
   command: "codeql",
   subcommand: "query compile",
   inputSchema: {
-    query: z15.string().describe("Path to the CodeQL query file (.ql)"),
-    database: z15.string().optional().describe("Path to the CodeQL database"),
-    library: z15.string().optional().describe("Path to query library"),
-    output: z15.string().optional().describe("Output file path"),
-    warnings: z15.enum(["hide", "show", "error"]).optional().describe("How to handle compilation warnings"),
-    verbose: z15.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z15.array(z15.string()).optional().describe("Additional command-line arguments")
+    query: z19.string().describe("Path to the CodeQL query file (.ql)"),
+    database: z19.string().optional().describe("Path to the CodeQL database"),
+    library: z19.string().optional().describe("Path to query library"),
+    output: z19.string().optional().describe("Output file path"),
+    warnings: z19.enum(["hide", "show", "error"]).optional().describe("How to handle compilation warnings"),
+    verbose: z19.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z19.array(z19.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql query compile --database=/path/to/db MyQuery.ql",
@@ -6142,7 +7187,7 @@ var codeqlQueryCompileTool = {
 };
 
 // src/tools/codeql/query-format.ts
-import { z as z16 } from "zod";
+import { z as z20 } from "zod";
 function formatResultProcessor(result, params) {
   const isCheckOnly = params["check-only"];
   const hasFormatChanges = result.exitCode === 1;
@@ -6158,12 +7203,12 @@ var codeqlQueryFormatTool = {
   command: "codeql",
   subcommand: "query format",
   inputSchema: {
-    files: z16.array(z16.string()).describe("One or more .ql or .qll source files to format"),
-    output: z16.string().optional().describe("Write formatted code to this file instead of stdout"),
-    "in-place": z16.boolean().optional().describe("Overwrite each input file with formatted version"),
-    "check-only": z16.boolean().optional().describe("Check formatting without writing output"),
-    backup: z16.string().optional().describe("Backup extension when overwriting existing files"),
-    "no-syntax-errors": z16.boolean().optional().describe("Ignore syntax errors and pretend file is formatted"),
+    files: z20.array(z20.string()).describe("One or more .ql or .qll source files to format"),
+    output: z20.string().optional().describe("Write formatted code to this file instead of stdout"),
+    "in-place": z20.boolean().optional().describe("Overwrite each input file with formatted version"),
+    "check-only": z20.boolean().optional().describe("Check formatting without writing output"),
+    backup: z20.string().optional().describe("Backup extension when overwriting existing files"),
+    "no-syntax-errors": z20.boolean().optional().describe("Ignore syntax errors and pretend file is formatted"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -6176,33 +7221,33 @@ var codeqlQueryFormatTool = {
 };
 
 // src/tools/codeql/query-run.ts
-import { z as z17 } from "zod";
+import { z as z21 } from "zod";
 var codeqlQueryRunTool = {
   name: "codeql_query_run",
-  description: 'Execute a CodeQL query against a database. Use either "query" parameter for direct file path OR "queryName" + "queryLanguage" for pre-defined tool queries.',
+  description: 'Execute a CodeQL query against a database. Use either "query" parameter for direct file path OR "queryName" + "queryLanguage" for pre-defined tool queries. Produces evaluator logs and BQRS results in a log directory. Use list_codeql_databases to discover databases, list_query_run_results to find previous results, and codeql_bqrs_decode to inspect BQRS output.',
   command: "codeql",
   subcommand: "query run",
   inputSchema: {
-    query: z17.string().optional().describe("Path to the CodeQL query file (.ql) - cannot be used with queryName"),
-    queryName: z17.string().optional().describe('Name of pre-defined query to run (e.g., "PrintAST", "CallGraphFrom", "CallGraphTo") - requires queryLanguage'),
-    queryLanguage: z17.string().optional().describe('Programming language for tools queries (e.g., "javascript", "java", "python") - required when using queryName'),
-    queryPack: z17.string().optional().describe("Query pack path (defaults to server/ql/<language>/tools/src/ for tool queries)"),
-    sourceFiles: z17.string().optional().describe('Comma-separated list of source file paths for PrintAST queries (e.g., "src/main.js,src/utils.js" or just "main.js")'),
-    sourceFunction: z17.string().optional().describe('Comma-separated list of source function names for CallGraphFrom queries (e.g., "main,processData")'),
-    targetFunction: z17.string().optional().describe('Comma-separated list of target function names for CallGraphTo queries (e.g., "helper,validateInput")'),
+    query: z21.string().optional().describe("Path to the CodeQL query file (.ql) - cannot be used with queryName"),
+    queryName: z21.string().optional().describe('Name of pre-defined query to run (e.g., "PrintAST", "CallGraphFrom", "CallGraphTo") - requires queryLanguage'),
+    queryLanguage: z21.string().optional().describe('Programming language for tools queries (e.g., "javascript", "java", "python") - required when using queryName'),
+    queryPack: z21.string().optional().describe("Query pack path (defaults to server/ql/<language>/tools/src/ for tool queries)"),
+    sourceFiles: z21.string().optional().describe('Comma-separated list of source file paths for PrintAST queries (e.g., "src/main.js,src/utils.js" or just "main.js")'),
+    sourceFunction: z21.string().optional().describe('Comma-separated list of source function names for CallGraphFrom queries (e.g., "main,processData")'),
+    targetFunction: z21.string().optional().describe('Comma-separated list of target function names for CallGraphTo queries (e.g., "helper,validateInput")'),
     database: createCodeQLSchemas.database(),
     output: createCodeQLSchemas.output(),
-    external: z17.array(z17.string()).optional().describe("External predicate data: predicate=file.csv"),
+    external: z21.array(z21.string()).optional().describe("External predicate data: predicate=file.csv"),
     timeout: createCodeQLSchemas.timeout(),
-    logDir: z17.string().optional().describe("Custom directory for query execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
-    "evaluator-log": z17.string().optional().describe("Path to save evaluator log (deprecated: use logDir instead)"),
-    "evaluator-log-minify": z17.boolean().optional().describe("Minimize evaluator log for smaller size"),
-    "evaluator-log-level": z17.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
-    "tuple-counting": z17.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
-    format: z17.enum(["sarif-latest", "sarifv2.1.0", "csv", "graphtext", "dgml", "dot"]).optional().describe("Output format for query results via codeql bqrs interpret. Defaults to sarif-latest for @kind problem/path-problem queries, graphtext for @kind graph queries. Graph formats (graphtext, dgml, dot) only work with @kind graph queries."),
-    interpretedOutput: z17.string().optional().describe("Output file for interpreted results (e.g., results.sarif, results.txt). If not provided, defaults based on format: .sarif for SARIF, .txt for graphtext/csv, .dgml for dgml, .dot for dot"),
-    evaluationFunction: z17.string().optional().describe('[DEPRECATED - use format parameter instead] Built-in function for query results evaluation (e.g., "mermaid-graph", "json-decode", "csv-decode") or path to custom evaluation script'),
-    evaluationOutput: z17.string().optional().describe("[DEPRECATED - use interpretedOutput parameter instead] Output file for evaluation results"),
+    logDir: z21.string().optional().describe("Custom directory for query execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
+    "evaluator-log": z21.string().optional().describe("Path to save evaluator log (deprecated: use logDir instead)"),
+    "evaluator-log-minify": z21.boolean().optional().describe("Minimize evaluator log for smaller size"),
+    "evaluator-log-level": z21.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
+    "tuple-counting": z21.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
+    format: z21.enum(["sarif-latest", "sarifv2.1.0", "csv", "graphtext", "dgml", "dot"]).optional().describe("Output format for query results via codeql bqrs interpret. Defaults to sarif-latest for @kind problem/path-problem queries, graphtext for @kind graph queries. Graph formats (graphtext, dgml, dot) only work with @kind graph queries."),
+    interpretedOutput: z21.string().optional().describe("Output file for interpreted results (e.g., results.sarif, results.txt). If not provided, defaults based on format: .sarif for SARIF, .txt for graphtext/csv, .dgml for dgml, .dot for dot"),
+    evaluationFunction: z21.string().optional().describe('[DEPRECATED - use format parameter instead] Built-in function for query results evaluation (e.g., "mermaid-graph", "json-decode", "csv-decode") or path to custom evaluation script'),
+    evaluationOutput: z21.string().optional().describe("[DEPRECATED - use interpretedOutput parameter instead] Output file for evaluation results"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -6217,8 +7262,8 @@ var codeqlQueryRunTool = {
 };
 
 // src/tools/codeql/quick-evaluate.ts
-import { z as z18 } from "zod";
-import { join as join8, resolve as resolve6 } from "path";
+import { z as z22 } from "zod";
+import { join as join12, resolve as resolve6 } from "path";
 init_logger();
 init_temp_dir();
 async function quickEvaluate({
@@ -6237,10 +7282,10 @@ async function quickEvaluate({
         throw new Error(`Symbol '${symbol}' not found as class or predicate in file: ${file}`);
       }
     }
-    const resolvedOutput = resolve6(output_path || join8(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
+    const resolvedOutput = resolve6(output_path || join12(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error) {
-    throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerQuickEvaluateTool(server) {
@@ -6248,10 +7293,10 @@ function registerQuickEvaluateTool(server) {
     "quick_evaluate",
     "Quick evaluate either a class or a predicate in a CodeQL query for debugging",
     {
-      file: z18.string().describe("Path to the .ql file containing the symbol"),
-      db: z18.string().describe("Path to the CodeQL database"),
-      symbol: z18.string().describe("Name of the class or predicate to evaluate"),
-      output_path: z18.string().optional().describe("Output path for results (defaults to project-local .tmp/quickeval/)")
+      file: z22.string().describe("Path to the .ql file containing the symbol"),
+      db: z22.string().describe("Path to the CodeQL database"),
+      symbol: z22.string().describe("Name of the class or predicate to evaluate"),
+      output_path: z22.string().optional().describe("Output path for results (defaults to project-local .tmp/quickeval/)")
     },
     async ({ file, db, symbol, output_path }) => {
       try {
@@ -6277,7 +7322,7 @@ function registerQuickEvaluateTool(server) {
 
 // src/tools/codeql/register-database.ts
 init_logger();
-import { z as z19 } from "zod";
+import { z as z23 } from "zod";
 import { access, constants } from "fs/promises";
 import { resolve as resolve7 } from "path";
 async function registerDatabase(dbPath) {
@@ -6312,15 +7357,15 @@ async function registerDatabase(dbPath) {
       const errorCode = error.code;
       if (errorCode === "ENOENT") {
         if (error.message.includes("codeql-database.yml")) {
-          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`);
+          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`, { cause: error });
         }
-        throw new Error(`Database path does not exist: ${dbPath}`);
+        throw new Error(`Database path does not exist: ${dbPath}`, { cause: error });
       }
       if (errorCode === "EACCES") {
-        throw new Error(`Database path does not exist: ${dbPath}`);
+        throw new Error(`Database path does not exist: ${dbPath}`, { cause: error });
       }
     }
-    throw new Error(`Failed to register database: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to register database: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerRegisterDatabaseTool(server) {
@@ -6328,7 +7373,7 @@ function registerRegisterDatabaseTool(server) {
     "register_database",
     "Register a CodeQL database given a local path to the database directory",
     {
-      db_path: z19.string().describe("Path to the CodeQL database directory")
+      db_path: z23.string().describe("Path to the CodeQL database directory")
     },
     async ({ db_path }) => {
       try {
@@ -6353,15 +7398,15 @@ function registerRegisterDatabaseTool(server) {
 }
 
 // src/tools/codeql/resolve-database.ts
-import { z as z20 } from "zod";
+import { z as z24 } from "zod";
 var codeqlResolveDatabaseTool = {
   name: "codeql_resolve_database",
   description: "Resolve database path and validate database structure",
   command: "codeql",
   subcommand: "resolve database",
   inputSchema: {
-    database: z20.string().describe("Database path to resolve"),
-    format: z20.enum(["text", "json", "betterjson"]).optional().describe("Output format for database information"),
+    database: z24.string().describe("Database path to resolve"),
+    format: z24.enum(["text", "json", "betterjson"]).optional().describe("Output format for database information"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -6374,16 +7419,16 @@ var codeqlResolveDatabaseTool = {
 };
 
 // src/tools/codeql/resolve-languages.ts
-import { z as z21 } from "zod";
+import { z as z25 } from "zod";
 var codeqlResolveLanguagesTool = {
   name: "codeql_resolve_languages",
   description: "List installed CodeQL extractor packs",
   command: "codeql",
   subcommand: "resolve languages",
   inputSchema: {
-    format: z21.enum(["text", "json", "betterjson"]).optional().describe("Output format for language information"),
-    verbose: z21.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z21.array(z21.string()).optional().describe("Additional command-line arguments")
+    format: z25.enum(["text", "json", "betterjson"]).optional().describe("Output format for language information"),
+    verbose: z25.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z25.array(z25.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql resolve languages --format=text",
@@ -6394,17 +7439,17 @@ var codeqlResolveLanguagesTool = {
 };
 
 // src/tools/codeql/resolve-library-path.ts
-import { z as z22 } from "zod";
+import { z as z26 } from "zod";
 var codeqlResolveLibraryPathTool = {
   name: "codeql_resolve_library-path",
   description: "Resolve library path for CodeQL queries and libraries",
   command: "codeql",
   subcommand: "resolve library-path",
   inputSchema: {
-    language: z22.string().optional().describe("Programming language to resolve library path for"),
-    format: z22.enum(["text", "json", "betterjson"]).optional().describe("Output format for library path information"),
-    verbose: z22.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z22.array(z22.string()).optional().describe("Additional command-line arguments")
+    language: z26.string().optional().describe("Programming language to resolve library path for"),
+    format: z26.enum(["text", "json", "betterjson"]).optional().describe("Output format for library path information"),
+    verbose: z26.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z26.array(z26.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql resolve library-path --language=java",
@@ -6415,17 +7460,17 @@ var codeqlResolveLibraryPathTool = {
 };
 
 // src/tools/codeql/resolve-metadata.ts
-import { z as z23 } from "zod";
+import { z as z27 } from "zod";
 var codeqlResolveMetadataTool = {
   name: "codeql_resolve_metadata",
   description: "Resolve and return the key-value metadata pairs from a CodeQL query source file.",
   command: "codeql",
   subcommand: "resolve metadata",
   inputSchema: {
-    query: z23.string().describe("Query file to resolve metadata for"),
-    format: z23.enum(["json"]).optional().describe("Output format for metadata information (always JSON, optional for future compatibility)"),
-    verbose: z23.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: z23.array(z23.string()).optional().describe("Additional command-line arguments")
+    query: z27.string().describe("Query file to resolve metadata for"),
+    format: z27.enum(["json"]).optional().describe("Output format for metadata information (always JSON, optional for future compatibility)"),
+    verbose: z27.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: z27.array(z27.string()).optional().describe("Additional command-line arguments")
   },
   examples: [
     "codeql resolve metadata -- relative-path/2/MyQuery.ql",
@@ -6435,15 +7480,15 @@ var codeqlResolveMetadataTool = {
 };
 
 // src/tools/codeql/resolve-qlref.ts
-import { z as z24 } from "zod";
+import { z as z28 } from "zod";
 var codeqlResolveQlrefTool = {
   name: "codeql_resolve_qlref",
   description: "Resolve qlref files to their corresponding query files",
   command: "codeql",
   subcommand: "resolve qlref",
   inputSchema: {
-    qlref: z24.string().describe("Path to the .qlref file to resolve"),
-    format: z24.enum(["text", "json", "betterjson"]).optional().describe("Output format for qlref resolution"),
+    qlref: z28.string().describe("Path to the .qlref file to resolve"),
+    format: z28.enum(["text", "json", "betterjson"]).optional().describe("Output format for qlref resolution"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -6456,7 +7501,7 @@ var codeqlResolveQlrefTool = {
 };
 
 // src/tools/codeql/resolve-queries.ts
-import { z as z25 } from "zod";
+import { z as z29 } from "zod";
 var jsonOnlyResultProcessor = (result, params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -6486,10 +7531,10 @@ var codeqlResolveQueriesTool = {
   command: "codeql",
   subcommand: "resolve queries",
   inputSchema: {
-    directory: z25.string().optional().describe("Directory to search for queries"),
-    language: z25.string().optional().describe("Filter queries by programming language"),
-    format: z25.enum(["text", "json", "betterjson", "bylanguage"]).optional().describe("Output format for query list"),
-    "additional-packs": z25.union([z25.string(), z25.array(z25.string())]).optional().describe("Additional pack directories to search for CodeQL packs"),
+    directory: z29.string().optional().describe("Directory to search for queries"),
+    language: z29.string().optional().describe("Filter queries by programming language"),
+    format: z29.enum(["text", "json", "betterjson", "bylanguage"]).optional().describe("Output format for query list"),
+    "additional-packs": z29.union([z29.string(), z29.array(z29.string())]).optional().describe("Additional pack directories to search for CodeQL packs"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -6503,15 +7548,15 @@ var codeqlResolveQueriesTool = {
 };
 
 // src/tools/codeql/resolve-tests.ts
-import { z as z26 } from "zod";
+import { z as z30 } from "zod";
 var codeqlResolveTestsTool = {
   name: "codeql_resolve_tests",
   description: "Resolve the local filesystem paths of unit tests and/or queries under some base directory",
   command: "codeql",
   subcommand: "resolve tests",
   inputSchema: {
-    tests: z26.array(z26.string()).optional().describe("One or more tests (.ql, .qlref files, or test directories)"),
-    format: z26.enum(["text", "json"]).optional().describe("Output format for test list"),
+    tests: z30.array(z30.string()).optional().describe("One or more tests (.ql, .qlref files, or test directories)"),
+    format: z30.enum(["text", "json"]).optional().describe("Output format for test list"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -6524,14 +7569,14 @@ var codeqlResolveTestsTool = {
 };
 
 // src/tools/codeql/test-accept.ts
-import { z as z27 } from "zod";
+import { z as z31 } from "zod";
 var codeqlTestAcceptTool = {
   name: "codeql_test_accept",
   description: "Accept new test results as the expected baseline",
   command: "codeql",
   subcommand: "test accept",
   inputSchema: {
-    tests: z27.array(z27.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
+    tests: z31.array(z31.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
     verbose: createCodeQLSchemas.verbose(),
     additionalArgs: createCodeQLSchemas.additionalArgs()
   },
@@ -6544,15 +7589,15 @@ var codeqlTestAcceptTool = {
 };
 
 // src/tools/codeql/test-extract.ts
-import { z as z28 } from "zod";
+import { z as z32 } from "zod";
 var codeqlTestExtractTool = {
   name: "codeql_test_extract",
   description: "Extract test databases for CodeQL query tests",
   command: "codeql",
   subcommand: "test extract",
   inputSchema: {
-    tests: z28.array(z28.string()).describe("One or more test directories or files"),
-    language: z28.string().optional().describe("Programming language for extraction"),
+    tests: z32.array(z32.string()).describe("One or more test directories or files"),
+    language: z32.string().optional().describe("Programming language for extraction"),
     threads: createCodeQLSchemas.threads(),
     ram: createCodeQLSchemas.ram(),
     verbose: createCodeQLSchemas.verbose(),
@@ -6567,18 +7612,18 @@ var codeqlTestExtractTool = {
 };
 
 // src/tools/codeql/test-run.ts
-import { z as z29 } from "zod";
+import { z as z33 } from "zod";
 var codeqlTestRunTool = {
   name: "codeql_test_run",
   description: "Run CodeQL query tests",
   command: "codeql",
   subcommand: "test run",
   inputSchema: {
-    tests: z29.array(z29.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
-    "show-extractor-output": z29.boolean().optional().describe("Show output from extractors during test execution"),
-    "keep-databases": z29.boolean().optional().describe("Keep test databases after running tests"),
-    "learn": z29.boolean().optional().describe("Accept current output as expected for failing tests"),
-    logDir: z29.string().optional().describe("Custom directory for test execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
+    tests: z33.array(z33.string()).describe("One or more tests (.ql, .qlref files, or test directories)"),
+    "show-extractor-output": z33.boolean().optional().describe("Show output from extractors during test execution"),
+    "keep-databases": z33.boolean().optional().describe("Keep test databases after running tests"),
+    "learn": z33.boolean().optional().describe("Accept current output as expected for failing tests"),
+    logDir: z33.string().optional().describe("Custom directory for test execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
     threads: createCodeQLSchemas.threads(),
     ram: createCodeQLSchemas.ram(),
     verbose: createCodeQLSchemas.verbose(),
@@ -6593,7 +7638,7 @@ var codeqlTestRunTool = {
 };
 
 // src/tools/codeql-tools.ts
-import { z as z30 } from "zod";
+import { z as z34 } from "zod";
 
 // src/lib/validation.ts
 function validateCodeQLSyntax(query, _language) {
@@ -6701,7 +7746,7 @@ function createCodeQLQuery(options) {
       filesCreated
     };
   } catch (error) {
-    throw new Error(`Failed to create query scaffolding: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to create query scaffolding: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 
@@ -6712,8 +7757,8 @@ function registerCodeQLTools(server) {
     "validate_codeql_query",
     "Quick heuristic validation for CodeQL query structure - checks for common patterns like from/where/select clauses and metadata presence. Does NOT compile the query. For authoritative validation with actual compilation, use codeql_lsp_diagnostics instead.",
     {
-      query: z30.string().describe("The CodeQL query to validate"),
-      language: z30.string().optional().describe("Target programming language")
+      query: z34.string().describe("The CodeQL query to validate"),
+      language: z34.string().optional().describe("Target programming language")
     },
     async ({ query, language }) => {
       try {
@@ -6739,11 +7784,11 @@ function registerCodeQLTools(server) {
     "create_codeql_query",
     "Create directory structure and files for a new CodeQL query with tests",
     {
-      basePath: z30.string().describe("Base path where src/ and test/ directories will be created"),
-      queryName: z30.string().describe("Name of the query (e.g., MySecurityQuery)"),
-      language: z30.string().describe("Target programming language (e.g., javascript, python, java)"),
-      description: z30.string().optional().describe("Description of what the query does"),
-      queryId: z30.string().optional().describe("Custom query ID (defaults to language/example/queryname)")
+      basePath: z34.string().describe("Base path where src/ and test/ directories will be created"),
+      queryName: z34.string().describe("Name of the query (e.g., MySecurityQuery)"),
+      language: z34.string().describe("Target programming language (e.g., javascript, python, java)"),
+      description: z34.string().optional().describe("Description of what the query does"),
+      queryId: z34.string().optional().describe("Custom query ID (defaults to language/example/queryname)")
     },
     async ({ basePath, queryName, language, description, queryId }) => {
       try {
@@ -6811,41 +7856,45 @@ function registerCodeQLTools(server) {
   registerFindClassPositionTool(server);
   registerFindCodeQLQueryFilesTool(server);
   registerFindPredicatePositionTool(server);
+  registerListDatabasesTool(server);
+  registerListMrvaRunResultsTool(server);
+  registerListQueryRunResultsTool(server);
+  registerProfileCodeQLQueryFromLogsTool(server);
   registerProfileCodeQLQueryTool(server);
   registerQuickEvaluateTool(server);
   registerRegisterDatabaseTool(server);
 }
 
 // src/lib/resources.ts
-import { readFileSync as readFileSync5 } from "fs";
-import { join as join10, dirname as dirname7 } from "path";
+import { readFileSync as readFileSync9 } from "fs";
+import { join as join14, dirname as dirname8 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname2 = dirname7(__filename2);
+var __dirname2 = dirname8(__filename2);
 function getGettingStartedGuide() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/getting-started.md"), "utf-8");
+    return readFileSync9(join14(__dirname2, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/query-basics.md"), "utf-8");
+    return readFileSync9(join14(__dirname2, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/security-templates.md"), "utf-8");
+    return readFileSync9(join14(__dirname2, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync5(join10(__dirname2, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync9(join14(__dirname2, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -6934,8 +7983,8 @@ function registerCodeQLResources(server) {
 // src/tools/lsp/lsp-diagnostics.ts
 init_logger();
 init_temp_dir();
-import { z as z31 } from "zod";
-import { join as join11 } from "path";
+import { z as z35 } from "zod";
+import { join as join15 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/lsp/lsp-server-helper.ts
@@ -7033,7 +8082,7 @@ async function lspDiagnostics({
       serverOptions,
       workspaceUri
     });
-    const evalUri = pathToFileURL3(join11(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
+    const evalUri = pathToFileURL3(join15(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     const summary = {
       errorCount: diagnostics.filter((d) => d.severity === 1).length,
@@ -7052,7 +8101,7 @@ async function lspDiagnostics({
     };
   } catch (error) {
     logger.error("Error evaluating QL code:", error);
-    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`QL evaluation failed: ${error instanceof Error ? error.message : "Unknown error"}`, { cause: error });
   }
 }
 function registerLspDiagnosticsTool(server) {
@@ -7060,10 +8109,10 @@ function registerLspDiagnosticsTool(server) {
     "codeql_lsp_diagnostics",
     "Authoritative syntax and semantic validation of CodeQL (QL) code via the CodeQL Language Server. Compiles the query and provides real-time diagnostics with precise error locations. Use this for accurate validation; for quick heuristic checks without compilation, use validate_codeql_query instead. Note: inline ql_code is evaluated as a virtual document and cannot resolve pack imports (e.g. `import javascript`). For validating queries with imports, use codeql_query_compile on the actual file instead.",
     {
-      log_level: z31.enum(["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "ALL"]).optional().describe("Language server log level"),
-      ql_code: z31.string().describe("The CodeQL (QL) code to evaluate for syntax and semantic errors"),
-      search_path: z31.string().optional().describe("Optional search path for CodeQL libraries"),
-      workspace_uri: z31.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)")
+      log_level: z35.enum(["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "ALL"]).optional().describe("Language server log level"),
+      ql_code: z35.string().describe("The CodeQL (QL) code to evaluate for syntax and semantic errors"),
+      search_path: z35.string().optional().describe("Optional search path for CodeQL libraries"),
+      workspace_uri: z35.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)")
     },
     async ({ ql_code, workspace_uri, search_path, log_level }) => {
       try {
@@ -7143,7 +8192,7 @@ async function openDocumentForPosition(server, params, absPath, docUri) {
     try {
       text = await readFile3(absPath, "utf-8");
     } catch (error) {
-      throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`);
+      throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`, { cause: error });
     }
   }
   server.openDocument(docUri, text);
@@ -7190,15 +8239,15 @@ async function lspReferences(params) {
 }
 
 // src/tools/lsp/lsp-tools.ts
-import { z as z32 } from "zod";
+import { z as z36 } from "zod";
 init_logger();
 var lspParamsSchema = {
-  character: z32.number().int().min(0).describe("0-based character offset within the line"),
-  file_content: z32.string().optional().describe("Optional file content override (reads from disk if omitted)"),
-  file_path: z32.string().describe("Path to the CodeQL (.ql/.qll) file. Relative paths are resolved against the user workspace directory (see CODEQL_MCP_WORKSPACE)."),
-  line: z32.number().int().min(0).describe("0-based line number in the document"),
-  search_path: z32.string().optional().describe("Optional search path for CodeQL libraries"),
-  workspace_uri: z32.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)")
+  character: z36.number().int().min(0).describe("0-based character offset within the line"),
+  file_content: z36.string().optional().describe("Optional file content override (reads from disk if omitted)"),
+  file_path: z36.string().describe("Path to the CodeQL (.ql/.qll) file. Relative paths are resolved against the user workspace directory (see CODEQL_MCP_WORKSPACE)."),
+  line: z36.number().int().min(0).describe("0-based line number in the document"),
+  search_path: z36.string().optional().describe("Optional search path for CodeQL libraries"),
+  workspace_uri: z36.string().optional().describe("Optional workspace URI for context (defaults to ./ql directory)")
 };
 function toHandlerParams(input) {
   return {
@@ -7308,8 +8357,8 @@ function registerLSPTools(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync6, existsSync as existsSync7 } from "fs";
-import { join as join12 } from "path";
+import { readFileSync as readFileSync10, existsSync as existsSync11 } from "fs";
+import { join as join16 } from "path";
 
 // src/types/language-types.ts
 var LANGUAGE_RESOURCES = [
@@ -7369,12 +8418,12 @@ function getQLBasePath() {
 }
 function loadResourceContent(relativePath) {
   try {
-    const fullPath = join12(getQLBasePath(), relativePath);
-    if (!existsSync7(fullPath)) {
+    const fullPath = join16(getQLBasePath(), relativePath);
+    if (!existsSync11(fullPath)) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync6(fullPath, "utf-8");
+    return readFileSync10(fullPath, "utf-8");
   } catch (error) {
     logger.error(`Error loading resource file ${relativePath}:`, error);
     return null;
@@ -7496,19 +8545,19 @@ function registerLanguageResources(server) {
 }
 
 // src/prompts/workflow-prompts.ts
-import { z as z33 } from "zod";
-import { basename as basename5 } from "path";
+import { z as z37 } from "zod";
+import { basename as basename6 } from "path";
 
 // src/prompts/prompt-loader.ts
-import { readFileSync as readFileSync7 } from "fs";
-import { join as join13, dirname as dirname8 } from "path";
+import { readFileSync as readFileSync11 } from "fs";
+import { join as join17, dirname as dirname9 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 var __filename3 = fileURLToPath3(import.meta.url);
-var __dirname3 = dirname8(__filename3);
+var __dirname3 = dirname9(__filename3);
 function loadPromptTemplate(promptFileName) {
   try {
-    const promptPath = join13(__dirname3, promptFileName);
-    return readFileSync7(promptPath, "utf-8");
+    const promptPath = join17(__dirname3, promptFileName);
+    return readFileSync11(promptPath, "utf-8");
   } catch (error) {
     return `Prompt template '${promptFileName}' not available: ${error instanceof Error ? error.message : "Unknown error"}`;
   }
@@ -7540,49 +8589,49 @@ var SUPPORTED_LANGUAGES = [
   "ruby",
   "swift"
 ];
-var testDrivenDevelopmentSchema = z33.object({
-  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
-  queryName: z33.string().optional().describe("Name of the query to develop")
+var testDrivenDevelopmentSchema = z37.object({
+  language: z37.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
+  queryName: z37.string().optional().describe("Name of the query to develop")
 });
-var toolsQueryWorkflowSchema = z33.object({
-  database: z33.string().describe("Path to the CodeQL database"),
-  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language for the tools queries"),
-  sourceFiles: z33.string().optional().describe('Comma-separated source file names for PrintAST (e.g., "main.js,utils.js")'),
-  sourceFunction: z33.string().optional().describe('Function name for PrintCFG or CallGraphFrom (e.g., "processData")'),
-  targetFunction: z33.string().optional().describe('Function name for CallGraphTo (e.g., "validate")')
+var toolsQueryWorkflowSchema = z37.object({
+  database: z37.string().describe("Path to the CodeQL database"),
+  language: z37.enum(SUPPORTED_LANGUAGES).describe("Programming language for the tools queries"),
+  sourceFiles: z37.string().optional().describe('Comma-separated source file names for PrintAST (e.g., "main.js,utils.js")'),
+  sourceFunction: z37.string().optional().describe('Function name for PrintCFG or CallGraphFrom (e.g., "processData")'),
+  targetFunction: z37.string().optional().describe('Function name for CallGraphTo (e.g., "validate")')
 });
-var workshopCreationWorkflowSchema = z33.object({
-  queryPath: z33.string().describe("Path to the production-grade CodeQL query (.ql or .qlref)"),
-  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
-  workshopName: z33.string().optional().describe("Name for the workshop directory"),
-  numStages: z33.coerce.number().optional().describe("Number of incremental stages (default: 4-8)")
+var workshopCreationWorkflowSchema = z37.object({
+  queryPath: z37.string().describe("Path to the production-grade CodeQL query (.ql or .qlref)"),
+  language: z37.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
+  workshopName: z37.string().optional().describe("Name for the workshop directory"),
+  numStages: z37.coerce.number().optional().describe("Number of incremental stages (default: 4-8)")
 });
-var qlTddBasicSchema = z33.object({
-  language: z33.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
-  queryName: z33.string().optional().describe("Name of the query to develop")
+var qlTddBasicSchema = z37.object({
+  language: z37.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  queryName: z37.string().optional().describe("Name of the query to develop")
 });
-var qlTddAdvancedSchema = z33.object({
-  database: z33.string().optional().describe("Path to the CodeQL database for analysis"),
-  language: z33.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
-  queryName: z33.string().optional().describe("Name of the query to develop")
+var qlTddAdvancedSchema = z37.object({
+  database: z37.string().optional().describe("Path to the CodeQL database for analysis"),
+  language: z37.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  queryName: z37.string().optional().describe("Name of the query to develop")
 });
-var sarifRankSchema = z33.object({
-  queryId: z33.string().optional().describe("CodeQL query/rule identifier"),
-  sarifPath: z33.string().optional().describe("Path to the SARIF file to analyze")
+var sarifRankSchema = z37.object({
+  queryId: z37.string().optional().describe("CodeQL query/rule identifier"),
+  sarifPath: z37.string().optional().describe("Path to the SARIF file to analyze")
 });
-var explainCodeqlQuerySchema = z33.object({
-  databasePath: z33.string().optional().describe("Optional path to a real CodeQL database for profiling"),
-  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
-  queryPath: z33.string().describe("Path to the CodeQL query file (.ql or .qlref)")
+var explainCodeqlQuerySchema = z37.object({
+  databasePath: z37.string().optional().describe("Optional path to a real CodeQL database for profiling"),
+  language: z37.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
+  queryPath: z37.string().describe("Path to the CodeQL query file (.ql or .qlref)")
 });
-var documentCodeqlQuerySchema = z33.object({
-  language: z33.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
-  queryPath: z33.string().describe("Path to the CodeQL query file (.ql or .qlref)")
+var documentCodeqlQuerySchema = z37.object({
+  language: z37.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
+  queryPath: z37.string().describe("Path to the CodeQL query file (.ql or .qlref)")
 });
-var qlLspIterativeDevelopmentSchema = z33.object({
-  language: z33.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query"),
-  queryPath: z33.string().optional().describe("Path to the query file being developed"),
-  workspaceUri: z33.string().optional().describe("Workspace URI for LSP dependency resolution")
+var qlLspIterativeDevelopmentSchema = z37.object({
+  language: z37.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query"),
+  queryPath: z37.string().optional().describe("Path to the query file being developed"),
+  workspaceUri: z37.string().optional().describe("Workspace URI for LSP dependency resolution")
 });
 var WORKFLOW_PROMPT_NAMES = [
   "document_codeql_query",
@@ -7667,7 +8716,7 @@ ${content}`
     workshopCreationWorkflowSchema.shape,
     async ({ queryPath, language, workshopName, numStages }) => {
       const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
-      const derivedName = workshopName || basename5(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
+      const derivedName = workshopName || basename6(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
       const contextSection = buildWorkshopContext(
         queryPath,
         language,
@@ -7969,7 +9018,7 @@ function buildWorkshopContext(queryPath, language, workshopName, numStages) {
 }
 
 // src/tools/monitoring-tools.ts
-import { z as z35 } from "zod";
+import { z as z39 } from "zod";
 import { randomUUID as randomUUID3 } from "crypto";
 
 // ../node_modules/lowdb/lib/core/Low.js
@@ -8003,7 +9052,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync8, renameSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { readFileSync as readFileSync12, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -8016,7 +9065,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync8(this.#filename, "utf-8");
+      data = readFileSync12(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -8026,7 +9075,7 @@ var TextFileSync = class {
     return data;
   }
   write(str2) {
-    writeFileSync5(this.#tempFilename, str2);
+    writeFileSync6(this.#tempFilename, str2);
     renameSync(this.#tempFilename, this.#filename);
   }
 };
@@ -8066,136 +9115,136 @@ var JSONFileSync = class extends DataFileSync {
 
 // src/lib/session-data-manager.ts
 init_temp_dir();
-import { mkdirSync as mkdirSync8, writeFileSync as writeFileSync6 } from "fs";
-import { join as join14 } from "path";
+import { mkdirSync as mkdirSync9, writeFileSync as writeFileSync7 } from "fs";
+import { join as join18 } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
 
 // src/types/monitoring.ts
-import { z as z34 } from "zod";
-var MCPCallRecordSchema = z34.object({
-  callId: z34.string(),
-  timestamp: z34.string(),
+import { z as z38 } from "zod";
+var MCPCallRecordSchema = z38.object({
+  callId: z38.string(),
+  timestamp: z38.string(),
   // ISO timestamp
-  toolName: z34.string(),
-  parameters: z34.record(z34.any()),
-  result: z34.any(),
-  success: z34.boolean(),
-  duration: z34.number(),
+  toolName: z38.string(),
+  parameters: z38.record(z38.any()),
+  result: z38.any(),
+  success: z38.boolean(),
+  duration: z38.number(),
   // milliseconds
-  nextSuggestedTool: z34.string().optional()
+  nextSuggestedTool: z38.string().optional()
 });
-var TestExecutionRecordSchema = z34.object({
-  executionId: z34.string(),
-  timestamp: z34.string(),
-  type: z34.enum(["compilation", "test_run", "database_build"]),
-  success: z34.boolean(),
-  details: z34.record(z34.any()),
-  metrics: z34.object({
-    passRate: z34.number().optional(),
-    coverage: z34.number().optional(),
-    performance: z34.number().optional()
+var TestExecutionRecordSchema = z38.object({
+  executionId: z38.string(),
+  timestamp: z38.string(),
+  type: z38.enum(["compilation", "test_run", "database_build"]),
+  success: z38.boolean(),
+  details: z38.record(z38.any()),
+  metrics: z38.object({
+    passRate: z38.number().optional(),
+    coverage: z38.number().optional(),
+    performance: z38.number().optional()
   }).optional()
 });
-var QualityScoreRecordSchema = z34.object({
-  scoreId: z34.string(),
-  timestamp: z34.string(),
-  overallScore: z34.number().min(0).max(100),
+var QualityScoreRecordSchema = z38.object({
+  scoreId: z38.string(),
+  timestamp: z38.string(),
+  overallScore: z38.number().min(0).max(100),
   // 0-100
-  dimensions: z34.object({
-    syntacticCorrectness: z34.number().min(0).max(100),
-    testCoverageResults: z34.number().min(0).max(100),
-    documentationQuality: z34.number().min(0).max(100),
-    functionalCorrectness: z34.number().min(0).max(100)
+  dimensions: z38.object({
+    syntacticCorrectness: z38.number().min(0).max(100),
+    testCoverageResults: z38.number().min(0).max(100),
+    documentationQuality: z38.number().min(0).max(100),
+    functionalCorrectness: z38.number().min(0).max(100)
   }),
-  grade: z34.enum(["A", "B", "C", "D", "F"]),
-  recommendations: z34.array(z34.string())
+  grade: z38.enum(["A", "B", "C", "D", "F"]),
+  recommendations: z38.array(z38.string())
 });
-var QueryStateSchema = z34.object({
-  filesPresent: z34.array(z34.string()),
-  compilationStatus: z34.enum(["unknown", "success", "failed"]),
-  testStatus: z34.enum(["unknown", "passing", "failing", "no_tests"]),
-  documentationStatus: z34.enum(["unknown", "present", "missing", "incomplete"]),
-  lastActivity: z34.string()
+var QueryStateSchema = z38.object({
+  filesPresent: z38.array(z38.string()),
+  compilationStatus: z38.enum(["unknown", "success", "failed"]),
+  testStatus: z38.enum(["unknown", "passing", "failing", "no_tests"]),
+  documentationStatus: z38.enum(["unknown", "present", "missing", "incomplete"]),
+  lastActivity: z38.string()
   // ISO timestamp
 });
-var QueryDevelopmentSessionSchema = z34.object({
+var QueryDevelopmentSessionSchema = z38.object({
   // Session Metadata
-  sessionId: z34.string(),
-  queryPath: z34.string(),
-  language: z34.string(),
-  queryType: z34.string().optional(),
-  description: z34.string().optional(),
-  startTime: z34.string(),
+  sessionId: z38.string(),
+  queryPath: z38.string(),
+  language: z38.string(),
+  queryType: z38.string().optional(),
+  description: z38.string().optional(),
+  startTime: z38.string(),
   // ISO timestamp
-  endTime: z34.string().optional(),
+  endTime: z38.string().optional(),
   // ISO timestamp
-  status: z34.enum(["active", "completed", "failed", "abandoned"]),
+  status: z38.enum(["active", "completed", "failed", "abandoned"]),
   // MCP Call History
-  mcpCalls: z34.array(MCPCallRecordSchema),
+  mcpCalls: z38.array(MCPCallRecordSchema),
   // Test Execution Records
-  testExecutions: z34.array(TestExecutionRecordSchema),
+  testExecutions: z38.array(TestExecutionRecordSchema),
   // Quality Metrics
-  qualityScores: z34.array(QualityScoreRecordSchema),
+  qualityScores: z38.array(QualityScoreRecordSchema),
   // Development State
   currentState: QueryStateSchema,
-  recommendations: z34.array(z34.string()),
-  nextSuggestedTool: z34.string().optional()
+  recommendations: z38.array(z38.string()),
+  nextSuggestedTool: z38.string().optional()
 });
-var SessionFilterSchema = z34.object({
-  queryPath: z34.string().optional(),
-  status: z34.string().optional(),
-  dateRange: z34.tuple([z34.string(), z34.string()]).optional(),
-  language: z34.string().optional(),
-  queryType: z34.string().optional()
+var SessionFilterSchema = z38.object({
+  queryPath: z38.string().optional(),
+  status: z38.string().optional(),
+  dateRange: z38.tuple([z38.string(), z38.string()]).optional(),
+  language: z38.string().optional(),
+  queryType: z38.string().optional()
 });
-var ComparisonReportSchema = z34.object({
-  sessionIds: z34.array(z34.string()),
-  dimensions: z34.array(z34.string()),
-  timestamp: z34.string(),
-  results: z34.record(z34.any())
+var ComparisonReportSchema = z38.object({
+  sessionIds: z38.array(z38.string()),
+  dimensions: z38.array(z38.string()),
+  timestamp: z38.string(),
+  results: z38.record(z38.any())
 });
-var AggregateReportSchema = z34.object({
+var AggregateReportSchema = z38.object({
   filters: SessionFilterSchema,
-  timestamp: z34.string(),
-  totalSessions: z34.number(),
-  successRate: z34.number(),
-  averageQualityScore: z34.number(),
-  commonPatterns: z34.array(z34.string()),
-  recommendations: z34.array(z34.string())
+  timestamp: z38.string(),
+  totalSessions: z38.number(),
+  successRate: z38.number(),
+  averageQualityScore: z38.number(),
+  commonPatterns: z38.array(z38.string()),
+  recommendations: z38.array(z38.string())
 });
-var ExportResultSchema = z34.object({
-  format: z34.enum(["json", "html", "markdown"]),
-  filename: z34.string(),
-  content: z34.string(),
-  timestamp: z34.string()
+var ExportResultSchema = z38.object({
+  format: z38.enum(["json", "html", "markdown"]),
+  filename: z38.string(),
+  content: z38.string(),
+  timestamp: z38.string()
 });
-var FunctionalTestResultSchema = z34.object({
-  sessionId: z34.string(),
-  queryPath: z34.string(),
-  passed: z34.boolean(),
-  criteria: z34.record(z34.any()),
-  details: z34.record(z34.any()),
-  timestamp: z34.string()
+var FunctionalTestResultSchema = z38.object({
+  sessionId: z38.string(),
+  queryPath: z38.string(),
+  passed: z38.boolean(),
+  criteria: z38.record(z38.any()),
+  details: z38.record(z38.any()),
+  timestamp: z38.string()
 });
-var TestReportSchema = z34.object({
-  sessionIds: z34.array(z34.string()),
-  criteria: z34.record(z34.any()),
-  timestamp: z34.string(),
-  overallPassRate: z34.number(),
-  results: z34.array(FunctionalTestResultSchema),
-  summary: z34.record(z34.any())
+var TestReportSchema = z38.object({
+  sessionIds: z38.array(z38.string()),
+  criteria: z38.record(z38.any()),
+  timestamp: z38.string(),
+  overallPassRate: z38.number(),
+  results: z38.array(FunctionalTestResultSchema),
+  summary: z38.record(z38.any())
 });
-var MonitoringConfigSchema = z34.object({
-  storageLocation: z34.string().default(".ql-mcp-tracking/"),
-  autoTrackSessions: z34.boolean().default(true),
-  retentionDays: z34.number().default(90),
-  includeCallParameters: z34.boolean().default(true),
-  includeCallResults: z34.boolean().default(true),
-  maxActiveSessionsPerQuery: z34.number().default(3),
-  scoringFrequency: z34.enum(["per_call", "periodic", "manual"]).default("per_call"),
-  archiveCompletedSessions: z34.boolean().default(true),
-  enableRecommendations: z34.boolean().default(true),
-  enableMonitoringTools: z34.boolean().default(false)
+var MonitoringConfigSchema = z38.object({
+  storageLocation: z38.string().default(".ql-mcp-tracking/"),
+  autoTrackSessions: z38.boolean().default(true),
+  retentionDays: z38.number().default(90),
+  includeCallParameters: z38.boolean().default(true),
+  includeCallResults: z38.boolean().default(true),
+  maxActiveSessionsPerQuery: z38.number().default(3),
+  scoringFrequency: z38.enum(["per_call", "periodic", "manual"]).default("per_call"),
+  archiveCompletedSessions: z38.boolean().default(true),
+  enableRecommendations: z38.boolean().default(true),
+  enableMonitoringTools: z38.boolean().default(false)
   // Opt-in: session_* tools disabled by default for end-users
 });
 
@@ -8212,7 +9261,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join14(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join18(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -8241,14 +9290,14 @@ var SessionDataManager = class {
    */
   ensureStorageDirectory() {
     try {
-      mkdirSync8(this.storageDir, { recursive: true });
+      mkdirSync9(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync8(join14(this.storageDir, subdir), { recursive: true });
+        mkdirSync9(join18(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join14(this.storageDir, "config.json");
+      const configPath = join18(this.storageDir, "config.json");
       try {
-        writeFileSync6(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
+        writeFileSync7(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
         const err = e;
         if (err.code !== "EEXIST") throw e;
@@ -8425,10 +9474,10 @@ var SessionDataManager = class {
       if (!session) return;
       const date = new Date(session.endTime || session.startTime);
       const monthDir = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join14(this.storageDir, "sessions-archive", monthDir);
-      mkdirSync8(archiveDir, { recursive: true });
-      const archiveFile = join14(archiveDir, `${sessionId}.json`);
-      writeFileSync6(archiveFile, JSON.stringify(session, null, 2));
+      const archiveDir = join18(this.storageDir, "sessions-archive", monthDir);
+      mkdirSync9(archiveDir, { recursive: true });
+      const archiveFile = join18(archiveDir, `${sessionId}.json`);
+      writeFileSync7(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
       await this.db.write();
@@ -8479,8 +9528,8 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join14(this.storageDir, "config.json");
-    writeFileSync6(configPath, JSON.stringify(this.config, null, 2));
+    const configPath = join18(this.storageDir, "config.json");
+    writeFileSync7(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
 };
@@ -8489,7 +9538,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join14(getProjectTmpBase(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join18(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
@@ -8519,8 +9568,8 @@ function registerSessionEndTool(server) {
     "session_end",
     "End a query development session with final status",
     {
-      sessionId: z35.string().describe("ID of the session to end"),
-      status: z35.enum(["completed", "failed", "abandoned"]).describe("Final status of the session")
+      sessionId: z39.string().describe("ID of the session to end"),
+      status: z39.enum(["completed", "failed", "abandoned"]).describe("Final status of the session")
     },
     async ({ sessionId, status }) => {
       try {
@@ -8564,7 +9613,7 @@ function registerSessionGetTool(server) {
     "session_get",
     "Get complete details of a specific query development session",
     {
-      sessionId: z35.string().describe("ID of the session to retrieve")
+      sessionId: z39.string().describe("ID of the session to retrieve")
     },
     async ({ sessionId }) => {
       try {
@@ -8608,11 +9657,11 @@ function registerSessionListTool(server) {
     "session_list",
     "List query development sessions with optional filtering",
     {
-      queryPath: z35.string().optional().describe("Filter by query path (partial match)"),
-      status: z35.string().optional().describe("Filter by session status"),
-      dateRange: z35.array(z35.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
-      language: z35.string().optional().describe("Filter by programming language"),
-      queryType: z35.string().optional().describe("Filter by query type")
+      queryPath: z39.string().optional().describe("Filter by query path (partial match)"),
+      status: z39.string().optional().describe("Filter by session status"),
+      dateRange: z39.array(z39.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
+      language: z39.string().optional().describe("Filter by programming language"),
+      queryType: z39.string().optional().describe("Filter by query type")
     },
     async ({ queryPath, status, dateRange, language, queryType }) => {
       try {
@@ -8668,11 +9717,11 @@ function registerSessionUpdateStateTool(server) {
     "session_update_state",
     "Update the current state of a query development session",
     {
-      sessionId: z35.string().describe("ID of the session to update"),
-      filesPresent: z35.array(z35.string()).optional().describe("List of files present in the query development"),
-      compilationStatus: z35.enum(["unknown", "success", "failed"]).optional().describe("Current compilation status"),
-      testStatus: z35.enum(["unknown", "passing", "failing", "no_tests"]).optional().describe("Current test status"),
-      documentationStatus: z35.enum(["unknown", "present", "missing", "incomplete"]).optional().describe("Documentation status")
+      sessionId: z39.string().describe("ID of the session to update"),
+      filesPresent: z39.array(z39.string()).optional().describe("List of files present in the query development"),
+      compilationStatus: z39.enum(["unknown", "success", "failed"]).optional().describe("Current compilation status"),
+      testStatus: z39.enum(["unknown", "passing", "failing", "no_tests"]).optional().describe("Current test status"),
+      documentationStatus: z39.enum(["unknown", "present", "missing", "incomplete"]).optional().describe("Documentation status")
     },
     async ({ sessionId, filesPresent, compilationStatus, testStatus, documentationStatus }) => {
       try {
@@ -8722,8 +9771,8 @@ function registerSessionGetCallHistoryTool(server) {
     "session_get_call_history",
     "Get MCP call history for a specific session",
     {
-      sessionId: z35.string().describe("ID of the session"),
-      limit: z35.number().optional().describe("Maximum number of calls to return (most recent first)")
+      sessionId: z39.string().describe("ID of the session"),
+      limit: z39.number().optional().describe("Maximum number of calls to return (most recent first)")
     },
     async ({ sessionId, limit }) => {
       try {
@@ -8775,8 +9824,8 @@ function registerSessionGetTestHistoryTool(server) {
     "session_get_test_history",
     "Get test execution history for a specific session",
     {
-      sessionId: z35.string().describe("ID of the session"),
-      limit: z35.number().optional().describe("Maximum number of test executions to return (most recent first)")
+      sessionId: z39.string().describe("ID of the session"),
+      limit: z39.number().optional().describe("Maximum number of test executions to return (most recent first)")
     },
     async ({ sessionId, limit }) => {
       try {
@@ -8828,8 +9877,8 @@ function registerSessionGetScoreHistoryTool(server) {
     "session_get_score_history",
     "Get quality score history for a specific session",
     {
-      sessionId: z35.string().describe("ID of the session"),
-      limit: z35.number().optional().describe("Maximum number of scores to return (most recent first)")
+      sessionId: z39.string().describe("ID of the session"),
+      limit: z39.number().optional().describe("Maximum number of scores to return (most recent first)")
     },
     async ({ sessionId, limit }) => {
       try {
@@ -8881,7 +9930,7 @@ function registerSessionCalculateCurrentScoreTool(server) {
     "session_calculate_current_score",
     "Calculate current quality score for a session based on its state",
     {
-      sessionId: z35.string().describe("ID of the session")
+      sessionId: z39.string().describe("ID of the session")
     },
     async ({ sessionId }) => {
       try {
@@ -8929,8 +9978,8 @@ function registerSessionsCompareTool(server) {
     "sessions_compare",
     "Compare multiple query development sessions across specified dimensions",
     {
-      sessionIds: z35.array(z35.string()).describe("Array of session IDs to compare"),
-      dimensions: z35.array(z35.string()).optional().describe("Specific dimensions to compare (default: all)")
+      sessionIds: z39.array(z39.string()).describe("Array of session IDs to compare"),
+      dimensions: z39.array(z39.string()).optional().describe("Specific dimensions to compare (default: all)")
     },
     async ({ sessionIds, dimensions }) => {
       try {
@@ -8978,11 +10027,11 @@ function registerSessionsAggregateTool(server) {
     "sessions_aggregate",
     "Generate aggregate insights from multiple sessions based on filters",
     {
-      queryPath: z35.string().optional().describe("Filter by query path (partial match)"),
-      status: z35.string().optional().describe("Filter by session status"),
-      dateRange: z35.array(z35.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
-      language: z35.string().optional().describe("Filter by programming language"),
-      queryType: z35.string().optional().describe("Filter by query type")
+      queryPath: z39.string().optional().describe("Filter by query path (partial match)"),
+      status: z39.string().optional().describe("Filter by session status"),
+      dateRange: z39.array(z39.string()).length(2).optional().describe("Filter by date range [start, end] (ISO timestamps)"),
+      language: z39.string().optional().describe("Filter by programming language"),
+      queryType: z39.string().optional().describe("Filter by query type")
     },
     async ({ queryPath, status, dateRange, language, queryType }) => {
       try {
@@ -9024,8 +10073,8 @@ function registerSessionsExportTool(server) {
     "sessions_export",
     "Export session data in specified format for external analysis",
     {
-      sessionIds: z35.array(z35.string()).describe("Array of session IDs to export"),
-      format: z35.enum(["json", "html", "markdown"]).optional().default("json").describe("Export format")
+      sessionIds: z39.array(z39.string()).describe("Array of session IDs to export"),
+      format: z39.enum(["json", "html", "markdown"]).optional().default("json").describe("Export format")
     },
     async ({ sessionIds, format = "json" }) => {
       try {

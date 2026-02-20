@@ -1,0 +1,75 @@
+{
+  "codeqlVersion": "2.23.1",
+  "logFormat": "raw",
+  "queries": [
+    {
+      "queryName": "/workspace/QueryA.ql",
+      "totalDurationMs": 200,
+      "predicateCount": 2,
+      "predicates": [
+        {
+          "predicateName": "QueryA::source/0#abc123",
+          "position": "/workspace/QueryA.ql:10,1-12,5",
+          "durationMs": 65,
+          "resultSize": 5,
+          "pipelineCount": 1,
+          "evaluationStrategy": "SIMPLE_INTENSIONAL",
+          "dependencies": []
+        },
+        {
+          "predicateName": "QueryA::sink/0#def456",
+          "position": "/workspace/QueryA.ql:14,1-16,5",
+          "durationMs": 45,
+          "resultSize": 3,
+          "pipelineCount": 1,
+          "evaluationStrategy": "SIMPLE_INTENSIONAL",
+          "dependencies": [
+            "QueryA::source/0#abc123"
+          ]
+        }
+      ],
+      "cacheHits": 1
+    },
+    {
+      "queryName": "/workspace/QueryB.ql",
+      "totalDurationMs": 300,
+      "predicateCount": 3,
+      "predicates": [
+        {
+          "predicateName": "QueryB::entryPoint/0#jkl012",
+          "position": "/workspace/QueryB.ql:8,1-10,3",
+          "durationMs": 95,
+          "resultSize": 8,
+          "pipelineCount": 1,
+          "evaluationStrategy": "EXTENSIONAL",
+          "dependencies": []
+        },
+        {
+          "predicateName": "QueryB::flowStep/2#mno345",
+          "position": "/workspace/QueryB.ql:12,1-18,5",
+          "durationMs": 95,
+          "resultSize": 12,
+          "pipelineCount": 1,
+          "evaluationStrategy": "SIMPLE_INTENSIONAL",
+          "dependencies": [
+            "QueryB::entryPoint/0#jkl012"
+          ]
+        },
+        {
+          "predicateName": "QueryB::result/3#pqr678",
+          "position": "/workspace/QueryB.ql:20,1-22,5",
+          "durationMs": 45,
+          "resultSize": 2,
+          "pipelineCount": 1,
+          "evaluationStrategy": "SIMPLE_INTENSIONAL",
+          "dependencies": [
+            "QueryB::flowStep/2#mno345",
+            "QueryB::entryPoint/0#jkl012"
+          ]
+        }
+      ],
+      "cacheHits": 0
+    }
+  ],
+  "totalEvents": 27
+}

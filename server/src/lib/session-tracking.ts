@@ -269,7 +269,7 @@ export function withSessionTracking<T extends unknown[], R>(
   return async (..._args: T): Promise<R> => {
     const startTime = Date.now();
     let success = false;
-    let result: R;
+    let result: R | undefined;
     let sessionId: string | null = null;
 
     try {
@@ -287,9 +287,6 @@ export function withSessionTracking<T extends unknown[], R>(
       success = true;
 
       return result;
-    } catch (error) {
-      success = false;
-      throw error;
     } finally {
       const duration = Date.now() - startTime;
 
@@ -358,7 +355,7 @@ export function withAdvancedSessionTracking<T extends unknown[], R>(
   return async (..._args: T): Promise<R> => {
     const startTime = Date.now();
     let success = false;
-    let result: R;
+    let result: R | undefined;
     let sessionId: string | null = null;
 
     try {
@@ -394,9 +391,6 @@ export function withAdvancedSessionTracking<T extends unknown[], R>(
       }
 
       return result;
-    } catch (error) {
-      success = false;
-      throw error;
     } finally {
       const duration = Date.now() - startTime;
 

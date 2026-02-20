@@ -132,6 +132,6 @@ export function createCodeQLQuery(options: QueryScaffoldingOptions): QueryScaffo
       filesCreated
     };
   } catch (error) {
-    throw new Error(`Failed to create query scaffolding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to create query scaffolding: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
   }
 }

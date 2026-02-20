@@ -1,0 +1,6 @@
+{
+  "toolName": "list_query_run_results",
+  "arguments": {
+    "queryName": "LogInjection.ql"
+  }
+}

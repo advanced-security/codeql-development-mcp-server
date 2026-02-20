@@ -23,29 +23,31 @@
     "npm": ">=11.6.2"
   },
   "devDependencies": {
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.55.0"
+    "typescript-eslint": "^8.56.0"
   },
   "scripts": {
-    "build": "npm run build -w server",
+    "build": "npm run build -w server && npm run build -w extensions/vscode",
     "build-and-test": "npm run build:all && npm run test:all",
-    "build:all": "npm run tidy && npm run build -w server && npm run build -w client",
-    "clean": "npm run clean -w client -w server",
+    "build:all": "npm run tidy && npm run build -w server && npm run build -w client && npm run build -w extensions/vscode",
+    "clean": "npm run clean -w client -w server -w extensions/vscode",
     "dev:stdio": "npm run dev:stdio -w server",
     "dev:http": "npm run dev:http -w server",
     "format": "prettier --write '**/*.{yml,yaml,md}'",
     "format:check": "prettier --check '**/*.{yml,yaml,md}'",
-    "lint": "npm run lint -w client -w server",
-    "lint:fix": "npm run lint:fix -w client -w server",
+    "lint": "npm run lint -w client -w server -w extensions/vscode",
+    "lint:fix": "npm run lint:fix -w client -w server -w extensions/vscode",
     "start": "npm run start -w server",
-    "test": "npm run test:server && npm run test:client",
-    "test:all": "npm run test:server && npm run test:client",
+    "test": "npm run test:server && npm run test:client && npm run test:vscode",
+    "test:all": "npm run test:server && npm run test:client && npm run test:vscode",
     "test:client": "npm run test:integration:default -w client",
     "test:server": "npm run test -w server",
+    "test:vscode": "npm run test -w extensions/vscode",
+    "package:vscode": "npm run package -w extensions/vscode",
     "tidy": "npm run lint:fix && npm run format",
     "tidy:check": "npm run lint && npm run format:check",
     "upgrade": "npm run upgrade:node",
@@ -53,6 +55,7 @@
   },
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "extensions/vscode"
   ]
 }

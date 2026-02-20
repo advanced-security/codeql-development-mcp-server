@@ -1,0 +1,7 @@
+{
+  "toolName": "codeql_bqrs_info",
+  "arguments": {
+    "files": ["client/integration-tests/primitives/tools/codeql_bqrs_info/json_format/before/results.bqrs"],
+    "format": "json"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "sessions": [
+    {
+      "id": "integration_test_session",
+      "calls": [
+        {
+          "tool": "profile_codeql_query_from_logs",
+          "timestamp": "2025-10-08T21:00:00.000Z",
+          "status": "success",
+          "arguments": {
+            "evaluatorLog": "client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl",
+            "outputDir": "client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/after",
+            "topN": 10
+          },
+          "response": {
+            "message": "Query log profiling completed successfully",
+            "filesGenerated": [
+              "query-evaluation-profile.json",
+              "query-evaluation-profile.md"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

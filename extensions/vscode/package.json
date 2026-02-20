@@ -1,0 +1,160 @@
+{
+  "name": "vscode-codeql-development-mcp-server",
+  "displayName": "CodeQL Development MCP Server",
+  "description": "Automatically installs, configures, and manages the CodeQL Development MCP Server in VS Code.",
+  "version": "2.24.1",
+  "publisher": "advanced-security",
+  "license": "SEE LICENSE IN LICENSE",
+  "icon": "media/codeql-icon.png",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git"
+  },
+  "type": "module",
+  "homepage": "https://github.com/advanced-security/codeql-development-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
+  },
+  "engines": {
+    "vscode": "^1.109.0",
+    "node": ">=24.13.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "codeql",
+    "mcp",
+    "model-context-protocol",
+    "static-analysis",
+    "security"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.cjs",
+  "extensionDependencies": [
+    "GitHub.vscode-codeql"
+  ],
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "ql-mcp",
+        "label": "CodeQL Development MCP Server"
+      }
+    ],
+    "configuration": {
+      "title": "CodeQL MCP Server",
+      "properties": {
+        "codeql-mcp.autoInstall": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically install and update the CodeQL Development MCP Server on activation."
+        },
+        "codeql-mcp.serverVersion": {
+          "type": "string",
+          "default": "latest",
+          "description": "The npm version of codeql-development-mcp-server to install. Use 'latest' for the most recent release."
+        },
+        "codeql-mcp.serverCommand": {
+          "type": "string",
+          "default": "node",
+          "description": "Command to launch the MCP server. The default 'node' runs the bundled server. Override to 'npx' to download from npm, or provide a custom path."
+        },
+        "codeql-mcp.serverArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Custom arguments for the MCP server command. When empty, the bundled server entry point is used automatically. Set to e.g. ['/path/to/server/dist/codeql-development-mcp-server.js'] for local development."
+        },
+        "codeql-mcp.watchCodeqlExtension": {
+          "type": "boolean",
+          "default": true,
+          "description": "Watch for CodeQL databases and query results created by the CodeQL extension."
+        },
+        "codeql-mcp.additionalEnv": {
+          "type": "object",
+          "default": {},
+          "description": "Additional environment variables to pass to the MCP server process.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "codeql-mcp.additionalDatabaseDirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional directories to search for CodeQL databases. Appended to CODEQL_DATABASES_BASE_DIRS alongside the vscode-codeql storage paths."
+        },
+        "codeql-mcp.additionalMrvaRunResultsDirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional directories containing MRVA run result subdirectories. Appended to CODEQL_MRVA_RUN_RESULTS_DIRS alongside the vscode-codeql variant analysis storage path."
+        },
+        "codeql-mcp.additionalQueryRunResultsDirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional directories containing query run result subdirectories. Appended to CODEQL_QUERY_RUN_RESULTS_DIRS alongside the vscode-codeql query storage path."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "codeql-mcp.reinstallServer",
+        "title": "Reinstall MCP Server",
+        "category": "CodeQL MCP"
+      },
+      {
+        "command": "codeql-mcp.reinstallPacks",
+        "title": "Reinstall CodeQL Tool Query Packs",
+        "category": "CodeQL MCP"
+      },
+      {
+        "command": "codeql-mcp.showStatus",
+        "title": "Show Status",
+        "category": "CodeQL MCP"
+      },
+      {
+        "command": "codeql-mcp.showLogs",
+        "title": "Show Logs",
+        "category": "CodeQL MCP"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "npm run clean && npm run lint && npm run bundle",
+    "bundle": "node esbuild.config.js",
+    "bundle:server": "node scripts/bundle-server.js",
+    "clean": "rm -rf dist server *.vsix",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint src/ test/ --fix",
+    "package": "vsce package --no-dependencies --out codeql-development-mcp-server.vsix",
+    "test": "vitest --run",
+    "test:coverage": "vitest --run --coverage",
+    "test:watch": "vitest --watch",
+    "vscode:prepublish": "npm run clean && npm run lint && npm run bundle && npm run bundle:server",
+    "watch": "node esbuild.config.js --watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.3.0",
+    "@types/vscode": "^1.109.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.3",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "glob": "^13.0.6",
+    "mocha": "^11.7.5",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.0",
+    "vitest": "^4.0.18"
+  }
+}

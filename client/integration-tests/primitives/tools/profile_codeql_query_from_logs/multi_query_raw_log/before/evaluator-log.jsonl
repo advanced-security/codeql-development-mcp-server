@@ -1,0 +1,298 @@
+{
+  "time" : "2025-10-08T20:00:00.000000000Z",
+  "type" : "LOG_HEADER",
+  "eventId" : 0,
+  "nanoTime" : 100000000,
+  "codeqlVersion" : "2.23.1",
+  "logVersion" : "0.5.0"
+}
+
+{
+  "time" : "2025-10-08T20:00:01.000000000Z",
+  "type" : "QUERY_STARTED",
+  "eventId" : 1,
+  "nanoTime" : 1000000000,
+  "queryName" : "/workspace/QueryA.ql",
+  "stages" : [ 0, 1 ]
+}
+
+{
+  "time" : "2025-10-08T20:00:01.010000000Z",
+  "type" : "PREDICATE_STARTED",
+  "eventId" : 2,
+  "nanoTime" : 1010000000,
+  "raHash" : "a1b2c3d4e5f601234567890ab01",
+  "predicateName" : "QueryA::source/0#abc123",
+  "appearsAs" : {
+    "QueryA::source/0#abc123" : [ 0 ]
+  },
+  "predicateType" : "SIMPLE_INTENSIONAL",
+  "position" : "/workspace/QueryA.ql:10,1-12,5",
+  "dependencies" : { },
+  "queryCausingWork" : 1
+}
+
+{
+  "time" : "2025-10-08T20:00:01.020000000Z",
+  "type" : "PIPELINE_STARTED",
+  "eventId" : 3,
+  "nanoTime" : 1020000000,
+  "predicateStartEvent" : 2,
+  "raReference" : "pipeline"
+}
+
+{
+  "time" : "2025-10-08T20:00:01.070000000Z",
+  "type" : "PIPELINE_COMPLETED",
+  "eventId" : 4,
+  "nanoTime" : 1070000000,
+  "startEvent" : 3,
+  "counts" : [ 5 ],
+  "duplicationPercentages" : [ 0 ],
+  "resultSize" : 5
+}
+
+{
+  "time" : "2025-10-08T20:00:01.075000000Z",
+  "type" : "PREDICATE_COMPLETED",
+  "eventId" : 5,
+  "nanoTime" : 1075000000,
+  "startEvent" : 2,
+  "resultSize" : 5
+}
+
+{
+  "time" : "2025-10-08T20:00:01.080000000Z",
+  "type" : "PREDICATE_STARTED",
+  "eventId" : 6,
+  "nanoTime" : 1080000000,
+  "raHash" : "b2c3d4e5f6012345678901bc02",
+  "predicateName" : "QueryA::sink/0#def456",
+  "appearsAs" : {
+    "QueryA::sink/0#def456" : [ 0 ]
+  },
+  "predicateType" : "SIMPLE_INTENSIONAL",
+  "position" : "/workspace/QueryA.ql:14,1-16,5",
+  "dependencies" : {
+    "QueryA::source/0#abc123" : "a1b2c3d4e5f601234567890ab01"
+  },
+  "queryCausingWork" : 1
+}
+
+{
+  "time" : "2025-10-08T20:00:01.090000000Z",
+  "type" : "PIPELINE_STARTED",
+  "eventId" : 7,
+  "nanoTime" : 1090000000,
+  "predicateStartEvent" : 6,
+  "raReference" : "pipeline"
+}
+
+{
+  "time" : "2025-10-08T20:00:01.120000000Z",
+  "type" : "PIPELINE_COMPLETED",
+  "eventId" : 8,
+  "nanoTime" : 1120000000,
+  "startEvent" : 7,
+  "counts" : [ 3 ],
+  "duplicationPercentages" : [ 0 ],
+  "resultSize" : 3
+}
+
+{
+  "time" : "2025-10-08T20:00:01.125000000Z",
+  "type" : "PREDICATE_COMPLETED",
+  "eventId" : 9,
+  "nanoTime" : 1125000000,
+  "startEvent" : 6,
+  "resultSize" : 3
+}
+
+{
+  "time" : "2025-10-08T20:00:01.130000000Z",
+  "type" : "CACHE_LOOKUP",
+  "eventId" : 10,
+  "nanoTime" : 1130000000,
+  "raHash" : "c3d4e5f60123456789012cd03",
+  "predicateName" : "QueryA::cached_helper/1#ghi789",
+  "appearsAs" : {
+    "QueryA::cached_helper/1#ghi789" : [ 0 ]
+  },
+  "isCached" : true,
+  "cacheLookupResult" : "RELATION_CACHE_HIT",
+  "relationSize" : 10
+}
+
+{
+  "time" : "2025-10-08T20:00:01.200000000Z",
+  "type" : "QUERY_COMPLETED",
+  "eventId" : 11,
+  "nanoTime" : 1200000000,
+  "startEvent" : 1,
+  "terminationType" : "COMPLETED_SUCCESSFULLY"
+}
+
+{
+  "time" : "2025-10-08T20:00:02.000000000Z",
+  "type" : "QUERY_STARTED",
+  "eventId" : 12,
+  "nanoTime" : 2000000000,
+  "queryName" : "/workspace/QueryB.ql",
+  "stages" : [ 0, 1 ]
+}
+
+{
+  "time" : "2025-10-08T20:00:02.010000000Z",
+  "type" : "PREDICATE_STARTED",
+  "eventId" : 13,
+  "nanoTime" : 2010000000,
+  "raHash" : "d4e5f601234567890123de04",
+  "predicateName" : "QueryB::entryPoint/0#jkl012",
+  "appearsAs" : {
+    "QueryB::entryPoint/0#jkl012" : [ 0 ]
+  },
+  "predicateType" : "EXTENSIONAL",
+  "position" : "/workspace/QueryB.ql:8,1-10,3",
+  "dependencies" : { },
+  "queryCausingWork" : 12
+}
+
+{
+  "time" : "2025-10-08T20:00:02.020000000Z",
+  "type" : "PIPELINE_STARTED",
+  "eventId" : 14,
+  "nanoTime" : 2020000000,
+  "predicateStartEvent" : 13,
+  "raReference" : "pipeline"
+}
+
+{
+  "time" : "2025-10-08T20:00:02.100000000Z",
+  "type" : "PIPELINE_COMPLETED",
+  "eventId" : 15,
+  "nanoTime" : 2100000000,
+  "startEvent" : 14,
+  "counts" : [ 8 ],
+  "duplicationPercentages" : [ 0 ],
+  "resultSize" : 8
+}
+
+{
+  "time" : "2025-10-08T20:00:02.105000000Z",
+  "type" : "PREDICATE_COMPLETED",
+  "eventId" : 16,
+  "nanoTime" : 2105000000,
+  "startEvent" : 13,
+  "resultSize" : 8
+}
+
+{
+  "time" : "2025-10-08T20:00:02.110000000Z",
+  "type" : "PREDICATE_STARTED",
+  "eventId" : 17,
+  "nanoTime" : 2110000000,
+  "raHash" : "e5f6012345678901234ef05",
+  "predicateName" : "QueryB::flowStep/2#mno345",
+  "appearsAs" : {
+    "QueryB::flowStep/2#mno345" : [ 0 ]
+  },
+  "predicateType" : "SIMPLE_INTENSIONAL",
+  "position" : "/workspace/QueryB.ql:12,1-18,5",
+  "dependencies" : {
+    "QueryB::entryPoint/0#jkl012" : "d4e5f601234567890123de04"
+  },
+  "queryCausingWork" : 12
+}
+
+{
+  "time" : "2025-10-08T20:00:02.120000000Z",
+  "type" : "PIPELINE_STARTED",
+  "eventId" : 18,
+  "nanoTime" : 2120000000,
+  "predicateStartEvent" : 17,
+  "raReference" : "pipeline"
+}
+
+{
+  "time" : "2025-10-08T20:00:02.200000000Z",
+  "type" : "PIPELINE_COMPLETED",
+  "eventId" : 19,
+  "nanoTime" : 2200000000,
+  "startEvent" : 18,
+  "counts" : [ 12 ],
+  "duplicationPercentages" : [ 0 ],
+  "resultSize" : 12
+}
+
+{
+  "time" : "2025-10-08T20:00:02.205000000Z",
+  "type" : "PREDICATE_COMPLETED",
+  "eventId" : 20,
+  "nanoTime" : 2205000000,
+  "startEvent" : 17,
+  "resultSize" : 12
+}
+
+{
+  "time" : "2025-10-08T20:00:02.210000000Z",
+  "type" : "PREDICATE_STARTED",
+  "eventId" : 21,
+  "nanoTime" : 2210000000,
+  "raHash" : "f601234567890123456fg06",
+  "predicateName" : "QueryB::result/3#pqr678",
+  "appearsAs" : {
+    "QueryB::result/3#pqr678" : [ 0 ]
+  },
+  "predicateType" : "SIMPLE_INTENSIONAL",
+  "position" : "/workspace/QueryB.ql:20,1-22,5",
+  "dependencies" : {
+    "QueryB::flowStep/2#mno345" : "e5f6012345678901234ef05",
+    "QueryB::entryPoint/0#jkl012" : "d4e5f601234567890123de04"
+  },
+  "queryCausingWork" : 12
+}
+
+{
+  "time" : "2025-10-08T20:00:02.220000000Z",
+  "type" : "PIPELINE_STARTED",
+  "eventId" : 22,
+  "nanoTime" : 2220000000,
+  "predicateStartEvent" : 21,
+  "raReference" : "pipeline"
+}
+
+{
+  "time" : "2025-10-08T20:00:02.250000000Z",
+  "type" : "PIPELINE_COMPLETED",
+  "eventId" : 23,
+  "nanoTime" : 2250000000,
+  "startEvent" : 22,
+  "counts" : [ 2 ],
+  "duplicationPercentages" : [ 0 ],
+  "resultSize" : 2
+}
+
+{
+  "time" : "2025-10-08T20:00:02.255000000Z",
+  "type" : "PREDICATE_COMPLETED",
+  "eventId" : 24,
+  "nanoTime" : 2255000000,
+  "startEvent" : 21,
+  "resultSize" : 2
+}
+
+{
+  "time" : "2025-10-08T20:00:02.300000000Z",
+  "type" : "QUERY_COMPLETED",
+  "eventId" : 25,
+  "nanoTime" : 2300000000,
+  "startEvent" : 12,
+  "terminationType" : "COMPLETED_SUCCESSFULLY"
+}
+
+{
+  "time" : "2025-10-08T20:00:02.500000000Z",
+  "type" : "LOG_FOOTER",
+  "eventId" : 26,
+  "nanoTime" : 2500000000
+}

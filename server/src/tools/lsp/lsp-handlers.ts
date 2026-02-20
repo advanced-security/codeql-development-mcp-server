@@ -84,7 +84,7 @@ async function openDocumentForPosition(
     try {
       text = await readFile(absPath, 'utf-8');
     } catch (error) {
-      throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`);
+      throw new Error(`Cannot read file: ${absPath}: ${error instanceof Error ? error.message : error}`, { cause: error });
     }
   }
 

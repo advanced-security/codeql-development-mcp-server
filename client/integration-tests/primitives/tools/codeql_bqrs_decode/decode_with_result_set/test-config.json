@@ -1,0 +1,9 @@
+{
+  "toolName": "codeql_bqrs_decode",
+  "arguments": {
+    "files": ["client/integration-tests/primitives/tools/codeql_bqrs_decode/decode_with_result_set/before/results.bqrs"],
+    "format": "csv",
+    "result-set": "#select",
+    "no-titles": true
+  }
+}

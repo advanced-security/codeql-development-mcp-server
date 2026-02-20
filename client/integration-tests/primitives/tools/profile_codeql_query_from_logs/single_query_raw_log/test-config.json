@@ -1,0 +1,8 @@
+{
+  "toolName": "profile_codeql_query_from_logs",
+  "arguments": {
+    "evaluatorLog": "client/integration-tests/primitives/tools/profile_codeql_query_from_logs/single_query_raw_log/before/evaluator-log.jsonl",
+    "outputDir": "client/integration-tests/primitives/tools/profile_codeql_query_from_logs/single_query_raw_log/after",
+    "topN": 10
+  }
+}

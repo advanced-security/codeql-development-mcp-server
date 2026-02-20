@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "build",
+      "path": "extensions/vscode",
+      "label": "npm: build - extensions/vscode",
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Clean, lint, and bundle the VS Code extension"
+    },
+    {
+      "type": "npm",
+      "script": "bundle",
+      "path": "extensions/vscode",
+      "label": "npm: bundle - extensions/vscode",
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Bundle the VS Code extension (no lint)"
+    },
+    {
+      "type": "npm",
+      "script": "watch",
+      "path": "extensions/vscode",
+      "label": "npm: watch - extensions/vscode",
+      "group": "build",
+      "isBackground": true,
+      "problemMatcher": [],
+      "detail": "Watch and rebuild the VS Code extension on changes"
+    },
+    {
+      "type": "npm",
+      "script": "test",
+      "path": "extensions/vscode",
+      "label": "npm: test - extensions/vscode",
+      "group": "test",
+      "problemMatcher": [],
+      "detail": "Run unit tests for the VS Code extension"
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "path": "server",
+      "label": "npm: build - server",
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Build the MCP server"
+    }
+  ]
+}
