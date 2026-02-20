@@ -15,12 +15,33 @@ to do by hand.
 
 ## Installation
 
-Install from the VS Code Marketplace:
+### From `.vsix` (GitHub Releases)
+
+Download `codeql-development-mcp-server.vsix` from the latest
+[GitHub Release](https://github.com/advanced-security/codeql-development-mcp-server/releases),
+then install:
+
+```bash
+code --install-extension codeql-development-mcp-server.vsix
+```
+
+Or in VS Code: **Extensions** sidebar → `⋯` menu → **Install from VSIX…** → select the file.
+
+### From VS Code Marketplace
 
 1. Open VS Code
 2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
 3. Search **"CodeQL Development MCP Server"**
 4. Click **Install**
+
+### From Source
+
+From the repository root:
+
+```bash
+npm run package:vscode
+code --install-extension extensions/vscode/codeql-development-mcp-server.vsix
+```
 
 The extension requires the [CodeQL extension](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-codeql) (`GitHub.vscode-codeql`) and will prompt you to install it if missing.
 
