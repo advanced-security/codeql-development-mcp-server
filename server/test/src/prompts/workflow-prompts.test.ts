@@ -95,8 +95,8 @@ describe('Workflow Prompts', () => {
   // WORKFLOW_PROMPT_NAMES
   // -----------------------------------------------------------------------
   describe('WORKFLOW_PROMPT_NAMES', () => {
-    it('should contain 10 prompt names', () => {
-      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(10);
+    it('should contain 11 prompt names', () => {
+      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(11);
     });
 
     it('should be sorted alphabetically', () => {

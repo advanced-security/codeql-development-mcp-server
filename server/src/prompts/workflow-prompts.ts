@@ -159,6 +159,19 @@ export const sarifRankSchema = z.object({
 });
 
 /**
+ * Schema for run_query_and_summarize_false_positives prompt parameters.
+ *
+ * Both parameters are optional.
+ */
+export const describeFalsePositivesSchema = z.object({
+  queryPath: z
+    .string()
+    .optional()
+    .describe('Path to the CodeQL query file'),
+});
+
+
+/**
  * Schema for explain_codeql_query prompt parameters.
  *
  * - `queryPath` and `language` are **required**.
@@ -222,6 +235,7 @@ export const WORKFLOW_PROMPT_NAMES = [
   'ql_lsp_iterative_development',
   'ql_tdd_advanced',
   'ql_tdd_basic',
+  'run_query_and_summarize_false_positives',
   'sarif_rank_false_positives',
   'sarif_rank_true_positives',
   'test_driven_development',
@@ -464,6 +478,35 @@ export function registerWorkflowPrompts(server: McpServer): void {
       if (queryId || sarifPath) {
         contextSection += '\n';
       }
+
+      return {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: contextSection + template
+            }
+          }
+        ]
+      };
+    }
+  );
+
+  // Run a query and describe its false positives
+  server.prompt(
+    'run_query_and_summarize_false_positives',
+    'Help a user figure out where their query may need improvement to have a lower false positive rate',
+    describeFalsePositivesSchema.shape,
+    async ({ queryPath }) => {
+      const template = loadPromptTemplate('run-query-and-summarize-false-positives.prompt.md');
+
+      let contextSection = '## Analysis Context\n\n';
+      if (queryPath) {
+        contextSection += `- **Query Path**: ${queryPath}\n`;
+      }
+
+      contextSection += '\n';
 
       return {
         messages: [

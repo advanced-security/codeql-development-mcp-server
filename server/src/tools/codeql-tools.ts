@@ -40,6 +40,7 @@ import {
   registerProfileCodeQLQueryFromLogsTool,
   registerProfileCodeQLQueryTool,
   registerQuickEvaluateTool,
+  registerReadDatabaseSourceTool,
   registerRegisterDatabaseTool
 } from './codeql';
 import { logger } from '../utils/logger';
@@ -168,5 +169,6 @@ export function registerCodeQLTools(server: McpServer): void {
   registerProfileCodeQLQueryFromLogsTool(server);
   registerProfileCodeQLQueryTool(server);
   registerQuickEvaluateTool(server);
+  registerReadDatabaseSourceTool(server);
   registerRegisterDatabaseTool(server);
 }

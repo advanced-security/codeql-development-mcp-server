@@ -4,7 +4,7 @@
 
 ## Overview
 
-The server provides **10 prompts** that guide AI assistants through common CodeQL development workflows. Each prompt is backed by a `*.prompt.md` file containing structured instructions.
+The server provides **11 prompts** that guide AI assistants through common CodeQL development workflows. Each prompt is backed by a `*.prompt.md` file containing structured instructions.
 
 ## Prompt Reference
 
@@ -17,6 +17,7 @@ The server provides **10 prompts** that guide AI assistants through common CodeQ
 | `ql_tdd_basic`                 | Test-driven CodeQL query development checklist — write tests first, implement query, iterate until tests pass        |
 | `sarif_rank_false_positives`   | Analyze SARIF results to identify likely false positives in CodeQL query results                                     |
 | `sarif_rank_true_positives`    | Analyze SARIF results to identify likely true positives in CodeQL query results                                      |
+| `run_query_and_summarize_false_positives` | Run a CodeQL query and summarize its false positives                                                                 |
 | `test_driven_development`      | Test-driven development workflow for CodeQL queries using MCP tools                                                  |
 | `tools_query_workflow`         | Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure |
 | `workshop_creation_workflow`   | Guide for creating CodeQL query development workshops from production-grade queries                                  |
