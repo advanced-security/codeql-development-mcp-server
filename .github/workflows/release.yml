@@ -139,6 +139,22 @@ jobs:
       version: ${{ needs.resolve-version.outputs.version }}
 
   # ─────────────────────────────────────────────────────────────────────────────
+  # Step 3c: Build the VS Code extension VSIX
+  #
+  # Checks out the clean tag, builds the server and extension (including the
+  # bundled MCP server), and packages the self-contained VSIX. Runs in parallel
+  # with npm/CodeQL publishing since it only needs the tag.
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-vsix:
+    name: Build VSIX Extension
+    needs: [resolve-version, ensure-tag]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-vsix.yml
+    with:
+      version: ${{ needs.resolve-version.outputs.version }}
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # Step 4: Create GitHub Release
   #
   # Downloads the clean build artifact (from npm workflow) and pack bundles
@@ -153,7 +169,7 @@ jobs:
       always() && !failure() && !cancelled()
       && needs.resolve-version.outputs.create_github_release == 'true'
       && needs.resolve-version.outputs.publish_npm == 'true'
-    needs: [resolve-version, ensure-tag, publish-npm, publish-codeql]
+    needs: [resolve-version, ensure-tag, publish-npm, publish-codeql, build-vsix]
     runs-on: ubuntu-latest
 
     permissions:
@@ -170,6 +186,12 @@ jobs:
         with:
           name: codeql-tool-query-packs-${{ needs.resolve-version.outputs.version }}
           path: dist-packs
+
+      - name: Release - Download VSIX artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: codeql-development-mcp-server-vsix-${{ needs.resolve-version.outputs.version }}
+          path: dist-vsix
 
       - name: Release - Create distribution directory
         run: |
@@ -217,6 +239,7 @@ jobs:
           files: |
             codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.tar.gz
             dist-packs/*.tar.gz
+            dist-vsix/codeql-development-mcp-server.vsix
           generate_release_notes: true
           tag_name: ${{ needs.resolve-version.outputs.version }}
 
@@ -238,6 +261,7 @@ jobs:
             echo "| CodeQL pack publish | ⏭️ Skipped (packs bundled only) |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "| Distribution archive | ✅ Created |" >> $GITHUB_STEP_SUMMARY
+          echo "| VSIX extension | ✅ Built |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub Release | ✅ Created |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Package Contents" >> $GITHUB_STEP_SUMMARY

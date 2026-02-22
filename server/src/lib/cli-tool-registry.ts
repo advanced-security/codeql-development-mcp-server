@@ -83,8 +83,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Separate positional arguments from named options
         // Extract tool-specific parameters that should not be passed to CLI
         // Note: format is extracted for tools that use it internally but not on CLI
-        // For codeql_bqrs_interpret, codeql_bqrs_decode, codeql_generate_query-help, and codeql_database_analyze, format should be passed to CLI
-        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze';
+        // For codeql_bqrs_interpret, codeql_bqrs_decode, codeql_bqrs_info, codeql_generate_query-help, and codeql_database_analyze, format should be passed to CLI
+        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_bqrs_info' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze';
         
         const extractedParams = formatShouldBePassedToCLI
           ? {
@@ -349,36 +349,46 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             break;
         }
 
-        // Set up logging directory for query/test runs
+        // Set up logging directory for query/test/analyze runs
         let queryLogDir: string | undefined;
-        if (name === 'codeql_query_run' || name === 'codeql_test_run') {
+        if (name === 'codeql_query_run' || name === 'codeql_test_run' || name === 'codeql_database_analyze') {
           queryLogDir = getOrCreateLogDirectory(customLogDir as string | undefined);
           logger.info(`Using log directory for ${name}: ${queryLogDir}`);
-          
+
           // Create timestamp file to track when query/test run started
           const timestampPath = join(queryLogDir, 'timestamp');
           writeFileSync(timestampPath, Date.now().toString(), 'utf8');
-          
+
           // Set the --logdir option for CodeQL CLI
           options.logdir = queryLogDir;
-          
+
           // Set verbosity to progress+ to generate detailed query.log/test.log
           if (!options.verbosity) {
             options.verbosity = 'progress+';
           }
-          
-          // For query run, also handle the deprecated evaluator-log parameter and default output
+
+          // Set evaluator-log if not explicitly provided
+          if (!options['evaluator-log']) {
+            options['evaluator-log'] = join(queryLogDir, 'evaluator-log.jsonl');
+          }
+
+          // Enable --tuple-counting by default for evaluator logging
+          if (options['tuple-counting'] === undefined) {
+            options['tuple-counting'] = true;
+          }
+
+          // For query run, also handle default output
           if (name === 'codeql_query_run') {
-            // If evaluator-log was explicitly provided (deprecated), use it
-            // Otherwise, set it to the log directory
-            if (!options['evaluator-log']) {
-              options['evaluator-log'] = join(queryLogDir, 'evaluator-log.jsonl');
-            }
-            
             // If output was not explicitly provided, set it to the log directory
             if (!options.output) {
               options.output = join(queryLogDir, 'results.bqrs');
             }
+          }
+
+          // Ensure the parent directory of --output exists (the CLI will not create it)
+          if (options.output && typeof options.output === 'string') {
+            const outputDir = dirname(options.output);
+            mkdirSync(outputDir, { recursive: true });
           }
         }
 
@@ -403,7 +413,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           const defaultExamplesPath = resolve(packageRootDir, 'ql', 'javascript', 'examples');
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS
             || (existsSync(defaultExamplesPath) ? defaultExamplesPath : undefined);
-          if (additionalPacksPath && (name === 'codeql_test_run' || name === 'codeql_query_run' || name === 'codeql_query_compile')) {
+          if (additionalPacksPath && (name === 'codeql_test_run' || name === 'codeql_query_run' || name === 'codeql_query_compile' || name === 'codeql_database_analyze')) {
             options['additional-packs'] = additionalPacksPath;
           }
           
@@ -421,28 +431,59 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Post-execution processing for codeql_query_run
         if (name === 'codeql_query_run' && result.success && queryLogDir) {
-          // Generate SARIF interpretation if results.bqrs exists
+          // Generate SARIF interpretation if results.bqrs exists and query path is known
           const bqrsPath = options.output as string;
-          const sarifPath = join(queryLogDir, 'results.sarif');
-          
-          if (existsSync(bqrsPath)) {
+          const sarifPath = join(queryLogDir, 'results-interpreted.sarif');
+
+          // The query file path is the last positional argument (set during query resolution)
+          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : undefined;
+
+          if (existsSync(bqrsPath) && queryFilePath) {
             try {
-              const sarifResult = await executeCodeQLCommand(
-                'bqrs interpret',
-                { format: 'sarif-latest', output: sarifPath },
-                [bqrsPath]
+              const sarifResult = await interpretBQRSFile(
+                bqrsPath,
+                queryFilePath,
+                'sarif-latest',
+                sarifPath,
+                logger
               );
-              
+
               if (sarifResult.success) {
                 logger.info(`Generated SARIF interpretation at ${sarifPath}`);
+              } else {
+                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
               }
             } catch (error) {
               logger.warn(`Failed to generate SARIF interpretation: ${error}`);
             }
+          } else if (existsSync(bqrsPath) && !queryFilePath) {
+            logger.warn('Skipping SARIF interpretation: query file path not available');
           }
-          
+
           // Process evaluation results
           result = await processQueryRunResults(result, params, logger);
+        }
+
+        // Post-execution: generate evaluator log summary for query run / database analyze
+        if ((name === 'codeql_query_run' || name === 'codeql_database_analyze') && result.success && queryLogDir) {
+          const evalLogPath = options['evaluator-log'] as string | undefined;
+          if (evalLogPath && existsSync(evalLogPath)) {
+            try {
+              const summaryPath = evalLogPath.replace(/\.jsonl$/, '.summary.jsonl');
+              // codeql generate log-summary takes positional args: <input> [<result>]
+              const summaryResult = await executeCodeQLCommand(
+                'generate log-summary',
+                { format: 'predicates' },
+                [evalLogPath, summaryPath]
+              );
+
+              if (summaryResult.success) {
+                logger.info(`Generated evaluator log summary at ${summaryPath}`);
+              }
+            } catch (error) {
+              logger.warn(`Failed to generate evaluator log summary: ${error}`);
+            }
+          }
         }
 
         // Process the result
@@ -638,7 +679,7 @@ async function resolveQueryPath(
       resolvedQueries = JSON.parse(resolveResult.stdout);
     } catch (parseError) {
       logger.error('Failed to parse resolve queries output:', parseError);
-      throw new Error('Failed to parse resolve queries output');
+      throw new Error('Failed to parse resolve queries output', { cause: parseError });
     }
     
     // Find the query that matches the requested name exactly

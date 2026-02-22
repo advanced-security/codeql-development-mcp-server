@@ -72,15 +72,15 @@ export async function registerDatabase(dbPath: string): Promise<string> {
       const errorCode = (error as { code?: string }).code;
       if (errorCode === 'ENOENT') {
         if (error.message.includes('codeql-database.yml')) {
-          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`);
+          throw new Error(`Missing required codeql-database.yml in: ${dbPath}`, { cause: error });
         }
-        throw new Error(`Database path does not exist: ${dbPath}`);
+        throw new Error(`Database path does not exist: ${dbPath}`, { cause: error });
       }
       if (errorCode === 'EACCES') {
-        throw new Error(`Database path does not exist: ${dbPath}`);
+        throw new Error(`Database path does not exist: ${dbPath}`, { cause: error });
       }
     }
-    throw new Error(`Failed to register database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to register database: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
   }
 }
 

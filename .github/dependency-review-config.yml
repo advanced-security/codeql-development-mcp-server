@@ -1,0 +1,53 @@
+# Dependency Review Configuration
+# https://github.com/actions/dependency-review-action?tab=readme-ov-file#configuration-options
+#
+# All allowed packages are transitive devDependencies that cannot be directly
+# controlled. They come from:
+#   - @vscode/vsce (VS Code extension packaging tool) — 16 packages
+#   - mocha (VS Code integration test runner) — 1 package
+#
+# None of these packages are bundled into the published extension (.vsix) or
+# the published npm package (codeql-development-mcp-server). They are only
+# present during development and CI builds.
+
+# Fail only on critical/high severity vulnerabilities in production dependencies.
+fail-on-severity: 'high'
+
+# Allow specific transitive devDependencies with OpenSSF Scorecard below
+# the repository threshold of 3. Each is a transitive dependency of either
+# @vscode/vsce or mocha and cannot be removed or replaced.
+allow-packages:
+  # @vscode/vsce → form-data → asynckit
+  - 'pkg:npm/asynckit'
+  # @vscode/vsce → keytar → prebuild-install → tar-fs → tar-stream → bl → buffer → base64-js
+  - 'pkg:npm/base64-js'
+  # @vscode/vsce → form-data → combined-stream
+  - 'pkg:npm/combined-stream'
+  # @vscode/vsce → form-data → combined-stream → delayed-stream
+  - 'pkg:npm/delayed-stream'
+  # @vscode/vsce → @azure/identity → @azure/msal-node → jsonwebtoken → jws → jwa → ecdsa-sig-formatter
+  - 'pkg:npm/ecdsa-sig-formatter'
+  # @vscode/vsce → yauzl → fd-slicer
+  - 'pkg:npm/fd-slicer'
+  # mocha → yargs → get-caller-file
+  - 'pkg:npm/get-caller-file'
+  # @vscode/vsce → keytar → prebuild-install → tar-fs → tar-stream → bl → buffer → ieee754
+  - 'pkg:npm/ieee754'
+  # @vscode/vsce → secretlint → globby → fast-glob → merge2
+  - 'pkg:npm/merge2'
+  # @vscode/vsce → yauzl → fd-slicer → pend
+  - 'pkg:npm/pend'
+  # @vscode/vsce → keytar → prebuild-install → rc
+  - 'pkg:npm/rc'
+  # @vscode/vsce → keytar/jsonwebtoken chains → safe-buffer
+  - 'pkg:npm/safe-buffer'
+  # @vscode/vsce → keytar → prebuild-install → simple-get → simple-concat
+  - 'pkg:npm/simple-concat'
+  # @vscode/vsce → azure-devops-node-api/typed-rest-client → tunnel
+  - 'pkg:npm/tunnel'
+  # @vscode/vsce → @secretlint/secretlint-formatter-sarif → node-sarif-builder → fs-extra → universalify
+  - 'pkg:npm/universalify'
+  # @vscode/vsce → keytar → prebuild-install → tar-fs → tar-stream → readable-stream → util-deprecate
+  - 'pkg:npm/util-deprecate'
+  # @vscode/vsce → xml2js → xmlbuilder
+  - 'pkg:npm/xmlbuilder'

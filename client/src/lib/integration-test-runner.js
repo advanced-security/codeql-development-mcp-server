@@ -1024,6 +1024,19 @@ export class IntegrationTestRunner {
       } else {
         throw new Error(`test-config.json not found for ${toolName}/${testCase}`);
       }
+    } else if (toolName === "profile_codeql_query_from_logs") {
+      // Read from test-config.json for profile_codeql_query_from_logs tool
+      const testConfigPath = path.join(testCaseDir, "test-config.json");
+      if (fs.existsSync(testConfigPath)) {
+        const testConfig = JSON.parse(fs.readFileSync(testConfigPath, "utf8"));
+        if (testConfig.arguments) {
+          Object.assign(params, testConfig.arguments);
+        } else {
+          throw new Error(`test-config.json missing arguments for ${toolName}/${testCase}`);
+        }
+      } else {
+        throw new Error(`test-config.json not found for ${toolName}/${testCase}`);
+      }
     } else if (toolName === "validate_codeql_query") {
       params.query = "from int i select i";
       params.language = "java";

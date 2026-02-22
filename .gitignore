@@ -26,6 +26,7 @@ codeql-development-mcp-server.code-workspace
 *.tar.gz
 *~
 
+.vscode/mcp.json
 .vscode/settings.json
 
 # Ignore state tracking for local, integration testing

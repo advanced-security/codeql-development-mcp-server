@@ -10,7 +10,17 @@ This guide covers installation, configuration, and usage of the CodeQL Developme
 
 ## Installation
 
-### From npm (recommended)
+### VS Code Extension (recommended)
+
+The easiest way to get started is the **VS Code extension**, which automates
+installation, configuration, and CodeQL CLI discovery.
+See the [VS Code Extension guide](./vscode/extension.md) for details.
+
+The `.vsix` can be downloaded from
+[GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
+or built from source (`npm run package:vscode` at the repository root).
+
+### From npm
 
 The package is published to the [public npm registry](https://www.npmjs.com/package/codeql-development-mcp-server). No authentication or special configuration is needed:
 
@@ -87,12 +97,15 @@ Add to your `mcp.json` file:
 
 ## Environment Variables
 
-| Variable         | Description                            | Default  |
-| ---------------- | -------------------------------------- | -------- |
-| `CODEQL_PATH`    | Absolute path to the CodeQL CLI binary | `codeql` |
-| `TRANSPORT_MODE` | `stdio` or `http`                      | `stdio`  |
-| `HTTP_PORT`      | HTTP port                              | `3000`   |
-| `DEBUG`          | Enable debug logging                   | `false`  |
+| Variable                        | Description                                                                | Default  |
+| ------------------------------- | -------------------------------------------------------------------------- | -------- |
+| `CODEQL_PATH`                   | Absolute path to the CodeQL CLI binary                                     | `codeql` |
+| `TRANSPORT_MODE`                | `stdio` or `http`                                                          | `stdio`  |
+| `HTTP_PORT`                     | HTTP port                                                                  | `3000`   |
+| `DEBUG`                         | Enable debug logging                                                       | `false`  |
+| `CODEQL_DATABASES_BASE_DIRS`    | Colon-separated directories to search for CodeQL databases                 | —        |
+| `CODEQL_QUERY_RUN_RESULTS_DIRS` | Colon-separated directories containing per-run query result subdirectories | —        |
+| `CODEQL_MRVA_RUN_RESULTS_DIRS`  | Colon-separated directories containing MRVA run result subdirectories      | —        |
 
 ## Verification
 

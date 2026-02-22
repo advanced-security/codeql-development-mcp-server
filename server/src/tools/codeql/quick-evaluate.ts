@@ -50,7 +50,7 @@ export async function quickEvaluate({
     // to perform the actual quick evaluation with the position parameters
     return resolvedOutput;
   } catch (error) {
-    throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`CodeQL evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
   }
 }
 
