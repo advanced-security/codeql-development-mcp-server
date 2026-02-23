@@ -17,13 +17,23 @@ export class MonitoringIntegrationTestRunner {
   }
 
   /**
-   * Helper method to call MCP tools with correct format
+   * Helper method to call MCP tools with correct format and timeout.
+   *
+   * All codeql_* tools invoke the CodeQL CLI or language server JVM, which
+   * can be slow in CI.  A generous 5-minute timeout avoids intermittent
+   * -32001 RequestTimeout failures.
    */
   async callTool(toolName, parameters = {}) {
-    return await this.client.callTool({
-      name: toolName,
-      arguments: parameters
-    });
+    const isCodeQLTool = toolName.startsWith("codeql_");
+    const requestOptions = {
+      timeout: isCodeQLTool ? 300000 : 60000,
+      resetTimeoutOnProgress: isCodeQLTool
+    };
+    return await this.client.callTool(
+      { name: toolName, arguments: parameters },
+      undefined,
+      requestOptions
+    );
   }
 
   /**
