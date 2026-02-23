@@ -81,13 +81,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
           LANGUAGES="actions cpp csharp go java javascript python ruby swift"
+
+          # Prerelease versions (containing a hyphen) require --allow-prerelease
+          PRERELEASE_FLAG=""
+          if [[ "${RELEASE_NAME}" == *-* ]]; then
+            PRERELEASE_FLAG="--allow-prerelease"
+            echo "Detected prerelease version — using ${PRERELEASE_FLAG}"
+          fi
+
           echo "Publishing CodeQL tool query packs..."
           for lang in ${LANGUAGES}; do
             PACK_DIR="server/ql/${lang}/tools/src"
             if [ -d "${PACK_DIR}" ]; then
               echo "📦 Publishing ${PACK_DIR}..."
-              codeql pack publish --threads=-1 -- "${PACK_DIR}"
+              codeql pack publish --threads=-1 ${PRERELEASE_FLAG} -- "${PACK_DIR}"
               echo "✅ Published ${lang} tool query pack"
             else
               echo "⚠️ Skipping ${lang}: ${PACK_DIR} not found"
