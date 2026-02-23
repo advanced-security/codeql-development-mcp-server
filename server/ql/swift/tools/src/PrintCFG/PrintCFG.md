@@ -1,4 +1,4 @@
-# Print CFG for Ruby
+# Print CFG for Swift
 
 Produces a representation of a file's Control Flow Graph (CFG) for specified source files.
 
@@ -6,7 +6,7 @@ Produces a representation of a file's Control Flow Graph (CFG) for specified sou
 
 The Control Flow Graph represents the order in which statements and expressions are executed in a program. Each node in the graph represents a control-flow element (statement or expression), and edges represent possible execution paths between them.
 
-This query outputs all CFG nodes and their successor relationships for Ruby code, which is useful for understanding program execution flow, debugging control flow issues, and analyzing code paths.
+This query outputs all CFG nodes and their successor relationships for Swift code, which is useful for understanding program execution flow, debugging control flow issues, and analyzing code paths.
 
 ## Use Cases
 
@@ -20,36 +20,36 @@ This query is primarily used for:
 
 ## Example
 
-The following Ruby code demonstrates control flow through conditional statements and loops:
+The following Swift code demonstrates control flow through conditional statements and loops:
 
-```ruby
-def example(x)
-    if x > 0  # Branching creates CFG edges
-        puts "Positive"
-    else
-        puts "Non-positive"
-    end
+```swift
+func example(x: Int) {
+    if x > 0 {  // Branching creates CFG edges
+        print("Positive")
+    } else {
+        print("Non-positive")
+    }
 
-    (0..2).each do |i|  # Iterator creates CFG paths
-        puts i
-    end
-end
+    for i in 0..<3 {  // Loop creates cyclic CFG
+        print(i)
+    }
+}
 ```
 
 In the resulting CFG:
 
 - The `if` condition creates two outgoing edges (true/false branches)
-- The `each` iterator creates paths through the block
+- The `for-in` loop creates a cycle back to the iterator
 - Each statement connects to its successor in execution order
 
 ## Output Format
 
 The query produces two relations:
 
-- `nodes(CfgNode, string, string)`: Each CFG node with its label
-- `edges(CfgNode, CfgNode)`: Successor relationships between nodes
+- `nodes(ControlFlowNode, string, string)`: Each CFG node with its label
+- `edges(ControlFlowNode, ControlFlowNode)`: Successor relationships between nodes
 
 ## References
 
-- [Ruby Control Structures](https://ruby-doc.org/core/doc/syntax/control_expressions_rdoc.html)
+- [Swift Control Flow](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/controlflow/)
 - [CodeQL Control Flow Graph](https://codeql.github.com/docs/writing-codeql-queries/about-control-flow-in-codeql/)

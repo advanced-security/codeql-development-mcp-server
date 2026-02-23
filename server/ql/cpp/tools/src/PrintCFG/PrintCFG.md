@@ -25,13 +25,13 @@ The following C++ code demonstrates control flow through conditional statements 
 ```cpp
 void example(int x) {
     int result = 0;
-    if (x > 0) {                     // COMPLIANT - Branching creates CFG edges
+    if (x > 0) {  // Branching creates CFG edges
         result = 1;
     } else {
         result = -1;
     }
 
-    for (int i = 0; i < 3; i++) {    // COMPLIANT - Loop creates cyclic CFG
+    for (int i = 0; i < 3; i++) {  // Loop creates cyclic CFG
         result = result + i;
     }
 }

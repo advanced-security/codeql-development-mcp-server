@@ -25,14 +25,14 @@ The following JavaScript code demonstrates control flow through conditional stat
 ```javascript
 function example(x) {
   if (x > 0) {
-    // COMPLIANT - Branching creates CFG edges
+    // Branching creates CFG edges
     console.log('Positive');
   } else {
     console.log('Non-positive');
   }
 
   for (let i = 0; i < 3; i++) {
-    // COMPLIANT - Loop creates cyclic CFG
+    // Loop creates cyclic CFG
     console.log(i);
   }
 }

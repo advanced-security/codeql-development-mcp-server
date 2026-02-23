@@ -24,13 +24,13 @@ The following Go code demonstrates control flow through conditional statements a
 
 ```go
 func example(x int) {
-    if x > 0 {                    // COMPLIANT - Branching creates CFG edges
+    if x > 0 {  // Branching creates CFG edges
         fmt.Println("Positive")
     } else {
         fmt.Println("Non-positive")
     }
 
-    for i := 0; i < 3; i++ {      // COMPLIANT - Loop creates cyclic CFG
+    for i := 0; i < 3; i++ {  // Loop creates cyclic CFG
         fmt.Println(i)
     }
 }

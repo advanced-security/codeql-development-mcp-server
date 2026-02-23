@@ -24,12 +24,12 @@ The following Python code demonstrates control flow through conditional statemen
 
 ```python
 def example(x):
-    if x > 0:                      # COMPLIANT - Branching creates CFG edges
+    if x > 0:  # Branching creates CFG edges
         print("Positive")
     else:
         print("Non-positive")
 
-    for i in range(3):             # COMPLIANT - Loop creates cyclic CFG
+    for i in range(3):  # Loop creates cyclic CFG
         print(i)
 ```
 
