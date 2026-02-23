@@ -57,6 +57,12 @@ jobs:
           npm run bundle
           npm run bundle:server
 
+      - name: Setup CodeQL environment for integration tests
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          add-to-path: 'true'
+          install-language-runtimes: 'false'
+
       - name: Run Extension Host integration tests
         working-directory: extensions/vscode
         run: xvfb-run -a npm run test:integration
