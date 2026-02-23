@@ -1,4 +1,4 @@
-# Call Graph From for Python
+# CallGraphFrom for Python
 
 Displays calls made from a specified function, showing the call graph outbound from the source function.
 

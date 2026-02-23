@@ -1,4 +1,4 @@
-# Call Graph From for Go
+# CallGraphFrom for Go
 
 Displays calls made from a specified function, showing the call graph outbound from the source function.
 

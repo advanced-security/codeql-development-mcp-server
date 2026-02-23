@@ -1,4 +1,4 @@
-# Call Graph From for Ruby
+# CallGraphFrom for Ruby
 
 Displays calls made from a specified method, showing the call graph outbound from the source method.
 
