@@ -61,6 +61,27 @@ export class IntegrationTestRunner {
   }
 
   /**
+   * Call an MCP tool with an appropriate timeout.
+   *
+   * All codeql_* tools invoke the CodeQL CLI or language server JVM, which
+   * can be slow in CI (cold JVM start, network pack downloads, Windows
+   * runner overhead).  A generous 5-minute timeout avoids intermittent
+   * -32001 RequestTimeout failures.
+   */
+  async callTool(toolName, args) {
+    const isCodeQLTool = toolName.startsWith("codeql_");
+    const requestOptions = {
+      timeout: isCodeQLTool ? 300000 : 60000,
+      resetTimeoutOnProgress: isCodeQLTool
+    };
+    return await this.client.callTool(
+      { name: toolName, arguments: args },
+      undefined,
+      requestOptions
+    );
+  }
+
+  /**
    * Run integration tests for a specific tool
    */
   async runToolIntegrationTests(toolName, integrationTestsDir, filterTests = null) {
@@ -268,12 +289,9 @@ export class IntegrationTestRunner {
         }
 
         // Run the tool
-        const result = await this.client.callTool({
-          name: toolName,
-          arguments: {
-            "files": files,
-            "in-place": true
-          }
+        const result = await this.callTool(toolName, {
+          "files": files,
+          "in-place": true
         });
 
         this.logger.log(`Tool ${toolName} result: ${result.content?.[0]?.text || "No output"}`);
@@ -337,11 +355,8 @@ export class IntegrationTestRunner {
         const _afterContent = fs.readFileSync(afterPath, "utf8");
 
         // Run the codeql_lsp_diagnostics tool on the before content
-        const result = await this.client.callTool({
-          name: toolName,
-          arguments: {
-            ql_code: beforeContent
-          }
+        const result = await this.callTool(toolName, {
+          ql_code: beforeContent
         });
 
         this.logger.log(
@@ -472,10 +487,7 @@ export class IntegrationTestRunner {
       resolvePathPlaceholders(testConfig.arguments, this.logger);
 
       // Run the tool with custom arguments
-      const result = await this.client.callTool({
-        name: toolName,
-        arguments: testConfig.arguments
-      });
+      const result = await this.callTool(toolName, testConfig.arguments);
 
       this.logger.log(`Tool ${toolName} result: ${result.content?.[0]?.text || "No output"}`);
 
@@ -659,10 +671,7 @@ export class IntegrationTestRunner {
         // Check if qlpack.yml exists and install dependencies
         if (fs.existsSync(path.join(packDir, "codeql-pack.yml"))) {
           try {
-            await this.client.callTool({
-              name: "codeql_pack_install",
-              arguments: { packDir: packDir }
-            });
+            await this.callTool("codeql_pack_install", { packDir: packDir });
           } catch (installError) {
             this.logger.log(
               `   Warning: Could not install pack dependencies: ${installError.message}`
@@ -708,9 +717,8 @@ export class IntegrationTestRunner {
 
               if (fs.existsSync(absoluteTestSourceDir)) {
                 this.logger.log(`Database not found, extracting from ${testSourceDir}`);
-                const extractResult = await this.client.callTool({
-                  name: "codeql_test_extract",
-                  arguments: { tests: [testSourceDir] }
+                const extractResult = await this.callTool("codeql_test_extract", {
+                  tests: [testSourceDir]
                 });
                 if (extractResult.isError) {
                   const errorText = extractResult.content?.[0]?.text || "Unknown error";
@@ -739,38 +747,10 @@ export class IntegrationTestRunner {
         params = await this.getToolSpecificParams(toolName, testCase);
       }
 
-      // Call the tool with appropriate parameters
-      // Set extended timeout for long-running operations
-      const longRunningTools = [
-        "codeql_database_analyze",
-        "codeql_database_create",
-        "codeql_lsp_completion",
-        "codeql_lsp_definition",
-        "codeql_lsp_diagnostics",
-        "codeql_lsp_references",
-        "codeql_query_run",
-        "codeql_test_run"
-      ];
+      // Call the tool with appropriate parameters (timeout is handled by this.callTool)
+      this.logger.log(`Calling tool ${toolName}`);
 
-      const requestOptions = longRunningTools.includes(toolName)
-        ? {
-            timeout: 300000, // 5 minutes for long-running tools
-            resetTimeoutOnProgress: true
-          }
-        : {
-            timeout: 60000 // 60 seconds for other tools
-          };
-
-      this.logger.log(`Calling tool ${toolName} with timeout: ${requestOptions.timeout}ms`);
-
-      const result = await this.client.callTool(
-        {
-          name: toolName,
-          arguments: params
-        },
-        undefined,
-        requestOptions
-      );
+      const result = await this.callTool(toolName, params);
 
       // For monitoring tests, we primarily check if the tool executed successfully
       // Special handling for session management tools that expect sessions to exist
@@ -979,9 +959,8 @@ export class IntegrationTestRunner {
         if (!fs.existsSync(databaseDir) && fs.existsSync(testDir)) {
           this.logger.log(`Database not found for query run, extracting first: ${databaseDir}`);
           // Call codeql test extract to create the database
-          const extractResult = await this.client.callTool({
-            name: "codeql_test_extract",
-            arguments: { tests: [testDir] }
+          const extractResult = await this.callTool("codeql_test_extract", {
+            tests: [testDir]
           });
           if (extractResult.isError) {
             throw new Error(`Failed to extract database: ${extractResult.content[0].text}`);

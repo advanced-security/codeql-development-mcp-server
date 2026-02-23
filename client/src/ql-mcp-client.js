@@ -49,20 +49,17 @@ class CodeQLMCPClient {
    * Helper method to call MCP tools with correct format
    */
   async callTool(toolName, parameters = {}, options = {}) {
-    // Set appropriate timeout based on tool type
-    // Long-running tools like query_run and test_run need extended timeouts
-    const longRunningTools = [
-      "codeql_query_run",
-      "codeql_test_run",
-      "codeql_database_analyze",
-      "codeql_database_create"
-    ];
+    // All codeql_* tools invoke the CodeQL CLI or language server JVM, which
+    // can be slow in CI (cold JVM start, network pack downloads, Windows
+    // runner overhead).  Use a generous 5-minute timeout for every CodeQL
+    // tool to avoid intermittent -32001 RequestTimeout failures.
+    const isCodeQLTool = toolName.startsWith("codeql_");
 
     const defaultOptions = {
-      // Use 5 minute timeout for long-running tools, 60 seconds for others
-      timeout: longRunningTools.includes(toolName) ? 300000 : 60000,
-      // Reset timeout on progress notifications for long-running operations
-      resetTimeoutOnProgress: longRunningTools.includes(toolName)
+      // Use 5 minute timeout for CodeQL tools, 60 seconds for others
+      timeout: isCodeQLTool ? 300000 : 60000,
+      // Reset timeout on progress notifications for CodeQL operations
+      resetTimeoutOnProgress: isCodeQLTool
     };
 
     const requestOptions = { ...defaultOptions, ...options };
