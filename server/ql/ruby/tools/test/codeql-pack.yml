@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-ruby-tools-test
-version: 2.24.2-rc1
+version: 2.24.2-rc2
 dependencies:
   advanced-security/ql-mcp-ruby-tools-src: ${workspace}
 extractor: ruby
