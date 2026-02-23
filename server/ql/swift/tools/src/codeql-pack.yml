@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-swift-tools-src
-version: 2.24.2
+version: 2.24.2-rc1
 description: 'Queries for codeql-development-mcp-server tools for swift language'
 library: false
 dependencies:
