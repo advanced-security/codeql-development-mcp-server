@@ -100,6 +100,9 @@ suite('vscode-codeql Bridge Tests', () => {
   });
 
   test('CODEQL_QUERY_RUN_RESULTS_DIRS parent should exist', async () => {
+    const codeqlExt = vscode.extensions.getExtension(CODEQL_EXTENSION_ID);
+    if (!codeqlExt) return; // vscode-codeql not installed — storage dirs won't exist
+
     const envBuilder = api.environmentBuilder;
     if (!envBuilder) return;
 
@@ -118,6 +121,9 @@ suite('vscode-codeql Bridge Tests', () => {
   });
 
   test('CODEQL_MRVA_RUN_RESULTS_DIRS parent should exist', async () => {
+    const codeqlExt = vscode.extensions.getExtension(CODEQL_EXTENSION_ID);
+    if (!codeqlExt) return; // vscode-codeql not installed — storage dirs won't exist
+
     const envBuilder = api.environmentBuilder;
     if (!envBuilder) return;
 
