@@ -8,8 +8,9 @@
 #   2. Monitoring mode (monitoring tools enabled) - tests session_* tools
 #
 # Environment Variables:
-#   HTTP_HOST              - Server host (default: localhost)
-#   HTTP_PORT              - Server port (default: 3000)
+#   MCP_MODE               - MCP transport mode (default: stdio, also: http)
+#   HTTP_HOST              - Server host for HTTP mode (default: localhost)
+#   HTTP_PORT              - Server port for HTTP mode (default: 3000)
 #   TIMEOUT_SECONDS        - Request timeout (default: 30)
 #   ENABLE_MONITORING_TOOLS - Force a specific mode instead of running both:
 #                            "true"  = only run with monitoring tools enabled
@@ -20,6 +21,7 @@
 #   ./run-integration-tests.sh                    # Run in BOTH modes (recommended)
 #   ENABLE_MONITORING_TOOLS=false ./run-integration-tests.sh  # Only default mode
 #   ENABLE_MONITORING_TOOLS=true ./run-integration-tests.sh   # Only monitoring mode
+#   MCP_MODE=http ./run-integration-tests.sh      # Run using HTTP transport
 #   ./run-integration-tests.sh --tools session_end            # Filter to specific tools
 
 set -e
@@ -29,6 +31,7 @@ CLIENT_DIR="$(dirname "$SCRIPT_DIR")"
 SERVER_DIR="$(dirname "$CLIENT_DIR")/server"
 
 # Set default environment variables
+export MCP_MODE="${MCP_MODE:-stdio}"
 export HTTP_HOST="${HTTP_HOST:-localhost}"
 export HTTP_PORT="${HTTP_PORT:-3000}"
 export TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-30}"
@@ -65,7 +68,10 @@ for arg in "$@"; do
 done
 
 echo "🚀 Starting CodeQL MCP Integration Tests"
-echo "Server URL: $URL_SCHEME://$HTTP_HOST:$HTTP_PORT/mcp"
+echo "MCP Mode: $MCP_MODE"
+if [ "$MCP_MODE" = "http" ]; then
+    echo "Server URL: $URL_SCHEME://$HTTP_HOST:$HTTP_PORT/mcp"
+fi
 
 # Step 1: Build and bundle the server code
 echo "📦 Building CodeQL MCP server bundle..."
@@ -81,43 +87,56 @@ else
 fi
 
 cd "$CLIENT_DIR"
-export MCP_MODE=http
-export MCP_SERVER_URL="$URL_SCHEME://$HTTP_HOST:$HTTP_PORT/mcp"
+
+# For HTTP mode, set the server URL for the client
+if [ "$MCP_MODE" = "http" ]; then
+    export MCP_SERVER_URL="$URL_SCHEME://$HTTP_HOST:$HTTP_PORT/mcp"
+fi
 
 # Function to run tests in a specific mode
 run_tests_in_mode() {
     local mode_name="$1"
     local enable_monitoring="$2"
-    
+    shift 2
+
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
     echo "🧪 Running integration tests: $mode_name"
     echo "═══════════════════════════════════════════════════════════════"
-    
+
     # Set the monitoring tools flag for this run
     export ENABLE_MONITORING_TOOLS="$enable_monitoring"
-    
-    # Start MCP server with current settings
-    echo "🚀 Starting MCP server (monitoring=$enable_monitoring)..."
-    "$SCRIPT_DIR/start-server.sh"
-    
-    # Wait for server startup
-    echo "⏳ Waiting for server startup..."
-    "$SCRIPT_DIR/wait-for-server.sh"
-    
+
+    if [ "$MCP_MODE" = "http" ]; then
+        # HTTP mode: start server in background, run tests, stop server
+        echo "🚀 Starting MCP server (monitoring=$enable_monitoring)..."
+        "$SCRIPT_DIR/start-server.sh"
+
+        # Wait for server startup
+        echo "⏳ Waiting for server startup..."
+        "$SCRIPT_DIR/wait-for-server.sh"
+    else
+        # stdio mode: client spawns server directly via StdioClientTransport
+        echo "📡 Using stdio transport (client spawns server directly)"
+    fi
+
     # Run the integration tests (skip pack installation since we already did it)
     echo "🧪 Running tests..."
     node src/ql-mcp-client.js integration-tests --no-install-packs "$@"
-    
-    # Stop the server before next mode
-    echo "🛑 Stopping server..."
-    "$SCRIPT_DIR/stop-server.sh"
+
+    if [ "$MCP_MODE" = "http" ]; then
+        # Stop the server before next mode
+        echo "🛑 Stopping server..."
+        "$SCRIPT_DIR/stop-server.sh"
+    fi
 }
 
 # Trap to ensure cleanup happens even if script fails
 cleanup() {
     echo "🧹 Cleaning up..."
-    "$SCRIPT_DIR/stop-server.sh" 2>/dev/null || true
+    if [ "$MCP_MODE" = "http" ]; then
+        "$SCRIPT_DIR/stop-server.sh" 2>/dev/null || true
+    fi
 }
 trap cleanup EXIT
 

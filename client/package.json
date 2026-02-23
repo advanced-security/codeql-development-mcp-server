@@ -55,8 +55,10 @@
     "test:coverage": "echo 'NOOP client test:coverage'",
     "test:integration": "scripts/run-integration-tests.sh --no-install-packs",
     "test:integration:default": "ENABLE_MONITORING_TOOLS=false scripts/run-integration-tests.sh --no-install-packs",
+    "test:integration:http": "MCP_MODE=http scripts/run-integration-tests.sh --no-install-packs",
     "test:integration:install-packs": "scripts/run-integration-tests.sh",
-    "test:integration:monitoring": "ENABLE_MONITORING_TOOLS=true scripts/run-integration-tests.sh",
+    "test:integration:monitoring": "ENABLE_MONITORING_TOOLS=true scripts/run-integration-tests.sh --no-install-packs",
+    "test:integration:stdio": "MCP_MODE=stdio scripts/run-integration-tests.sh --no-install-packs",
     "tidy": "npm run lint && npm run format"
   }
 }

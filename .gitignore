@@ -49,6 +49,9 @@ codeql-development-mcp-server.code-workspace
 # Prevent accidentally committing integration test output files in root directory
 # These should only be in client/integration-tests/primitives/tools/*/after/ directories
 /evaluator-log.json
+/client/query-results/
+/client/query-results.bqrs
+/client/query-results.sarif
 /query-results/
 /query-results.bqrs
 /query-results.sarif
