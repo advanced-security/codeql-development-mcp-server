@@ -42,6 +42,7 @@ The server provides **11 prompts** that guide AI assistants through common CodeQ
 ### Documentation and Quality
 
 - **`document_codeql_query`** — Generates standardized markdown documentation as a sibling file to a query.
+- **`run_query_and_summarize_false_positives`** — Runs a CodeQL query on a database and groups results into false-positive categories by root cause.
 - **`sarif_rank_false_positives`** / **`sarif_rank_true_positives`** — Help assess query precision by ranking SARIF results.
 
 ### Workshop Creation

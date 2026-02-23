@@ -5,11 +5,11 @@
 import AdmZip from 'adm-zip';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   readDatabaseSource,
 } from '../../../../src/tools/codeql/read-database-source';
-import { createTestTempDir } from '../../../utils/temp-dir';
+import { cleanupTestTempDir, createTestTempDir } from '../../../utils/temp-dir';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,8 +58,17 @@ async function createDirDatabase(dir: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 describe('readDatabaseSource (src.zip)', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = createTestTempDir('read-src-zip');
+  });
+
+  afterEach(() => {
+    cleanupTestTempDir(dir);
+  });
+
   it('lists all entries when filePath is omitted', async () => {
-    const dir = createTestTempDir('read-src-zip-list');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({ databasePath: dir });
@@ -73,12 +82,9 @@ describe('readDatabaseSource (src.zip)', () => {
     const listing = result as { entries: string[] };
     expect(listing.entries).toHaveLength(3);
     expect(listing.entries).toContain('home/user/repo/src/Foo.java');
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('reads a file by exact archive path', async () => {
-    const dir = createTestTempDir('read-src-zip-exact');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -92,12 +98,9 @@ describe('readDatabaseSource (src.zip)', () => {
       content: 'public class Util {}',
       totalLines: 1,
     });
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('resolves a file:// URI from a SARIF physicalLocation', async () => {
-    const dir = createTestTempDir('read-src-zip-uri');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -109,12 +112,9 @@ describe('readDatabaseSource (src.zip)', () => {
       entryPath: 'home/user/repo/src/Baz.java',
       content: 'public class Baz {}',
     });
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('applies startLine and endLine to slice the file', async () => {
-    const dir = createTestTempDir('read-src-zip-range');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -133,19 +133,14 @@ describe('readDatabaseSource (src.zip)', () => {
       ),
     );
     expect(file.totalLines).toBe(7);
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('throws a helpful error when the requested file is not in the archive', async () => {
-    const dir = createTestTempDir('read-src-zip-missing');
     await createZipDatabase(dir);
 
     await expect(
       readDatabaseSource({ databasePath: dir, filePath: 'does/not/exist.java' }),
     ).rejects.toThrow('File not found in src.zip');
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('throws when the database path does not exist', async () => {
@@ -155,14 +150,11 @@ describe('readDatabaseSource (src.zip)', () => {
   });
 
   it('throws when neither src.zip nor src/ is present', async () => {
-    const dir = createTestTempDir('read-src-no-archive');
     await fs.writeFile(join(dir, 'codeql-database.yml'), 'primaryLanguage: java\n');
 
     await expect(readDatabaseSource({ databasePath: dir })).rejects.toThrow(
       'No source archive found',
     );
-
-    await fs.rm(dir, { recursive: true });
   });
 });
 
@@ -171,8 +163,17 @@ describe('readDatabaseSource (src.zip)', () => {
 // ---------------------------------------------------------------------------
 
 describe('readDatabaseSource (src/ directory)', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = createTestTempDir('read-src-dir');
+  });
+
+  afterEach(() => {
+    cleanupTestTempDir(dir);
+  });
+
   it('lists all entries when filePath is omitted', async () => {
-    const dir = createTestTempDir('read-src-dir-list');
     await createDirDatabase(dir);
 
     const result = await readDatabaseSource({ databasePath: dir });
@@ -183,12 +184,9 @@ describe('readDatabaseSource (src/ directory)', () => {
       returnedEntries: 3,
       truncated: false,
     });
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('reads a file by relative path', async () => {
-    const dir = createTestTempDir('read-src-dir-exact');
     await createDirDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -200,12 +198,9 @@ describe('readDatabaseSource (src/ directory)', () => {
       sourceType: 'src/',
       content: 'public class Util {}',
     });
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('applies startLine and endLine', async () => {
-    const dir = createTestTempDir('read-src-dir-range');
     await createDirDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -219,19 +214,14 @@ describe('readDatabaseSource (src/ directory)', () => {
     expect(file.startLine).toBe(1);
     expect(file.endLine).toBe(2);
     expect(file.content).toBe('package com.example;\n');
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('throws a helpful error when the requested file is not in the directory', async () => {
-    const dir = createTestTempDir('read-src-dir-missing');
     await createDirDatabase(dir);
 
     await expect(
       readDatabaseSource({ databasePath: dir, filePath: 'does/not/exist.java' }),
     ).rejects.toThrow('File not found in src/');
-
-    await fs.rm(dir, { recursive: true });
   });
 });
 
@@ -240,8 +230,17 @@ describe('readDatabaseSource (src/ directory)', () => {
 // ---------------------------------------------------------------------------
 
 describe('readDatabaseSource (src.zip takes priority)', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = createTestTempDir('read-src-priority');
+  });
+
+  afterEach(() => {
+    cleanupTestTempDir(dir);
+  });
+
   it('prefers src.zip when both src.zip and src/ are present', async () => {
-    const dir = createTestTempDir('read-src-priority');
     await createZipDatabase(dir);
     // Also create a src/ directory (should be ignored)
     await fs.mkdir(join(dir, 'src'), { recursive: true });
@@ -249,8 +248,6 @@ describe('readDatabaseSource (src.zip takes priority)', () => {
     const result = await readDatabaseSource({ databasePath: dir });
 
     expect(result).toMatchObject({ sourceType: 'src.zip' });
-
-    await fs.rm(dir, { recursive: true });
   });
 });
 
@@ -259,8 +256,17 @@ describe('readDatabaseSource (src.zip takes priority)', () => {
 // ---------------------------------------------------------------------------
 
 describe('readDatabaseSource listing mode filtering', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = createTestTempDir('read-src-listing');
+  });
+
+  afterEach(() => {
+    cleanupTestTempDir(dir);
+  });
+
   it('filters entries by prefix', async () => {
-    const dir = createTestTempDir('read-src-prefix');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -275,12 +281,9 @@ describe('readDatabaseSource listing mode filtering', () => {
     for (const entry of listing.entries) {
       expect(entry.startsWith('home/user/repo/src/')).toBe(true);
     }
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('truncates entries when maxEntries is set', async () => {
-    const dir = createTestTempDir('read-src-maxentries');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -293,12 +296,9 @@ describe('readDatabaseSource listing mode filtering', () => {
     expect(listing.returnedEntries).toBe(2);
     expect(listing.entries).toHaveLength(2);
     expect(listing.truncated).toBe(true);
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('does not truncate when maxEntries exceeds total', async () => {
-    const dir = createTestTempDir('read-src-maxentries-high');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -310,12 +310,9 @@ describe('readDatabaseSource listing mode filtering', () => {
     expect(listing.totalEntries).toBe(3);
     expect(listing.returnedEntries).toBe(3);
     expect(listing.truncated).toBe(false);
-
-    await fs.rm(dir, { recursive: true });
   });
 
   it('combines prefix and maxEntries', async () => {
-    const dir = createTestTempDir('read-src-prefix-max');
     await createZipDatabase(dir);
 
     const result = await readDatabaseSource({
@@ -329,8 +326,6 @@ describe('readDatabaseSource listing mode filtering', () => {
     expect(listing.returnedEntries).toBe(1);
     expect(listing.entries).toHaveLength(1);
     expect(listing.truncated).toBe(true);
-
-    await fs.rm(dir, { recursive: true });
   });
 });
 
@@ -339,8 +334,17 @@ describe('readDatabaseSource listing mode filtering', () => {
 // ---------------------------------------------------------------------------
 
 describe('readDatabaseSource line range validation', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = createTestTempDir('read-src-bad-range');
+  });
+
+  afterEach(() => {
+    cleanupTestTempDir(dir);
+  });
+
   it('throws when startLine is greater than endLine', async () => {
-    const dir = createTestTempDir('read-src-bad-range');
     await createZipDatabase(dir);
 
     await expect(
@@ -351,8 +355,6 @@ describe('readDatabaseSource line range validation', () => {
         endLine: 2,
       }),
     ).rejects.toThrow('Invalid line range');
-
-    await fs.rm(dir, { recursive: true });
   });
 });
 
@@ -361,8 +363,17 @@ describe('readDatabaseSource line range validation', () => {
 // ---------------------------------------------------------------------------
 
 describe('readDatabaseSource ambiguous suffix match', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = createTestTempDir('read-src-ambiguous');
+  });
+
+  afterEach(() => {
+    cleanupTestTempDir(dir);
+  });
+
   it('picks the most specific (longest) suffix match', async () => {
-    const dir = createTestTempDir('read-src-ambiguous');
     await fs.writeFile(join(dir, 'codeql-database.yml'), 'primaryLanguage: java\n');
     const zip = new AdmZip();
     zip.addFile('src/Foo.java', Buffer.from('short', 'utf-8'));
@@ -378,7 +389,5 @@ describe('readDatabaseSource ambiguous suffix match', () => {
     const file = result as import('../../../../src/tools/codeql/read-database-source').DatabaseSourceFile;
     expect(file.entryPath).toBe('src/Foo.java');
     expect(file.content).toBe('short');
-
-    await fs.rm(dir, { recursive: true });
   });
 });

@@ -161,7 +161,7 @@ export const sarifRankSchema = z.object({
 /**
  * Schema for run_query_and_summarize_false_positives prompt parameters.
  *
- * The queryPath parameter is optional.
+ * All parameters are optional.
  */
 export const describeFalsePositivesSchema = z.object({
   queryPath: z
@@ -169,7 +169,6 @@ export const describeFalsePositivesSchema = z.object({
     .optional()
     .describe('Path to the CodeQL query file'),
 });
-
 
 /**
  * Schema for explain_codeql_query prompt parameters.
