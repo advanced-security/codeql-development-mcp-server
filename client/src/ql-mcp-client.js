@@ -8,6 +8,7 @@
 /* global URL, setTimeout */
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { execSync } from "child_process";
 import dotenv from "dotenv";
@@ -36,6 +37,7 @@ class CodeQLMCPClient {
   constructor(options = {}) {
     this.client = null;
     this.transport = null;
+    this.mcpMode = process.env.MCP_MODE || "stdio";
     this.serverUrl = process.env.MCP_SERVER_URL || DEFAULT_SERVER_URL;
     this.timeout = parseInt(options.timeout || process.env.TIMEOUT_SECONDS || "30") * 1000;
     this.logger = new TestLogger();
@@ -113,14 +115,34 @@ class CodeQLMCPClient {
    */
   async connect() {
     try {
-      this.logger.log(`Connecting to MCP server at ${this.serverUrl}`);
+      this.logger.log(`Connecting to MCP server (mode: ${this.mcpMode})`);
 
       this.client = new Client({
         name: "codeql-development-mcp-client",
         version: "1.0.0"
       });
 
-      this.transport = new StreamableHTTPClientTransport(new URL(this.serverUrl));
+      if (this.mcpMode === "stdio") {
+        const serverPath = path.join(
+          __dirname,
+          "..",
+          "server",
+          "dist",
+          "codeql-development-mcp-server.js"
+        );
+        this.transport = new StdioClientTransport({
+          command: "node",
+          args: [serverPath],
+          env: {
+            ...process.env,
+            TRANSPORT_MODE: "stdio"
+          },
+          stderr: "pipe"
+        });
+      } else {
+        this.logger.log(`Server URL: ${this.serverUrl}`);
+        this.transport = new StreamableHTTPClientTransport(new URL(this.serverUrl));
+      }
 
       // Set up timeout
       const connectPromise = this.client.connect(this.transport);
@@ -169,7 +191,10 @@ class CodeQLMCPClient {
    */
   async runTests() {
     this.logger.log("Starting CodeQL MCP Client Integration Tests");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
+    if (this.mcpMode === "http") {
+      this.logger.log(`Server URL: ${this.serverUrl}`);
+    }
     this.logger.log(`Timeout: ${this.timeout}ms`);
 
     // Check CodeQL CLI availability first
@@ -212,7 +237,7 @@ class CodeQLMCPClient {
    */
   async runMonitoringDemo() {
     this.logger.log("🚀 Starting MCP Server Monitoring Demo");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
 
     let connected = false;
 
@@ -315,7 +340,7 @@ class CodeQLMCPClient {
    */
   async runWorkflowTests() {
     this.logger.log("🔄 Starting Workflow Integration Tests");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
 
     let connected = false;
 
@@ -347,7 +372,7 @@ class CodeQLMCPClient {
    */
   async runMonitoringIntegrationTests() {
     this.logger.log("📊 Starting Monitoring Integration Tests");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
 
     let connected = false;
 

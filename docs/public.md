@@ -25,7 +25,22 @@ codeql --version # any recent release
 
 ## Installation
 
-### 1. Install the MCP Server (npm)
+### Recommended: VS Code Extension (VSIX archive bundle)
+
+The easiest and recommended way to get started is the **VS Code extension**,
+distributed as a `.vsix` archive bundle. It automates installation,
+configuration, and CodeQL CLI discovery — no manual `mcp.json` editing required.
+
+1. Download the latest `.vsix` from
+   [GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases).
+2. In VS Code, open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and
+   run **Extensions: Install from VSIX…**.
+3. Select the downloaded `.vsix` file.
+
+The extension bundles the MCP server and will register it automatically on
+activation. See the [VS Code Extension guide](./vscode/extension.md) for details.
+
+### Alternative: Install the MCP Server (npm)
 
 The server is published as a public package on [npmjs.org](https://www.npmjs.com/package/codeql-development-mcp-server). No authentication or special configuration is needed:
 
@@ -39,7 +54,7 @@ npx -y codeql-development-mcp-server
 
 The package ships the bundled server (`dist/codeql-development-mcp-server.js`), production dependencies, and the CodeQL tool query source packs (`ql/*/tools/src/`).
 
-### 2. Install CodeQL Tool Query Packs (optional)
+### Alternative: Install CodeQL Tool Query Packs (optional)
 
 The server ships with embedded copies of its tool query packs. If you prefer to manage the packs independently, or want to pin a specific version, download them from GHCR:
 

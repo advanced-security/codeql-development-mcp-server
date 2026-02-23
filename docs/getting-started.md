@@ -12,13 +12,13 @@ This guide covers installation, configuration, and usage of the CodeQL Developme
 
 ### VS Code Extension (recommended)
 
-The easiest way to get started is the **VS Code extension**, which automates
-installation, configuration, and CodeQL CLI discovery.
-See the [VS Code Extension guide](./vscode/extension.md) for details.
-
-The `.vsix` can be downloaded from
+The easiest and recommended way to get started is the **VS Code extension** (VSIX
+archive bundle), which automates installation, configuration, and CodeQL CLI
+discovery. Download the `.vsix` from
 [GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
-or built from source (`npm run package:vsix` at the repository root).
+and install it in VS Code via `Extensions: Install from VSIX…` in the Command
+Palette, or build from source (`npm run package:vsix` at the repository root).
+See the [VS Code Extension guide](./vscode/extension.md) for details.
 
 ### From npm
 

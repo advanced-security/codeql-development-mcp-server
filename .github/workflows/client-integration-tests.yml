@@ -26,17 +26,19 @@ permissions:
 
 jobs:
   integration-tests:
-    name: Integration Tests (${{ matrix.os }})
+    name: Integration Tests (${{ matrix.os }}, ${{ matrix.mcp-mode }})
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
+        mcp-mode: [http, stdio]
         os: [ubuntu-latest, windows-latest]
 
     env:
       HTTP_HOST: 'localhost'
       HTTP_PORT: '3000'
+      MCP_MODE: ${{ matrix.mcp-mode }}
       TIMEOUT_SECONDS: '30'
       URL_SCHEME: 'http'
 
@@ -110,7 +112,7 @@ jobs:
         run: npm run test:integration --workspace=client
 
       - name: MCP Integration Tests - Stop the background MCP server process
-        if: always()
+        if: always() && matrix.mcp-mode == 'http'
         shell: bash
         run: |
           if [ -f server.pid ]; then
@@ -141,8 +143,8 @@ jobs:
       - name: MCP Integration Tests - Summary
         shell: bash
         run: |
-          echo "## Integration Tests Summary (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
-          echo "✅ MCP server integration tests passed on ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Integration Tests Summary (${{ matrix.os }}, ${{ matrix.mcp-mode }})" >> $GITHUB_STEP_SUMMARY
+          echo "✅ MCP server integration tests passed on ${{ matrix.os }} with ${{ matrix.mcp-mode }} transport" >> $GITHUB_STEP_SUMMARY
 
   codeql-path-tests:
     name: CODEQL_PATH Tests (${{ matrix.os }})
