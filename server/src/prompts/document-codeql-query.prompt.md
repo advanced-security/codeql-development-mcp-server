@@ -32,7 +32,7 @@ Documentation files are **siblings** to the query file (same directory).
 
 1. **No documentation exists**: Create new `QueryFileBaseName.md` file
 2. **`.md` file exists**: Update the existing markdown file
-3. **`.qhelp` file exists**: Use `codeql_generate_query-help` tool to convert to markdown, then update
+3. **`.qhelp` file exists**: Use #codeql_generate_query-help tool to convert to markdown, then update
 
 ## Workflow Checklist
 
@@ -41,39 +41,39 @@ Use the following MCP server tools to gather context before creating documentati
 ### Phase 1: Query Discovery
 
 - [ ] **Step 1: Locate query files**
-  - Tool: `find_codeql_query_files`
+  - Tool: #find_codeql_query_files
   - Parameters: `queryPath` = provided query path
   - Gather: Query source file path, existing documentation files, test files
   - Check: Does `QueryFileBaseName.md` or `QueryFileBaseName.qhelp` exist?
 
 - [ ] **Step 2: Read query metadata**
-  - Tool: `codeql_resolve_metadata`
+  - Tool: #codeql_resolve_metadata
   - Parameters: `query` = query file path
   - Gather: @name, @description, @kind, @id, @tags, @precision, @severity
 
 ### Phase 2: Convert Existing qhelp (if needed)
 
 - [ ] **Step 3: Convert qhelp to markdown** (only if `.qhelp` exists)
-  - Tool: `codeql_generate_query-help`
+  - Tool: #codeql_generate_query-help
   - Parameters: `query` = query file path, `format` = "markdown"
   - Use output as starting point for updated documentation
 
 ### Phase 3: Gather Query Context
 
 - [ ] **Step 4: Validate query structure**
-  - Tool: `validate_codeql_query`
+  - Tool: #validate_codeql_query
   - Parameters: `query` = query source code
   - Gather: Structural validation, suggestions
-  - Note: This is a heuristic check only — for full validation, use `codeql_query_compile`
+  - Note: This is a heuristic check only — for full validation, use #codeql_query_compile
 
 - [ ] **Step 5: Explore query types** (if deeper understanding needed)
-  - Tool: `codeql_lsp_definition` — navigate to class/predicate definitions
-  - Tool: `codeql_lsp_completion` — explore member predicates on types used in the query
+  - Tool: #codeql_lsp_definition — navigate to class/predicate definitions
+  - Tool: #codeql_lsp_completion — explore member predicates on types used in the query
   - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri` (pack root)
-  - Run `codeql_pack_install` first — LSP tools require resolved dependencies
+  - Run #codeql_pack_install first — LSP tools require resolved dependencies
 
 - [ ] **Step 6: Run tests** (if tests exist from Step 1)
-  - Tool: `codeql_test_run`
+  - Tool: #codeql_test_run
   - Parameters: `tests` = test directories
   - Gather: Pass/fail status, confirms query behavior
 

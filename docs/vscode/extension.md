@@ -39,7 +39,7 @@ Or in VS Code: **Extensions** sidebar → `⋯` menu → **Install from VSIX…*
 From the repository root:
 
 ```bash
-npm run package:vscode
+npm run package:vsix
 code --install-extension extensions/vscode/codeql-development-mcp-server.vsix
 ```
 

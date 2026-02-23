@@ -1,7 +1,7 @@
 {
   "name": "vscode-codeql-development-mcp-server",
   "displayName": "CodeQL Development MCP Server",
-  "description": "Automatically installs, configures, and manages the CodeQL Development MCP Server in VS Code.",
+  "description": "LLM-assisted development of CodeQL queries, libraries, and tests via #ql-mcp prompts, resources, and tools.",
   "version": "2.24.1",
   "publisher": "advanced-security",
   "license": "SEE LICENSE IN LICENSE",
@@ -65,7 +65,9 @@
         },
         "codeql-mcp.serverArgs": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Custom arguments for the MCP server command. When empty, the bundled server entry point is used automatically. Set to e.g. ['/path/to/server/dist/codeql-development-mcp-server.js'] for local development."
         },
@@ -84,19 +86,25 @@
         },
         "codeql-mcp.additionalDatabaseDirs": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Additional directories to search for CodeQL databases. Appended to CODEQL_DATABASES_BASE_DIRS alongside the vscode-codeql storage paths."
         },
         "codeql-mcp.additionalMrvaRunResultsDirs": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Additional directories containing MRVA run result subdirectories. Appended to CODEQL_MRVA_RUN_RESULTS_DIRS alongside the vscode-codeql variant analysis storage path."
         },
         "codeql-mcp.additionalQueryRunResultsDirs": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Additional directories containing query run result subdirectories. Appended to CODEQL_QUERY_RUN_RESULTS_DIRS alongside the vscode-codeql query storage path."
         }
@@ -133,8 +141,10 @@
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
     "package": "vsce package --no-dependencies --out codeql-development-mcp-server.vsix",
-    "test": "vitest --run",
+    "test": "npm run test:coverage && npm run test:integration",
     "test:coverage": "vitest --run --coverage",
+    "test:integration": "vscode-test",
+    "test:integration:label": "vscode-test --label",
     "test:watch": "vitest --watch",
     "vscode:prepublish": "npm run clean && npm run lint && npm run bundle && npm run bundle:server",
     "watch": "node esbuild.config.js --watch"
@@ -145,6 +155,8 @@
     "@types/node": "^25.3.0",
     "@types/vscode": "^1.109.0",
     "@vitest/coverage-v8": "^4.0.18",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.3",
     "eslint": "^10.0.0",
