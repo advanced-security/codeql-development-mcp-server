@@ -9,6 +9,7 @@ set -euo pipefail
 ##   .codeql-version                                      (vX.Y.Z format)
 ##   package.json                                         (X.Y.Z format)
 ##   client/package.json                                  (X.Y.Z format)
+##   extensions/vscode/package.json                       (X.Y.Z format)
 ##   server/package.json                                  (X.Y.Z format)
 ##   server/ql/*/tools/src/codeql-pack.yml                (X.Y.Z format)
 ##   server/ql/*/tools/test/codeql-pack.yml               (X.Y.Z format)
@@ -82,7 +83,7 @@ collect_versions() {
 	fi
 
 	## package.json files
-	local pkg_files=("package.json" "client/package.json" "server/package.json")
+	local pkg_files=("package.json" "client/package.json" "extensions/vscode/package.json" "server/package.json")
 	for pkg_file in "${pkg_files[@]}"; do
 		local full_path="${REPO_ROOT}/${pkg_file}"
 		if [[ -f "${full_path}" ]]; then
@@ -289,7 +290,7 @@ update_versions() {
 	fi
 
 	## 2. Update package.json files
-	local pkg_files=("package.json" "client/package.json" "server/package.json")
+	local pkg_files=("package.json" "client/package.json" "extensions/vscode/package.json" "server/package.json")
 	for pkg_file in "${pkg_files[@]}"; do
 		local full_path="${REPO_ROOT}/${pkg_file}"
 		if [[ -f "${full_path}" ]]; then

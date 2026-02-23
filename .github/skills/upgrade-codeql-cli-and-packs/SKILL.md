@@ -24,9 +24,9 @@ This skill guides you through upgrading the CodeQL CLI version used by the MCP s
 
 This repository uses a **CLI-aligned versioning strategy** across all version-bearing files:
 
-1. **`.codeql-version`**: Contains the target CLI version (e.g., `v2.24.1`)
-2. **`package.json` versions**: All `package.json` files (root, client, server) use the CLI version number without the "v" prefix (e.g., `2.24.1`)
-3. **`ql-mcp-*` pack versions**: Use the CLI version number without the "v" prefix (e.g., `2.24.1`)
+1. **`.codeql-version`**: Contains the target CLI version (e.g., `vX.Y.Z`)
+2. **`package.json` versions**: All `package.json` files (root, client, extensions/vscode, server) use the CLI version number without the "v" prefix (e.g., `X.Y.Z`)
+3. **`ql-mcp-*` pack versions**: Use the CLI version number without the "v" prefix (e.g., `X.Y.Z`)
 4. **`codeql/*-all` dependencies**: Must have `cliVersion <= target CLI version`
 
 ### Why Database Compatibility Matters
@@ -77,7 +77,7 @@ Use the `update-release-version.sh` script to deterministically update `.codeql-
 ./server/scripts/update-release-version.sh X.XX.Y
 ```
 
-This updates all 22 version-bearing files. Preview changes first with `--dry-run`:
+This updates all version-bearing files. Preview changes first with `--dry-run`:
 
 ```bash
 ./server/scripts/update-release-version.sh --dry-run X.XX.Y
@@ -229,13 +229,13 @@ dependencies:
 
 # Good - explicit compatible version
 dependencies:
-  codeql/cpp-all: 6.1.4
+  codeql/cpp-all: 1.2.3
 ```
 
 ### Pack cliVersion Rules
 
 - Pack `cliVersion` must be **≤** target CLI version
-- Packs built for the same minor version (e.g., 2.23.x) are usually compatible
+- Packs built for the same minor version (e.g., X.Y.x) are usually compatible
 - Different languages may require different pack versions due to independent release cycles
 
 ### Test Output Changes
