@@ -44,7 +44,7 @@ The tool `read_database_source` can be used to read the code of a particular fin
 3. Stop early.
    - Grouping the potential false positive cases is more important than exhaustively verifying every single finding.
    - A common false positive likely introduces some false positives that are very hard to verify, so it is usually better to focus on simple cases first.
-   - Truly hard-to-verify false positive cases are often in code that users don't expect to be condusive to static analysis, and query authors often don't expect their queries to work well in those cases.
+   - Truly hard-to-verify false positive cases are often in code that users don't expect to be conducive to static analysis, and query authors often don't expect their queries to work well in those cases.
    - Suggest a chainsaw approach rather than a scalpel - if a result may be a false positive, identify some simple heuristics to eliminate all such complex cases, even if such a hueristic could introduce false negatives.
 
 ### What Makes a Result Likely to be a False Positive?

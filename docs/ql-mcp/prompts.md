@@ -15,9 +15,9 @@ The server provides **11 prompts** that guide AI assistants through common CodeQ
 | `ql_lsp_iterative_development` | Iterative CodeQL query development using LSP tools for completion, navigation, and validation                        |
 | `ql_tdd_advanced`              | Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis                |
 | `ql_tdd_basic`                 | Test-driven CodeQL query development checklist — write tests first, implement query, iterate until tests pass        |
+| `run_query_and_summarize_false_positives` | Run a CodeQL query and summarize its false positives                                                                 |
 | `sarif_rank_false_positives`   | Analyze SARIF results to identify likely false positives in CodeQL query results                                     |
 | `sarif_rank_true_positives`    | Analyze SARIF results to identify likely true positives in CodeQL query results                                      |
-| `run_query_and_summarize_false_positives` | Run a CodeQL query and summarize its false positives                                                                 |
 | `test_driven_development`      | Test-driven development workflow for CodeQL queries using MCP tools                                                  |
 | `tools_query_workflow`         | Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure |
 | `workshop_creation_workflow`   | Guide for creating CodeQL query development workshops from production-grade queries                                  |
