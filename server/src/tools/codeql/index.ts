@@ -24,6 +24,7 @@ export { codeqlQueryCompileTool } from './query-compile';
 export { codeqlQueryFormatTool } from './query-format';
 export { codeqlQueryRunTool } from './query-run';
 export { registerQuickEvaluateTool } from './quick-evaluate';
+export { registerReadDatabaseSourceTool } from './read-database-source';
 export { registerRegisterDatabaseTool } from './register-database';
 export { codeqlResolveDatabaseTool } from './resolve-database';
 export { codeqlResolveLanguagesTool } from './resolve-languages';

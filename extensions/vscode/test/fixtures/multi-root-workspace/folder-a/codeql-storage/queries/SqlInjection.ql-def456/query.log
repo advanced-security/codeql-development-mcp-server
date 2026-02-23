@@ -1,0 +1,2 @@
+[2026-01-20 15:00:00] [SPAMMY] execute query-server2> runQuery called with /workspace/src/SqlInjection.ql
+[2026-01-20 15:00:01] Calling plumbing command: codeql resolve upgrades --dbscheme=/databases/test-python-db/db-python/semmlecode.python.dbscheme --format=json

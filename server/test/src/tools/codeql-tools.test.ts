@@ -42,9 +42,9 @@ describe('registerCodeQLTools', () => {
     // rank_sarif_results has been removed in favor of SARIF prompts
     expect(toolNames).not.toContain('rank_sarif_results');
     
-    // Total tools registered: 2 high-level helpers + 10 specialized tools + 22 CLI tools = 34
+    // Total tools registered: 2 high-level helpers + 11 specialized tools + 22 CLI tools = 35
     // (codeql_lsp_diagnostics moved to registerLSPTools in tools/lsp/)
-    expect(mockServer.tool).toHaveBeenCalledTimes(34);
+    expect(mockServer.tool).toHaveBeenCalledTimes(35);
   });
 
   it('should register validate_codeql_query with correct parameters', () => {

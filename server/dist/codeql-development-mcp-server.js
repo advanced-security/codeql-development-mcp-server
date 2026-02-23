@@ -2991,7 +2991,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve12.call(this, root, ref);
+      let _sch = resolve13.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -3018,7 +3018,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve12(root, ref) {
+    function resolve13(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3593,7 +3593,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve12(baseURI, relativeURI, options) {
+    function resolve13(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse4(baseURI, schemelessOptions), parse4(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -3820,7 +3820,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve12,
+      resolve: resolve13,
       resolveComponent,
       equal,
       serialize,
@@ -9611,7 +9611,7 @@ var require_compile2 = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve12.call(this, root, ref);
+      let _sch = resolve13.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -9638,7 +9638,7 @@ var require_compile2 = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve12(root, ref) {
+    function resolve13(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -17919,10 +17919,10 @@ var require_raw_body = __commonJS({
       if (done) {
         return readStream(stream, encoding, length, limit, wrap(done));
       }
-      return new Promise(function executor(resolve12, reject) {
+      return new Promise(function executor(resolve13, reject) {
         readStream(stream, encoding, length, limit, function onRead(err, buf) {
           if (err) return reject(err);
-          resolve12(buf);
+          resolve13(buf);
         });
       });
     }
@@ -31257,8 +31257,8 @@ var require_view = __commonJS({
     var dirname9 = path4.dirname;
     var basename7 = path4.basename;
     var extname2 = path4.extname;
-    var join18 = path4.join;
-    var resolve12 = path4.resolve;
+    var join19 = path4.join;
+    var resolve13 = path4.resolve;
     module.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -31292,7 +31292,7 @@ var require_view = __commonJS({
       debug('lookup "%s"', name);
       for (var i = 0; i < roots.length && !path5; i++) {
         var root = roots[i];
-        var loc = resolve12(root, name);
+        var loc = resolve13(root, name);
         var dir = dirname9(loc);
         var file = basename7(loc);
         path5 = this.resolve(dir, file);
@@ -31317,14 +31317,14 @@ var require_view = __commonJS({
       });
       sync = false;
     };
-    View.prototype.resolve = function resolve13(dir, file) {
+    View.prototype.resolve = function resolve14(dir, file) {
       var ext = this.ext;
-      var path5 = join18(dir, file);
+      var path5 = join19(dir, file);
       var stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
       }
-      path5 = join18(dir, basename7(file, ext), "index" + ext);
+      path5 = join19(dir, basename7(file, ext), "index" + ext);
       stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
@@ -33458,7 +33458,7 @@ var require_application = __commonJS({
     var compileETag = require_utils4().compileETag;
     var compileQueryParser = require_utils4().compileQueryParser;
     var compileTrust = require_utils4().compileTrust;
-    var resolve12 = __require("node:path").resolve;
+    var resolve13 = __require("node:path").resolve;
     var once = require_once();
     var Router = require_router();
     var slice = Array.prototype.slice;
@@ -33512,7 +33512,7 @@ var require_application = __commonJS({
       this.mountpath = "/";
       this.locals.settings = this.settings;
       this.set("view", View);
-      this.set("views", resolve12("views"));
+      this.set("views", resolve13("views"));
       this.set("jsonp callback name", "callback");
       if (env === "production") {
         this.enable("view cache");
@@ -34969,9 +34969,9 @@ var require_send = __commonJS({
     var Stream = __require("stream");
     var util2 = __require("util");
     var extname2 = path4.extname;
-    var join18 = path4.join;
+    var join19 = path4.join;
     var normalize = path4.normalize;
-    var resolve12 = path4.resolve;
+    var resolve13 = path4.resolve;
     var sep2 = path4.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
@@ -35000,7 +35000,7 @@ var require_send = __commonJS({
       this._maxage = opts.maxAge || opts.maxage;
       this._maxage = typeof this._maxage === "string" ? ms(this._maxage) : Number(this._maxage);
       this._maxage = !isNaN(this._maxage) ? Math.min(Math.max(0, this._maxage), MAX_MAXAGE) : 0;
-      this._root = opts.root ? resolve12(opts.root) : null;
+      this._root = opts.root ? resolve13(opts.root) : null;
     }
     util2.inherits(SendStream, Stream);
     SendStream.prototype.error = function error2(status, err) {
@@ -35141,7 +35141,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = path5.split(sep2);
-        path5 = normalize(join18(root, path5));
+        path5 = normalize(join19(root, path5));
       } else {
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
@@ -35149,7 +35149,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = normalize(path5).split(sep2);
-        path5 = resolve12(path5);
+        path5 = resolve13(path5);
       }
       if (containsDotFile(parts)) {
         debug('%s dotfile "%s"', this._dotfiles, path5);
@@ -35274,7 +35274,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join18(path5, self._index[i]);
+        var p = join19(path5, self._index[i]);
         debug('stat "%s"', p);
         fs3.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -35527,7 +35527,7 @@ var require_response = __commonJS({
     var cookie = require_cookie();
     var send = require_send();
     var extname2 = path4.extname;
-    var resolve12 = path4.resolve;
+    var resolve13 = path4.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = __require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -35733,7 +35733,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve12(path5) : path5;
+      var fullPath = !opts.root ? resolve13(path5) : path5;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type2) {
@@ -35982,7 +35982,7 @@ var require_serve_static = __commonJS({
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
     var parseUrl = require_parseurl();
-    var resolve12 = __require("path").resolve;
+    var resolve13 = __require("path").resolve;
     var send = require_send();
     var url = __require("url");
     module.exports = serveStatic;
@@ -36001,7 +36001,7 @@ var require_serve_static = __commonJS({
         throw new TypeError("option setHeaders must be function");
       }
       opts.maxage = opts.maxage || opts.maxAge || 0;
-      opts.root = resolve12(root);
+      opts.root = resolve13(root);
       var onDirectory = redirect ? createRedirectDirectoryListener() : createNotFoundDirectoryListener();
       return function serveStatic2(req, res, next) {
         if (req.method !== "GET" && req.method !== "HEAD") {
@@ -36992,7 +36992,7 @@ var init_temp_dir = __esm({
 import { clearTimeout as clearTimeout2, setTimeout as setTimeout2 } from "timers";
 function waitForProcessReady(child, name, opts) {
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
-  return new Promise((resolve12, reject) => {
+  return new Promise((resolve13, reject) => {
     let settled = false;
     const cleanup = () => {
       settled = true;
@@ -37006,13 +37006,13 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.debug(`${name}: ready (stderr output detected)`);
       cleanup();
-      resolve12();
+      resolve13();
     };
     const onStdout = () => {
       if (settled) return;
       logger.debug(`${name}: ready (stdout output detected)`);
       cleanup();
-      resolve12();
+      resolve13();
     };
     const onError = (error2) => {
       if (settled) return;
@@ -37028,7 +37028,7 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.warn(`${name}: readiness timeout (${timeoutMs} ms) \u2014 proceeding anyway`);
       cleanup();
-      resolve12();
+      resolve13();
     }, timeoutMs);
     child.stderr?.on("data", onStderr);
     child.stdout?.on("data", onStdout);
@@ -37196,7 +37196,7 @@ var init_language_server = __esm({
           method,
           params
         };
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           const timer = setTimeout3(() => {
             if (this.pendingResponses.has(id)) {
               this.pendingResponses.delete(id);
@@ -37210,7 +37210,7 @@ var init_language_server = __esm({
             },
             resolve: (val) => {
               clearTimeout3(timer);
-              resolve12(val);
+              resolve13(val);
             }
           });
           this.sendMessage(message);
@@ -37299,7 +37299,7 @@ var init_language_server = __esm({
           throw new Error("Language server is not initialized");
         }
         const documentUri = uri || pathToFileURL(join2(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           let diagnosticsReceived = false;
           const timeout = setTimeout3(() => {
             if (!diagnosticsReceived) {
@@ -37315,7 +37315,7 @@ var init_language_server = __esm({
               this.sendNotification("textDocument/didClose", {
                 textDocument: { uri: documentUri }
               });
-              resolve12(params.diagnostics);
+              resolve13(params.diagnostics);
             }
           };
           this.on("diagnostics", diagnosticsHandler);
@@ -37430,22 +37430,22 @@ var init_language_server = __esm({
         } catch (error2) {
           logger.warn("Error during graceful shutdown:", error2);
         }
-        await new Promise((resolve12) => {
+        await new Promise((resolve13) => {
           const timer = setTimeout3(() => {
             if (this.server) {
               this.server.kill("SIGTERM");
             }
-            resolve12();
+            resolve13();
           }, 1e3);
           if (this.server) {
             this.server.once("exit", () => {
               clearTimeout3(timer);
               this.server = null;
-              resolve12();
+              resolve13();
             });
           } else {
             clearTimeout3(timer);
-            resolve12();
+            resolve13();
           }
         });
         this.isInitialized = false;
@@ -37535,8 +37535,8 @@ var init_query_server = __esm({
           method,
           params
         };
-        return new Promise((resolve12, reject) => {
-          this.pendingRequests.set(id, { reject, resolve: resolve12 });
+        return new Promise((resolve13, reject) => {
+          this.pendingRequests.set(id, { reject, resolve: resolve13 });
           try {
             this.sendRaw(message);
           } catch (error2) {
@@ -37550,7 +37550,7 @@ var init_query_server = __esm({
               reject(new Error(`Query server request timeout for method: ${method}`));
             }
           }, timeoutMs);
-          const originalResolve = resolve12;
+          const originalResolve = resolve13;
           const originalReject = reject;
           const wrapped = {
             reject: (err) => {
@@ -37578,23 +37578,23 @@ var init_query_server = __esm({
         } catch (error2) {
           logger.warn("Error during query server graceful shutdown:", error2);
         }
-        await new Promise((resolve12) => {
+        await new Promise((resolve13) => {
           const timer = setTimeout4(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve12();
+            resolve13();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout4(timer);
               this.process = null;
-              resolve12();
+              resolve13();
             });
           } else {
             clearTimeout4(timer);
-            resolve12();
+            resolve13();
           }
         });
       }
@@ -37755,9 +37755,9 @@ var init_cli_server = __esm({
        * @returns The stdout output from the command.
        */
       runCommand(args) {
-        return new Promise((resolve12, reject) => {
+        return new Promise((resolve13, reject) => {
           const execute = () => {
-            this.executeCommand({ args, reject, resolve: resolve12 });
+            this.executeCommand({ args, reject, resolve: resolve13 });
           };
           if (this.commandInProgress) {
             this.commandQueue.push(execute);
@@ -37780,23 +37780,23 @@ var init_cli_server = __esm({
         } catch (error2) {
           logger.warn("Error during CLI server shutdown request:", error2);
         }
-        await new Promise((resolve12) => {
+        await new Promise((resolve13) => {
           const timer = setTimeout5(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve12();
+            resolve13();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout5(timer);
               this.process = null;
-              resolve12();
+              resolve13();
             });
           } else {
             clearTimeout5(timer);
-            resolve12();
+            resolve13();
           }
         });
         this.commandInProgress = false;
@@ -38041,11 +38041,11 @@ var init_server_manager = __esm({
       async warmUpLanguageServer() {
         try {
           const { packageRootDir: packageRootDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-          const { resolve: resolve12 } = await import("path");
+          const { resolve: resolve13 } = await import("path");
           const config2 = {
             checkErrors: "ON_CHANGE",
             loglevel: "WARN",
-            searchPath: resolve12(packageRootDir2, "ql")
+            searchPath: resolve13(packageRootDir2, "ql")
           };
           logger.info("Warming up language server (background JVM start)...");
           await this.getLanguageServer(config2);
@@ -38498,6 +38498,2662 @@ var init_cli_executor = __esm({
       "test extract",
       "test run"
     ]);
+  }
+});
+
+// ../node_modules/adm-zip/util/constants.js
+var require_constants = __commonJS({
+  "../node_modules/adm-zip/util/constants.js"(exports, module) {
+    module.exports = {
+      /* The local file header */
+      LOCHDR: 30,
+      // LOC header size
+      LOCSIG: 67324752,
+      // "PK\003\004"
+      LOCVER: 4,
+      // version needed to extract
+      LOCFLG: 6,
+      // general purpose bit flag
+      LOCHOW: 8,
+      // compression method
+      LOCTIM: 10,
+      // modification time (2 bytes time, 2 bytes date)
+      LOCCRC: 14,
+      // uncompressed file crc-32 value
+      LOCSIZ: 18,
+      // compressed size
+      LOCLEN: 22,
+      // uncompressed size
+      LOCNAM: 26,
+      // filename length
+      LOCEXT: 28,
+      // extra field length
+      /* The Data descriptor */
+      EXTSIG: 134695760,
+      // "PK\007\008"
+      EXTHDR: 16,
+      // EXT header size
+      EXTCRC: 4,
+      // uncompressed file crc-32 value
+      EXTSIZ: 8,
+      // compressed size
+      EXTLEN: 12,
+      // uncompressed size
+      /* The central directory file header */
+      CENHDR: 46,
+      // CEN header size
+      CENSIG: 33639248,
+      // "PK\001\002"
+      CENVEM: 4,
+      // version made by
+      CENVER: 6,
+      // version needed to extract
+      CENFLG: 8,
+      // encrypt, decrypt flags
+      CENHOW: 10,
+      // compression method
+      CENTIM: 12,
+      // modification time (2 bytes time, 2 bytes date)
+      CENCRC: 16,
+      // uncompressed file crc-32 value
+      CENSIZ: 20,
+      // compressed size
+      CENLEN: 24,
+      // uncompressed size
+      CENNAM: 28,
+      // filename length
+      CENEXT: 30,
+      // extra field length
+      CENCOM: 32,
+      // file comment length
+      CENDSK: 34,
+      // volume number start
+      CENATT: 36,
+      // internal file attributes
+      CENATX: 38,
+      // external file attributes (host system dependent)
+      CENOFF: 42,
+      // LOC header offset
+      /* The entries in the end of central directory */
+      ENDHDR: 22,
+      // END header size
+      ENDSIG: 101010256,
+      // "PK\005\006"
+      ENDSUB: 8,
+      // number of entries on this disk
+      ENDTOT: 10,
+      // total number of entries
+      ENDSIZ: 12,
+      // central directory size in bytes
+      ENDOFF: 16,
+      // offset of first CEN header
+      ENDCOM: 20,
+      // zip file comment length
+      END64HDR: 20,
+      // zip64 END header size
+      END64SIG: 117853008,
+      // zip64 Locator signature, "PK\006\007"
+      END64START: 4,
+      // number of the disk with the start of the zip64
+      END64OFF: 8,
+      // relative offset of the zip64 end of central directory
+      END64NUMDISKS: 16,
+      // total number of disks
+      ZIP64SIG: 101075792,
+      // zip64 signature, "PK\006\006"
+      ZIP64HDR: 56,
+      // zip64 record minimum size
+      ZIP64LEAD: 12,
+      // leading bytes at the start of the record, not counted by the value stored in ZIP64SIZE
+      ZIP64SIZE: 4,
+      // zip64 size of the central directory record
+      ZIP64VEM: 12,
+      // zip64 version made by
+      ZIP64VER: 14,
+      // zip64 version needed to extract
+      ZIP64DSK: 16,
+      // zip64 number of this disk
+      ZIP64DSKDIR: 20,
+      // number of the disk with the start of the record directory
+      ZIP64SUB: 24,
+      // number of entries on this disk
+      ZIP64TOT: 32,
+      // total number of entries
+      ZIP64SIZB: 40,
+      // zip64 central directory size in bytes
+      ZIP64OFF: 48,
+      // offset of start of central directory with respect to the starting disk number
+      ZIP64EXTRA: 56,
+      // extensible data sector
+      /* Compression methods */
+      STORED: 0,
+      // no compression
+      SHRUNK: 1,
+      // shrunk
+      REDUCED1: 2,
+      // reduced with compression factor 1
+      REDUCED2: 3,
+      // reduced with compression factor 2
+      REDUCED3: 4,
+      // reduced with compression factor 3
+      REDUCED4: 5,
+      // reduced with compression factor 4
+      IMPLODED: 6,
+      // imploded
+      // 7 reserved for Tokenizing compression algorithm
+      DEFLATED: 8,
+      // deflated
+      ENHANCED_DEFLATED: 9,
+      // enhanced deflated
+      PKWARE: 10,
+      // PKWare DCL imploded
+      // 11 reserved by PKWARE
+      BZIP2: 12,
+      //  compressed using BZIP2
+      // 13 reserved by PKWARE
+      LZMA: 14,
+      // LZMA
+      // 15-17 reserved by PKWARE
+      IBM_TERSE: 18,
+      // compressed using IBM TERSE
+      IBM_LZ77: 19,
+      // IBM LZ77 z
+      AES_ENCRYPT: 99,
+      // WinZIP AES encryption method
+      /* General purpose bit flag */
+      // values can obtained with expression 2**bitnr
+      FLG_ENC: 1,
+      // Bit 0: encrypted file
+      FLG_COMP1: 2,
+      // Bit 1, compression option
+      FLG_COMP2: 4,
+      // Bit 2, compression option
+      FLG_DESC: 8,
+      // Bit 3, data descriptor
+      FLG_ENH: 16,
+      // Bit 4, enhanced deflating
+      FLG_PATCH: 32,
+      // Bit 5, indicates that the file is compressed patched data.
+      FLG_STR: 64,
+      // Bit 6, strong encryption (patented)
+      // Bits 7-10: Currently unused.
+      FLG_EFS: 2048,
+      // Bit 11: Language encoding flag (EFS)
+      // Bit 12: Reserved by PKWARE for enhanced compression.
+      // Bit 13: encrypted the Central Directory (patented).
+      // Bits 14-15: Reserved by PKWARE.
+      FLG_MSK: 4096,
+      // mask header values
+      /* Load type */
+      FILE: 2,
+      BUFFER: 1,
+      NONE: 0,
+      /* 4.5 Extensible data fields */
+      EF_ID: 0,
+      EF_SIZE: 2,
+      /* Header IDs */
+      ID_ZIP64: 1,
+      ID_AVINFO: 7,
+      ID_PFS: 8,
+      ID_OS2: 9,
+      ID_NTFS: 10,
+      ID_OPENVMS: 12,
+      ID_UNIX: 13,
+      ID_FORK: 14,
+      ID_PATCH: 15,
+      ID_X509_PKCS7: 20,
+      ID_X509_CERTID_F: 21,
+      ID_X509_CERTID_C: 22,
+      ID_STRONGENC: 23,
+      ID_RECORD_MGT: 24,
+      ID_X509_PKCS7_RL: 25,
+      ID_IBM1: 101,
+      ID_IBM2: 102,
+      ID_POSZIP: 18064,
+      EF_ZIP64_OR_32: 4294967295,
+      EF_ZIP64_OR_16: 65535,
+      EF_ZIP64_SUNCOMP: 0,
+      EF_ZIP64_SCOMP: 8,
+      EF_ZIP64_RHO: 16,
+      EF_ZIP64_DSN: 24
+    };
+  }
+});
+
+// ../node_modules/adm-zip/util/errors.js
+var require_errors3 = __commonJS({
+  "../node_modules/adm-zip/util/errors.js"(exports) {
+    var errors = {
+      /* Header error messages */
+      INVALID_LOC: "Invalid LOC header (bad signature)",
+      INVALID_CEN: "Invalid CEN header (bad signature)",
+      INVALID_END: "Invalid END header (bad signature)",
+      /* Descriptor */
+      DESCRIPTOR_NOT_EXIST: "No descriptor present",
+      DESCRIPTOR_UNKNOWN: "Unknown descriptor format",
+      DESCRIPTOR_FAULTY: "Descriptor data is malformed",
+      /* ZipEntry error messages*/
+      NO_DATA: "Nothing to decompress",
+      BAD_CRC: "CRC32 checksum failed {0}",
+      FILE_IN_THE_WAY: "There is a file in the way: {0}",
+      UNKNOWN_METHOD: "Invalid/unsupported compression method",
+      /* Inflater error messages */
+      AVAIL_DATA: "inflate::Available inflate data did not terminate",
+      INVALID_DISTANCE: "inflate::Invalid literal/length or distance code in fixed or dynamic block",
+      TO_MANY_CODES: "inflate::Dynamic block code description: too many length or distance codes",
+      INVALID_REPEAT_LEN: "inflate::Dynamic block code description: repeat more than specified lengths",
+      INVALID_REPEAT_FIRST: "inflate::Dynamic block code description: repeat lengths with no first length",
+      INCOMPLETE_CODES: "inflate::Dynamic block code description: code lengths codes incomplete",
+      INVALID_DYN_DISTANCE: "inflate::Dynamic block code description: invalid distance code lengths",
+      INVALID_CODES_LEN: "inflate::Dynamic block code description: invalid literal/length code lengths",
+      INVALID_STORE_BLOCK: "inflate::Stored block length did not match one's complement",
+      INVALID_BLOCK_TYPE: "inflate::Invalid block type (type == 3)",
+      /* ADM-ZIP error messages */
+      CANT_EXTRACT_FILE: "Could not extract the file",
+      CANT_OVERRIDE: "Target file already exists",
+      DISK_ENTRY_TOO_LARGE: "Number of disk entries is too large",
+      NO_ZIP: "No zip file was loaded",
+      NO_ENTRY: "Entry doesn't exist",
+      DIRECTORY_CONTENT_ERROR: "A directory cannot have content",
+      FILE_NOT_FOUND: 'File not found: "{0}"',
+      NOT_IMPLEMENTED: "Not implemented",
+      INVALID_FILENAME: "Invalid filename",
+      INVALID_FORMAT: "Invalid or unsupported zip format. No END header found",
+      INVALID_PASS_PARAM: "Incompatible password parameter",
+      WRONG_PASSWORD: "Wrong Password",
+      /* ADM-ZIP */
+      COMMENT_TOO_LONG: "Comment is too long",
+      // Comment can be max 65535 bytes long (NOTE: some non-US characters may take more space)
+      EXTRA_FIELD_PARSE_ERROR: "Extra field parsing error"
+    };
+    function E(message) {
+      return function(...args) {
+        if (args.length) {
+          message = message.replace(/\{(\d)\}/g, (_, n) => args[n] || "");
+        }
+        return new Error("ADM-ZIP: " + message);
+      };
+    }
+    for (const msg of Object.keys(errors)) {
+      exports[msg] = E(errors[msg]);
+    }
+  }
+});
+
+// ../node_modules/adm-zip/util/utils.js
+var require_utils5 = __commonJS({
+  "../node_modules/adm-zip/util/utils.js"(exports, module) {
+    var fsystem = __require("fs");
+    var pth = __require("path");
+    var Constants = require_constants();
+    var Errors = require_errors3();
+    var isWin = typeof process === "object" && "win32" === process.platform;
+    var is_Obj = (obj) => typeof obj === "object" && obj !== null;
+    var crcTable = new Uint32Array(256).map((t, c) => {
+      for (let k = 0; k < 8; k++) {
+        if ((c & 1) !== 0) {
+          c = 3988292384 ^ c >>> 1;
+        } else {
+          c >>>= 1;
+        }
+      }
+      return c >>> 0;
+    });
+    function Utils(opts) {
+      this.sep = pth.sep;
+      this.fs = fsystem;
+      if (is_Obj(opts)) {
+        if (is_Obj(opts.fs) && typeof opts.fs.statSync === "function") {
+          this.fs = opts.fs;
+        }
+      }
+    }
+    module.exports = Utils;
+    Utils.prototype.makeDir = function(folder) {
+      const self = this;
+      function mkdirSync10(fpath) {
+        let resolvedPath = fpath.split(self.sep)[0];
+        fpath.split(self.sep).forEach(function(name) {
+          if (!name || name.substr(-1, 1) === ":") return;
+          resolvedPath += self.sep + name;
+          var stat;
+          try {
+            stat = self.fs.statSync(resolvedPath);
+          } catch (e) {
+            self.fs.mkdirSync(resolvedPath);
+          }
+          if (stat && stat.isFile()) throw Errors.FILE_IN_THE_WAY(`"${resolvedPath}"`);
+        });
+      }
+      mkdirSync10(folder);
+    };
+    Utils.prototype.writeFileTo = function(path4, content, overwrite, attr) {
+      const self = this;
+      if (self.fs.existsSync(path4)) {
+        if (!overwrite) return false;
+        var stat = self.fs.statSync(path4);
+        if (stat.isDirectory()) {
+          return false;
+        }
+      }
+      var folder = pth.dirname(path4);
+      if (!self.fs.existsSync(folder)) {
+        self.makeDir(folder);
+      }
+      var fd;
+      try {
+        fd = self.fs.openSync(path4, "w", 438);
+      } catch (e) {
+        self.fs.chmodSync(path4, 438);
+        fd = self.fs.openSync(path4, "w", 438);
+      }
+      if (fd) {
+        try {
+          self.fs.writeSync(fd, content, 0, content.length, 0);
+        } finally {
+          self.fs.closeSync(fd);
+        }
+      }
+      self.fs.chmodSync(path4, attr || 438);
+      return true;
+    };
+    Utils.prototype.writeFileToAsync = function(path4, content, overwrite, attr, callback) {
+      if (typeof attr === "function") {
+        callback = attr;
+        attr = void 0;
+      }
+      const self = this;
+      self.fs.exists(path4, function(exist) {
+        if (exist && !overwrite) return callback(false);
+        self.fs.stat(path4, function(err, stat) {
+          if (exist && stat.isDirectory()) {
+            return callback(false);
+          }
+          var folder = pth.dirname(path4);
+          self.fs.exists(folder, function(exists) {
+            if (!exists) self.makeDir(folder);
+            self.fs.open(path4, "w", 438, function(err2, fd) {
+              if (err2) {
+                self.fs.chmod(path4, 438, function() {
+                  self.fs.open(path4, "w", 438, function(err3, fd2) {
+                    self.fs.write(fd2, content, 0, content.length, 0, function() {
+                      self.fs.close(fd2, function() {
+                        self.fs.chmod(path4, attr || 438, function() {
+                          callback(true);
+                        });
+                      });
+                    });
+                  });
+                });
+              } else if (fd) {
+                self.fs.write(fd, content, 0, content.length, 0, function() {
+                  self.fs.close(fd, function() {
+                    self.fs.chmod(path4, attr || 438, function() {
+                      callback(true);
+                    });
+                  });
+                });
+              } else {
+                self.fs.chmod(path4, attr || 438, function() {
+                  callback(true);
+                });
+              }
+            });
+          });
+        });
+      });
+    };
+    Utils.prototype.findFiles = function(path4) {
+      const self = this;
+      function findSync(dir, pattern, recursive) {
+        if (typeof pattern === "boolean") {
+          recursive = pattern;
+          pattern = void 0;
+        }
+        let files = [];
+        self.fs.readdirSync(dir).forEach(function(file) {
+          const path5 = pth.join(dir, file);
+          const stat = self.fs.statSync(path5);
+          if (!pattern || pattern.test(path5)) {
+            files.push(pth.normalize(path5) + (stat.isDirectory() ? self.sep : ""));
+          }
+          if (stat.isDirectory() && recursive) files = files.concat(findSync(path5, pattern, recursive));
+        });
+        return files;
+      }
+      return findSync(path4, void 0, true);
+    };
+    Utils.prototype.findFilesAsync = function(dir, cb) {
+      const self = this;
+      let results = [];
+      self.fs.readdir(dir, function(err, list) {
+        if (err) return cb(err);
+        let list_length = list.length;
+        if (!list_length) return cb(null, results);
+        list.forEach(function(file) {
+          file = pth.join(dir, file);
+          self.fs.stat(file, function(err2, stat) {
+            if (err2) return cb(err2);
+            if (stat) {
+              results.push(pth.normalize(file) + (stat.isDirectory() ? self.sep : ""));
+              if (stat.isDirectory()) {
+                self.findFilesAsync(file, function(err3, res) {
+                  if (err3) return cb(err3);
+                  results = results.concat(res);
+                  if (!--list_length) cb(null, results);
+                });
+              } else {
+                if (!--list_length) cb(null, results);
+              }
+            }
+          });
+        });
+      });
+    };
+    Utils.prototype.getAttributes = function() {
+    };
+    Utils.prototype.setAttributes = function() {
+    };
+    Utils.crc32update = function(crc, byte) {
+      return crcTable[(crc ^ byte) & 255] ^ crc >>> 8;
+    };
+    Utils.crc32 = function(buf) {
+      if (typeof buf === "string") {
+        buf = Buffer.from(buf, "utf8");
+      }
+      let len = buf.length;
+      let crc = ~0;
+      for (let off = 0; off < len; ) crc = Utils.crc32update(crc, buf[off++]);
+      return ~crc >>> 0;
+    };
+    Utils.methodToString = function(method) {
+      switch (method) {
+        case Constants.STORED:
+          return "STORED (" + method + ")";
+        case Constants.DEFLATED:
+          return "DEFLATED (" + method + ")";
+        default:
+          return "UNSUPPORTED (" + method + ")";
+      }
+    };
+    Utils.canonical = function(path4) {
+      if (!path4) return "";
+      const safeSuffix = pth.posix.normalize("/" + path4.split("\\").join("/"));
+      return pth.join(".", safeSuffix);
+    };
+    Utils.zipnamefix = function(path4) {
+      if (!path4) return "";
+      const safeSuffix = pth.posix.normalize("/" + path4.split("\\").join("/"));
+      return pth.posix.join(".", safeSuffix);
+    };
+    Utils.findLast = function(arr, callback) {
+      if (!Array.isArray(arr)) throw new TypeError("arr is not array");
+      const len = arr.length >>> 0;
+      for (let i = len - 1; i >= 0; i--) {
+        if (callback(arr[i], i, arr)) {
+          return arr[i];
+        }
+      }
+      return void 0;
+    };
+    Utils.sanitize = function(prefix, name) {
+      prefix = pth.resolve(pth.normalize(prefix));
+      var parts = name.split("/");
+      for (var i = 0, l = parts.length; i < l; i++) {
+        var path4 = pth.normalize(pth.join(prefix, parts.slice(i, l).join(pth.sep)));
+        if (path4.indexOf(prefix) === 0) {
+          return path4;
+        }
+      }
+      return pth.normalize(pth.join(prefix, pth.basename(name)));
+    };
+    Utils.toBuffer = function toBuffer(input, encoder) {
+      if (Buffer.isBuffer(input)) {
+        return input;
+      } else if (input instanceof Uint8Array) {
+        return Buffer.from(input);
+      } else {
+        return typeof input === "string" ? encoder(input) : Buffer.alloc(0);
+      }
+    };
+    Utils.readBigUInt64LE = function(buffer, index) {
+      var slice = Buffer.from(buffer.slice(index, index + 8));
+      slice.swap64();
+      return parseInt(`0x${slice.toString("hex")}`);
+    };
+    Utils.fromDOS2Date = function(val) {
+      return new Date((val >> 25 & 127) + 1980, Math.max((val >> 21 & 15) - 1, 0), Math.max(val >> 16 & 31, 1), val >> 11 & 31, val >> 5 & 63, (val & 31) << 1);
+    };
+    Utils.fromDate2DOS = function(val) {
+      let date3 = 0;
+      let time3 = 0;
+      if (val.getFullYear() > 1979) {
+        date3 = (val.getFullYear() - 1980 & 127) << 9 | val.getMonth() + 1 << 5 | val.getDate();
+        time3 = val.getHours() << 11 | val.getMinutes() << 5 | val.getSeconds() >> 1;
+      }
+      return date3 << 16 | time3;
+    };
+    Utils.isWin = isWin;
+    Utils.crcTable = crcTable;
+  }
+});
+
+// ../node_modules/adm-zip/util/fattr.js
+var require_fattr = __commonJS({
+  "../node_modules/adm-zip/util/fattr.js"(exports, module) {
+    var pth = __require("path");
+    module.exports = function(path4, { fs: fs3 }) {
+      var _path = path4 || "", _obj = newAttr(), _stat = null;
+      function newAttr() {
+        return {
+          directory: false,
+          readonly: false,
+          hidden: false,
+          executable: false,
+          mtime: 0,
+          atime: 0
+        };
+      }
+      if (_path && fs3.existsSync(_path)) {
+        _stat = fs3.statSync(_path);
+        _obj.directory = _stat.isDirectory();
+        _obj.mtime = _stat.mtime;
+        _obj.atime = _stat.atime;
+        _obj.executable = (73 & _stat.mode) !== 0;
+        _obj.readonly = (128 & _stat.mode) === 0;
+        _obj.hidden = pth.basename(_path)[0] === ".";
+      } else {
+        console.warn("Invalid path: " + _path);
+      }
+      return {
+        get directory() {
+          return _obj.directory;
+        },
+        get readOnly() {
+          return _obj.readonly;
+        },
+        get hidden() {
+          return _obj.hidden;
+        },
+        get mtime() {
+          return _obj.mtime;
+        },
+        get atime() {
+          return _obj.atime;
+        },
+        get executable() {
+          return _obj.executable;
+        },
+        decodeAttributes: function() {
+        },
+        encodeAttributes: function() {
+        },
+        toJSON: function() {
+          return {
+            path: _path,
+            isDirectory: _obj.directory,
+            isReadOnly: _obj.readonly,
+            isHidden: _obj.hidden,
+            isExecutable: _obj.executable,
+            mTime: _obj.mtime,
+            aTime: _obj.atime
+          };
+        },
+        toString: function() {
+          return JSON.stringify(this.toJSON(), null, "	");
+        }
+      };
+    };
+  }
+});
+
+// ../node_modules/adm-zip/util/decoder.js
+var require_decoder = __commonJS({
+  "../node_modules/adm-zip/util/decoder.js"(exports, module) {
+    module.exports = {
+      efs: true,
+      encode: (data) => Buffer.from(data, "utf8"),
+      decode: (data) => data.toString("utf8")
+    };
+  }
+});
+
+// ../node_modules/adm-zip/util/index.js
+var require_util3 = __commonJS({
+  "../node_modules/adm-zip/util/index.js"(exports, module) {
+    module.exports = require_utils5();
+    module.exports.Constants = require_constants();
+    module.exports.Errors = require_errors3();
+    module.exports.FileAttr = require_fattr();
+    module.exports.decoder = require_decoder();
+  }
+});
+
+// ../node_modules/adm-zip/headers/entryHeader.js
+var require_entryHeader = __commonJS({
+  "../node_modules/adm-zip/headers/entryHeader.js"(exports, module) {
+    var Utils = require_util3();
+    var Constants = Utils.Constants;
+    module.exports = function() {
+      var _verMade = 20, _version = 10, _flags = 0, _method = 0, _time = 0, _crc = 0, _compressedSize = 0, _size2 = 0, _fnameLen = 0, _extraLen = 0, _comLen = 0, _diskStart = 0, _inattr = 0, _attr = 0, _offset = 0;
+      _verMade |= Utils.isWin ? 2560 : 768;
+      _flags |= Constants.FLG_EFS;
+      const _localHeader = {
+        extraLen: 0
+      };
+      const uint32 = (val) => Math.max(0, val) >>> 0;
+      const uint16 = (val) => Math.max(0, val) & 65535;
+      const uint8 = (val) => Math.max(0, val) & 255;
+      _time = Utils.fromDate2DOS(/* @__PURE__ */ new Date());
+      return {
+        get made() {
+          return _verMade;
+        },
+        set made(val) {
+          _verMade = val;
+        },
+        get version() {
+          return _version;
+        },
+        set version(val) {
+          _version = val;
+        },
+        get flags() {
+          return _flags;
+        },
+        set flags(val) {
+          _flags = val;
+        },
+        get flags_efs() {
+          return (_flags & Constants.FLG_EFS) > 0;
+        },
+        set flags_efs(val) {
+          if (val) {
+            _flags |= Constants.FLG_EFS;
+          } else {
+            _flags &= ~Constants.FLG_EFS;
+          }
+        },
+        get flags_desc() {
+          return (_flags & Constants.FLG_DESC) > 0;
+        },
+        set flags_desc(val) {
+          if (val) {
+            _flags |= Constants.FLG_DESC;
+          } else {
+            _flags &= ~Constants.FLG_DESC;
+          }
+        },
+        get method() {
+          return _method;
+        },
+        set method(val) {
+          switch (val) {
+            case Constants.STORED:
+              this.version = 10;
+            case Constants.DEFLATED:
+            default:
+              this.version = 20;
+          }
+          _method = val;
+        },
+        get time() {
+          return Utils.fromDOS2Date(this.timeval);
+        },
+        set time(val) {
+          this.timeval = Utils.fromDate2DOS(val);
+        },
+        get timeval() {
+          return _time;
+        },
+        set timeval(val) {
+          _time = uint32(val);
+        },
+        get timeHighByte() {
+          return uint8(_time >>> 8);
+        },
+        get crc() {
+          return _crc;
+        },
+        set crc(val) {
+          _crc = uint32(val);
+        },
+        get compressedSize() {
+          return _compressedSize;
+        },
+        set compressedSize(val) {
+          _compressedSize = uint32(val);
+        },
+        get size() {
+          return _size2;
+        },
+        set size(val) {
+          _size2 = uint32(val);
+        },
+        get fileNameLength() {
+          return _fnameLen;
+        },
+        set fileNameLength(val) {
+          _fnameLen = val;
+        },
+        get extraLength() {
+          return _extraLen;
+        },
+        set extraLength(val) {
+          _extraLen = val;
+        },
+        get extraLocalLength() {
+          return _localHeader.extraLen;
+        },
+        set extraLocalLength(val) {
+          _localHeader.extraLen = val;
+        },
+        get commentLength() {
+          return _comLen;
+        },
+        set commentLength(val) {
+          _comLen = val;
+        },
+        get diskNumStart() {
+          return _diskStart;
+        },
+        set diskNumStart(val) {
+          _diskStart = uint32(val);
+        },
+        get inAttr() {
+          return _inattr;
+        },
+        set inAttr(val) {
+          _inattr = uint32(val);
+        },
+        get attr() {
+          return _attr;
+        },
+        set attr(val) {
+          _attr = uint32(val);
+        },
+        // get Unix file permissions
+        get fileAttr() {
+          return (_attr || 0) >> 16 & 4095;
+        },
+        get offset() {
+          return _offset;
+        },
+        set offset(val) {
+          _offset = uint32(val);
+        },
+        get encrypted() {
+          return (_flags & Constants.FLG_ENC) === Constants.FLG_ENC;
+        },
+        get centralHeaderSize() {
+          return Constants.CENHDR + _fnameLen + _extraLen + _comLen;
+        },
+        get realDataOffset() {
+          return _offset + Constants.LOCHDR + _localHeader.fnameLen + _localHeader.extraLen;
+        },
+        get localHeader() {
+          return _localHeader;
+        },
+        loadLocalHeaderFromBinary: function(input) {
+          var data = input.slice(_offset, _offset + Constants.LOCHDR);
+          if (data.readUInt32LE(0) !== Constants.LOCSIG) {
+            throw Utils.Errors.INVALID_LOC();
+          }
+          _localHeader.version = data.readUInt16LE(Constants.LOCVER);
+          _localHeader.flags = data.readUInt16LE(Constants.LOCFLG);
+          _localHeader.method = data.readUInt16LE(Constants.LOCHOW);
+          _localHeader.time = data.readUInt32LE(Constants.LOCTIM);
+          _localHeader.crc = data.readUInt32LE(Constants.LOCCRC);
+          _localHeader.compressedSize = data.readUInt32LE(Constants.LOCSIZ);
+          _localHeader.size = data.readUInt32LE(Constants.LOCLEN);
+          _localHeader.fnameLen = data.readUInt16LE(Constants.LOCNAM);
+          _localHeader.extraLen = data.readUInt16LE(Constants.LOCEXT);
+          const extraStart = _offset + Constants.LOCHDR + _localHeader.fnameLen;
+          const extraEnd = extraStart + _localHeader.extraLen;
+          return input.slice(extraStart, extraEnd);
+        },
+        loadFromBinary: function(data) {
+          if (data.length !== Constants.CENHDR || data.readUInt32LE(0) !== Constants.CENSIG) {
+            throw Utils.Errors.INVALID_CEN();
+          }
+          _verMade = data.readUInt16LE(Constants.CENVEM);
+          _version = data.readUInt16LE(Constants.CENVER);
+          _flags = data.readUInt16LE(Constants.CENFLG);
+          _method = data.readUInt16LE(Constants.CENHOW);
+          _time = data.readUInt32LE(Constants.CENTIM);
+          _crc = data.readUInt32LE(Constants.CENCRC);
+          _compressedSize = data.readUInt32LE(Constants.CENSIZ);
+          _size2 = data.readUInt32LE(Constants.CENLEN);
+          _fnameLen = data.readUInt16LE(Constants.CENNAM);
+          _extraLen = data.readUInt16LE(Constants.CENEXT);
+          _comLen = data.readUInt16LE(Constants.CENCOM);
+          _diskStart = data.readUInt16LE(Constants.CENDSK);
+          _inattr = data.readUInt16LE(Constants.CENATT);
+          _attr = data.readUInt32LE(Constants.CENATX);
+          _offset = data.readUInt32LE(Constants.CENOFF);
+        },
+        localHeaderToBinary: function() {
+          var data = Buffer.alloc(Constants.LOCHDR);
+          data.writeUInt32LE(Constants.LOCSIG, 0);
+          data.writeUInt16LE(_version, Constants.LOCVER);
+          data.writeUInt16LE(_flags, Constants.LOCFLG);
+          data.writeUInt16LE(_method, Constants.LOCHOW);
+          data.writeUInt32LE(_time, Constants.LOCTIM);
+          data.writeUInt32LE(_crc, Constants.LOCCRC);
+          data.writeUInt32LE(_compressedSize, Constants.LOCSIZ);
+          data.writeUInt32LE(_size2, Constants.LOCLEN);
+          data.writeUInt16LE(_fnameLen, Constants.LOCNAM);
+          data.writeUInt16LE(_localHeader.extraLen, Constants.LOCEXT);
+          return data;
+        },
+        centralHeaderToBinary: function() {
+          var data = Buffer.alloc(Constants.CENHDR + _fnameLen + _extraLen + _comLen);
+          data.writeUInt32LE(Constants.CENSIG, 0);
+          data.writeUInt16LE(_verMade, Constants.CENVEM);
+          data.writeUInt16LE(_version, Constants.CENVER);
+          data.writeUInt16LE(_flags, Constants.CENFLG);
+          data.writeUInt16LE(_method, Constants.CENHOW);
+          data.writeUInt32LE(_time, Constants.CENTIM);
+          data.writeUInt32LE(_crc, Constants.CENCRC);
+          data.writeUInt32LE(_compressedSize, Constants.CENSIZ);
+          data.writeUInt32LE(_size2, Constants.CENLEN);
+          data.writeUInt16LE(_fnameLen, Constants.CENNAM);
+          data.writeUInt16LE(_extraLen, Constants.CENEXT);
+          data.writeUInt16LE(_comLen, Constants.CENCOM);
+          data.writeUInt16LE(_diskStart, Constants.CENDSK);
+          data.writeUInt16LE(_inattr, Constants.CENATT);
+          data.writeUInt32LE(_attr, Constants.CENATX);
+          data.writeUInt32LE(_offset, Constants.CENOFF);
+          return data;
+        },
+        toJSON: function() {
+          const bytes = function(nr) {
+            return nr + " bytes";
+          };
+          return {
+            made: _verMade,
+            version: _version,
+            flags: _flags,
+            method: Utils.methodToString(_method),
+            time: this.time,
+            crc: "0x" + _crc.toString(16).toUpperCase(),
+            compressedSize: bytes(_compressedSize),
+            size: bytes(_size2),
+            fileNameLength: bytes(_fnameLen),
+            extraLength: bytes(_extraLen),
+            commentLength: bytes(_comLen),
+            diskNumStart: _diskStart,
+            inAttr: _inattr,
+            attr: _attr,
+            offset: _offset,
+            centralHeaderSize: bytes(Constants.CENHDR + _fnameLen + _extraLen + _comLen)
+          };
+        },
+        toString: function() {
+          return JSON.stringify(this.toJSON(), null, "	");
+        }
+      };
+    };
+  }
+});
+
+// ../node_modules/adm-zip/headers/mainHeader.js
+var require_mainHeader = __commonJS({
+  "../node_modules/adm-zip/headers/mainHeader.js"(exports, module) {
+    var Utils = require_util3();
+    var Constants = Utils.Constants;
+    module.exports = function() {
+      var _volumeEntries = 0, _totalEntries = 0, _size2 = 0, _offset = 0, _commentLength = 0;
+      return {
+        get diskEntries() {
+          return _volumeEntries;
+        },
+        set diskEntries(val) {
+          _volumeEntries = _totalEntries = val;
+        },
+        get totalEntries() {
+          return _totalEntries;
+        },
+        set totalEntries(val) {
+          _totalEntries = _volumeEntries = val;
+        },
+        get size() {
+          return _size2;
+        },
+        set size(val) {
+          _size2 = val;
+        },
+        get offset() {
+          return _offset;
+        },
+        set offset(val) {
+          _offset = val;
+        },
+        get commentLength() {
+          return _commentLength;
+        },
+        set commentLength(val) {
+          _commentLength = val;
+        },
+        get mainHeaderSize() {
+          return Constants.ENDHDR + _commentLength;
+        },
+        loadFromBinary: function(data) {
+          if ((data.length !== Constants.ENDHDR || data.readUInt32LE(0) !== Constants.ENDSIG) && (data.length < Constants.ZIP64HDR || data.readUInt32LE(0) !== Constants.ZIP64SIG)) {
+            throw Utils.Errors.INVALID_END();
+          }
+          if (data.readUInt32LE(0) === Constants.ENDSIG) {
+            _volumeEntries = data.readUInt16LE(Constants.ENDSUB);
+            _totalEntries = data.readUInt16LE(Constants.ENDTOT);
+            _size2 = data.readUInt32LE(Constants.ENDSIZ);
+            _offset = data.readUInt32LE(Constants.ENDOFF);
+            _commentLength = data.readUInt16LE(Constants.ENDCOM);
+          } else {
+            _volumeEntries = Utils.readBigUInt64LE(data, Constants.ZIP64SUB);
+            _totalEntries = Utils.readBigUInt64LE(data, Constants.ZIP64TOT);
+            _size2 = Utils.readBigUInt64LE(data, Constants.ZIP64SIZE);
+            _offset = Utils.readBigUInt64LE(data, Constants.ZIP64OFF);
+            _commentLength = 0;
+          }
+        },
+        toBinary: function() {
+          var b = Buffer.alloc(Constants.ENDHDR + _commentLength);
+          b.writeUInt32LE(Constants.ENDSIG, 0);
+          b.writeUInt32LE(0, 4);
+          b.writeUInt16LE(_volumeEntries, Constants.ENDSUB);
+          b.writeUInt16LE(_totalEntries, Constants.ENDTOT);
+          b.writeUInt32LE(_size2, Constants.ENDSIZ);
+          b.writeUInt32LE(_offset, Constants.ENDOFF);
+          b.writeUInt16LE(_commentLength, Constants.ENDCOM);
+          b.fill(" ", Constants.ENDHDR);
+          return b;
+        },
+        toJSON: function() {
+          const offset = function(nr, len) {
+            let offs = nr.toString(16).toUpperCase();
+            while (offs.length < len) offs = "0" + offs;
+            return "0x" + offs;
+          };
+          return {
+            diskEntries: _volumeEntries,
+            totalEntries: _totalEntries,
+            size: _size2 + " bytes",
+            offset: offset(_offset, 4),
+            commentLength: _commentLength
+          };
+        },
+        toString: function() {
+          return JSON.stringify(this.toJSON(), null, "	");
+        }
+      };
+    };
+  }
+});
+
+// ../node_modules/adm-zip/headers/index.js
+var require_headers = __commonJS({
+  "../node_modules/adm-zip/headers/index.js"(exports) {
+    exports.EntryHeader = require_entryHeader();
+    exports.MainHeader = require_mainHeader();
+  }
+});
+
+// ../node_modules/adm-zip/methods/deflater.js
+var require_deflater = __commonJS({
+  "../node_modules/adm-zip/methods/deflater.js"(exports, module) {
+    module.exports = function(inbuf) {
+      var zlib = __require("zlib");
+      var opts = { chunkSize: (parseInt(inbuf.length / 1024) + 1) * 1024 };
+      return {
+        deflate: function() {
+          return zlib.deflateRawSync(inbuf, opts);
+        },
+        deflateAsync: function(callback) {
+          var tmp = zlib.createDeflateRaw(opts), parts = [], total = 0;
+          tmp.on("data", function(data) {
+            parts.push(data);
+            total += data.length;
+          });
+          tmp.on("end", function() {
+            var buf = Buffer.alloc(total), written = 0;
+            buf.fill(0);
+            for (var i = 0; i < parts.length; i++) {
+              var part = parts[i];
+              part.copy(buf, written);
+              written += part.length;
+            }
+            callback && callback(buf);
+          });
+          tmp.end(inbuf);
+        }
+      };
+    };
+  }
+});
+
+// ../node_modules/adm-zip/methods/inflater.js
+var require_inflater = __commonJS({
+  "../node_modules/adm-zip/methods/inflater.js"(exports, module) {
+    var version2 = +(process.versions ? process.versions.node : "").split(".")[0] || 0;
+    module.exports = function(inbuf, expectedLength) {
+      var zlib = __require("zlib");
+      const option = version2 >= 15 && expectedLength > 0 ? { maxOutputLength: expectedLength } : {};
+      return {
+        inflate: function() {
+          return zlib.inflateRawSync(inbuf, option);
+        },
+        inflateAsync: function(callback) {
+          var tmp = zlib.createInflateRaw(option), parts = [], total = 0;
+          tmp.on("data", function(data) {
+            parts.push(data);
+            total += data.length;
+          });
+          tmp.on("end", function() {
+            var buf = Buffer.alloc(total), written = 0;
+            buf.fill(0);
+            for (var i = 0; i < parts.length; i++) {
+              var part = parts[i];
+              part.copy(buf, written);
+              written += part.length;
+            }
+            callback && callback(buf);
+          });
+          tmp.end(inbuf);
+        }
+      };
+    };
+  }
+});
+
+// ../node_modules/adm-zip/methods/zipcrypto.js
+var require_zipcrypto = __commonJS({
+  "../node_modules/adm-zip/methods/zipcrypto.js"(exports, module) {
+    "use strict";
+    var { randomFillSync } = __require("crypto");
+    var Errors = require_errors3();
+    var crctable = new Uint32Array(256).map((t, crc) => {
+      for (let j = 0; j < 8; j++) {
+        if (0 !== (crc & 1)) {
+          crc = crc >>> 1 ^ 3988292384;
+        } else {
+          crc >>>= 1;
+        }
+      }
+      return crc >>> 0;
+    });
+    var uMul = (a, b) => Math.imul(a, b) >>> 0;
+    var crc32update = (pCrc32, bval) => {
+      return crctable[(pCrc32 ^ bval) & 255] ^ pCrc32 >>> 8;
+    };
+    var genSalt = () => {
+      if ("function" === typeof randomFillSync) {
+        return randomFillSync(Buffer.alloc(12));
+      } else {
+        return genSalt.node();
+      }
+    };
+    genSalt.node = () => {
+      const salt = Buffer.alloc(12);
+      const len = salt.length;
+      for (let i = 0; i < len; i++) salt[i] = Math.random() * 256 & 255;
+      return salt;
+    };
+    var config2 = {
+      genSalt
+    };
+    function Initkeys(pw) {
+      const pass = Buffer.isBuffer(pw) ? pw : Buffer.from(pw);
+      this.keys = new Uint32Array([305419896, 591751049, 878082192]);
+      for (let i = 0; i < pass.length; i++) {
+        this.updateKeys(pass[i]);
+      }
+    }
+    Initkeys.prototype.updateKeys = function(byteValue) {
+      const keys = this.keys;
+      keys[0] = crc32update(keys[0], byteValue);
+      keys[1] += keys[0] & 255;
+      keys[1] = uMul(keys[1], 134775813) + 1;
+      keys[2] = crc32update(keys[2], keys[1] >>> 24);
+      return byteValue;
+    };
+    Initkeys.prototype.next = function() {
+      const k = (this.keys[2] | 2) >>> 0;
+      return uMul(k, k ^ 1) >> 8 & 255;
+    };
+    function make_decrypter(pwd) {
+      const keys = new Initkeys(pwd);
+      return function(data) {
+        const result = Buffer.alloc(data.length);
+        let pos = 0;
+        for (let c of data) {
+          result[pos++] = keys.updateKeys(c ^ keys.next());
+        }
+        return result;
+      };
+    }
+    function make_encrypter(pwd) {
+      const keys = new Initkeys(pwd);
+      return function(data, result, pos = 0) {
+        if (!result) result = Buffer.alloc(data.length);
+        for (let c of data) {
+          const k = keys.next();
+          result[pos++] = c ^ k;
+          keys.updateKeys(c);
+        }
+        return result;
+      };
+    }
+    function decrypt(data, header, pwd) {
+      if (!data || !Buffer.isBuffer(data) || data.length < 12) {
+        return Buffer.alloc(0);
+      }
+      const decrypter = make_decrypter(pwd);
+      const salt = decrypter(data.slice(0, 12));
+      const verifyByte = (header.flags & 8) === 8 ? header.timeHighByte : header.crc >>> 24;
+      if (salt[11] !== verifyByte) {
+        throw Errors.WRONG_PASSWORD();
+      }
+      return decrypter(data.slice(12));
+    }
+    function _salter(data) {
+      if (Buffer.isBuffer(data) && data.length >= 12) {
+        config2.genSalt = function() {
+          return data.slice(0, 12);
+        };
+      } else if (data === "node") {
+        config2.genSalt = genSalt.node;
+      } else {
+        config2.genSalt = genSalt;
+      }
+    }
+    function encrypt(data, header, pwd, oldlike = false) {
+      if (data == null) data = Buffer.alloc(0);
+      if (!Buffer.isBuffer(data)) data = Buffer.from(data.toString());
+      const encrypter = make_encrypter(pwd);
+      const salt = config2.genSalt();
+      salt[11] = header.crc >>> 24 & 255;
+      if (oldlike) salt[10] = header.crc >>> 16 & 255;
+      const result = Buffer.alloc(data.length + 12);
+      encrypter(salt, result);
+      return encrypter(data, result, 12);
+    }
+    module.exports = { decrypt, encrypt, _salter };
+  }
+});
+
+// ../node_modules/adm-zip/methods/index.js
+var require_methods = __commonJS({
+  "../node_modules/adm-zip/methods/index.js"(exports) {
+    exports.Deflater = require_deflater();
+    exports.Inflater = require_inflater();
+    exports.ZipCrypto = require_zipcrypto();
+  }
+});
+
+// ../node_modules/adm-zip/zipEntry.js
+var require_zipEntry = __commonJS({
+  "../node_modules/adm-zip/zipEntry.js"(exports, module) {
+    var Utils = require_util3();
+    var Headers2 = require_headers();
+    var Constants = Utils.Constants;
+    var Methods = require_methods();
+    module.exports = function(options, input) {
+      var _centralHeader = new Headers2.EntryHeader(), _entryName = Buffer.alloc(0), _comment = Buffer.alloc(0), _isDirectory = false, uncompressedData = null, _extra = Buffer.alloc(0), _extralocal = Buffer.alloc(0), _efs = true;
+      const opts = options;
+      const decoder = typeof opts.decoder === "object" ? opts.decoder : Utils.decoder;
+      _efs = decoder.hasOwnProperty("efs") ? decoder.efs : false;
+      function getCompressedDataFromZip() {
+        if (!input || !(input instanceof Uint8Array)) {
+          return Buffer.alloc(0);
+        }
+        _extralocal = _centralHeader.loadLocalHeaderFromBinary(input);
+        return input.slice(_centralHeader.realDataOffset, _centralHeader.realDataOffset + _centralHeader.compressedSize);
+      }
+      function crc32OK(data) {
+        if (!_centralHeader.flags_desc) {
+          if (Utils.crc32(data) !== _centralHeader.localHeader.crc) {
+            return false;
+          }
+        } else {
+          const descriptor = {};
+          const dataEndOffset = _centralHeader.realDataOffset + _centralHeader.compressedSize;
+          if (input.readUInt32LE(dataEndOffset) == Constants.LOCSIG || input.readUInt32LE(dataEndOffset) == Constants.CENSIG) {
+            throw Utils.Errors.DESCRIPTOR_NOT_EXIST();
+          }
+          if (input.readUInt32LE(dataEndOffset) == Constants.EXTSIG) {
+            descriptor.crc = input.readUInt32LE(dataEndOffset + Constants.EXTCRC);
+            descriptor.compressedSize = input.readUInt32LE(dataEndOffset + Constants.EXTSIZ);
+            descriptor.size = input.readUInt32LE(dataEndOffset + Constants.EXTLEN);
+          } else if (input.readUInt16LE(dataEndOffset + 12) === 19280) {
+            descriptor.crc = input.readUInt32LE(dataEndOffset + Constants.EXTCRC - 4);
+            descriptor.compressedSize = input.readUInt32LE(dataEndOffset + Constants.EXTSIZ - 4);
+            descriptor.size = input.readUInt32LE(dataEndOffset + Constants.EXTLEN - 4);
+          } else {
+            throw Utils.Errors.DESCRIPTOR_UNKNOWN();
+          }
+          if (descriptor.compressedSize !== _centralHeader.compressedSize || descriptor.size !== _centralHeader.size || descriptor.crc !== _centralHeader.crc) {
+            throw Utils.Errors.DESCRIPTOR_FAULTY();
+          }
+          if (Utils.crc32(data) !== descriptor.crc) {
+            return false;
+          }
+        }
+        return true;
+      }
+      function decompress(async, callback, pass) {
+        if (typeof callback === "undefined" && typeof async === "string") {
+          pass = async;
+          async = void 0;
+        }
+        if (_isDirectory) {
+          if (async && callback) {
+            callback(Buffer.alloc(0), Utils.Errors.DIRECTORY_CONTENT_ERROR());
+          }
+          return Buffer.alloc(0);
+        }
+        var compressedData = getCompressedDataFromZip();
+        if (compressedData.length === 0) {
+          if (async && callback) callback(compressedData);
+          return compressedData;
+        }
+        if (_centralHeader.encrypted) {
+          if ("string" !== typeof pass && !Buffer.isBuffer(pass)) {
+            throw Utils.Errors.INVALID_PASS_PARAM();
+          }
+          compressedData = Methods.ZipCrypto.decrypt(compressedData, _centralHeader, pass);
+        }
+        var data = Buffer.alloc(_centralHeader.size);
+        switch (_centralHeader.method) {
+          case Utils.Constants.STORED:
+            compressedData.copy(data);
+            if (!crc32OK(data)) {
+              if (async && callback) callback(data, Utils.Errors.BAD_CRC());
+              throw Utils.Errors.BAD_CRC();
+            } else {
+              if (async && callback) callback(data);
+              return data;
+            }
+          case Utils.Constants.DEFLATED:
+            var inflater = new Methods.Inflater(compressedData, _centralHeader.size);
+            if (!async) {
+              const result = inflater.inflate(data);
+              result.copy(data, 0);
+              if (!crc32OK(data)) {
+                throw Utils.Errors.BAD_CRC(`"${decoder.decode(_entryName)}"`);
+              }
+              return data;
+            } else {
+              inflater.inflateAsync(function(result) {
+                result.copy(result, 0);
+                if (callback) {
+                  if (!crc32OK(result)) {
+                    callback(result, Utils.Errors.BAD_CRC());
+                  } else {
+                    callback(result);
+                  }
+                }
+              });
+            }
+            break;
+          default:
+            if (async && callback) callback(Buffer.alloc(0), Utils.Errors.UNKNOWN_METHOD());
+            throw Utils.Errors.UNKNOWN_METHOD();
+        }
+      }
+      function compress(async, callback) {
+        if ((!uncompressedData || !uncompressedData.length) && Buffer.isBuffer(input)) {
+          if (async && callback) callback(getCompressedDataFromZip());
+          return getCompressedDataFromZip();
+        }
+        if (uncompressedData.length && !_isDirectory) {
+          var compressedData;
+          switch (_centralHeader.method) {
+            case Utils.Constants.STORED:
+              _centralHeader.compressedSize = _centralHeader.size;
+              compressedData = Buffer.alloc(uncompressedData.length);
+              uncompressedData.copy(compressedData);
+              if (async && callback) callback(compressedData);
+              return compressedData;
+            default:
+            case Utils.Constants.DEFLATED:
+              var deflater = new Methods.Deflater(uncompressedData);
+              if (!async) {
+                var deflated = deflater.deflate();
+                _centralHeader.compressedSize = deflated.length;
+                return deflated;
+              } else {
+                deflater.deflateAsync(function(data) {
+                  compressedData = Buffer.alloc(data.length);
+                  _centralHeader.compressedSize = data.length;
+                  data.copy(compressedData);
+                  callback && callback(compressedData);
+                });
+              }
+              deflater = null;
+              break;
+          }
+        } else if (async && callback) {
+          callback(Buffer.alloc(0));
+        } else {
+          return Buffer.alloc(0);
+        }
+      }
+      function readUInt64LE(buffer, offset) {
+        return (buffer.readUInt32LE(offset + 4) << 4) + buffer.readUInt32LE(offset);
+      }
+      function parseExtra(data) {
+        try {
+          var offset = 0;
+          var signature, size, part;
+          while (offset + 4 < data.length) {
+            signature = data.readUInt16LE(offset);
+            offset += 2;
+            size = data.readUInt16LE(offset);
+            offset += 2;
+            part = data.slice(offset, offset + size);
+            offset += size;
+            if (Constants.ID_ZIP64 === signature) {
+              parseZip64ExtendedInformation(part);
+            }
+          }
+        } catch (error2) {
+          throw Utils.Errors.EXTRA_FIELD_PARSE_ERROR();
+        }
+      }
+      function parseZip64ExtendedInformation(data) {
+        var size, compressedSize, offset, diskNumStart;
+        if (data.length >= Constants.EF_ZIP64_SCOMP) {
+          size = readUInt64LE(data, Constants.EF_ZIP64_SUNCOMP);
+          if (_centralHeader.size === Constants.EF_ZIP64_OR_32) {
+            _centralHeader.size = size;
+          }
+        }
+        if (data.length >= Constants.EF_ZIP64_RHO) {
+          compressedSize = readUInt64LE(data, Constants.EF_ZIP64_SCOMP);
+          if (_centralHeader.compressedSize === Constants.EF_ZIP64_OR_32) {
+            _centralHeader.compressedSize = compressedSize;
+          }
+        }
+        if (data.length >= Constants.EF_ZIP64_DSN) {
+          offset = readUInt64LE(data, Constants.EF_ZIP64_RHO);
+          if (_centralHeader.offset === Constants.EF_ZIP64_OR_32) {
+            _centralHeader.offset = offset;
+          }
+        }
+        if (data.length >= Constants.EF_ZIP64_DSN + 4) {
+          diskNumStart = data.readUInt32LE(Constants.EF_ZIP64_DSN);
+          if (_centralHeader.diskNumStart === Constants.EF_ZIP64_OR_16) {
+            _centralHeader.diskNumStart = diskNumStart;
+          }
+        }
+      }
+      return {
+        get entryName() {
+          return decoder.decode(_entryName);
+        },
+        get rawEntryName() {
+          return _entryName;
+        },
+        set entryName(val) {
+          _entryName = Utils.toBuffer(val, decoder.encode);
+          var lastChar = _entryName[_entryName.length - 1];
+          _isDirectory = lastChar === 47 || lastChar === 92;
+          _centralHeader.fileNameLength = _entryName.length;
+        },
+        get efs() {
+          if (typeof _efs === "function") {
+            return _efs(this.entryName);
+          } else {
+            return _efs;
+          }
+        },
+        get extra() {
+          return _extra;
+        },
+        set extra(val) {
+          _extra = val;
+          _centralHeader.extraLength = val.length;
+          parseExtra(val);
+        },
+        get comment() {
+          return decoder.decode(_comment);
+        },
+        set comment(val) {
+          _comment = Utils.toBuffer(val, decoder.encode);
+          _centralHeader.commentLength = _comment.length;
+          if (_comment.length > 65535) throw Utils.Errors.COMMENT_TOO_LONG();
+        },
+        get name() {
+          var n = decoder.decode(_entryName);
+          return _isDirectory ? n.substr(n.length - 1).split("/").pop() : n.split("/").pop();
+        },
+        get isDirectory() {
+          return _isDirectory;
+        },
+        getCompressedData: function() {
+          return compress(false, null);
+        },
+        getCompressedDataAsync: function(callback) {
+          compress(true, callback);
+        },
+        setData: function(value) {
+          uncompressedData = Utils.toBuffer(value, Utils.decoder.encode);
+          if (!_isDirectory && uncompressedData.length) {
+            _centralHeader.size = uncompressedData.length;
+            _centralHeader.method = Utils.Constants.DEFLATED;
+            _centralHeader.crc = Utils.crc32(value);
+            _centralHeader.changed = true;
+          } else {
+            _centralHeader.method = Utils.Constants.STORED;
+          }
+        },
+        getData: function(pass) {
+          if (_centralHeader.changed) {
+            return uncompressedData;
+          } else {
+            return decompress(false, null, pass);
+          }
+        },
+        getDataAsync: function(callback, pass) {
+          if (_centralHeader.changed) {
+            callback(uncompressedData);
+          } else {
+            decompress(true, callback, pass);
+          }
+        },
+        set attr(attr) {
+          _centralHeader.attr = attr;
+        },
+        get attr() {
+          return _centralHeader.attr;
+        },
+        set header(data) {
+          _centralHeader.loadFromBinary(data);
+        },
+        get header() {
+          return _centralHeader;
+        },
+        packCentralHeader: function() {
+          _centralHeader.flags_efs = this.efs;
+          _centralHeader.extraLength = _extra.length;
+          var header = _centralHeader.centralHeaderToBinary();
+          var addpos = Utils.Constants.CENHDR;
+          _entryName.copy(header, addpos);
+          addpos += _entryName.length;
+          _extra.copy(header, addpos);
+          addpos += _centralHeader.extraLength;
+          _comment.copy(header, addpos);
+          return header;
+        },
+        packLocalHeader: function() {
+          let addpos = 0;
+          _centralHeader.flags_efs = this.efs;
+          _centralHeader.extraLocalLength = _extralocal.length;
+          const localHeaderBuf = _centralHeader.localHeaderToBinary();
+          const localHeader = Buffer.alloc(localHeaderBuf.length + _entryName.length + _centralHeader.extraLocalLength);
+          localHeaderBuf.copy(localHeader, addpos);
+          addpos += localHeaderBuf.length;
+          _entryName.copy(localHeader, addpos);
+          addpos += _entryName.length;
+          _extralocal.copy(localHeader, addpos);
+          addpos += _extralocal.length;
+          return localHeader;
+        },
+        toJSON: function() {
+          const bytes = function(nr) {
+            return "<" + (nr && nr.length + " bytes buffer" || "null") + ">";
+          };
+          return {
+            entryName: this.entryName,
+            name: this.name,
+            comment: this.comment,
+            isDirectory: this.isDirectory,
+            header: _centralHeader.toJSON(),
+            compressedData: bytes(input),
+            data: bytes(uncompressedData)
+          };
+        },
+        toString: function() {
+          return JSON.stringify(this.toJSON(), null, "	");
+        }
+      };
+    };
+  }
+});
+
+// ../node_modules/adm-zip/zipFile.js
+var require_zipFile = __commonJS({
+  "../node_modules/adm-zip/zipFile.js"(exports, module) {
+    var ZipEntry = require_zipEntry();
+    var Headers2 = require_headers();
+    var Utils = require_util3();
+    module.exports = function(inBuffer, options) {
+      var entryList = [], entryTable = {}, _comment = Buffer.alloc(0), mainHeader = new Headers2.MainHeader(), loadedEntries = false;
+      var password = null;
+      const temporary = /* @__PURE__ */ new Set();
+      const opts = options;
+      const { noSort, decoder } = opts;
+      if (inBuffer) {
+        readMainHeader(opts.readEntries);
+      } else {
+        loadedEntries = true;
+      }
+      function makeTemporaryFolders() {
+        const foldersList = /* @__PURE__ */ new Set();
+        for (const elem of Object.keys(entryTable)) {
+          const elements = elem.split("/");
+          elements.pop();
+          if (!elements.length) continue;
+          for (let i = 0; i < elements.length; i++) {
+            const sub = elements.slice(0, i + 1).join("/") + "/";
+            foldersList.add(sub);
+          }
+        }
+        for (const elem of foldersList) {
+          if (!(elem in entryTable)) {
+            const tempfolder = new ZipEntry(opts);
+            tempfolder.entryName = elem;
+            tempfolder.attr = 16;
+            tempfolder.temporary = true;
+            entryList.push(tempfolder);
+            entryTable[tempfolder.entryName] = tempfolder;
+            temporary.add(tempfolder);
+          }
+        }
+      }
+      function readEntries() {
+        loadedEntries = true;
+        entryTable = {};
+        if (mainHeader.diskEntries > (inBuffer.length - mainHeader.offset) / Utils.Constants.CENHDR) {
+          throw Utils.Errors.DISK_ENTRY_TOO_LARGE();
+        }
+        entryList = new Array(mainHeader.diskEntries);
+        var index = mainHeader.offset;
+        for (var i = 0; i < entryList.length; i++) {
+          var tmp = index, entry = new ZipEntry(opts, inBuffer);
+          entry.header = inBuffer.slice(tmp, tmp += Utils.Constants.CENHDR);
+          entry.entryName = inBuffer.slice(tmp, tmp += entry.header.fileNameLength);
+          if (entry.header.extraLength) {
+            entry.extra = inBuffer.slice(tmp, tmp += entry.header.extraLength);
+          }
+          if (entry.header.commentLength) entry.comment = inBuffer.slice(tmp, tmp + entry.header.commentLength);
+          index += entry.header.centralHeaderSize;
+          entryList[i] = entry;
+          entryTable[entry.entryName] = entry;
+        }
+        temporary.clear();
+        makeTemporaryFolders();
+      }
+      function readMainHeader(readNow) {
+        var i = inBuffer.length - Utils.Constants.ENDHDR, max = Math.max(0, i - 65535), n = max, endStart = inBuffer.length, endOffset = -1, commentEnd = 0;
+        const trailingSpace = typeof opts.trailingSpace === "boolean" ? opts.trailingSpace : false;
+        if (trailingSpace) max = 0;
+        for (i; i >= n; i--) {
+          if (inBuffer[i] !== 80) continue;
+          if (inBuffer.readUInt32LE(i) === Utils.Constants.ENDSIG) {
+            endOffset = i;
+            commentEnd = i;
+            endStart = i + Utils.Constants.ENDHDR;
+            n = i - Utils.Constants.END64HDR;
+            continue;
+          }
+          if (inBuffer.readUInt32LE(i) === Utils.Constants.END64SIG) {
+            n = max;
+            continue;
+          }
+          if (inBuffer.readUInt32LE(i) === Utils.Constants.ZIP64SIG) {
+            endOffset = i;
+            endStart = i + Utils.readBigUInt64LE(inBuffer, i + Utils.Constants.ZIP64SIZE) + Utils.Constants.ZIP64LEAD;
+            break;
+          }
+        }
+        if (endOffset == -1) throw Utils.Errors.INVALID_FORMAT();
+        mainHeader.loadFromBinary(inBuffer.slice(endOffset, endStart));
+        if (mainHeader.commentLength) {
+          _comment = inBuffer.slice(commentEnd + Utils.Constants.ENDHDR);
+        }
+        if (readNow) readEntries();
+      }
+      function sortEntries() {
+        if (entryList.length > 1 && !noSort) {
+          entryList.sort((a, b) => a.entryName.toLowerCase().localeCompare(b.entryName.toLowerCase()));
+        }
+      }
+      return {
+        /**
+         * Returns an array of ZipEntry objects existent in the current opened archive
+         * @return Array
+         */
+        get entries() {
+          if (!loadedEntries) {
+            readEntries();
+          }
+          return entryList.filter((e) => !temporary.has(e));
+        },
+        /**
+         * Archive comment
+         * @return {String}
+         */
+        get comment() {
+          return decoder.decode(_comment);
+        },
+        set comment(val) {
+          _comment = Utils.toBuffer(val, decoder.encode);
+          mainHeader.commentLength = _comment.length;
+        },
+        getEntryCount: function() {
+          if (!loadedEntries) {
+            return mainHeader.diskEntries;
+          }
+          return entryList.length;
+        },
+        forEach: function(callback) {
+          this.entries.forEach(callback);
+        },
+        /**
+         * Returns a reference to the entry with the given name or null if entry is inexistent
+         *
+         * @param entryName
+         * @return ZipEntry
+         */
+        getEntry: function(entryName) {
+          if (!loadedEntries) {
+            readEntries();
+          }
+          return entryTable[entryName] || null;
+        },
+        /**
+         * Adds the given entry to the entry list
+         *
+         * @param entry
+         */
+        setEntry: function(entry) {
+          if (!loadedEntries) {
+            readEntries();
+          }
+          entryList.push(entry);
+          entryTable[entry.entryName] = entry;
+          mainHeader.totalEntries = entryList.length;
+        },
+        /**
+         * Removes the file with the given name from the entry list.
+         *
+         * If the entry is a directory, then all nested files and directories will be removed
+         * @param entryName
+         * @returns {void}
+         */
+        deleteFile: function(entryName, withsubfolders = true) {
+          if (!loadedEntries) {
+            readEntries();
+          }
+          const entry = entryTable[entryName];
+          const list = this.getEntryChildren(entry, withsubfolders).map((child) => child.entryName);
+          list.forEach(this.deleteEntry);
+        },
+        /**
+         * Removes the entry with the given name from the entry list.
+         *
+         * @param {string} entryName
+         * @returns {void}
+         */
+        deleteEntry: function(entryName) {
+          if (!loadedEntries) {
+            readEntries();
+          }
+          const entry = entryTable[entryName];
+          const index = entryList.indexOf(entry);
+          if (index >= 0) {
+            entryList.splice(index, 1);
+            delete entryTable[entryName];
+            mainHeader.totalEntries = entryList.length;
+          }
+        },
+        /**
+         *  Iterates and returns all nested files and directories of the given entry
+         *
+         * @param entry
+         * @return Array
+         */
+        getEntryChildren: function(entry, subfolders = true) {
+          if (!loadedEntries) {
+            readEntries();
+          }
+          if (typeof entry === "object") {
+            if (entry.isDirectory && subfolders) {
+              const list = [];
+              const name = entry.entryName;
+              for (const zipEntry of entryList) {
+                if (zipEntry.entryName.startsWith(name)) {
+                  list.push(zipEntry);
+                }
+              }
+              return list;
+            } else {
+              return [entry];
+            }
+          }
+          return [];
+        },
+        /**
+         *  How many child elements entry has
+         *
+         * @param {ZipEntry} entry
+         * @return {integer}
+         */
+        getChildCount: function(entry) {
+          if (entry && entry.isDirectory) {
+            const list = this.getEntryChildren(entry);
+            return list.includes(entry) ? list.length - 1 : list.length;
+          }
+          return 0;
+        },
+        /**
+         * Returns the zip file
+         *
+         * @return Buffer
+         */
+        compressToBuffer: function() {
+          if (!loadedEntries) {
+            readEntries();
+          }
+          sortEntries();
+          const dataBlock = [];
+          const headerBlocks = [];
+          let totalSize = 0;
+          let dindex = 0;
+          mainHeader.size = 0;
+          mainHeader.offset = 0;
+          let totalEntries = 0;
+          for (const entry of this.entries) {
+            const compressedData = entry.getCompressedData();
+            entry.header.offset = dindex;
+            const localHeader = entry.packLocalHeader();
+            const dataLength = localHeader.length + compressedData.length;
+            dindex += dataLength;
+            dataBlock.push(localHeader);
+            dataBlock.push(compressedData);
+            const centralHeader = entry.packCentralHeader();
+            headerBlocks.push(centralHeader);
+            mainHeader.size += centralHeader.length;
+            totalSize += dataLength + centralHeader.length;
+            totalEntries++;
+          }
+          totalSize += mainHeader.mainHeaderSize;
+          mainHeader.offset = dindex;
+          mainHeader.totalEntries = totalEntries;
+          dindex = 0;
+          const outBuffer = Buffer.alloc(totalSize);
+          for (const content of dataBlock) {
+            content.copy(outBuffer, dindex);
+            dindex += content.length;
+          }
+          for (const content of headerBlocks) {
+            content.copy(outBuffer, dindex);
+            dindex += content.length;
+          }
+          const mh = mainHeader.toBinary();
+          if (_comment) {
+            _comment.copy(mh, Utils.Constants.ENDHDR);
+          }
+          mh.copy(outBuffer, dindex);
+          inBuffer = outBuffer;
+          loadedEntries = false;
+          return outBuffer;
+        },
+        toAsyncBuffer: function(onSuccess, onFail, onItemStart, onItemEnd) {
+          try {
+            if (!loadedEntries) {
+              readEntries();
+            }
+            sortEntries();
+            const dataBlock = [];
+            const centralHeaders = [];
+            let totalSize = 0;
+            let dindex = 0;
+            let totalEntries = 0;
+            mainHeader.size = 0;
+            mainHeader.offset = 0;
+            const compress2Buffer = function(entryLists) {
+              if (entryLists.length > 0) {
+                const entry = entryLists.shift();
+                const name = entry.entryName + entry.extra.toString();
+                if (onItemStart) onItemStart(name);
+                entry.getCompressedDataAsync(function(compressedData) {
+                  if (onItemEnd) onItemEnd(name);
+                  entry.header.offset = dindex;
+                  const localHeader = entry.packLocalHeader();
+                  const dataLength = localHeader.length + compressedData.length;
+                  dindex += dataLength;
+                  dataBlock.push(localHeader);
+                  dataBlock.push(compressedData);
+                  const centalHeader = entry.packCentralHeader();
+                  centralHeaders.push(centalHeader);
+                  mainHeader.size += centalHeader.length;
+                  totalSize += dataLength + centalHeader.length;
+                  totalEntries++;
+                  compress2Buffer(entryLists);
+                });
+              } else {
+                totalSize += mainHeader.mainHeaderSize;
+                mainHeader.offset = dindex;
+                mainHeader.totalEntries = totalEntries;
+                dindex = 0;
+                const outBuffer = Buffer.alloc(totalSize);
+                dataBlock.forEach(function(content) {
+                  content.copy(outBuffer, dindex);
+                  dindex += content.length;
+                });
+                centralHeaders.forEach(function(content) {
+                  content.copy(outBuffer, dindex);
+                  dindex += content.length;
+                });
+                const mh = mainHeader.toBinary();
+                if (_comment) {
+                  _comment.copy(mh, Utils.Constants.ENDHDR);
+                }
+                mh.copy(outBuffer, dindex);
+                inBuffer = outBuffer;
+                loadedEntries = false;
+                onSuccess(outBuffer);
+              }
+            };
+            compress2Buffer(Array.from(this.entries));
+          } catch (e) {
+            onFail(e);
+          }
+        }
+      };
+    };
+  }
+});
+
+// ../node_modules/adm-zip/adm-zip.js
+var require_adm_zip = __commonJS({
+  "../node_modules/adm-zip/adm-zip.js"(exports, module) {
+    var Utils = require_util3();
+    var pth = __require("path");
+    var ZipEntry = require_zipEntry();
+    var ZipFile = require_zipFile();
+    var get_Bool = (...val) => Utils.findLast(val, (c) => typeof c === "boolean");
+    var get_Str = (...val) => Utils.findLast(val, (c) => typeof c === "string");
+    var get_Fun = (...val) => Utils.findLast(val, (c) => typeof c === "function");
+    var defaultOptions2 = {
+      // option "noSort" : if true it disables files sorting
+      noSort: false,
+      // read entries during load (initial loading may be slower)
+      readEntries: false,
+      // default method is none
+      method: Utils.Constants.NONE,
+      // file system
+      fs: null
+    };
+    module.exports = function(input, options) {
+      let inBuffer = null;
+      const opts = Object.assign(/* @__PURE__ */ Object.create(null), defaultOptions2);
+      if (input && "object" === typeof input) {
+        if (!(input instanceof Uint8Array)) {
+          Object.assign(opts, input);
+          input = opts.input ? opts.input : void 0;
+          if (opts.input) delete opts.input;
+        }
+        if (Buffer.isBuffer(input)) {
+          inBuffer = input;
+          opts.method = Utils.Constants.BUFFER;
+          input = void 0;
+        }
+      }
+      Object.assign(opts, options);
+      const filetools = new Utils(opts);
+      if (typeof opts.decoder !== "object" || typeof opts.decoder.encode !== "function" || typeof opts.decoder.decode !== "function") {
+        opts.decoder = Utils.decoder;
+      }
+      if (input && "string" === typeof input) {
+        if (filetools.fs.existsSync(input)) {
+          opts.method = Utils.Constants.FILE;
+          opts.filename = input;
+          inBuffer = filetools.fs.readFileSync(input);
+        } else {
+          throw Utils.Errors.INVALID_FILENAME();
+        }
+      }
+      const _zip = new ZipFile(inBuffer, opts);
+      const { canonical, sanitize, zipnamefix } = Utils;
+      function getEntry(entry) {
+        if (entry && _zip) {
+          var item;
+          if (typeof entry === "string") item = _zip.getEntry(pth.posix.normalize(entry));
+          if (typeof entry === "object" && typeof entry.entryName !== "undefined" && typeof entry.header !== "undefined") item = _zip.getEntry(entry.entryName);
+          if (item) {
+            return item;
+          }
+        }
+        return null;
+      }
+      function fixPath(zipPath) {
+        const { join: join19, normalize, sep: sep2 } = pth.posix;
+        return join19(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
+      }
+      function filenameFilter(filterfn) {
+        if (filterfn instanceof RegExp) {
+          return /* @__PURE__ */ (function(rx) {
+            return function(filename) {
+              return rx.test(filename);
+            };
+          })(filterfn);
+        } else if ("function" !== typeof filterfn) {
+          return () => true;
+        }
+        return filterfn;
+      }
+      const relativePath = (local, entry) => {
+        let lastChar = entry.slice(-1);
+        lastChar = lastChar === filetools.sep ? filetools.sep : "";
+        return pth.relative(local, entry) + lastChar;
+      };
+      return {
+        /**
+         * Extracts the given entry from the archive and returns the content as a Buffer object
+         * @param {ZipEntry|string} entry ZipEntry object or String with the full path of the entry
+         * @param {Buffer|string} [pass] - password
+         * @return Buffer or Null in case of error
+         */
+        readFile: function(entry, pass) {
+          var item = getEntry(entry);
+          return item && item.getData(pass) || null;
+        },
+        /**
+         * Returns how many child elements has on entry (directories) on files it is always 0
+         * @param {ZipEntry|string} entry ZipEntry object or String with the full path of the entry
+         * @returns {integer}
+         */
+        childCount: function(entry) {
+          const item = getEntry(entry);
+          if (item) {
+            return _zip.getChildCount(item);
+          }
+        },
+        /**
+         * Asynchronous readFile
+         * @param {ZipEntry|string} entry ZipEntry object or String with the full path of the entry
+         * @param {callback} callback
+         *
+         * @return Buffer or Null in case of error
+         */
+        readFileAsync: function(entry, callback) {
+          var item = getEntry(entry);
+          if (item) {
+            item.getDataAsync(callback);
+          } else {
+            callback(null, "getEntry failed for:" + entry);
+          }
+        },
+        /**
+         * Extracts the given entry from the archive and returns the content as plain text in the given encoding
+         * @param {ZipEntry|string} entry - ZipEntry object or String with the full path of the entry
+         * @param {string} encoding - Optional. If no encoding is specified utf8 is used
+         *
+         * @return String
+         */
+        readAsText: function(entry, encoding) {
+          var item = getEntry(entry);
+          if (item) {
+            var data = item.getData();
+            if (data && data.length) {
+              return data.toString(encoding || "utf8");
+            }
+          }
+          return "";
+        },
+        /**
+         * Asynchronous readAsText
+         * @param {ZipEntry|string} entry ZipEntry object or String with the full path of the entry
+         * @param {callback} callback
+         * @param {string} [encoding] - Optional. If no encoding is specified utf8 is used
+         *
+         * @return String
+         */
+        readAsTextAsync: function(entry, callback, encoding) {
+          var item = getEntry(entry);
+          if (item) {
+            item.getDataAsync(function(data, err) {
+              if (err) {
+                callback(data, err);
+                return;
+              }
+              if (data && data.length) {
+                callback(data.toString(encoding || "utf8"));
+              } else {
+                callback("");
+              }
+            });
+          } else {
+            callback("");
+          }
+        },
+        /**
+         * Remove the entry from the file or the entry and all it's nested directories and files if the given entry is a directory
+         *
+         * @param {ZipEntry|string} entry
+         * @returns {void}
+         */
+        deleteFile: function(entry, withsubfolders = true) {
+          var item = getEntry(entry);
+          if (item) {
+            _zip.deleteFile(item.entryName, withsubfolders);
+          }
+        },
+        /**
+         * Remove the entry from the file or directory without affecting any nested entries
+         *
+         * @param {ZipEntry|string} entry
+         * @returns {void}
+         */
+        deleteEntry: function(entry) {
+          var item = getEntry(entry);
+          if (item) {
+            _zip.deleteEntry(item.entryName);
+          }
+        },
+        /**
+         * Adds a comment to the zip. The zip must be rewritten after adding the comment.
+         *
+         * @param {string} comment
+         */
+        addZipComment: function(comment) {
+          _zip.comment = comment;
+        },
+        /**
+         * Returns the zip comment
+         *
+         * @return String
+         */
+        getZipComment: function() {
+          return _zip.comment || "";
+        },
+        /**
+         * Adds a comment to a specified zipEntry. The zip must be rewritten after adding the comment
+         * The comment cannot exceed 65535 characters in length
+         *
+         * @param {ZipEntry} entry
+         * @param {string} comment
+         */
+        addZipEntryComment: function(entry, comment) {
+          var item = getEntry(entry);
+          if (item) {
+            item.comment = comment;
+          }
+        },
+        /**
+         * Returns the comment of the specified entry
+         *
+         * @param {ZipEntry} entry
+         * @return String
+         */
+        getZipEntryComment: function(entry) {
+          var item = getEntry(entry);
+          if (item) {
+            return item.comment || "";
+          }
+          return "";
+        },
+        /**
+         * Updates the content of an existing entry inside the archive. The zip must be rewritten after updating the content
+         *
+         * @param {ZipEntry} entry
+         * @param {Buffer} content
+         */
+        updateFile: function(entry, content) {
+          var item = getEntry(entry);
+          if (item) {
+            item.setData(content);
+          }
+        },
+        /**
+         * Adds a file from the disk to the archive
+         *
+         * @param {string} localPath File to add to zip
+         * @param {string} [zipPath] Optional path inside the zip
+         * @param {string} [zipName] Optional name for the file
+         * @param {string} [comment] Optional file comment
+         */
+        addLocalFile: function(localPath2, zipPath, zipName, comment) {
+          if (filetools.fs.existsSync(localPath2)) {
+            zipPath = zipPath ? fixPath(zipPath) : "";
+            const p = pth.win32.basename(pth.win32.normalize(localPath2));
+            zipPath += zipName ? zipName : p;
+            const _attr = filetools.fs.statSync(localPath2);
+            const data = _attr.isFile() ? filetools.fs.readFileSync(localPath2) : Buffer.alloc(0);
+            if (_attr.isDirectory()) zipPath += filetools.sep;
+            this.addFile(zipPath, data, comment, _attr);
+          } else {
+            throw Utils.Errors.FILE_NOT_FOUND(localPath2);
+          }
+        },
+        /**
+         * Callback for showing if everything was done.
+         *
+         * @callback doneCallback
+         * @param {Error} err - Error object
+         * @param {boolean} done - was request fully completed
+         */
+        /**
+         * Adds a file from the disk to the archive
+         *
+         * @param {(object|string)} options - options object, if it is string it us used as localPath.
+         * @param {string} options.localPath - Local path to the file.
+         * @param {string} [options.comment] - Optional file comment.
+         * @param {string} [options.zipPath] - Optional path inside the zip
+         * @param {string} [options.zipName] - Optional name for the file
+         * @param {doneCallback} callback - The callback that handles the response.
+         */
+        addLocalFileAsync: function(options2, callback) {
+          options2 = typeof options2 === "object" ? options2 : { localPath: options2 };
+          const localPath2 = pth.resolve(options2.localPath);
+          const { comment } = options2;
+          let { zipPath, zipName } = options2;
+          const self = this;
+          filetools.fs.stat(localPath2, function(err, stats) {
+            if (err) return callback(err, false);
+            zipPath = zipPath ? fixPath(zipPath) : "";
+            const p = pth.win32.basename(pth.win32.normalize(localPath2));
+            zipPath += zipName ? zipName : p;
+            if (stats.isFile()) {
+              filetools.fs.readFile(localPath2, function(err2, data) {
+                if (err2) return callback(err2, false);
+                self.addFile(zipPath, data, comment, stats);
+                return setImmediate(callback, void 0, true);
+              });
+            } else if (stats.isDirectory()) {
+              zipPath += filetools.sep;
+              self.addFile(zipPath, Buffer.alloc(0), comment, stats);
+              return setImmediate(callback, void 0, true);
+            }
+          });
+        },
+        /**
+         * Adds a local directory and all its nested files and directories to the archive
+         *
+         * @param {string} localPath - local path to the folder
+         * @param {string} [zipPath] - optional path inside zip
+         * @param {(RegExp|function)} [filter] - optional RegExp or Function if files match will be included.
+         */
+        addLocalFolder: function(localPath2, zipPath, filter) {
+          filter = filenameFilter(filter);
+          zipPath = zipPath ? fixPath(zipPath) : "";
+          localPath2 = pth.normalize(localPath2);
+          if (filetools.fs.existsSync(localPath2)) {
+            const items = filetools.findFiles(localPath2);
+            const self = this;
+            if (items.length) {
+              for (const filepath of items) {
+                const p = pth.join(zipPath, relativePath(localPath2, filepath));
+                if (filter(p)) {
+                  self.addLocalFile(filepath, pth.dirname(p));
+                }
+              }
+            }
+          } else {
+            throw Utils.Errors.FILE_NOT_FOUND(localPath2);
+          }
+        },
+        /**
+         * Asynchronous addLocalFolder
+         * @param {string} localPath
+         * @param {callback} callback
+         * @param {string} [zipPath] optional path inside zip
+         * @param {RegExp|function} [filter] optional RegExp or Function if files match will
+         *               be included.
+         */
+        addLocalFolderAsync: function(localPath2, callback, zipPath, filter) {
+          filter = filenameFilter(filter);
+          zipPath = zipPath ? fixPath(zipPath) : "";
+          localPath2 = pth.normalize(localPath2);
+          var self = this;
+          filetools.fs.open(localPath2, "r", function(err) {
+            if (err && err.code === "ENOENT") {
+              callback(void 0, Utils.Errors.FILE_NOT_FOUND(localPath2));
+            } else if (err) {
+              callback(void 0, err);
+            } else {
+              var items = filetools.findFiles(localPath2);
+              var i = -1;
+              var next = function() {
+                i += 1;
+                if (i < items.length) {
+                  var filepath = items[i];
+                  var p = relativePath(localPath2, filepath).split("\\").join("/");
+                  p = p.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "");
+                  if (filter(p)) {
+                    filetools.fs.stat(filepath, function(er0, stats) {
+                      if (er0) callback(void 0, er0);
+                      if (stats.isFile()) {
+                        filetools.fs.readFile(filepath, function(er1, data) {
+                          if (er1) {
+                            callback(void 0, er1);
+                          } else {
+                            self.addFile(zipPath + p, data, "", stats);
+                            next();
+                          }
+                        });
+                      } else {
+                        self.addFile(zipPath + p + "/", Buffer.alloc(0), "", stats);
+                        next();
+                      }
+                    });
+                  } else {
+                    process.nextTick(() => {
+                      next();
+                    });
+                  }
+                } else {
+                  callback(true, void 0);
+                }
+              };
+              next();
+            }
+          });
+        },
+        /**
+         * Adds a local directory and all its nested files and directories to the archive
+         *
+         * @param {object | string} options - options object, if it is string it us used as localPath.
+         * @param {string} options.localPath - Local path to the folder.
+         * @param {string} [options.zipPath] - optional path inside zip.
+         * @param {RegExp|function} [options.filter] - optional RegExp or Function if files match will be included.
+         * @param {function|string} [options.namefix] - optional function to help fix filename
+         * @param {doneCallback} callback - The callback that handles the response.
+         *
+         */
+        addLocalFolderAsync2: function(options2, callback) {
+          const self = this;
+          options2 = typeof options2 === "object" ? options2 : { localPath: options2 };
+          localPath = pth.resolve(fixPath(options2.localPath));
+          let { zipPath, filter, namefix } = options2;
+          if (filter instanceof RegExp) {
+            filter = /* @__PURE__ */ (function(rx) {
+              return function(filename) {
+                return rx.test(filename);
+              };
+            })(filter);
+          } else if ("function" !== typeof filter) {
+            filter = function() {
+              return true;
+            };
+          }
+          zipPath = zipPath ? fixPath(zipPath) : "";
+          if (namefix == "latin1") {
+            namefix = (str2) => str2.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "");
+          }
+          if (typeof namefix !== "function") namefix = (str2) => str2;
+          const relPathFix = (entry) => pth.join(zipPath, namefix(relativePath(localPath, entry)));
+          const fileNameFix = (entry) => pth.win32.basename(pth.win32.normalize(namefix(entry)));
+          filetools.fs.open(localPath, "r", function(err) {
+            if (err && err.code === "ENOENT") {
+              callback(void 0, Utils.Errors.FILE_NOT_FOUND(localPath));
+            } else if (err) {
+              callback(void 0, err);
+            } else {
+              filetools.findFilesAsync(localPath, function(err2, fileEntries) {
+                if (err2) return callback(err2);
+                fileEntries = fileEntries.filter((dir) => filter(relPathFix(dir)));
+                if (!fileEntries.length) callback(void 0, false);
+                setImmediate(
+                  fileEntries.reverse().reduce(function(next, entry) {
+                    return function(err3, done) {
+                      if (err3 || done === false) return setImmediate(next, err3, false);
+                      self.addLocalFileAsync(
+                        {
+                          localPath: entry,
+                          zipPath: pth.dirname(relPathFix(entry)),
+                          zipName: fileNameFix(entry)
+                        },
+                        next
+                      );
+                    };
+                  }, callback)
+                );
+              });
+            }
+          });
+        },
+        /**
+         * Adds a local directory and all its nested files and directories to the archive
+         *
+         * @param {string} localPath - path where files will be extracted
+         * @param {object} props - optional properties
+         * @param {string} [props.zipPath] - optional path inside zip
+         * @param {RegExp|function} [props.filter] - optional RegExp or Function if files match will be included.
+         * @param {function|string} [props.namefix] - optional function to help fix filename
+         */
+        addLocalFolderPromise: function(localPath2, props) {
+          return new Promise((resolve13, reject) => {
+            this.addLocalFolderAsync2(Object.assign({ localPath: localPath2 }, props), (err, done) => {
+              if (err) reject(err);
+              if (done) resolve13(this);
+            });
+          });
+        },
+        /**
+         * Allows you to create a entry (file or directory) in the zip file.
+         * If you want to create a directory the entryName must end in / and a null buffer should be provided.
+         * Comment and attributes are optional
+         *
+         * @param {string} entryName
+         * @param {Buffer | string} content - file content as buffer or utf8 coded string
+         * @param {string} [comment] - file comment
+         * @param {number | object} [attr] - number as unix file permissions, object as filesystem Stats object
+         */
+        addFile: function(entryName, content, comment, attr) {
+          entryName = zipnamefix(entryName);
+          let entry = getEntry(entryName);
+          const update = entry != null;
+          if (!update) {
+            entry = new ZipEntry(opts);
+            entry.entryName = entryName;
+          }
+          entry.comment = comment || "";
+          const isStat = "object" === typeof attr && attr instanceof filetools.fs.Stats;
+          if (isStat) {
+            entry.header.time = attr.mtime;
+          }
+          var fileattr = entry.isDirectory ? 16 : 0;
+          let unix = entry.isDirectory ? 16384 : 32768;
+          if (isStat) {
+            unix |= 4095 & attr.mode;
+          } else if ("number" === typeof attr) {
+            unix |= 4095 & attr;
+          } else {
+            unix |= entry.isDirectory ? 493 : 420;
+          }
+          fileattr = (fileattr | unix << 16) >>> 0;
+          entry.attr = fileattr;
+          entry.setData(content);
+          if (!update) _zip.setEntry(entry);
+          return entry;
+        },
+        /**
+         * Returns an array of ZipEntry objects representing the files and folders inside the archive
+         *
+         * @param {string} [password]
+         * @returns Array
+         */
+        getEntries: function(password) {
+          _zip.password = password;
+          return _zip ? _zip.entries : [];
+        },
+        /**
+         * Returns a ZipEntry object representing the file or folder specified by ``name``.
+         *
+         * @param {string} name
+         * @return ZipEntry
+         */
+        getEntry: function(name) {
+          return getEntry(name);
+        },
+        getEntryCount: function() {
+          return _zip.getEntryCount();
+        },
+        forEach: function(callback) {
+          return _zip.forEach(callback);
+        },
+        /**
+         * Extracts the given entry to the given targetPath
+         * If the entry is a directory inside the archive, the entire directory and it's subdirectories will be extracted
+         *
+         * @param {string|ZipEntry} entry - ZipEntry object or String with the full path of the entry
+         * @param {string} targetPath - Target folder where to write the file
+         * @param {boolean} [maintainEntryPath=true] - If maintainEntryPath is true and the entry is inside a folder, the entry folder will be created in targetPath as well. Default is TRUE
+         * @param {boolean} [overwrite=false] - If the file already exists at the target path, the file will be overwriten if this is true.
+         * @param {boolean} [keepOriginalPermission=false] - The file will be set as the permission from the entry if this is true.
+         * @param {string} [outFileName] - String If set will override the filename of the extracted file (Only works if the entry is a file)
+         *
+         * @return Boolean
+         */
+        extractEntryTo: function(entry, targetPath, maintainEntryPath, overwrite, keepOriginalPermission, outFileName) {
+          overwrite = get_Bool(false, overwrite);
+          keepOriginalPermission = get_Bool(false, keepOriginalPermission);
+          maintainEntryPath = get_Bool(true, maintainEntryPath);
+          outFileName = get_Str(keepOriginalPermission, outFileName);
+          var item = getEntry(entry);
+          if (!item) {
+            throw Utils.Errors.NO_ENTRY();
+          }
+          var entryName = canonical(item.entryName);
+          var target = sanitize(targetPath, outFileName && !item.isDirectory ? outFileName : maintainEntryPath ? entryName : pth.basename(entryName));
+          if (item.isDirectory) {
+            var children = _zip.getEntryChildren(item);
+            children.forEach(function(child) {
+              if (child.isDirectory) return;
+              var content2 = child.getData();
+              if (!content2) {
+                throw Utils.Errors.CANT_EXTRACT_FILE();
+              }
+              var name = canonical(child.entryName);
+              var childName = sanitize(targetPath, maintainEntryPath ? name : pth.basename(name));
+              const fileAttr2 = keepOriginalPermission ? child.header.fileAttr : void 0;
+              filetools.writeFileTo(childName, content2, overwrite, fileAttr2);
+            });
+            return true;
+          }
+          var content = item.getData(_zip.password);
+          if (!content) throw Utils.Errors.CANT_EXTRACT_FILE();
+          if (filetools.fs.existsSync(target) && !overwrite) {
+            throw Utils.Errors.CANT_OVERRIDE();
+          }
+          const fileAttr = keepOriginalPermission ? entry.header.fileAttr : void 0;
+          filetools.writeFileTo(target, content, overwrite, fileAttr);
+          return true;
+        },
+        /**
+         * Test the archive
+         * @param {string} [pass]
+         */
+        test: function(pass) {
+          if (!_zip) {
+            return false;
+          }
+          for (var entry in _zip.entries) {
+            try {
+              if (entry.isDirectory) {
+                continue;
+              }
+              var content = _zip.entries[entry].getData(pass);
+              if (!content) {
+                return false;
+              }
+            } catch (err) {
+              return false;
+            }
+          }
+          return true;
+        },
+        /**
+         * Extracts the entire archive to the given location
+         *
+         * @param {string} targetPath Target location
+         * @param {boolean} [overwrite=false] If the file already exists at the target path, the file will be overwriten if this is true.
+         *                  Default is FALSE
+         * @param {boolean} [keepOriginalPermission=false] The file will be set as the permission from the entry if this is true.
+         *                  Default is FALSE
+         * @param {string|Buffer} [pass] password
+         */
+        extractAllTo: function(targetPath, overwrite, keepOriginalPermission, pass) {
+          keepOriginalPermission = get_Bool(false, keepOriginalPermission);
+          pass = get_Str(keepOriginalPermission, pass);
+          overwrite = get_Bool(false, overwrite);
+          if (!_zip) throw Utils.Errors.NO_ZIP();
+          _zip.entries.forEach(function(entry) {
+            var entryName = sanitize(targetPath, canonical(entry.entryName));
+            if (entry.isDirectory) {
+              filetools.makeDir(entryName);
+              return;
+            }
+            var content = entry.getData(pass);
+            if (!content) {
+              throw Utils.Errors.CANT_EXTRACT_FILE();
+            }
+            const fileAttr = keepOriginalPermission ? entry.header.fileAttr : void 0;
+            filetools.writeFileTo(entryName, content, overwrite, fileAttr);
+            try {
+              filetools.fs.utimesSync(entryName, entry.header.time, entry.header.time);
+            } catch (err) {
+              throw Utils.Errors.CANT_EXTRACT_FILE();
+            }
+          });
+        },
+        /**
+         * Asynchronous extractAllTo
+         *
+         * @param {string} targetPath Target location
+         * @param {boolean} [overwrite=false] If the file already exists at the target path, the file will be overwriten if this is true.
+         *                  Default is FALSE
+         * @param {boolean} [keepOriginalPermission=false] The file will be set as the permission from the entry if this is true.
+         *                  Default is FALSE
+         * @param {function} callback The callback will be executed when all entries are extracted successfully or any error is thrown.
+         */
+        extractAllToAsync: function(targetPath, overwrite, keepOriginalPermission, callback) {
+          callback = get_Fun(overwrite, keepOriginalPermission, callback);
+          keepOriginalPermission = get_Bool(false, keepOriginalPermission);
+          overwrite = get_Bool(false, overwrite);
+          if (!callback) {
+            return new Promise((resolve13, reject) => {
+              this.extractAllToAsync(targetPath, overwrite, keepOriginalPermission, function(err) {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve13(this);
+                }
+              });
+            });
+          }
+          if (!_zip) {
+            callback(Utils.Errors.NO_ZIP());
+            return;
+          }
+          targetPath = pth.resolve(targetPath);
+          const getPath = (entry) => sanitize(targetPath, pth.normalize(canonical(entry.entryName)));
+          const getError = (msg, file) => new Error(msg + ': "' + file + '"');
+          const dirEntries = [];
+          const fileEntries = [];
+          _zip.entries.forEach((e) => {
+            if (e.isDirectory) {
+              dirEntries.push(e);
+            } else {
+              fileEntries.push(e);
+            }
+          });
+          for (const entry of dirEntries) {
+            const dirPath = getPath(entry);
+            const dirAttr = keepOriginalPermission ? entry.header.fileAttr : void 0;
+            try {
+              filetools.makeDir(dirPath);
+              if (dirAttr) filetools.fs.chmodSync(dirPath, dirAttr);
+              filetools.fs.utimesSync(dirPath, entry.header.time, entry.header.time);
+            } catch (er) {
+              callback(getError("Unable to create folder", dirPath));
+            }
+          }
+          fileEntries.reverse().reduce(function(next, entry) {
+            return function(err) {
+              if (err) {
+                next(err);
+              } else {
+                const entryName = pth.normalize(canonical(entry.entryName));
+                const filePath = sanitize(targetPath, entryName);
+                entry.getDataAsync(function(content, err_1) {
+                  if (err_1) {
+                    next(err_1);
+                  } else if (!content) {
+                    next(Utils.Errors.CANT_EXTRACT_FILE());
+                  } else {
+                    const fileAttr = keepOriginalPermission ? entry.header.fileAttr : void 0;
+                    filetools.writeFileToAsync(filePath, content, overwrite, fileAttr, function(succ) {
+                      if (!succ) {
+                        next(getError("Unable to write file", filePath));
+                      }
+                      filetools.fs.utimes(filePath, entry.header.time, entry.header.time, function(err_2) {
+                        if (err_2) {
+                          next(getError("Unable to set times", filePath));
+                        } else {
+                          next();
+                        }
+                      });
+                    });
+                  }
+                });
+              }
+            };
+          }, callback)();
+        },
+        /**
+         * Writes the newly created zip file to disk at the specified location or if a zip was opened and no ``targetFileName`` is provided, it will overwrite the opened zip
+         *
+         * @param {string} targetFileName
+         * @param {function} callback
+         */
+        writeZip: function(targetFileName, callback) {
+          if (arguments.length === 1) {
+            if (typeof targetFileName === "function") {
+              callback = targetFileName;
+              targetFileName = "";
+            }
+          }
+          if (!targetFileName && opts.filename) {
+            targetFileName = opts.filename;
+          }
+          if (!targetFileName) return;
+          var zipData = _zip.compressToBuffer();
+          if (zipData) {
+            var ok = filetools.writeFileTo(targetFileName, zipData, true);
+            if (typeof callback === "function") callback(!ok ? new Error("failed") : null, "");
+          }
+        },
+        /**
+                 *
+                 * @param {string} targetFileName
+                 * @param {object} [props]
+                 * @param {boolean} [props.overwrite=true] If the file already exists at the target path, the file will be overwriten if this is true.
+                 * @param {boolean} [props.perm] The file will be set as the permission from the entry if this is true.
+        
+                 * @returns {Promise<void>}
+                 */
+        writeZipPromise: function(targetFileName, props) {
+          const { overwrite, perm } = Object.assign({ overwrite: true }, props);
+          return new Promise((resolve13, reject) => {
+            if (!targetFileName && opts.filename) targetFileName = opts.filename;
+            if (!targetFileName) reject("ADM-ZIP: ZIP File Name Missing");
+            this.toBufferPromise().then((zipData) => {
+              const ret = (done) => done ? resolve13(done) : reject("ADM-ZIP: Wasn't able to write zip file");
+              filetools.writeFileToAsync(targetFileName, zipData, overwrite, perm, ret);
+            }, reject);
+          });
+        },
+        /**
+         * @returns {Promise<Buffer>} A promise to the Buffer.
+         */
+        toBufferPromise: function() {
+          return new Promise((resolve13, reject) => {
+            _zip.toAsyncBuffer(resolve13, reject);
+          });
+        },
+        /**
+         * Returns the content of the entire zip file as a Buffer object
+         *
+         * @prop {function} [onSuccess]
+         * @prop {function} [onFail]
+         * @prop {function} [onItemStart]
+         * @prop {function} [onItemEnd]
+         * @returns {Buffer}
+         */
+        toBuffer: function(onSuccess, onFail, onItemStart, onItemEnd) {
+          if (typeof onSuccess === "function") {
+            _zip.toAsyncBuffer(onSuccess, onFail, onItemStart, onItemEnd);
+            return null;
+          }
+          return _zip.compressToBuffer();
+        }
+      };
+    };
   }
 });
 
@@ -50575,7 +53231,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve12) => setTimeout(resolve12, pollInterval));
+        await new Promise((resolve13) => setTimeout(resolve13, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -50592,7 +53248,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve12, reject) => {
+    return new Promise((resolve13, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -50670,7 +53326,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve12(parseResult.data);
+            resolve13(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -50931,12 +53587,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve12, reject) => {
+    return new Promise((resolve13, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve12, interval);
+      const timeoutId = setTimeout(resolve13, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -51895,7 +54551,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve12) => setTimeout(resolve12, pollInterval));
+      await new Promise((resolve13) => setTimeout(resolve13, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -52538,12 +55194,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve12) => {
+    return new Promise((resolve13) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve12();
+        resolve13();
       } else {
-        this._stdout.once("drain", resolve12);
+        this._stdout.once("drain", resolve13);
       }
     });
   }
@@ -52957,7 +55613,7 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
         });
         if (!chunk) {
           if (i === 1) {
-            await new Promise((resolve12) => setTimeout(resolve12));
+            await new Promise((resolve13) => setTimeout(resolve13));
             maxReadCount = 3;
             continue;
           }
@@ -53439,9 +56095,9 @@ data:
       const initRequest = messages.find((m) => isInitializeRequest(m));
       const clientProtocolVersion = initRequest ? initRequest.params.protocolVersion : req.headers.get("mcp-protocol-version") ?? DEFAULT_NEGOTIATED_PROTOCOL_VERSION;
       if (this._enableJsonResponse) {
-        return new Promise((resolve12) => {
+        return new Promise((resolve13) => {
           this._streamMapping.set(streamId, {
-            resolveJson: resolve12,
+            resolveJson: resolve13,
             cleanup: () => {
               this._streamMapping.delete(streamId);
             }
@@ -53772,7 +56428,7 @@ var import_express = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 import { realpathSync } from "fs";
-import { resolve as resolve11 } from "path";
+import { resolve as resolve12 } from "path";
 import { pathToFileURL as pathToFileURL5 } from "url";
 
 // src/lib/cli-tool-registry.ts
@@ -59347,18 +62003,245 @@ function registerQuickEvaluateTool(server) {
   );
 }
 
+// src/tools/codeql/read-database-source.ts
+var import_adm_zip = __toESM(require_adm_zip(), 1);
+import { existsSync as existsSync11, readdirSync as readdirSync5, readFileSync as readFileSync9, statSync as statSync5 } from "fs";
+import { join as join13, resolve as resolve7 } from "path";
+import { fileURLToPath as fileURLToPath2 } from "url";
+init_logger();
+var DEFAULT_MAX_LISTING_ENTRIES = 1e3;
+var MAX_UNCOMPRESSED_BYTES = 10 * 1024 * 1024;
+function toFilesystemPath(uri) {
+  if (uri.startsWith("file://")) {
+    try {
+      return fileURLToPath2(new URL(uri));
+    } catch {
+      return uri.startsWith("file:///") ? uri.slice("file://".length) : uri.slice("file://".length);
+    }
+  }
+  return uri;
+}
+function* walkDirectory(dir, base = dir) {
+  for (const entry of readdirSync5(dir)) {
+    const fullPath = join13(dir, entry);
+    if (statSync5(fullPath).isDirectory()) {
+      yield* walkDirectory(fullPath, base);
+    } else {
+      yield fullPath.slice(base.length).replace(/\\/g, "/").replace(/^\//, "");
+    }
+  }
+}
+function resolveEntryPath(requested, available) {
+  const normalised = toFilesystemPath(requested).replace(/\\/g, "/");
+  const withoutLeading = normalised.replace(/^\//, "");
+  for (const entry of available) {
+    const entryNorm = entry.replace(/^\//, "");
+    if (entryNorm === withoutLeading) {
+      return entry;
+    }
+  }
+  const lower = withoutLeading.toLowerCase();
+  for (const entry of available) {
+    if (entry.replace(/^\//, "").toLowerCase() === lower) {
+      return entry;
+    }
+  }
+  const candidates = [];
+  for (const entry of available) {
+    const entryNorm = entry.replace(/^\//, "");
+    if (entryNorm.endsWith(withoutLeading) || withoutLeading.endsWith(entryNorm)) {
+      candidates.push({ entry, length: entryNorm.length });
+    }
+  }
+  if (candidates.length === 0) {
+    return void 0;
+  }
+  if (candidates.length === 1) {
+    return candidates[0].entry;
+  }
+  candidates.sort((a, b) => {
+    if (b.length !== a.length) {
+      return b.length - a.length;
+    }
+    return a.entry.localeCompare(b.entry);
+  });
+  const chosen = candidates[0];
+  logger.warn(
+    `resolveEntryPath: ambiguous suffix match for "${requested}". Candidates: ${candidates.map((c) => c.entry).join(", ")}. Using "${chosen.entry}".`
+  );
+  return chosen.entry;
+}
+function applyLineRange(content, startLine, endLine) {
+  const lines = content.split(/\r?\n/);
+  const totalLines = lines.length;
+  const effectiveStart = Math.max(1, startLine ?? 1);
+  const effectiveEnd = Math.min(totalLines, endLine ?? totalLines);
+  if (effectiveStart > effectiveEnd) {
+    throw new Error(
+      `Invalid line range: startLine (${effectiveStart}) is greater than endLine (${effectiveEnd}). File has ${totalLines} line(s).`
+    );
+  }
+  const sliced = lines.slice(effectiveStart - 1, effectiveEnd).join("\n");
+  return { content: sliced, effectiveEnd, effectiveStart, totalLines };
+}
+async function readDatabaseSource(params) {
+  const { databasePath, endLine, filePath, maxEntries, prefix, startLine } = params;
+  const resolvedDbPath = resolve7(databasePath);
+  if (!existsSync11(resolvedDbPath)) {
+    throw new Error(`Database path does not exist: ${databasePath}`);
+  }
+  const srcZipPath = join13(resolvedDbPath, "src.zip");
+  const srcDirPath = join13(resolvedDbPath, "src");
+  const hasSrcZip = existsSync11(srcZipPath);
+  const hasSrcDir = existsSync11(srcDirPath);
+  if (!hasSrcZip && !hasSrcDir) {
+    throw new Error(
+      `No source archive found in database: expected src.zip or src/ in ${databasePath}`
+    );
+  }
+  const sourceType = hasSrcZip ? "src.zip" : "src/";
+  if (!filePath) {
+    let allEntries;
+    if (hasSrcZip) {
+      const zip = new import_adm_zip.default(srcZipPath);
+      allEntries = zip.getEntries().filter((e) => !e.isDirectory).map((e) => e.entryName).sort();
+    } else {
+      allEntries = [...walkDirectory(srcDirPath)].sort();
+    }
+    if (prefix) {
+      allEntries = allEntries.filter((e) => e.startsWith(prefix));
+    }
+    const totalEntries = allEntries.length;
+    const effectiveMax = maxEntries ?? DEFAULT_MAX_LISTING_ENTRIES;
+    const truncated = effectiveMax < totalEntries;
+    const entries = truncated ? allEntries.slice(0, effectiveMax) : allEntries;
+    return {
+      entries,
+      returnedEntries: entries.length,
+      sourceType,
+      totalEntries,
+      truncated
+    };
+  }
+  if (hasSrcZip) {
+    const zip = new import_adm_zip.default(srcZipPath);
+    const availableEntries = zip.getEntries().filter((e) => !e.isDirectory).map((e) => e.entryName);
+    const matchedEntry = resolveEntryPath(filePath, availableEntries);
+    if (!matchedEntry) {
+      throw new Error(
+        `File not found in src.zip: ${filePath}
+Archive contains ${availableEntries.length} entries. Use read_database_source without filePath to list available entries.`
+      );
+    }
+    const entry = zip.getEntry(matchedEntry);
+    if (!entry) {
+      throw new Error(`Failed to read entry from src.zip: ${matchedEntry}`);
+    }
+    const rawSize = entry.header.size;
+    if (rawSize > MAX_UNCOMPRESSED_BYTES) {
+      throw new Error(
+        `Entry "${matchedEntry}" is too large to read (${rawSize} bytes, limit ${MAX_UNCOMPRESSED_BYTES}). Use startLine/endLine on a smaller file, or increase the limit.`
+      );
+    }
+    const rawContent = entry.getData().toString("utf-8");
+    const { content, effectiveEnd, effectiveStart, totalLines } = applyLineRange(
+      rawContent,
+      startLine,
+      endLine
+    );
+    return {
+      content,
+      endLine: effectiveEnd,
+      entryPath: matchedEntry,
+      sourceType,
+      startLine: effectiveStart,
+      totalLines
+    };
+  } else {
+    const availableEntries = [...walkDirectory(srcDirPath)];
+    const matchedRelative = resolveEntryPath(filePath, availableEntries);
+    if (!matchedRelative) {
+      throw new Error(
+        `File not found in src/: ${filePath}
+Directory contains ${availableEntries.length} entries. Use read_database_source without filePath to list available entries.`
+      );
+    }
+    const fullPath = join13(srcDirPath, matchedRelative);
+    const rawContent = readFileSync9(fullPath, "utf-8");
+    const { content, effectiveEnd, effectiveStart, totalLines } = applyLineRange(
+      rawContent,
+      startLine,
+      endLine
+    );
+    return {
+      content,
+      endLine: effectiveEnd,
+      entryPath: matchedRelative,
+      sourceType,
+      startLine: effectiveStart,
+      totalLines
+    };
+  }
+}
+function registerReadDatabaseSourceTool(server) {
+  server.tool(
+    "read_database_source",
+    "Read source file contents from a CodeQL database source archive (src.zip) or source directory (src/). Use this to explore code at alert locations discovered via codeql_bqrs_interpret SARIF output. Omit filePath to list all files in the archive. Accepts raw file paths, file:// URIs (as found in SARIF physicalLocation.artifactLocation.uri), or paths relative to the archive root. Use startLine/endLine to return only the relevant portion of large files.",
+    {
+      databasePath: external_exports.string().describe("Path to the CodeQL database directory"),
+      endLine: external_exports.number().int().positive().optional().describe("Last line to return (1-based, inclusive). Defaults to end of file."),
+      filePath: external_exports.string().optional().describe(
+        "Path of the source file to read. Accepts a raw path, a file:// URI from SARIF, or a path relative to the archive root. Omit to list all files in the archive."
+      ),
+      maxEntries: external_exports.number().int().positive().optional().describe(
+        "Maximum number of entries to return in listing mode (when filePath is omitted). Defaults to 1000. When the total exceeds this limit the response includes truncated: true. Use prefix to narrow results for large databases."
+      ),
+      prefix: external_exports.string().optional().describe(
+        "Filter listing results to entries starting with this prefix (listing mode only)."
+      ),
+      startLine: external_exports.number().int().positive().optional().describe("First line to return (1-based, inclusive). Defaults to 1.")
+    },
+    async ({ databasePath, endLine, filePath, maxEntries, prefix, startLine }) => {
+      try {
+        const result = await readDatabaseSource({
+          databasePath,
+          endLine,
+          filePath,
+          maxEntries,
+          prefix,
+          startLine
+        });
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+        };
+      } catch (error2) {
+        logger.error("Error reading database source:", error2);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error2 instanceof Error ? error2.message : "Unknown error"}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
 // src/tools/codeql/register-database.ts
 init_logger();
 import { access, constants } from "fs/promises";
-import { resolve as resolve7 } from "path";
+import { resolve as resolve8 } from "path";
 async function registerDatabase(dbPath) {
   try {
-    const resolvedPath = resolve7(dbPath);
+    const resolvedPath = resolve8(dbPath);
     await access(resolvedPath, constants.F_OK);
-    const dbYmlPath = resolve7(resolvedPath, "codeql-database.yml");
+    const dbYmlPath = resolve8(resolvedPath, "codeql-database.yml");
     await access(dbYmlPath, constants.F_OK);
-    const srcZipPath = resolve7(resolvedPath, "src.zip");
-    const srcDirPath = resolve7(resolvedPath, "src");
+    const srcZipPath = resolve8(resolvedPath, "src.zip");
+    const srcDirPath = resolve8(resolvedPath, "src");
     let hasSrcZip = false;
     let hasSrcDir = false;
     try {
@@ -59875,39 +62758,40 @@ function registerCodeQLTools(server) {
   registerProfileCodeQLQueryFromLogsTool(server);
   registerProfileCodeQLQueryTool(server);
   registerQuickEvaluateTool(server);
+  registerReadDatabaseSourceTool(server);
   registerRegisterDatabaseTool(server);
 }
 
 // src/lib/resources.ts
-import { readFileSync as readFileSync9 } from "fs";
-import { join as join14, dirname as dirname8 } from "path";
-import { fileURLToPath as fileURLToPath2 } from "url";
-var __filename2 = fileURLToPath2(import.meta.url);
+import { readFileSync as readFileSync10 } from "fs";
+import { join as join15, dirname as dirname8 } from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
+var __filename2 = fileURLToPath3(import.meta.url);
 var __dirname2 = dirname8(__filename2);
 function getGettingStartedGuide() {
   try {
-    return readFileSync9(join14(__dirname2, "../resources/getting-started.md"), "utf-8");
+    return readFileSync10(join15(__dirname2, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync9(join14(__dirname2, "../resources/query-basics.md"), "utf-8");
+    return readFileSync10(join15(__dirname2, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync9(join14(__dirname2, "../resources/security-templates.md"), "utf-8");
+    return readFileSync10(join15(__dirname2, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync9(join14(__dirname2, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync10(join15(__dirname2, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -59996,13 +62880,13 @@ function registerCodeQLResources(server) {
 // src/tools/lsp/lsp-diagnostics.ts
 init_logger();
 init_temp_dir();
-import { join as join15 } from "path";
+import { join as join16 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/lsp/lsp-server-helper.ts
 init_server_manager();
 init_logger();
-import { isAbsolute as isAbsolute5, resolve as resolve9 } from "path";
+import { isAbsolute as isAbsolute5, resolve as resolve10 } from "path";
 import { pathToFileURL as pathToFileURL2 } from "url";
 async function getInitializedLanguageServer(opts = {}) {
   const { packageRootDir: pkgRoot, getUserWorkspaceDir: getUserWorkspaceDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
@@ -60010,7 +62894,7 @@ async function getInitializedLanguageServer(opts = {}) {
   const config2 = {
     checkErrors: "ON_CHANGE",
     loglevel: options.loglevel ?? "WARN",
-    searchPath: options.searchPath ?? resolve9(pkgRoot, "ql"),
+    searchPath: options.searchPath ?? resolve10(pkgRoot, "ql"),
     synchronous: options.synchronous,
     verbosity: options.verbosity
   };
@@ -60018,10 +62902,10 @@ async function getInitializedLanguageServer(opts = {}) {
   const server = await manager.getLanguageServer(config2);
   let effectiveUri = opts.workspaceUri;
   if (effectiveUri && !effectiveUri.startsWith("file://")) {
-    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve9(getUserWorkspaceDir2(), effectiveUri);
+    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve10(getUserWorkspaceDir2(), effectiveUri);
     effectiveUri = pathToFileURL2(absWorkspace).href;
   }
-  effectiveUri = effectiveUri ?? pathToFileURL2(resolve9(pkgRoot, "ql")).href;
+  effectiveUri = effectiveUri ?? pathToFileURL2(resolve10(pkgRoot, "ql")).href;
   await server.initialize(effectiveUri);
   logger.debug(`Language server initialized with workspace: ${effectiveUri}`);
   return server;
@@ -60094,7 +62978,7 @@ async function lspDiagnostics({
       serverOptions,
       workspaceUri
     });
-    const evalUri = pathToFileURL3(join15(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
+    const evalUri = pathToFileURL3(join16(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     const summary = {
       errorCount: diagnostics.filter((d) => d.severity === 1).length,
@@ -60183,7 +63067,7 @@ function registerLspDiagnosticsTool(server) {
 init_logger();
 init_package_paths();
 import { readFile as readFile3 } from "fs/promises";
-import { isAbsolute as isAbsolute6, resolve as resolve10 } from "path";
+import { isAbsolute as isAbsolute6, resolve as resolve11 } from "path";
 import { pathToFileURL as pathToFileURL4 } from "url";
 async function getInitializedServer(params) {
   return getInitializedLanguageServer({
@@ -60192,7 +63076,7 @@ async function getInitializedServer(params) {
   });
 }
 function prepareDocumentPosition(params) {
-  const absPath = isAbsolute6(params.filePath) ? params.filePath : resolve10(getUserWorkspaceDir(), params.filePath);
+  const absPath = isAbsolute6(params.filePath) ? params.filePath : resolve11(getUserWorkspaceDir(), params.filePath);
   const docUri = pathToFileURL4(absPath).href;
   return { absPath, docUri };
 }
@@ -60368,8 +63252,8 @@ function registerLSPTools(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync10, existsSync as existsSync11 } from "fs";
-import { join as join16 } from "path";
+import { readFileSync as readFileSync11, existsSync as existsSync12 } from "fs";
+import { join as join17 } from "path";
 
 // src/types/language-types.ts
 var LANGUAGE_RESOURCES = [
@@ -60429,12 +63313,12 @@ function getQLBasePath() {
 }
 function loadResourceContent(relativePath) {
   try {
-    const fullPath = join16(getQLBasePath(), relativePath);
-    if (!existsSync11(fullPath)) {
+    const fullPath = join17(getQLBasePath(), relativePath);
+    if (!existsSync12(fullPath)) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync10(fullPath, "utf-8");
+    return readFileSync11(fullPath, "utf-8");
   } catch (error2) {
     logger.error(`Error loading resource file ${relativePath}:`, error2);
     return null;
@@ -60573,6 +63457,9 @@ var ql_tdd_advanced_prompt_default = '---\nagent: agent\n---\n\n# Advanced Test-
 // src/prompts/ql-tdd-basic.prompt.md
 var ql_tdd_basic_prompt_default = '---\nagent: agent\n---\n\n# Test-Driven CodeQL Query Development Checklist\n\nUse this checklist to guide test-driven development of CodeQL queries. Follow the TDD cycle: write tests first, implement query logic, and iterate until tests pass.\n\nFor advanced techniques including AST/CFG visualization, see: `codeql://prompts/ql-tdd-advanced`\nFor detailed guidance, reference the MCP resource: `codeql://learning/test-driven-development`\n\n## TDD Workflow Checklist\n\n### Phase 1: Project Setup\n\n- [ ] **Create Query Structure**\n  - Tool: #create_codeql_query\n  - Specify: basePath, queryName, language, description (optional)\n  - Creates: src/QueryName/QueryName.ql, test/QueryName/QueryName.qlref, test/QueryName/test-code-file\n  - The .qlref file will contain the relative path: `QueryName/QueryName.ql`\n  - Verify: directory structure follows CodeQL conventions with intermediate directories\n\n- [ ] **Install Pack Dependencies**\n  - Tool: #codeql_pack_install\n  - Install src pack dependencies\n  - Install test pack dependencies\n  - Verify: imports resolve without errors\n\n### Phase 2: Test Design (Red Phase)\n\n- [ ] **Design Test Cases**\n  - Create positive test cases (should match)\n  - Create negative test cases (should not match)\n  - Create edge case tests\n  - Document expected behavior in comments\n\n- [ ] **Define Expected Results**\n  - Create .expected file with anticipated matches\n  - Specify exact match locations (file, line, column)\n  - Include expected alert messages\n\n- [ ] **Extract Test Database**\n  - Tool: #codeql_test_extract\n  - Extract database from test code\n  - Verify: .testproj directory created\n\n### Phase 3: Analysis and Understanding\n\n- [ ] **Analyze Test Code AST**\n  - Tool: #codeql_query_run with queryName: "PrintAST"\n  - Use format: "graphtext" for @kind graph queries\n  - Review AST structure and identify relevant classes\n\n- [ ] **Explore Available Classes and Predicates**\n  - Tool: #codeql_lsp_completion at the position in the `from` clause\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based)\n  - Set `workspace_uri` to the pack root directory (containing `codeql-pack.yml`)\n  - Request completions after a dot (e.g., `pw.`) to see member predicates with docs\n  - Tip: Run #codeql_pack_install first \u2014 LSP tools require resolved dependencies\n\n- [ ] **Navigate to Type Definitions**\n  - Tool: #codeql_lsp_definition on a class or predicate name\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri`\n  - Returns file URI and line range \u2014 even into library pack files\n  - Read the definition source to understand available member predicates\n  - Tool: #codeql_lsp_references to find usage examples across the pack\n\n  For the full iterative LSP workflow, see: `codeql://prompts/ql_lsp_iterative_development`\n\n- [ ] **Reference Language Documentation**\n  - Resource: `codeql://languages/{language}/ast`\n  - Resource: `codeql://languages/{language}/security` (if applicable)\n  - Identify AST classes and predicates needed\n\n### Phase 4: Implementation (Green Phase)\n\n- [ ] **Write Query Metadata**\n  - Add @name annotation\n  - Add @description annotation\n  - Add @kind annotation (problem, path-problem, graph, etc.)\n  - Add @id and other required metadata\n\n- [ ] **Implement Query Logic**\n  - Import required libraries\n  - Define necessary classes (if any)\n  - Define helper predicates\n  - Implement main query clause\n\n- [ ] **Compile Query**\n  - Tool: #codeql_query_compile\n  - Fix any compilation errors\n  - Verify: query compiles successfully\n\n- [ ] **Run Tests**\n  - Tool: #codeql_test_run\n  - Compare actual vs expected results\n  - If tests fail: adjust query logic and recompile\n  - If tests pass: proceed to validation\n\n### Phase 5: Validation and Acceptance\n\n- [ ] **Verify Test Results**\n  - Review all test matches\n  - Confirm no false positives\n  - Confirm no false negatives\n  - Check edge cases behave correctly\n\n- [ ] **Accept Test Results** (only when correct)\n  - Tool: #codeql_test_accept\n  - Update .expected files\n  - Commit accepted results\n\n### Phase 6: Refactoring and Enhancement\n\n- [ ] **Refactor Query**\n  - Improve code clarity\n  - Extract common logic to predicates\n  - Add code comments and documentation\n  - Tool: #codeql_query_format for consistent formatting\n\n- [ ] **Optimize Performance** (if needed)\n  - Run with evaluator-log enabled\n  - Tool: #codeql_generate_log_summary\n  - Resource: `codeql://patterns/performance`\n  - Optimize expensive operations\n\n- [ ] **Generate Documentation**\n  - Tool: #codeql_generate_query_help\n  - Review and enhance QLDoc comments\n  - Document query purpose and limitations\n\n### Phase 7: Additional Testing\n\n- [ ] **Add More Test Cases**\n  - Identify additional scenarios\n  - Add tests for new edge cases\n  - Extract new test databases\n  - Run expanded test suite\n\n- [ ] **Validate Against Real Code** (optional)\n  - Tool: #codeql_database_create for real codebase\n  - Tool: #codeql_query_run against real database\n  - Review results for false positives/negatives\n\n## Quick Command Reference\n\n### Essential Tools\n\n```typescript\n// Create query structure\ncreate_codeql_query: {\n  basePath: "/path/to/query/base",\n  queryName: "MySecurityQuery",\n  language: "javascript",\n  description: "Detects security vulnerability X"\n}\n\n// Install dependencies\ncodeql_pack_install: {\n  packPath: "/path/to/pack"\n}\n\n// Extract test database\ncodeql_test_extract: {\n  testPath: "/path/to/test/QueryName",\n  searchPath: "/path/to/base"\n}\n\n// Analyze AST (for @kind graph queries)\ncodeql_query_run: {\n  queryName: "PrintAST",\n  queryLanguage: "javascript",\n  database: "/path/to/test.testproj",\n  format: "graphtext",\n  interpretedOutput: "/path/to/ast-output/"\n}\n\n// Compile query\ncodeql_query_compile: {\n  query: "/path/to/Query.ql",\n  searchPath: "/path/to/base",\n  checkOnly: true\n}\n\n// Run tests\ncodeql_test_run: {\n  testPath: "/path/to/test/Query.qlref",\n  searchPath: "/path/to/base"\n}\n\n// Accept results\ncodeql_test_accept: {\n  testPath: "/path/to/test/Query",\n  searchPath: "/path/to/base"\n}\n```\n\n## TDD Principles to Remember\n\n1. **Red \u2192 Green \u2192 Refactor**: Always start with failing tests\n2. **Test First**: Write tests before implementation\n3. **Small Steps**: Make minimal changes to pass each test\n4. **Frequent Testing**: Run tests after each change\n5. **One Concept Per Test**: Each test should verify one behavior\n6. **Keep Tests Simple**: Test code should be easy to understand\n7. **Refactor Confidently**: Tests enable safe refactoring\n\n## Common Pitfalls to Avoid\n\n- \u274C Writing query before tests\n- \u274C Accepting test results without verification\n- \u274C Skipping compilation step\n- \u274C Not using PrintAST to understand test code\n- \u274C Not using #codeql_lsp_completion to discover available types\n- \u274C Not setting `workspace_uri` when using LSP tools (completions will be empty)\n- \u274C Creating tests that are too complex\n- \u274C Ignoring false positives in results\n- \u274C Not refactoring after tests pass\n\n## Success Criteria\n\nYour query development is complete when:\n\n- \u2705 All tests pass\n- \u2705 No false positives in test results\n- \u2705 No false negatives (all expected cases caught)\n- \u2705 Query compiles without errors or warnings\n- \u2705 Code is well-documented with QLDoc comments\n- \u2705 Performance is acceptable\n- \u2705 Edge cases are covered by tests\n- \u2705 Query follows CodeQL best practices\n\n## Next Steps After Completion\n\n1. **Integration Testing**: Test against real codebases\n2. **Peer Review**: Have another developer review the query\n3. **Documentation**: Update project documentation\n4. **Regression Testing**: Add to CI/CD pipeline\n5. **Monitor Performance**: Track query performance over time\n';
 
+// src/prompts/run-query-and-summarize-false-positives.prompt.md
+var run_query_and_summarize_false_positives_prompt_default = '---\nagent: agent\n---\n\n# Run a query and describe its false positives\n\n## Task\n\nHelp a developer discover what kinds of false positives are produced by their current CodeQL query, and which of those false positive cases are most common.\n\n### Task steps:\n\n1. Read the provided CodeQL query to understand what patterns it is designed to detect.\n2. Discover the results of this query on a real database, by:\n   - Running the tool #list_query_run_results to find existing runs for this query\n   - If no existing runs are found, run the query on a relevant database using #codeql_query_run tool\n3. Analyze and group the results into what appear to be similar types of results. This may mean:\n   - Grouping results in the same file\n   - Grouping results that reference the same elements\n   - Grouping results with similar messages\n4. For each group, explore the actual code for a sample of alerts in that group, using the #read_database_source tool to triage the results and determine which groups appear to be false positives\n5. For each false positive case discovered in this exploration, group them into categories of similar root causes. For example, a query might not properly account for unreachable code, or there may be a commonly used library that violates the query\'s assumptions but is actually safe.\n6. Explain these results to the user in order of most common to least common, so they can understand where their query may need improvement to reduce false positives.\n\n## Input Context\n\nYou will be provided with:\n\n- **Query Path**: The path to the CodeQL query\n\n## Analysis Guidelines\n\n### Exploring code paths\n\nThe tool #read_database_source can be used to read the code of a particular finding. A good strategy to explore the code paths of a finding is:\n\n1. Read in the immediate context of the violation.\n   - Some queries may depend on later context (e.g., an "unused variable" may only be used after its declaration)\n   - Some queries may depend on earlier context (e.g., "mutex not initialized" requires observing code that ran before the violation)\n   - Some queries may rely on exploring other function calls.\n2. Read the interprocedural context of the violation.\n   - If understanding a violation requires checking other source locations, read the beginning of the file to find what it imports, and then read those imported files to find the relevant code.\n   - Selectively scan interprocedural paths. A false positive that requires tremendous code exploration to verify is less problematic than a false positive that only requires checking a small amount of code to verify.\n3. Stop early.\n   - Grouping the potential false positive cases is more important than exhaustively verifying every single finding.\n   - A common false positive likely introduces some false positives that are very hard to verify, so it is usually better to focus on simple cases first.\n   - Truly hard-to-verify false positive cases are often in code that users don\'t expect to be conducive to static analysis, and query authors often don\'t expect their queries to work well in those cases.\n   - Suggest a chainsaw approach rather than a scalpel - if a result may be a false positive, identify some simple heuristics to eliminate all such complex cases, even if such a heuristic could introduce false negatives.\n\n### What Makes a Result Likely to be a False Positive?\n\n1. **Pattern Mismatches**\n   - Query pattern doesn\'t accurately match the actual code behavior\n   - Missing context that would show the code is safe\n   - Overly broad query logic catching benign variations\n\n2. **Safe Code Patterns**\n   - Code includes proper validation before the flagged operation\n   - Results in test code, example code, or mock implementations\n   - Variable/function names suggesting test/example context (e.g., `testFunc`, `exampleVar`, `mockData`)\n   - Defensive programming patterns present but not recognized by query\n\n3. **Context Indicators**\n   - File paths suggesting test/example files (e.g., `test/`, `examples/`, `mock/`)\n   - Comments indicating intentional patterns or safe usage\n   - Framework-specific patterns that are safe in context\n\n4. **Technical Factors**\n   - Type mismatches that make the vulnerability impossible\n   - Control flow that prevents exploitation\n   - Data flow interrupted by sanitization not captured in query\n\n### Important Constraints\n\n- **Be objective**: Don\'t be influenced by variable/function naming suggesting importance (e.g., "prodOnly" vs "test")\n- **Require evidence**: Base conclusions on actual code patterns, not assumptions\n- **Mark uncertainty**: Use lower confidence scores when code snippets are missing\n- **Avoid false confidence**: If you cannot determine FP status, mark confidence as low\n\n## Output Format\n\nReturn a JSON array of false-positive _groups_, ordered by the estimated prevalence or importance of the false-positive pattern (highest first):\n\n```json\n[\n  {\n    "groupLabel": "Test and example code with safe validation",\n    "patternSummary": "Results where the flagged operation occurs in test/example files and is always preceded by input validation.",\n    "resultCount": 23,\n    "estimatedFpProportion": 0.9,\n    "confidence": 0.85,\n    "commonRootCause": "The query does not recognize common test/example locations or custom validation helpers as making the pattern safe.",\n    "sampleResults": [\n      {\n        "sourceFile": "results-1.sarif",\n        "resultIndex": 42,\n        "ruleId": "query-id",\n        "message": { "text": "original result message" },\n        "locations": []\n      }\n    ],\n    "reasoning": "Based on manual inspection of several alerts in this group: (1) results are consistently located under \'test/\' or \'examples/\' directories, (2) there is clear validation before the flagged operation, and (3) the query does not model the custom validation helpers used in these files."\n  }\n]\n```\n\n### Field Descriptions\n\n- **groupLabel**: Short human-readable name for the false-positive category.\n- **patternSummary**: One-sentence description of the common pattern shared by results in this group.\n- **resultCount**: Number of SARIF results that belong to this group.\n- **estimatedFpProportion**: Estimated proportion of results in this group that are false positives (0.0\u20131.0).\n- **confidence**: Confidence in the group-level assessment (see guidelines below).\n- **commonRootCause**: Why the query produces false positives for this pattern.\n- **sampleResults**: A small representative sample of results illustrating the pattern.\n- **reasoning**: Detailed explanation of how the FP determination was made.\n\n### Confidence Score Guidelines\n\n- **0.8-1.0**: Strong evidence of FP (e.g., test code with clear safety patterns)\n- **0.6-0.8**: Good evidence of FP (e.g., defensive patterns present)\n- **0.4-0.6**: Moderate evidence of FP (e.g., context suggests safety but not conclusive)\n- **0.2-0.4**: Weak evidence of FP (e.g., minor indicators, missing code snippets)\n- **0.0-0.2**: Minimal evidence (uncertain, need more information)\n\n## Examples\n\n### High-Confidence FP Group Example\n\n```json\n{\n  "groupLabel": "Sanitised inputs in test harnesses",\n  "patternSummary": "Results in test files where sanitizeInput() is called before the database query.",\n  "resultCount": 15,\n  "estimatedFpProportion": 0.95,\n  "confidence": 0.9,\n  "commonRootCause": "Query does not model sanitizeInput() as a sanitizer.",\n  "sampleResults": [\n    {\n      "sourceFile": "results-1.sarif",\n      "resultIndex": 7,\n      "ruleId": "js/sql-injection",\n      "message": { "text": "Potential SQL injection" },\n      "locations": []\n    }\n  ],\n  "reasoning": "False positive group: (1) File paths like \'test/unit/database-mock.test.js\' indicate test code, (2) Query doesn\'t recognize that \'sanitizeInput()\' is called before database query, (3) All 15 results share this pattern."\n}\n```\n\n### Low-Confidence FP Group Example\n\n```json\n{\n  "groupLabel": "File utility handlers with unclear validation",\n  "patternSummary": "Results in src/utils/ files where path validation may or may not be present.",\n  "resultCount": 4,\n  "estimatedFpProportion": 0.5,\n  "confidence": 0.3,\n  "commonRootCause": "Unclear whether custom path validation is sufficient.",\n  "sampleResults": [\n    {\n      "sourceFile": "results-1.sarif",\n      "resultIndex": 22,\n      "ruleId": "js/path-injection",\n      "message": { "text": "Potential path traversal" },\n      "locations": []\n    }\n  ],\n  "reasoning": "Possibly false positive: (1) No code snippets available in SARIF, (2) File path \'src/utils/fileHandler.js\' doesn\'t indicate test code, (3) Cannot verify if proper path validation exists. Low confidence due to missing context."\n}\n```\n\n## Processing Instructions\n\n1. **Review SARIF results** and group them by common patterns\n2. **Analyze available context** (code snippets, file paths, messages) for each group\n3. **Compare against query logic** to understand what pattern was detected\n4. **Identify FP indicators** based on guidelines above\n5. **Assign group-level confidence scores** reflecting evidence strength\n6. **Write clear reasoning** for each group explaining the assessment\n7. **Sort groups** by estimated prevalence / importance (descending)\n\n## Important Notes\n\n- A result should belong to at most one FP group\n- When in doubt, prefer lower confidence scores\n- Missing code snippets should always reduce confidence\n- Test/example code is more likely to be FP but not always\n- Focus on technical evidence, not code naming conventions\n';
+
 // src/prompts/sarif-rank-false-positives.prompt.md
 var sarif_rank_false_positives_prompt_default = '---\nagent: agent\n---\n\n# Evaluate SARIF Results for False Positives\n\n## Task\n\nAnalyze SARIF results from a CodeQL query and identify the most likely **False Positives (FPs)** - results that incorrectly flag benign code as problematic.\n\n## Input Context\n\nYou will be provided with:\n\n- **Query ID**: The CodeQL query/rule identifier\n- **Query Name**: Human-readable name of the query\n- **Query Content**: Full CodeQL query implementation\n- **SARIF Results**: Array of results to analyze\n- **Code Snippets**: When available, code snippets from SARIF physical locations\n\n## Analysis Guidelines\n\n### What Makes a Result Likely to be a False Positive?\n\n1. **Pattern Mismatches**\n   - Query pattern doesn\'t accurately match the actual code behavior\n   - Missing context that would show the code is safe\n   - Overly broad query logic catching benign variations\n\n2. **Safe Code Patterns**\n   - Code includes proper validation before the flagged operation\n   - Results in test code, example code, or mock implementations\n   - Variable/function names suggesting test/example context (e.g., `testFunc`, `exampleVar`, `mockData`)\n   - Defensive programming patterns present but not recognized by query\n\n3. **Context Indicators**\n   - File paths suggesting test/example files (e.g., `test/`, `examples/`, `mock/`)\n   - Comments indicating intentional patterns or safe usage\n   - Framework-specific patterns that are safe in context\n\n4. **Technical Factors**\n   - Type mismatches that make the vulnerability impossible\n   - Control flow that prevents exploitation\n   - Data flow interrupted by sanitization not captured in query\n\n### Important Constraints\n\n- **Be objective**: Don\'t be influenced by variable/function naming suggesting importance (e.g., "prodOnly" vs "test")\n- **Require evidence**: Base conclusions on actual code patterns, not assumptions\n- **Mark uncertainty**: Use lower confidence scores when code snippets are missing\n- **Avoid false confidence**: If you cannot determine FP status, mark confidence as low\n\n### When Code Snippets Are Missing\n\nIf SARIF results lack `physicalLocation.region.snippet` or `contextRegion`:\n\n- **Lower confidence scores** (typically 0.3-0.5 instead of 0.6-0.9)\n- **Note the limitation** in reasoning\n- **Rely more on**:\n  - Result message text\n  - File path analysis\n  - Query logic understanding\n\n## Output Format\n\nReturn a JSON array of ranked results, ordered by FP likelihood (highest first):\n\n```json\n[\n  {\n    "ruleId": "query-id",\n    "message": { "text": "original result message" },\n    "locations": [...],\n    "confidence": 0.85,\n    "reasoning": "This appears to be a false positive because: (1) the file path \'test/examples/mock-data.js\' indicates test code, (2) variable name \'testInput\' suggests this is test data, (3) the query doesn\'t account for the validation on line X.",\n    "sourceFile": "results-1.sarif",\n    "resultIndex": 42\n  }\n]\n```\n\n### Confidence Score Guidelines\n\n- **0.8-1.0**: Strong evidence of FP (e.g., test code with clear safety patterns)\n- **0.6-0.8**: Good evidence of FP (e.g., defensive patterns present)\n- **0.4-0.6**: Moderate evidence of FP (e.g., context suggests safety but not conclusive)\n- **0.2-0.4**: Weak evidence of FP (e.g., minor indicators, missing code snippets)\n- **0.0-0.2**: Minimal evidence (uncertain, need more information)\n\n## Examples\n\n### High-Confidence FP Example\n\n```json\n{\n  "ruleId": "js/sql-injection",\n  "message": { "text": "Potential SQL injection" },\n  "confidence": 0.9,\n  "reasoning": "False positive: (1) File path \'test/unit/database-mock.test.js\' indicates test code, (2) Query doesn\'t recognize that \'sanitizeInput()\' function is called before database query, (3) Variable name \'mockUserInput\' suggests test data. Missing code snippet limits certainty to 0.9 instead of 1.0."\n}\n```\n\n### Low-Confidence FP Example\n\n```json\n{\n  "ruleId": "js/path-injection",\n  "message": { "text": "Potential path traversal" },\n  "confidence": 0.3,\n  "reasoning": "Possibly a false positive: (1) No code snippets available in SARIF, (2) File path \'src/utils/fileHandler.js\' doesn\'t indicate test code, (3) Cannot verify if proper path validation exists. Low confidence due to missing context."\n}\n```\n\n## Processing Instructions\n\n1. **Review each SARIF result** in the provided array\n2. **Analyze available context** (code snippets, file paths, messages)\n3. **Compare against query logic** to understand what pattern was detected\n4. **Identify FP indicators** based on guidelines above\n5. **Assign confidence score** reflecting evidence strength\n6. **Write clear reasoning** explaining your assessment\n7. **Sort results** by confidence score (descending)\n8. **Return top N results** as requested (or all if N not specified)\n\n## Important Notes\n\n- A result should never appear in both FP and TP rankings\n- When in doubt, prefer lower confidence scores\n- Missing code snippets should always reduce confidence\n- Test/example code is more likely to be FP but not always\n- Focus on technical evidence, not code naming conventions\n';
 
@@ -60592,6 +63479,7 @@ var PROMPT_TEMPLATES = {
   "ql-lsp-iterative-development.prompt.md": ql_lsp_iterative_development_prompt_default,
   "ql-tdd-advanced.prompt.md": ql_tdd_advanced_prompt_default,
   "ql-tdd-basic.prompt.md": ql_tdd_basic_prompt_default,
+  "run-query-and-summarize-false-positives.prompt.md": run_query_and_summarize_false_positives_prompt_default,
   "sarif-rank-false-positives.prompt.md": sarif_rank_false_positives_prompt_default,
   "sarif-rank-true-positives.prompt.md": sarif_rank_true_positives_prompt_default,
   "tools-query-workflow.prompt.md": tools_query_workflow_prompt_default,
@@ -60661,6 +63549,9 @@ var sarifRankSchema = external_exports.object({
   queryId: external_exports.string().optional().describe("CodeQL query/rule identifier"),
   sarifPath: external_exports.string().optional().describe("Path to the SARIF file to analyze")
 });
+var describeFalsePositivesSchema = external_exports.object({
+  queryPath: external_exports.string().optional().describe("Path to the CodeQL query file")
+});
 var explainCodeqlQuerySchema = external_exports.object({
   databasePath: external_exports.string().optional().describe("Optional path to a real CodeQL database for profiling"),
   language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
@@ -60681,6 +63572,7 @@ var WORKFLOW_PROMPT_NAMES = [
   "ql_lsp_iterative_development",
   "ql_tdd_advanced",
   "ql_tdd_basic",
+  "run_query_and_summarize_false_positives",
   "sarif_rank_false_positives",
   "sarif_rank_true_positives",
   "test_driven_development",
@@ -60907,6 +63799,31 @@ ${content}`
     }
   );
   server.prompt(
+    "run_query_and_summarize_false_positives",
+    "Help a user figure out where their query may need improvement to have a lower false positive rate",
+    describeFalsePositivesSchema.shape,
+    async ({ queryPath }) => {
+      const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
+      let contextSection = "## Analysis Context\n\n";
+      if (queryPath) {
+        contextSection += `- **Query Path**: ${queryPath}
+`;
+      }
+      contextSection += "\n";
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: contextSection + template
+            }
+          }
+        ]
+      };
+    }
+  );
+  server.prompt(
     "explain_codeql_query",
     "Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams",
     explainCodeqlQuerySchema.shape,
@@ -61093,7 +64010,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync11, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
+import { readFileSync as readFileSync12, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -61106,7 +64023,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync11(this.#filename, "utf-8");
+      data = readFileSync12(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -61157,7 +64074,7 @@ var JSONFileSync = class extends DataFileSync {
 // src/lib/session-data-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync9, writeFileSync as writeFileSync7 } from "fs";
-import { join as join17 } from "path";
+import { join as join18 } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
 
 // src/types/monitoring.ts
@@ -61301,7 +64218,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join17(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join18(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -61333,9 +64250,9 @@ var SessionDataManager = class {
       mkdirSync9(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync9(join17(this.storageDir, subdir), { recursive: true });
+        mkdirSync9(join18(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join17(this.storageDir, "config.json");
+      const configPath = join18(this.storageDir, "config.json");
       try {
         writeFileSync7(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
@@ -61514,9 +64431,9 @@ var SessionDataManager = class {
       if (!session) return;
       const date3 = new Date(session.endTime || session.startTime);
       const monthDir = `${date3.getFullYear()}-${String(date3.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join17(this.storageDir, "sessions-archive", monthDir);
+      const archiveDir = join18(this.storageDir, "sessions-archive", monthDir);
       mkdirSync9(archiveDir, { recursive: true });
-      const archiveFile = join17(archiveDir, `${sessionId}.json`);
+      const archiveFile = join18(archiveDir, `${sessionId}.json`);
       writeFileSync7(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
@@ -61568,7 +64485,7 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join17(this.storageDir, "config.json");
+    const configPath = join18(this.storageDir, "config.json");
     writeFileSync7(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
@@ -61578,7 +64495,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join17(getProjectTmpBase(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join18(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
@@ -62452,7 +65369,7 @@ init_cli_executor();
 init_server_manager();
 init_package_paths();
 init_logger();
-import_dotenv.default.config({ path: resolve11(packageRootDir, ".env"), quiet: true });
+import_dotenv.default.config({ path: resolve12(packageRootDir, ".env"), quiet: true });
 var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.24.1";
 async function startServer(mode = "stdio") {
@@ -62508,10 +65425,10 @@ async function startServer(mode = "stdio") {
     });
     const host = process.env.HTTP_HOST || "localhost";
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
-    return new Promise((resolve12, reject) => {
+    return new Promise((resolve13, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve12();
+        resolve13();
       });
       httpServer.on("error", (error2) => {
         logger.error("HTTP server error:", error2);
@@ -62548,7 +65465,7 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? realpathSync(resolve11(process.argv[1])) : void 0;
+var scriptPath = process.argv[1] ? realpathSync(resolve12(process.argv[1])) : void 0;
 if (scriptPath && import.meta.url === pathToFileURL5(scriptPath).href) {
   main();
 }

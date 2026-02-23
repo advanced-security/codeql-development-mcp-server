@@ -17,6 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   buildToolsQueryContext,
   buildWorkshopContext,
+  describeFalsePositivesSchema,
   documentCodeqlQuerySchema,
   explainCodeqlQuerySchema,
   qlLspIterativeDevelopmentSchema,
@@ -95,8 +96,8 @@ describe('Workflow Prompts', () => {
   // WORKFLOW_PROMPT_NAMES
   // -----------------------------------------------------------------------
   describe('WORKFLOW_PROMPT_NAMES', () => {
-    it('should contain 10 prompt names', () => {
-      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(10);
+    it('should contain 11 prompt names', () => {
+      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(11);
     });
 
     it('should be sorted alphabetically', () => {
@@ -565,6 +566,40 @@ describe('Workflow Prompts', () => {
   });
 
   // -----------------------------------------------------------------------
+  // describeFalsePositivesSchema
+  // -----------------------------------------------------------------------
+  describe('describeFalsePositivesSchema', () => {
+    it('should expose exactly the expected parameter keys', () => {
+      expect(Object.keys(describeFalsePositivesSchema.shape).sort()).toEqual(
+        ['queryPath']
+      );
+    });
+
+    it('should accept empty object (all optional)', () => {
+      const result = describeFalsePositivesSchema.safeParse({});
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept queryPath', () => {
+      const result = describeFalsePositivesSchema.safeParse({
+        queryPath: '/path/to/query.ql',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.queryPath).toBe('/path/to/query.ql');
+      }
+    });
+
+    it('should leave queryPath as undefined when omitted', () => {
+      const result = describeFalsePositivesSchema.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.queryPath).toBeUndefined();
+      }
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // documentCodeqlQuerySchema
   // -----------------------------------------------------------------------
   describe('documentCodeqlQuerySchema', () => {
@@ -854,6 +889,7 @@ describe('Workflow Prompts', () => {
   // -----------------------------------------------------------------------
   describe('Schema field descriptions (VS Code placeholder text)', () => {
     const allSchemas = {
+      describeFalsePositivesSchema,
       documentCodeqlQuerySchema,
       explainCodeqlQuerySchema,
       qlLspIterativeDevelopmentSchema,
@@ -948,6 +984,7 @@ describe('Workflow Prompts', () => {
         ql_lsp_iterative_development: qlLspIterativeDevelopmentSchema.shape,
         ql_tdd_advanced: qlTddAdvancedSchema.shape,
         ql_tdd_basic: qlTddBasicSchema.shape,
+        run_query_and_summarize_false_positives: describeFalsePositivesSchema.shape,
         sarif_rank_false_positives: sarifRankSchema.shape,
         sarif_rank_true_positives: sarifRankSchema.shape,
         test_driven_development: testDrivenDevelopmentSchema.shape,
@@ -990,6 +1027,7 @@ describe('Workflow Prompts', () => {
         ql_lsp_iterative_development: {},
         ql_tdd_advanced: {},
         ql_tdd_basic: {},
+        run_query_and_summarize_false_positives: {},
         sarif_rank_false_positives: {},
         sarif_rank_true_positives: {},
         test_driven_development: { language: 'javascript' },
@@ -1179,6 +1217,28 @@ describe('Workflow Prompts', () => {
         const result: PromptResult = await handler({});
         expect(result.messages[0].content.text.length).toBeGreaterThan(0);
       }
+    });
+
+    it('run_query_and_summarize_false_positives handler should include queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
+      const result: PromptResult = await handler({
+        queryPath: '/queries/SqlInjection.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Query Path**: /queries/SqlInjection.ql');
+    });
+
+    it('run_query_and_summarize_false_positives handler should return content with no parameters', async () => {
+      const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
+      const result: PromptResult = await handler({});
+      expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+    });
+
+    it('run_query_and_summarize_false_positives handler should omit Query Path when not provided', async () => {
+      const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
+      const result: PromptResult = await handler({});
+      const text = result.messages[0].content.text;
+      expect(text).not.toContain('**Query Path**');
     });
 
     it('explain_codeql_query handler should include required and optional params', async () => {
