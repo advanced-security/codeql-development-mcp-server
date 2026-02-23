@@ -1,24 +1,54 @@
 /**
- * Utility functions for loading prompt template files
+ * Utility functions for loading prompt template files.
+ *
+ * Prompt templates are imported as static string literals at build time via
+ * esbuild's `loader: { '.md': 'text' }` configuration. This ensures they
+ * are embedded in the bundled JS and available at runtime regardless of the
+ * execution layout (monorepo source, npm install, or VSIX bundle).
  */
 
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Static imports — esbuild inlines the file contents as string literals.
+import documentCodeqlQuery from './document-codeql-query.prompt.md';
+import explainCodeqlQuery from './explain-codeql-query.prompt.md';
+import qlLspIterativeDevelopment from './ql-lsp-iterative-development.prompt.md';
+import qlTddAdvanced from './ql-tdd-advanced.prompt.md';
+import qlTddBasic from './ql-tdd-basic.prompt.md';
+import sarifRankFalsePositives from './sarif-rank-false-positives.prompt.md';
+import sarifRankTruePositives from './sarif-rank-true-positives.prompt.md';
+import toolsQueryWorkflow from './tools-query-workflow.prompt.md';
+import workshopCreationWorkflow from './workshop-creation-workflow.prompt.md';
 
 /**
- * Load a prompt template from a .prompt.md file
+ * Embedded prompt template map (filename → content).
+ *
+ * Every .prompt.md file in this directory must be listed here so it is
+ * bundled into the output. The keys must match the filenames passed to
+ * `loadPromptTemplate()` throughout the codebase.
+ */
+const PROMPT_TEMPLATES: Record<string, string> = {
+  'document-codeql-query.prompt.md': documentCodeqlQuery,
+  'explain-codeql-query.prompt.md': explainCodeqlQuery,
+  'ql-lsp-iterative-development.prompt.md': qlLspIterativeDevelopment,
+  'ql-tdd-advanced.prompt.md': qlTddAdvanced,
+  'ql-tdd-basic.prompt.md': qlTddBasic,
+  'sarif-rank-false-positives.prompt.md': sarifRankFalsePositives,
+  'sarif-rank-true-positives.prompt.md': sarifRankTruePositives,
+  'tools-query-workflow.prompt.md': toolsQueryWorkflow,
+  'workshop-creation-workflow.prompt.md': workshopCreationWorkflow,
+};
+
+/**
+ * Load a prompt template by filename.
+ *
+ * Returns the embedded template content, or a descriptive fallback message
+ * if the template is not registered in the bundle.
  */
 export function loadPromptTemplate(promptFileName: string): string {
-  try {
-    const promptPath = join(__dirname, promptFileName);
-    return readFileSync(promptPath, 'utf-8');
-  } catch (error) {
-    return `Prompt template '${promptFileName}' not available: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  const content = PROMPT_TEMPLATES[promptFileName];
+  if (content !== undefined) {
+    return content;
   }
+  return `Prompt template '${promptFileName}' not available: not found in embedded prompt templates. Add it to PROMPT_TEMPLATES in prompt-loader.ts.`;
 }
 
 /**

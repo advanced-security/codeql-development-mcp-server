@@ -99,13 +99,20 @@ export async function activate(
 
   // --- Register MCP server definition provider ---
   logger.info('Registering ql-mcp MCP server definition provider...');
-  context.subscriptions.push(
-    vscode.lm.registerMcpServerDefinitionProvider('ql-mcp', mcpProvider),
-  );
-  logger.info(
-    'ql-mcp registered. The server will start when Copilot needs it, ' +
-    'or start it manually via the MCP servers list.',
-  );
+  try {
+    context.subscriptions.push(
+      vscode.lm.registerMcpServerDefinitionProvider('ql-mcp', mcpProvider),
+    );
+    logger.info(
+      'ql-mcp registered. The server will start when Copilot needs it, ' +
+      'or start it manually via the MCP servers list.',
+    );
+  } catch (err) {
+    logger.warn(
+      `Failed to register MCP server definition provider: ${err instanceof Error ? err.message : String(err)}. ` +
+      'MCP server definitions will not be available. This may happen on older VS Code versions.',
+    );
+  }
 
   // --- Register commands ---
   context.subscriptions.push(

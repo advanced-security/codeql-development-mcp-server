@@ -1,53 +1,55 @@
-name: Build Extension - CodeQL Development MCP Server
+name: Build and Test Extension - CodeQL Development MCP Server
 
 on:
   pull_request:
     branches: ['main']
     paths:
-      - '.github/workflows/build-extension.yml'
+      - '.github/workflows/build-and-test-extension.yml'
       - '.node-version'
       - 'extensions/vscode/**'
       - 'server/dist/**'
       - 'server/ql/*/tools/src/**'
+      - 'server/src/**'
   push:
     branches: ['main']
     paths:
-      - '.github/workflows/build-extension.yml'
+      - '.github/workflows/build-and-test-extension.yml'
       - '.node-version'
       - 'extensions/vscode/**'
       - 'server/dist/**'
       - 'server/ql/*/tools/src/**'
+      - 'server/src/**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build-extension:
-    name: Build Extension
+  build-and-test-extension:
+    name: Build and Test Extension
     runs-on: ubuntu-latest
 
     steps:
-      - name: Build Extension - Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Build Extension - Setup Node.js environment
+      - name: Setup Node.js environment
         uses: actions/setup-node@v6
         with:
           cache: 'npm'
           node-version-file: '.node-version'
 
-      - name: Build Extension - Install dependencies
+      - name: Install dependencies
         run: npm ci --include=optional
 
-      - name: Build Extension - Build server (dependency)
+      - name: Build server (dependency)
         run: npm run build -w server
 
-      - name: Build Extension - Run extension tests with coverage
+      - name: Run extension unit tests with coverage
         working-directory: extensions/vscode
         run: npm run test:coverage
 
-      - name: Build Extension - Bundle extension and server
+      - name: Bundle extension and server
         working-directory: extensions/vscode
         run: |
           npm run clean
@@ -55,11 +57,15 @@ jobs:
           npm run bundle
           npm run bundle:server
 
-      - name: Build Extension - Verify VSIX packaging
+      - name: Run Extension Host integration tests
+        working-directory: extensions/vscode
+        run: xvfb-run -a npm run test:integration
+
+      - name: Verify VSIX packaging
         working-directory: extensions/vscode
         run: npx @vscode/vsce package --no-dependencies --out codeql-development-mcp-server.vsix
 
-      - name: Build Extension - Verify VSIX contents
+      - name: Verify VSIX contents
         working-directory: extensions/vscode
         run: |
           echo "## VSIX Contents" >> $GITHUB_STEP_SUMMARY
@@ -67,7 +73,7 @@ jobs:
           npx @vscode/vsce ls --no-dependencies --tree 2>&1 | head -50 >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-      - name: Build Extension - Check for uncommitted changes
+      - name: Check for uncommitted changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "❌ Uncommitted changes detected after build:"
@@ -78,12 +84,13 @@ jobs:
             echo "✅ No uncommitted changes after build"
           fi
 
-      - name: Build Extension - Summary
+      - name: Summary
         run: |
-          echo "## Build Extension Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Build and Test Extension Summary" >> $GITHUB_STEP_SUMMARY
           echo "✅ ESLint checks completed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All tests passed with coverage" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Unit tests passed with coverage" >> $GITHUB_STEP_SUMMARY
           echo "✅ Extension bundled successfully" >> $GITHUB_STEP_SUMMARY
           echo "✅ Server bundled into extension" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Extension Host integration tests passed" >> $GITHUB_STEP_SUMMARY
           echo "✅ VSIX packaging verified" >> $GITHUB_STEP_SUMMARY
           echo "✅ No uncommitted changes detected" >> $GITHUB_STEP_SUMMARY

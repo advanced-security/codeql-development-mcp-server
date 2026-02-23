@@ -3,3 +3,6 @@ dist/
 server/
 coverage/
 *.vsix
+
+# @vscode/test-cli downloads and runtime data
+.vscode-test/

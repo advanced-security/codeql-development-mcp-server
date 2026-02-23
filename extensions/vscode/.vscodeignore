@@ -1,6 +1,7 @@
 # Source and config (not needed at runtime)
 .vscode/**
 .vscode-test/**
+.vscode-test.mjs
 src/**
 test/**
 scripts/**
