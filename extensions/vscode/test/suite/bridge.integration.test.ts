@@ -112,10 +112,13 @@ suite('vscode-codeql Bridge Tests', () => {
 
     for (const dir of dirs.split(':')) {
       if (dir.length === 0) continue;
-      const parent = path.dirname(dir);
+      // The immediate parent (GitHub.vscode-codeql storage root) only exists
+      // after first activation.  Verify the grandparent (VS Code's globalStorage
+      // root) which is always created by VS Code.
+      const grandparent = path.dirname(path.dirname(dir));
       assert.ok(
-        fs.existsSync(parent),
-        `Parent of CODEQL_QUERY_RUN_RESULTS_DIRS entry does not exist: ${parent}`,
+        fs.existsSync(grandparent),
+        `Grandparent of CODEQL_QUERY_RUN_RESULTS_DIRS entry does not exist: ${grandparent} (from ${dir})`,
       );
     }
   });
@@ -133,10 +136,13 @@ suite('vscode-codeql Bridge Tests', () => {
 
     for (const dir of dirs.split(':')) {
       if (dir.length === 0) continue;
-      const parent = path.dirname(dir);
+      // The immediate parent (GitHub.vscode-codeql storage root) only exists
+      // after first activation.  Verify the grandparent (VS Code's globalStorage
+      // root) which is always created by VS Code.
+      const grandparent = path.dirname(path.dirname(dir));
       assert.ok(
-        fs.existsSync(parent),
-        `Parent of CODEQL_MRVA_RUN_RESULTS_DIRS entry does not exist: ${parent}`,
+        fs.existsSync(grandparent),
+        `Grandparent of CODEQL_MRVA_RUN_RESULTS_DIRS entry does not exist: ${grandparent} (from ${dir})`,
       );
     }
   });
