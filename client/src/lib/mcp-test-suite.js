@@ -32,10 +32,11 @@ export class MCPTestSuite {
       this.logger.log("Testing tool execution...");
 
       // Try to call a simple resolve languages tool
-      const result = await this.client.callTool({
-        name: "codeql_resolve_languages",
-        arguments: {}
-      });
+      const result = await this.client.callTool(
+        { name: "codeql_resolve_languages", arguments: {} },
+        undefined,
+        { timeout: 300000, resetTimeoutOnProgress: true }
+      );
 
       this.logger.log(`Tool result: ${JSON.stringify(result, null, 2)}`);
 
