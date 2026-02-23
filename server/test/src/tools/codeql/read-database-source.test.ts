@@ -67,6 +67,8 @@ describe('readDatabaseSource (src.zip)', () => {
     expect(result).toMatchObject({
       sourceType: 'src.zip',
       totalEntries: 3,
+      returnedEntries: 3,
+      truncated: false,
     });
     const listing = result as { entries: string[] };
     expect(listing.entries).toHaveLength(3);
@@ -178,6 +180,8 @@ describe('readDatabaseSource (src/ directory)', () => {
     expect(result).toMatchObject({
       sourceType: 'src/',
       totalEntries: 3,
+      returnedEntries: 3,
+      truncated: false,
     });
 
     await fs.rm(dir, { recursive: true });
@@ -245,6 +249,135 @@ describe('readDatabaseSource (src.zip takes priority)', () => {
     const result = await readDatabaseSource({ databasePath: dir });
 
     expect(result).toMatchObject({ sourceType: 'src.zip' });
+
+    await fs.rm(dir, { recursive: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Listing mode: prefix and maxEntries
+// ---------------------------------------------------------------------------
+
+describe('readDatabaseSource listing mode filtering', () => {
+  it('filters entries by prefix', async () => {
+    const dir = createTestTempDir('read-src-prefix');
+    await createZipDatabase(dir);
+
+    const result = await readDatabaseSource({
+      databasePath: dir,
+      prefix: 'home/user/repo/src/',
+    });
+
+    const listing = result as import('../../../../src/tools/codeql/read-database-source').DatabaseSourceListing;
+    expect(listing.totalEntries).toBe(2);
+    expect(listing.entries).toHaveLength(2);
+    expect(listing.truncated).toBe(false);
+    for (const entry of listing.entries) {
+      expect(entry.startsWith('home/user/repo/src/')).toBe(true);
+    }
+
+    await fs.rm(dir, { recursive: true });
+  });
+
+  it('truncates entries when maxEntries is set', async () => {
+    const dir = createTestTempDir('read-src-maxentries');
+    await createZipDatabase(dir);
+
+    const result = await readDatabaseSource({
+      databasePath: dir,
+      maxEntries: 2,
+    });
+
+    const listing = result as import('../../../../src/tools/codeql/read-database-source').DatabaseSourceListing;
+    expect(listing.totalEntries).toBe(3);
+    expect(listing.returnedEntries).toBe(2);
+    expect(listing.entries).toHaveLength(2);
+    expect(listing.truncated).toBe(true);
+
+    await fs.rm(dir, { recursive: true });
+  });
+
+  it('does not truncate when maxEntries exceeds total', async () => {
+    const dir = createTestTempDir('read-src-maxentries-high');
+    await createZipDatabase(dir);
+
+    const result = await readDatabaseSource({
+      databasePath: dir,
+      maxEntries: 100,
+    });
+
+    const listing = result as import('../../../../src/tools/codeql/read-database-source').DatabaseSourceListing;
+    expect(listing.totalEntries).toBe(3);
+    expect(listing.returnedEntries).toBe(3);
+    expect(listing.truncated).toBe(false);
+
+    await fs.rm(dir, { recursive: true });
+  });
+
+  it('combines prefix and maxEntries', async () => {
+    const dir = createTestTempDir('read-src-prefix-max');
+    await createZipDatabase(dir);
+
+    const result = await readDatabaseSource({
+      databasePath: dir,
+      prefix: 'home/user/repo/src/',
+      maxEntries: 1,
+    });
+
+    const listing = result as import('../../../../src/tools/codeql/read-database-source').DatabaseSourceListing;
+    expect(listing.totalEntries).toBe(2);
+    expect(listing.returnedEntries).toBe(1);
+    expect(listing.entries).toHaveLength(1);
+    expect(listing.truncated).toBe(true);
+
+    await fs.rm(dir, { recursive: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyLineRange validation
+// ---------------------------------------------------------------------------
+
+describe('readDatabaseSource line range validation', () => {
+  it('throws when startLine is greater than endLine', async () => {
+    const dir = createTestTempDir('read-src-bad-range');
+    await createZipDatabase(dir);
+
+    await expect(
+      readDatabaseSource({
+        databasePath: dir,
+        filePath: 'home/user/repo/src/Foo.java',
+        startLine: 5,
+        endLine: 2,
+      }),
+    ).rejects.toThrow('Invalid line range');
+
+    await fs.rm(dir, { recursive: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveEntryPath ambiguous suffix match
+// ---------------------------------------------------------------------------
+
+describe('readDatabaseSource ambiguous suffix match', () => {
+  it('picks the most specific (longest) suffix match', async () => {
+    const dir = createTestTempDir('read-src-ambiguous');
+    await fs.writeFile(join(dir, 'codeql-database.yml'), 'primaryLanguage: java\n');
+    const zip = new AdmZip();
+    zip.addFile('src/Foo.java', Buffer.from('short', 'utf-8'));
+    zip.addFile('home/user/repo/src/Foo.java', Buffer.from('long path', 'utf-8'));
+    zip.writeZip(join(dir, 'src.zip'));
+
+    // Requesting 'src/Foo.java' matches both, but exact match wins
+    const result = await readDatabaseSource({
+      databasePath: dir,
+      filePath: 'src/Foo.java',
+    });
+
+    const file = result as import('../../../../src/tools/codeql/read-database-source').DatabaseSourceFile;
+    expect(file.entryPath).toBe('src/Foo.java');
+    expect(file.content).toBe('short');
 
     await fs.rm(dir, { recursive: true });
   });

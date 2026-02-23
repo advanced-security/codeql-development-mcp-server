@@ -161,7 +161,7 @@ export const sarifRankSchema = z.object({
 /**
  * Schema for run_query_and_summarize_false_positives prompt parameters.
  *
- * Both parameters are optional.
+ * The queryPath parameter is optional.
  */
 export const describeFalsePositivesSchema = z.object({
   queryPath: z

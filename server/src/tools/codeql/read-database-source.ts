@@ -21,6 +21,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import AdmZip from 'adm-zip';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 
@@ -30,9 +31,11 @@ import { logger } from '../../utils/logger';
 
 export interface ReadDatabaseSourceParams {
   databasePath: string;
-  filePath?: string;
-  startLine?: number;
   endLine?: number;
+  filePath?: string;
+  maxEntries?: number;
+  prefix?: string;
+  startLine?: number;
 }
 
 export interface DatabaseSourceFile {
@@ -46,20 +49,26 @@ export interface DatabaseSourceFile {
 
 export interface DatabaseSourceListing {
   entries: string[];
+  returnedEntries: number;
   sourceType: 'src.zip' | 'src/';
   totalEntries: number;
+  truncated: boolean;
 }
 
 /**
- * Strip a leading `file://` (or `file:///`) scheme from a URI and return the
- * resulting filesystem path.
+ * Convert a `file://` URI to a filesystem path using Node's `URL` +
+ * `fileURLToPath`, which correctly handles percent-encoded characters
+ * (e.g. `%20`) and `file://host/path` forms.  Non-`file://` strings are
+ * returned unchanged.
  */
-function stripFileScheme(uri: string): string {
-  if (uri.startsWith('file:///')) {
-    return uri.slice('file://'.length);
-  }
+function toFilesystemPath(uri: string): string {
   if (uri.startsWith('file://')) {
-    return uri.slice('file://'.length);
+    try {
+      return fileURLToPath(new URL(uri));
+    } catch {
+      // Fall back to simple scheme stripping when URL parsing fails
+      return uri.startsWith('file:///') ? uri.slice('file://'.length) : uri.slice('file://'.length);
+    }
   }
   return uri;
 }
@@ -88,7 +97,7 @@ function* walkDirectory(dir: string, base: string = dir): Generator<string> {
  *     URIs stored as relative paths inside the archive)
  */
 function resolveEntryPath(requested: string, available: string[]): string | undefined {
-  const normalised = stripFileScheme(requested).replace(/\\/g, '/');
+  const normalised = toFilesystemPath(requested).replace(/\\/g, '/');
   // Strip leading slash for comparison
   const withoutLeading = normalised.replace(/^\//, '');
 
@@ -108,15 +117,39 @@ function resolveEntryPath(requested: string, available: string[]): string | unde
     }
   }
 
-  // 3. Suffix match (handles absolute paths encoded inside archives)
+  // 3. Suffix match — collect all candidates, prefer the longest (most specific)
+  const candidates: { entry: string; length: number }[] = [];
   for (const entry of available) {
     const entryNorm = entry.replace(/^\//, '');
     if (entryNorm.endsWith(withoutLeading) || withoutLeading.endsWith(entryNorm)) {
-      return entry;
+      candidates.push({ entry, length: entryNorm.length });
     }
   }
 
-  return undefined;
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  if (candidates.length === 1) {
+    return candidates[0].entry;
+  }
+
+  // Sort by path length descending (most specific first), then alphabetically
+  candidates.sort((a, b) => {
+    if (b.length !== a.length) {
+      return b.length - a.length;
+    }
+    return a.entry.localeCompare(b.entry);
+  });
+
+  const chosen = candidates[0];
+  logger.warn(
+    `resolveEntryPath: ambiguous suffix match for "${requested}". ` +
+      `Candidates: ${candidates.map((c) => c.entry).join(', ')}. ` +
+      `Using "${chosen.entry}".`,
+  );
+
+  return chosen.entry;
 }
 
 /**
@@ -132,6 +165,14 @@ function applyLineRange(
   const totalLines = lines.length;
   const effectiveStart = Math.max(1, startLine ?? 1);
   const effectiveEnd = Math.min(totalLines, endLine ?? totalLines);
+
+  if (effectiveStart > effectiveEnd) {
+    throw new Error(
+      `Invalid line range: startLine (${effectiveStart}) is greater than endLine (${effectiveEnd}). ` +
+        `File has ${totalLines} line(s).`,
+    );
+  }
+
   const sliced = lines.slice(effectiveStart - 1, effectiveEnd).join('\n');
   return { content: sliced, effectiveEnd, effectiveStart, totalLines };
 }
@@ -143,7 +184,7 @@ function applyLineRange(
 export async function readDatabaseSource(
   params: ReadDatabaseSourceParams,
 ): Promise<DatabaseSourceFile | DatabaseSourceListing> {
-  const { databasePath, endLine, filePath, startLine } = params;
+  const { databasePath, endLine, filePath, maxEntries, prefix, startLine } = params;
   const resolvedDbPath = resolve(databasePath);
 
   if (!existsSync(resolvedDbPath)) {
@@ -167,18 +208,34 @@ export async function readDatabaseSource(
   // Listing mode
   // ------------------------------------------------------------------
   if (!filePath) {
+    let allEntries: string[];
     if (hasSrcZip) {
       const zip = new AdmZip(srcZipPath);
-      const entries = zip
+      allEntries = zip
         .getEntries()
         .filter((e) => !e.isDirectory)
         .map((e) => e.entryName)
         .sort();
-      return { entries, sourceType, totalEntries: entries.length };
     } else {
-      const entries = [...walkDirectory(srcDirPath)].sort();
-      return { entries, sourceType, totalEntries: entries.length };
+      allEntries = [...walkDirectory(srcDirPath)].sort();
     }
+
+    // Apply optional prefix filter
+    if (prefix) {
+      allEntries = allEntries.filter((e) => e.startsWith(prefix));
+    }
+
+    const totalEntries = allEntries.length;
+    const truncated = maxEntries !== undefined && maxEntries < totalEntries;
+    const entries = truncated ? allEntries.slice(0, maxEntries) : allEntries;
+
+    return {
+      entries,
+      returnedEntries: entries.length,
+      sourceType,
+      totalEntries,
+      truncated,
+    };
   }
 
   // ------------------------------------------------------------------
@@ -283,6 +340,21 @@ export function registerReadDatabaseSourceTool(server: McpServer): void {
             'or a path relative to the archive root. ' +
             'Omit to list all files in the archive.',
         ),
+      maxEntries: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe(
+          'Maximum number of entries to return in listing mode (when filePath is omitted). ' +
+            'When the total exceeds this limit the response includes truncated: true.',
+        ),
+      prefix: z
+        .string()
+        .optional()
+        .describe(
+          'Filter listing results to entries starting with this prefix (listing mode only).',
+        ),
       startLine: z
         .number()
         .int()
@@ -290,9 +362,11 @@ export function registerReadDatabaseSourceTool(server: McpServer): void {
         .optional()
         .describe('First line to return (1-based, inclusive). Defaults to 1.'),
     },
-    async ({ databasePath, endLine, filePath, startLine }) => {
+    async ({ databasePath, endLine, filePath, maxEntries, prefix, startLine }) => {
       try {
-        const result = await readDatabaseSource({ databasePath, endLine, filePath, startLine });
+        const result = await readDatabaseSource({
+          databasePath, endLine, filePath, maxEntries, prefix, startLine,
+        });
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };

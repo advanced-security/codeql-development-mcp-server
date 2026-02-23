@@ -45,7 +45,7 @@ The tool `read_database_source` can be used to read the code of a particular fin
    - Grouping the potential false positive cases is more important than exhaustively verifying every single finding.
    - A common false positive likely introduces some false positives that are very hard to verify, so it is usually better to focus on simple cases first.
    - Truly hard-to-verify false positive cases are often in code that users don't expect to be conducive to static analysis, and query authors often don't expect their queries to work well in those cases.
-   - Suggest a chainsaw approach rather than a scalpel - if a result may be a false positive, identify some simple heuristics to eliminate all such complex cases, even if such a hueristic could introduce false negatives.
+   - Suggest a chainsaw approach rather than a scalpel - if a result may be a false positive, identify some simple heuristics to eliminate all such complex cases, even if such a heuristic could introduce false negatives.
 
 ### What Makes a Result Likely to be a False Positive?
 
@@ -79,21 +79,41 @@ The tool `read_database_source` can be used to read the code of a particular fin
 
 ## Output Format
 
-Return a JSON array of ranked results, ordered by FP likelihood (highest first):
+Return a JSON array of false-positive _groups_, ordered by the estimated prevalence or importance of the false-positive pattern (highest first):
 
 ```json
 [
   {
-    "ruleId": "query-id",
-    "message": { "text": "original result message" },
-    "locations": [...],
+    "groupLabel": "Test and example code with safe validation",
+    "patternSummary": "Results where the flagged operation occurs in test/example files and is always preceded by input validation.",
+    "resultCount": 23,
+    "estimatedFpProportion": 0.9,
     "confidence": 0.85,
-    "reasoning": "This appears to be a false positive because: (1) the file path 'test/examples/mock-data.js' indicates test code, (2) variable name 'testInput' suggests this is test data, (3) the query doesn't account for the validation on line X.",
-    "sourceFile": "results-1.sarif",
-    "resultIndex": 42
+    "commonRootCause": "The query does not recognize common test/example locations or custom validation helpers as making the pattern safe.",
+    "sampleResults": [
+      {
+        "sourceFile": "results-1.sarif",
+        "resultIndex": 42,
+        "ruleId": "query-id",
+        "message": { "text": "original result message" },
+        "locations": []
+      }
+    ],
+    "reasoning": "Based on manual inspection of several alerts in this group: (1) results are consistently located under 'test/' or 'examples/' directories, (2) there is clear validation before the flagged operation, and (3) the query does not model the custom validation helpers used in these files."
   }
 ]
 ```
+
+### Field Descriptions
+
+- **groupLabel**: Short human-readable name for the false-positive category.
+- **patternSummary**: One-sentence description of the common pattern shared by results in this group.
+- **resultCount**: Number of SARIF results that belong to this group.
+- **estimatedFpProportion**: Estimated proportion of results in this group that are false positives (0.0–1.0).
+- **confidence**: Confidence in the group-level assessment (see guidelines below).
+- **commonRootCause**: Why the query produces false positives for this pattern.
+- **sampleResults**: A small representative sample of results illustrating the pattern.
+- **reasoning**: Detailed explanation of how the FP determination was made.
 
 ### Confidence Score Guidelines
 
@@ -105,42 +125,65 @@ Return a JSON array of ranked results, ordered by FP likelihood (highest first):
 
 ## Examples
 
-### High-Confidence FP Example
+### High-Confidence FP Group Example
 
 ```json
 {
-  "ruleId": "js/sql-injection",
-  "message": { "text": "Potential SQL injection" },
+  "groupLabel": "Sanitised inputs in test harnesses",
+  "patternSummary": "Results in test files where sanitizeInput() is called before the database query.",
+  "resultCount": 15,
+  "estimatedFpProportion": 0.95,
   "confidence": 0.9,
-  "reasoning": "False positive: (1) File path 'test/unit/database-mock.test.js' indicates test code, (2) Query doesn't recognize that 'sanitizeInput()' function is called before database query, (3) Variable name 'mockUserInput' suggests test data. Missing code snippet limits certainty to 0.9 instead of 1.0."
+  "commonRootCause": "Query does not model sanitizeInput() as a sanitizer.",
+  "sampleResults": [
+    {
+      "sourceFile": "results-1.sarif",
+      "resultIndex": 7,
+      "ruleId": "js/sql-injection",
+      "message": { "text": "Potential SQL injection" },
+      "locations": []
+    }
+  ],
+  "reasoning": "False positive group: (1) File paths like 'test/unit/database-mock.test.js' indicate test code, (2) Query doesn't recognize that 'sanitizeInput()' is called before database query, (3) All 15 results share this pattern."
 }
 ```
 
-### Low-Confidence FP Example
+### Low-Confidence FP Group Example
 
 ```json
 {
-  "ruleId": "js/path-injection",
-  "message": { "text": "Potential path traversal" },
+  "groupLabel": "File utility handlers with unclear validation",
+  "patternSummary": "Results in src/utils/ files where path validation may or may not be present.",
+  "resultCount": 4,
+  "estimatedFpProportion": 0.5,
   "confidence": 0.3,
-  "reasoning": "Possibly a false positive: (1) No code snippets available in SARIF, (2) File path 'src/utils/fileHandler.js' doesn't indicate test code, (3) Cannot verify if proper path validation exists. Low confidence due to missing context."
+  "commonRootCause": "Unclear whether custom path validation is sufficient.",
+  "sampleResults": [
+    {
+      "sourceFile": "results-1.sarif",
+      "resultIndex": 22,
+      "ruleId": "js/path-injection",
+      "message": { "text": "Potential path traversal" },
+      "locations": []
+    }
+  ],
+  "reasoning": "Possibly false positive: (1) No code snippets available in SARIF, (2) File path 'src/utils/fileHandler.js' doesn't indicate test code, (3) Cannot verify if proper path validation exists. Low confidence due to missing context."
 }
 ```
 
 ## Processing Instructions
 
-1. **Review each SARIF result** in the provided array
-2. **Analyze available context** (code snippets, file paths, messages)
+1. **Review SARIF results** and group them by common patterns
+2. **Analyze available context** (code snippets, file paths, messages) for each group
 3. **Compare against query logic** to understand what pattern was detected
 4. **Identify FP indicators** based on guidelines above
-5. **Assign confidence score** reflecting evidence strength
-6. **Write clear reasoning** explaining your assessment
-7. **Sort results** by confidence score (descending)
-8. **Return top N results** as requested (or all if N not specified)
+5. **Assign group-level confidence scores** reflecting evidence strength
+6. **Write clear reasoning** for each group explaining the assessment
+7. **Sort groups** by estimated prevalence / importance (descending)
 
 ## Important Notes
 
-- A result should never appear in both FP and TP rankings
+- A result should belong to at most one FP group
 - When in doubt, prefer lower confidence scores
 - Missing code snippets should always reduce confidence
 - Test/example code is more likely to be FP but not always
