@@ -12,13 +12,13 @@ Help a developer discover what kinds of false positives are produced by their cu
 
 1. Read the provided CodeQL query to understand what patterns it is designed to detect.
 2. Discover the results of this query on a real database, by:
-   - Running the tool `list_query_run_results` to find existing runs for this query
-   - If no existing runs are found, run the query on a relevant database using `codeql_query_run` tool
+   - Running the tool #list_query_run_results to find existing runs for this query
+   - If no existing runs are found, run the query on a relevant database using #codeql_query_run tool
 3. Analyze and group the results into what appear to be similar types of results. This may mean:
    - Grouping results in the same file
    - Grouping results that reference the same elements
    - Grouping results with similar messages
-4. For each group, explore the actual code for a sample of alerts in that group, using the `read_database_source` tool to triage the results and determine which groups appear to be false positives
+4. For each group, explore the actual code for a sample of alerts in that group, using the #read_database_source tool to triage the results and determine which groups appear to be false positives
 5. For each false positive case discovered in this exploration, group them into categories of similar root causes. For example, a query might not properly account for unreachable code, or there may be a commonly used library that violates the query's assumptions but is actually safe.
 6. Explain these results to the user in order of most common to least common, so they can understand where their query may need improvement to reduce false positives.
 
@@ -32,7 +32,7 @@ You will be provided with:
 
 ### Exploring code paths
 
-The tool `read_database_source` can be used to read the code of a particular finding. A good strategy to explore the code paths of a finding is:
+The tool #read_database_source can be used to read the code of a particular finding. A good strategy to explore the code paths of a finding is:
 
 1. Read in the immediate context of the violation.
    - Some queries may depend on later context (e.g., an "unused variable" may only be used after its declaration)

@@ -4,7 +4,7 @@
 
 import AdmZip from 'adm-zip';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   readDatabaseSource,
@@ -48,7 +48,7 @@ async function createDirDatabase(dir: string): Promise<void> {
   await fs.writeFile(join(dir, 'codeql-database.yml'), 'primaryLanguage: java\n');
   for (const [entryPath, content] of Object.entries(SAMPLE_FILES)) {
     const fullPath = join(dir, 'src', entryPath);
-    await fs.mkdir(join(fullPath, '..'), { recursive: true });
+    await fs.mkdir(dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, 'utf-8');
   }
 }

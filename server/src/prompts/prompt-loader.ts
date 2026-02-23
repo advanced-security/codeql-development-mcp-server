@@ -13,6 +13,7 @@ import explainCodeqlQuery from './explain-codeql-query.prompt.md';
 import qlLspIterativeDevelopment from './ql-lsp-iterative-development.prompt.md';
 import qlTddAdvanced from './ql-tdd-advanced.prompt.md';
 import qlTddBasic from './ql-tdd-basic.prompt.md';
+import runQueryAndSummarizeFalsePositives from './run-query-and-summarize-false-positives.prompt.md';
 import sarifRankFalsePositives from './sarif-rank-false-positives.prompt.md';
 import sarifRankTruePositives from './sarif-rank-true-positives.prompt.md';
 import toolsQueryWorkflow from './tools-query-workflow.prompt.md';
@@ -31,6 +32,7 @@ const PROMPT_TEMPLATES: Record<string, string> = {
   'ql-lsp-iterative-development.prompt.md': qlLspIterativeDevelopment,
   'ql-tdd-advanced.prompt.md': qlTddAdvanced,
   'ql-tdd-basic.prompt.md': qlTddBasic,
+  'run-query-and-summarize-false-positives.prompt.md': runQueryAndSummarizeFalsePositives,
   'sarif-rank-false-positives.prompt.md': sarifRankFalsePositives,
   'sarif-rank-true-positives.prompt.md': sarifRankTruePositives,
   'tools-query-workflow.prompt.md': toolsQueryWorkflow,

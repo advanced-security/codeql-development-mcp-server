@@ -26,6 +26,25 @@ import { z } from 'zod';
 import { logger } from '../../utils/logger';
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/**
+ * Default maximum number of entries returned in listing mode when the caller
+ * does not provide an explicit `maxEntries` value.  Real databases can contain
+ * very large numbers of files; capping the response avoids oversized MCP
+ * responses and high memory usage.
+ */
+const DEFAULT_MAX_LISTING_ENTRIES = 1000;
+
+/**
+ * Maximum uncompressed size (in bytes) for a single zip entry that the tool
+ * will decompress into memory.  Prevents runaway memory usage when a src.zip
+ * contains unexpectedly large files.  10 MB.
+ */
+const MAX_UNCOMPRESSED_BYTES = 10 * 1024 * 1024;
+
+// ---------------------------------------------------------------------------
 // Core implementation
 // ---------------------------------------------------------------------------
 
@@ -161,7 +180,7 @@ function applyLineRange(
   startLine?: number,
   endLine?: number,
 ): { content: string; effectiveEnd: number; effectiveStart: number; totalLines: number } {
-  const lines = content.split('\n');
+  const lines = content.split(/\r?\n/);
   const totalLines = lines.length;
   const effectiveStart = Math.max(1, startLine ?? 1);
   const effectiveEnd = Math.min(totalLines, endLine ?? totalLines);
@@ -226,8 +245,9 @@ export async function readDatabaseSource(
     }
 
     const totalEntries = allEntries.length;
-    const truncated = maxEntries !== undefined && maxEntries < totalEntries;
-    const entries = truncated ? allEntries.slice(0, maxEntries) : allEntries;
+    const effectiveMax = maxEntries ?? DEFAULT_MAX_LISTING_ENTRIES;
+    const truncated = effectiveMax < totalEntries;
+    const entries = truncated ? allEntries.slice(0, effectiveMax) : allEntries;
 
     return {
       entries,
@@ -260,6 +280,14 @@ export async function readDatabaseSource(
     const entry = zip.getEntry(matchedEntry);
     if (!entry) {
       throw new Error(`Failed to read entry from src.zip: ${matchedEntry}`);
+    }
+
+    const rawSize = entry.header.size;
+    if (rawSize > MAX_UNCOMPRESSED_BYTES) {
+      throw new Error(
+        `Entry "${matchedEntry}" is too large to read (${rawSize} bytes, limit ${MAX_UNCOMPRESSED_BYTES}). ` +
+          `Use startLine/endLine on a smaller file, or increase the limit.`,
+      );
     }
 
     const rawContent = entry.getData().toString('utf-8');
@@ -347,7 +375,8 @@ export function registerReadDatabaseSourceTool(server: McpServer): void {
         .optional()
         .describe(
           'Maximum number of entries to return in listing mode (when filePath is omitted). ' +
-            'When the total exceeds this limit the response includes truncated: true.',
+            'Defaults to 1000. When the total exceeds this limit the response includes truncated: true. ' +
+            'Use prefix to narrow results for large databases.',
         ),
       prefix: z
         .string()
