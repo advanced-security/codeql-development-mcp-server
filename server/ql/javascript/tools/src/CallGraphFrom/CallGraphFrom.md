@@ -1,4 +1,4 @@
-# Call Graph From for JavaScript
+# CallGraphFrom for JavaScript
 
 Displays calls made from a specified function, showing the call graph outbound from the source function.
 

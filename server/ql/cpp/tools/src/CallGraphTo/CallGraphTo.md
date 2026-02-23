@@ -1,4 +1,4 @@
-# Call Graph To for C++
+# CallGraphTo for C++
 
 Displays calls made to a specified function, showing the call graph inbound to the target function.
 

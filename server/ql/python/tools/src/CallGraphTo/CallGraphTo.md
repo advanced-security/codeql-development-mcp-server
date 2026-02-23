@@ -1,4 +1,4 @@
-# Call Graph To for Python
+# CallGraphTo for Python
 
 Displays calls made to a specified function, showing the call graph inbound to the target function.
 

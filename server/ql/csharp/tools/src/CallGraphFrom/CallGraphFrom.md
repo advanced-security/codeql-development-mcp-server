@@ -1,4 +1,4 @@
-# Call Graph From for `csharp` Source Files
+# CallGraphFrom for `csharp` Source Files
 
 Displays calls made from a specified method, showing the call graph outbound from the source method.
 

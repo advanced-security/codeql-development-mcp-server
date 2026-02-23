@@ -1,4 +1,4 @@
-# Call Graph To for Swift
+# CallGraphTo for Swift
 
 Displays calls made to a specified function, showing the call graph inbound to the target function.
 

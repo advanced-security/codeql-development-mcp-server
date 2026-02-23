@@ -1,4 +1,4 @@
-# Call Graph To for Ruby
+# CallGraphTo for Ruby
 
 Displays calls made to a specified method, showing the call graph inbound to the target method.
 
