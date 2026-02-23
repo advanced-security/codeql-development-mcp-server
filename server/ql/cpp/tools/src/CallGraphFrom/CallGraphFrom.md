@@ -33,10 +33,7 @@ void sourceFunc() {  // Source function for analysis
 
 Running with `sourceFunction = "sourceFunc"` produces:
 
-| Call site   | Message                                 |
-| ----------- | --------------------------------------- |
-| `helper1()` | Call from \`sourceFunc\` to \`helper1\` |
-| `helper2()` | Call from \`sourceFunc\` to \`helper2\` |
+
 
 ## Output Format
 
