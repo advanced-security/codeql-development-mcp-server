@@ -123,12 +123,14 @@ class CodeQLMCPClient {
       });
 
       if (this.mcpMode === "stdio") {
+        const repoRoot = path.join(__dirname, "..", "..");
         const serverPath =
           process.env.MCP_SERVER_PATH ||
-          path.join(__dirname, "..", "..", "server", "dist", "codeql-development-mcp-server.js");
+          path.join(repoRoot, "server", "dist", "codeql-development-mcp-server.js");
         this.transport = new StdioClientTransport({
           command: "node",
           args: [serverPath],
+          cwd: repoRoot,
           env: {
             ...process.env,
             TRANSPORT_MODE: "stdio"
@@ -215,17 +217,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Test execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print test summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print test summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**
@@ -246,17 +255,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Demo execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print demo summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**
@@ -350,17 +366,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Workflow test execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print test summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print test summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**
@@ -387,17 +410,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Monitoring test execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print test summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print test summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**
