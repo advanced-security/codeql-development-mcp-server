@@ -370,12 +370,11 @@ class ThrowingMethod extends Method {
    }
    ```
 
-3. **Profile the query**:
+3. **Profile from evaluator logs** (after step 1 produces a log file):
 
    ```typescript
-   profile_codeql_query: {
-     query: "/path/to/Query.ql",
-     database: "/path/to/db"
+   profile_codeql_query_from_logs: {
+     evaluatorLog: '/path/to/log.json';
    }
    ```
 
@@ -408,7 +407,7 @@ class ThrowingMethod extends Method {
 - [ ] No false positives in results
 - [ ] No false negatives (all expected cases caught)
 - [ ] Query formatted with #codeql_query_format
-- [ ] Performance acceptable (check with #profile_codeql_query)
+- [ ] Performance acceptable (check with #profile_codeql_query_from_logs)
 
 ## Test Acceptance Workflow
 
@@ -440,7 +439,7 @@ When your query produces correct results but differs from the `.expected` file:
 | #find_class_position            | Locate class for quickeval        | Before quick_evaluate           |
 | #find_codeql_query_files        | Discover related files            | Planning, tracking changes      |
 | #codeql_test_accept             | Accept actual results as expected | After verifying correct output  |
-| #profile_codeql_query           | Performance analysis              | Optimization                    |
+| #profile_codeql_query_from_logs | Performance analysis              | Optimization                    |
 
 ## Interpreting Graph Query Results
 

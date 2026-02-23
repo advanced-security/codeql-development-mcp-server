@@ -27,6 +27,16 @@ For creating/updating **query documentation files** (`.md` or `.qhelp`), use the
 - Tuple counts: `grep -E "tuples|rows" <logfile>`
 - RA operations: `grep -E "SCAN|JOIN|AGGREGATE" <logfile>`
 
+## Choosing a Database
+
+Several steps below require a CodeQL database. Determine which database to use:
+
+1. **User-provided `databasePath`** — use this if provided and valid (check with #codeql_resolve_database).
+2. **Test database** — if Step 1 finds tests, run them in Step 3 to create a `.testproj` database.
+3. **No database available** — skip Steps 4-6, and base the explanation on source code analysis only.
+
+Store the chosen database path as `$DB` for use in Steps 4-6.
+
 ## Workflow Checklist
 
 You MUST use the following MCP server tools in sequence to gather context before generating your explanation:
@@ -51,16 +61,19 @@ You MUST use the following MCP server tools in sequence to gather context before
   - Parameters: `tests` = array of test directories from Step 1
   - Purpose: Ensures test database is created and current with test code
   - Gather: Test pass/fail status, test database path (`.testproj` directory)
+  - **If no tests exist**: Skip this step. Use user-provided `databasePath` as `$DB`.
 
-### Phase 3: Code Structure Analysis (if test database exists)
+### Phase 3: Code Structure Analysis (requires `$DB`)
+
+Skip this phase entirely if no database is available.
 
 - [ ] **Step 4: Generate PrintAST output**
   - Tool: #codeql_query_run
   - Parameters:
     - `queryName`: `"PrintAST"`
     - `queryLanguage`: provided language
-    - `database`: test database path from Step 3
-    - `sourceFiles`: test source file names
+    - `database`: `$DB`
+    - `sourceFiles`: test source file names (or representative source files from the database)
     - `format`: `"graphtext"`
   - Gather: AST hierarchy showing code structure representation
 
@@ -69,24 +82,30 @@ You MUST use the following MCP server tools in sequence to gather context before
   - Parameters:
     - `queryName`: `"PrintCFG"`
     - `queryLanguage`: provided language
-    - `database`: test database path from Step 3
-    - `sourceFunction`: key function name(s) from test code
+    - `database`: `$DB`
+    - `sourceFunction`: key function name(s) from test code or query source
     - `format`: `"graphtext"`
   - Gather: Control flow graph showing execution paths
 
-### Phase 4: Query Profiling and Evaluation Order
+### Phase 4: Query Profiling and Evaluation Order (requires `$DB`)
 
-- [ ] **Step 6: Profile the query**
-  - Tool: #profile_codeql_query
+Skip this phase entirely if no database is available.
+
+- [ ] **Step 6a: Run the query with evaluator logging**
+  - Tool: #codeql_query_run (or #codeql_database_analyze)
+  - Run the query against `$DB` with evaluator logging enabled
+  - The tool returns the path to the evaluator log file (`.jsonl`)
+
+- [ ] **Step 6b: Profile from evaluator logs**
+  - Tool: #profile_codeql_query_from_logs
   - Parameters:
-    - `queryPath`: the query file path
-    - `database`: If `databasePath` input was provided and valid, use it; otherwise use test database from Step 3
-  - Gather: Query evaluator log, pipeline execution order, timing data
+    - `evaluatorLog`: path to the evaluator log file from Step 6a
+  - Gather: Pipeline execution order, predicate timing data, tuple counts
   - **Critical**: This reveals the actual bottom-up evaluation order of predicates
 
 - [ ] **Step 7: Analyze evaluator log** (for large logs)
   - Use CLI grep commands to extract key performance data from evaluator logs:
-  - Replace `<evaluator-log-file>` with the actual log file path from Step 6
+  - Replace `<evaluator-log-file>` with the log file path from Step 6a
 
   ```bash
   # Find pipeline evaluation order and timing
@@ -127,138 +146,28 @@ Understanding the query profiler output is critical for explaining how the query
 
 ### Verbal Explanation Structure
 
-```markdown
-## Query Overview
+Generate a single markdown document with these sections in order:
 
-[2-3 sentence summary of what this query detects and why it matters]
-
-## Query Metadata
-
-| Property    | Value                                    |
-| ----------- | ---------------------------------------- |
-| Name        | [from @name]                             |
-| Description | [from @description]                      |
-| Kind        | [problem/path-problem/diagnostic/metric] |
-| ID          | [from @id]                               |
-| Tags        | [from @tags]                             |
-| Precision   | [high/medium/low]                        |
-| Severity    | [error/warning/recommendation]           |
-
-## What This Query Detects
-
-[Detailed explanation of the vulnerability/issue being detected, including:]
-
-- Security implications (CWE, OWASP if applicable)
-- Why this pattern is problematic
-- Real-world attack scenarios or code quality impacts
-
-## How the Query Works
-
-### Bottom-Up Evaluation Order
-
-[Explain how CodeQL evaluates this query from the profiler data. CodeQL always evaluates queries "bottom-up" - starting with base predicates and building up to the final select clause.]
-
-**Evaluation Timeline** (from profiler data):
-
-| Order | Predicate/Pipeline           | Time (ms) | Tuples  |
-| ----- | ---------------------------- | --------- | ------- |
-| 1     | [first evaluated predicate]  | [time]    | [count] |
-| 2     | [second evaluated predicate] | [time]    | [count] |
-| ...   | ...                          | ...       | ...     |
-
-### Key Components
-
-#### Imports and Dependencies
-
-[List and explain imports]
-
-#### Classes and Characteristic Predicates
-
-[For each class, explain what it represents and its characteristic predicate]
-
-#### Helper Predicates
-
-[Explain each predicate, its purpose, parameters, and return type]
-
-#### Data Flow Configuration (if applicable)
-
-- **Sources**: [what defines a source]
-- **Sinks**: [what defines a sink]
-- **Sanitizers/Barriers**: [what stops the flow]
-- **Additional Flow Steps**: [custom flow propagation]
-
-#### Main Query (from/where/select)
-
-[Explain the final query structure]
-
-## Test Code Analysis
-
-### AST Structure
-
-[Summarize key insights from PrintAST output - what AST classes represent the test code patterns]
-
-### Control Flow
-
-[Summarize key insights from PrintCFG output - execution paths through key functions]
-
-## Example Patterns
-
-### Positive Test Cases (Should Match)
-
-[Code patterns that should trigger the query, with explanation]
-
-### Negative Test Cases (Should Not Match)
-
-[Code patterns that should NOT trigger the query, with explanation]
-
-## Performance Characteristics
-
-[Based on profiler data, note:]
-
-- Most expensive predicates (by evaluation time)
-- Predicates with highest tuple counts
-- Any potential performance optimizations
-
-## Limitations and Edge Cases
-
-[Note any patterns the query might miss or known false positive scenarios]
-```
+1. **Query Overview** — 2-3 sentence summary of what the query detects and why it matters.
+2. **Query Metadata** — Table with: Name, Description, Kind, ID, Tags, Precision, Severity (from `@` annotations).
+3. **What This Query Detects** — Security implications (CWE/OWASP if applicable), why the pattern is problematic, real-world attack scenarios.
+4. **How the Query Works** — Two subsections:
+   - **Bottom-Up Evaluation Order**: Evaluation timeline table (Order, Predicate/Pipeline, Time ms, Tuples) derived from profiler data. Explain that CodeQL evaluates bottom-up.
+   - **Key Components**: Imports, classes and characteristic predicates, helper predicates, data flow configuration (sources, sinks, sanitizers, additional flow steps), main query `from`/`where`/`select`.
+5. **Test Code Analysis** (if database was available) — AST structure insights from PrintAST, control flow insights from PrintCFG.
+6. **Example Patterns** — Positive test cases (should match) and negative test cases (should not match) with explanations.
+7. **Performance Characteristics** (if profiler data available) — Most expensive predicates, highest tuple counts, optimization opportunities.
+8. **Limitations and Edge Cases** — Patterns the query might miss, known false positive scenarios.
 
 ### Visual Explanation: Mermaid Evaluation Diagram
 
-Generate a mermaid diagram showing the bottom-up evaluation order based on profiler data:
+Generate a `mermaid` `flowchart BU` (bottom-up) diagram showing the evaluation order derived from profiler data. Guidelines:
 
-```mermaid
-flowchart BU
-    subgraph "Base Predicates (Evaluated First)"
-        A[Predicate1] --> B[Predicate2]
-        C[Class1.member] --> B
-    end
-
-    subgraph "Intermediate Predicates"
-        B --> D[HelperPredicate]
-        D --> E[DataFlowConfig.isSource]
-        D --> F[DataFlowConfig.isSink]
-    end
-
-    subgraph "Flow Analysis"
-        E --> G[DataFlow::hasFlow]
-        F --> G
-    end
-
-    subgraph "Final Query (Evaluated Last)"
-        G --> H[select clause]
-    end
-```
-
-**Diagram Guidelines:**
-
-- Direction: Bottom-Up (`BU`) to reflect actual evaluation
-- Group predicates by evaluation phase
-- Show dependencies between predicates
-- Label with actual predicate/class names from the query
-- Use timing data from profiler to order predicates accurately
+- Use subgraphs to group predicates by evaluation phase (base, intermediate, flow analysis, final select)
+- Label nodes with actual predicate/class names from the query
+- Show dependency edges between predicates
 - Annotate expensive operations with timing (e.g., `[500ms]`)
+- Direction must be `BU` to reflect bottom-up evaluation
 
 ## Important Notes
 

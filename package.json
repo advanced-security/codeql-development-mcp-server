@@ -48,7 +48,7 @@
     "test:client": "npm run test:integration:default -w client",
     "test:server": "npm run test -w server",
     "test:vscode": "npm run test -w extensions/vscode",
-    "package:vsix": "npm run clean:test-dbs &&npm run package -w extensions/vscode",
+    "package:vsix": "npm run clean:test-dbs && npm run build -w server && npm run package -w extensions/vscode",
     "tidy": "npm run lint:fix && npm run format",
     "tidy:check": "npm run lint && npm run format:check",
     "upgrade": "npm run upgrade:node",
