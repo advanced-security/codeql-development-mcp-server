@@ -33,11 +33,11 @@ Before using tools queries, you need:
 ### Step 1: Identify or Create Database
 
 - [ ] **Option A: Use existing database**
-  - Tool: `codeql_resolve_database`
+  - Tool: #codeql_resolve_database
   - Verify database is valid and note the language
 
 - [ ] **Option B: Create new database**
-  - Tool: `codeql_database_create`
+  - Tool: #codeql_database_create
   - Parameters: `database`, `language`, `source-root`
 
 ### Step 2: Run PrintAST Query
@@ -45,7 +45,7 @@ Before using tools queries, you need:
 The PrintAST query outputs a hierarchical tree of AST nodes with labels.
 
 - [ ] **Execute PrintAST**
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `database`: Path to your CodeQL database
     - `queryName`: `"PrintAST"`
@@ -76,7 +76,7 @@ TopLevelFunction
 The PrintCFG query outputs control flow nodes and edges.
 
 - [ ] **Execute PrintCFG**
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `database`: Path to your CodeQL database
     - `queryName`: `"PrintCFG"`
@@ -108,7 +108,7 @@ edges
 Call graph queries help trace function relationships.
 
 - [ ] **Execute CallGraphFrom** (to find what a function calls)
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `database`: Path to your CodeQL database
     - `queryName`: `"CallGraphFrom"`
@@ -117,7 +117,7 @@ Call graph queries help trace function relationships.
     - `format`: `"sarif-latest"` or `"csv"`
 
 - [ ] **Execute CallGraphTo** (to find what calls a function)
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `database`: Path to your CodeQL database
     - `queryName`: `"CallGraphTo"`
@@ -173,20 +173,20 @@ Use the gathered information to inform your query:
 | Empty AST output      | `sourceFiles` parameter not matching  | Use just filenames, not full paths (e.g., `"test.js"`) |
 | Empty CFG output      | `sourceFunction` not found            | Check exact function name spelling                     |
 | Empty CallGraph       | No calls exist or wrong function name | Verify function exists and has calls                   |
-| Query compilation err | Pack dependencies missing             | Run `codeql_pack_install` on the tools pack            |
+| Query compilation err | Pack dependencies missing             | Run #codeql_pack_install on the tools pack             |
 
 ## MCP Tools Reference
 
-| Tool                      | Purpose                                              |
-| ------------------------- | ---------------------------------------------------- |
-| `codeql_query_run`        | Execute tools queries with parameters                |
-| `codeql_resolve_database` | Validate database before querying                    |
-| `codeql_database_create`  | Create database from source code                     |
-| `codeql_bqrs_interpret`   | Convert results to different formats                 |
-| `codeql_pack_install`     | Install pack dependencies if needed                  |
-| `codeql_lsp_completion`   | Explore available types after seeing AST class names |
-| `codeql_lsp_definition`   | Navigate to class definitions to see predicates      |
-| `codeql_lsp_references`   | Find usage examples of a class or predicate          |
+| Tool                     | Purpose                                              |
+| ------------------------ | ---------------------------------------------------- |
+| #codeql_query_run        | Execute tools queries with parameters                |
+| #codeql_resolve_database | Validate database before querying                    |
+| #codeql_database_create  | Create database from source code                     |
+| #codeql_bqrs_interpret   | Convert results to different formats                 |
+| #codeql_pack_install     | Install pack dependencies if needed                  |
+| #codeql_lsp_completion   | Explore available types after seeing AST class names |
+| #codeql_lsp_definition   | Navigate to class definitions to see predicates      |
+| #codeql_lsp_references   | Find usage examples of a class or predicate          |
 
 ### Using LSP Tools After AST Analysis
 
@@ -194,13 +194,13 @@ After running PrintAST and identifying relevant AST class names, use the LSP too
 to explore those classes in your query file:
 
 1. **Write the class name** in your query's `from` clause and save the file
-2. **Run `codeql_lsp_completion`** after the dot to see member predicates:
+2. **Run #codeql_lsp_completion** after the dot to see member predicates:
    - `file_path`: your query file, `line`/`character`: 0-based position after the dot
    - `workspace_uri`: the pack root directory (containing `codeql-pack.yml`)
-3. **Run `codeql_lsp_definition`** on an AST class name to see its full API
-4. **Run `codeql_lsp_references`** to find usage examples in the pack
+3. **Run #codeql_lsp_definition** on an AST class name to see its full API
+4. **Run #codeql_lsp_references** to find usage examples in the pack
 
-> **Note**: LSP tools use 0-based line/character positions. Run `codeql_pack_install`
+> **Note**: LSP tools use 0-based line/character positions. Run #codeql_pack_install
 > before using them — they require resolved dependencies. Set `workspace_uri` to
 > a plain directory path (not a `file://` URI).
 

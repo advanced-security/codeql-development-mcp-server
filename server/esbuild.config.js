@@ -19,15 +19,19 @@ const config = {
   platform: 'node',
   target: 'node24',
   sourcemap: true,
-  external: [
-    '@modelcontextprotocol/sdk',
-    'express',
-    'cors',
-    'dotenv',
-    'zod'
-  ],
+  loader: {
+    // Embed .prompt.md files as string literals so they are available
+    // at runtime without filesystem access (npm, VSIX, bundled layouts).
+    '.md': 'text',
+  },
   banner: {
-    js: '#!/usr/bin/env node'
+    // createRequire shim lets bundled CJS packages (e.g., express) call
+    // require() for Node.js built-ins inside the ESM output.
+    js: [
+      '#!/usr/bin/env node',
+      'import { createRequire as __bundled_createRequire__ } from "module";',
+      'const require = __bundled_createRequire__(import.meta.url);',
+    ].join('\n'),
   },
   // Only generate the bundled JS file and source map
   write: true,

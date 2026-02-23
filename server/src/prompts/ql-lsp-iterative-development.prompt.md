@@ -21,7 +21,7 @@ Thus, this prompt can be used in any environment where the query files are on di
 ## Prerequisites
 
 1. A CodeQL pack with `codeql-pack.yml` on disk
-2. Dependencies installed via `codeql_pack_install` (pointing at the pack directory)
+2. Dependencies installed via #codeql_pack_install (pointing at the pack directory)
 3. Query files saved to disk (LSP tools operate on files, not inline strings)
 
 ## Key Concept: Positions Are File Path + Line + Character
@@ -37,12 +37,12 @@ containing `codeql-pack.yml`) for import resolution to work. Without it, complet
 and definitions for imported libraries will be empty.
 
 > **Critical**: LSP line/character positions are 0-based, but `read_file`,
-> `find_predicate_position`, and `find_class_position` return 1-based positions.
+> #find_predicate_position, and #find_class_position return 1-based positions.
 > Always subtract 1 when passing their output to LSP tools.
 
 ## Step 1: Discover Available Types with Completions
 
-Use `codeql_lsp_completion` to explore what types and predicates are available at any
+Use #codeql_lsp_completion to explore what types and predicates are available at any
 position in a query file. This replaces manual documentation browsing.
 
 **Example**: To see what classes are available in a `from` clause after `import javascript`:
@@ -68,7 +68,7 @@ each with full signature and documentation.
 
 ## Step 2: Navigate to Definitions
 
-Use `codeql_lsp_definition` to find where a class, predicate, or module is defined.
+Use #codeql_lsp_definition to find where a class, predicate, or module is defined.
 This returns the file URI and line range of the definition — even into library pack
 files you haven't opened.
 
@@ -95,7 +95,7 @@ the source.
 
 ## Step 3: Find All References
 
-Use `codeql_lsp_references` to find how a symbol is used across the workspace.
+Use #codeql_lsp_references to find how a symbol is used across the workspace.
 
 ```text
 Tool: codeql_lsp_references
@@ -115,7 +115,7 @@ find real usage examples instead of guessing from documentation.
 
 ## Step 4: Locate Symbols with Position Finders
 
-Use `find_predicate_position` and `find_class_position` to locate where a specific
+Use #find_predicate_position and #find_class_position to locate where a specific
 symbol is defined in a file. These return **1-based** line/column positions.
 
 ```text
@@ -126,18 +126,18 @@ Parameters:
 Returns: { start_line: 12, start_col: 13, end_line: 12, end_col: 20 }
 ```
 
-> **Note**: `find_class_position` finds `class` definitions only — it does not find
-> `module` definitions. Use `find_predicate_position` for predicates inside modules.
+> **Note**: #find_class_position finds `class` definitions only — it does not find
+> `module` definitions. Use #find_predicate_position for predicates inside modules.
 
 **Combining with LSP tools**: To navigate to a predicate's definition in library code:
 
-1. Use `find_predicate_position` to get its 1-based position
+1. Use #find_predicate_position to get its 1-based position
 2. Subtract 1 from line/col to convert to 0-based
-3. Pass to `codeql_lsp_definition` to jump to the underlying type
+3. Pass to #codeql_lsp_definition to jump to the underlying type
 
 ## Step 5: Quick-Evaluate Individual Predicates
 
-Use `quick_evaluate` to evaluate a single predicate or class against a database
+Use #quick_evaluate to evaluate a single predicate or class against a database
 without running the full query. This is the fastest way to debug whether a predicate
 matches what you expect.
 
@@ -151,27 +151,27 @@ Parameters:
 ```
 
 The tool evaluates just that symbol (predicate or class) and returns the result path.
-Use `codeql_bqrs_decode` on the output to inspect results in CSV or JSON format.
+Use #codeql_bqrs_decode on the output to inspect results in CSV or JSON format.
 
 ## Step 6: Validate at Multiple Levels
 
 Use the right validation tool for each situation:
 
-| Tool                     | Use When                                | Input              | Resolves Imports?   |
-| ------------------------ | --------------------------------------- | ------------------ | ------------------- |
-| `validate_codeql_query`  | Quick structural check                  | Inline QL string   | No (heuristic only) |
-| `codeql_lsp_diagnostics` | Syntax/semantic validation of fragments | Inline QL string   | No                  |
-| `codeql_query_compile`   | Full compilation check                  | On-disk `.ql` file | Yes                 |
-| `codeql_test_run`        | End-to-end result validation            | Test directory     | Yes                 |
+| Tool                    | Use When                                | Input              | Resolves Imports?   |
+| ----------------------- | --------------------------------------- | ------------------ | ------------------- |
+| #validate_codeql_query  | Quick structural check                  | Inline QL string   | No (heuristic only) |
+| #codeql_lsp_diagnostics | Syntax/semantic validation of fragments | Inline QL string   | No                  |
+| #codeql_query_compile   | Full compilation check                  | On-disk `.ql` file | Yes                 |
+| #codeql_test_run        | End-to-end result validation            | Test directory     | Yes                 |
 
-**`codeql_lsp_diagnostics`** validates QL syntax and semantics for inline code snippets,
+**#codeql_lsp_diagnostics** validates QL syntax and semantics for inline code snippets,
 but **cannot resolve `import` statements** (like `import javascript`). Use it for:
 
 - Checking predicate signatures and QL syntax
 - Verifying `from`/`where`/`select` clause structure
 - Catching type errors in import-free QL fragments
 
-For queries with imports, always use `codeql_query_compile` on the saved file.
+For queries with imports, always use #codeql_query_compile on the saved file.
 
 ## Iterative Development Loop
 
@@ -202,7 +202,7 @@ This example shows the tools in action for building a JavaScript XSS query.
 ### 1. Create the query file and install dependencies
 
 Write a `.ql` file with `import javascript` and a skeleton `from`/`where`/`select`.
-Run `codeql_pack_install` on the pack directory.
+Run #codeql_pack_install on the pack directory.
 
 ### 2. Explore sink types
 
@@ -245,14 +245,14 @@ quick_evaluate(file=..., db=test.testproj, symbol="isSink")  →  inspect result
 
 ## Important Notes
 
-- **All LSP tools use 0-based positions**. `find_class_position` and
-  `find_predicate_position` return 1-based positions. Convert before combining.
+- **All LSP tools use 0-based positions**. #find_class_position and
+  #find_predicate_position return 1-based positions. Convert before combining.
 - **`workspace_uri` must be the pack root** (the directory containing
   `codeql-pack.yml`). Without it, completions and definitions will be empty.
-- **Run `codeql_pack_install` first**. LSP tools require resolved dependencies.
-- **`codeql_lsp_diagnostics` cannot resolve imports**. For `import javascript`
-  and similar, use `codeql_query_compile` on the on-disk file instead.
-- **`find_class_position` finds `class` only**, not `module` definitions.
-  Use grep or `find_predicate_position` for predicates inside modules.
-- **`codeql_lsp_references` scope** depends on `workspace_uri`. Point it at
+- **Run #codeql_pack_install first**. LSP tools require resolved dependencies.
+- **#codeql_lsp_diagnostics cannot resolve imports**. For `import javascript`
+  and similar, use #codeql_query_compile on the on-disk file instead.
+- **#find_class_position finds `class` only**, not `module` definitions.
+  Use grep or #find_predicate_position for predicates inside modules.
+- **#codeql_lsp_references scope** depends on `workspace_uri`. Point it at
   a library pack root to find usages across library code.

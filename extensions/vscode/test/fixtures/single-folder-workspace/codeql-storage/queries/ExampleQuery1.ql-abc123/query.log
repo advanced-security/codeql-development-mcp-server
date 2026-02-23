@@ -1,0 +1,4 @@
+[2026-01-15 10:00:00.000 UTC] [SPAMMY] execute query-server2> runQuery called with /home/user/codeql-workspace/queries/ExampleQuery1.ql
+[2026-01-15 10:00:00.001 UTC] [SPAMMY] execute query-server2> --dbscheme=/home/user/.local/share/vscode-codeql/databases/test-javascript-db/db-javascript/semmlecode.javascript.dbscheme
+[2026-01-15 10:00:02.345 UTC] [SPAMMY] execute query-server2> Compilation finished in 2344 ms.
+[2026-01-15 10:00:03.678 UTC] [SPAMMY] execute query-server2> Evaluation finished in 1333 ms.
