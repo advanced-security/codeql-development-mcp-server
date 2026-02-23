@@ -24,13 +24,13 @@ The following Java code demonstrates control flow through conditional statements
 
 ```java
 public void example(int x) {
-    if (x > 0) {                     // COMPLIANT - Branching creates CFG edges
+    if (x > 0) {  // Branching creates CFG edges
         System.out.println("Positive");
     } else {
         System.out.println("Non-positive");
     }
 
-    for (int i = 0; i < 3; i++) {    // COMPLIANT - Loop creates cyclic CFG
+    for (int i = 0; i < 3; i++) {  // Loop creates cyclic CFG
         System.out.println(i);
     }
 }

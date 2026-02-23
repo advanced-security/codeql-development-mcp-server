@@ -24,13 +24,13 @@ The following C# code demonstrates control flow through conditional statements a
 
 ```csharp
 public void Example(int x) {
-    if (x > 0) {                     // COMPLIANT - Branching creates CFG edges
+    if (x > 0) {  // Branching creates CFG edges
         Console.WriteLine("Positive");
     } else {
         Console.WriteLine("Non-positive");
     }
 
-    for (int i = 0; i < 3; i++) {    // COMPLIANT - Loop creates cyclic CFG
+    for (int i = 0; i < 3; i++) {  // Loop creates cyclic CFG
         Console.WriteLine(i);
     }
 }
