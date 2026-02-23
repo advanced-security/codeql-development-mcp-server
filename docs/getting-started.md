@@ -18,7 +18,7 @@ See the [VS Code Extension guide](./vscode/extension.md) for details.
 
 The `.vsix` can be downloaded from
 [GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
-or built from source (`npm run package:vscode` at the repository root).
+or built from source (`npm run package:vsix` at the repository root).
 
 ### From npm
 

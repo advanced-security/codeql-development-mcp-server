@@ -34,20 +34,20 @@ You MUST use the following MCP server tools in sequence to gather context before
 ### Phase 1: Query Discovery and Validation
 
 - [ ] **Step 1: Locate query files**
-  - Tool: `find_codeql_query_files`
+  - Tool: #find_codeql_query_files
   - Parameters: `queryPath` = provided query path
   - Gather: Query source file, test files, expected results, metadata location
   - Note: If tests exist, record the test directory path for later steps
 
 - [ ] **Step 2: Validate query structure**
-  - Tool: `validate_codeql_query`
+  - Tool: #validate_codeql_query
   - Parameters: `query` = contents of the query file
   - Gather: Structural validation results, heuristic warnings/suggestions
 
 ### Phase 2: Test Execution and Database Creation
 
 - [ ] **Step 3: Run existing tests** (if tests exist from Step 1)
-  - Tool: `codeql_test_run`
+  - Tool: #codeql_test_run
   - Parameters: `tests` = array of test directories from Step 1
   - Purpose: Ensures test database is created and current with test code
   - Gather: Test pass/fail status, test database path (`.testproj` directory)
@@ -55,7 +55,7 @@ You MUST use the following MCP server tools in sequence to gather context before
 ### Phase 3: Code Structure Analysis (if test database exists)
 
 - [ ] **Step 4: Generate PrintAST output**
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `queryName`: `"PrintAST"`
     - `queryLanguage`: provided language
@@ -65,7 +65,7 @@ You MUST use the following MCP server tools in sequence to gather context before
   - Gather: AST hierarchy showing code structure representation
 
 - [ ] **Step 5: Generate PrintCFG output** (for key functions)
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `queryName`: `"PrintCFG"`
     - `queryLanguage`: provided language
@@ -77,7 +77,7 @@ You MUST use the following MCP server tools in sequence to gather context before
 ### Phase 4: Query Profiling and Evaluation Order
 
 - [ ] **Step 6: Profile the query**
-  - Tool: `profile_codeql_query`
+  - Tool: #profile_codeql_query
   - Parameters:
     - `queryPath`: the query file path
     - `database`: If `databasePath` input was provided and valid, use it; otherwise use test database from Step 3
@@ -103,11 +103,11 @@ You MUST use the following MCP server tools in sequence to gather context before
   ```
 
 - [ ] **Step 8: Quick evaluate specific predicates** (as needed)
-  - First, locate the predicate: Tool: `find_predicate_position` with `file` and `name`
-  - Then evaluate: Tool: `quick_evaluate` with `file`, `db`, and `symbol`
+  - First, locate the predicate: Tool: #find_predicate_position with `file` and `name`
+  - Then evaluate: Tool: #quick_evaluate with `file`, `db`, and `symbol`
   - Use when: You need more context on how a specific predicate or class behaves
-  - Note: `find_class_position` finds `class` definitions only, not `module` definitions
-  - Note: `find_predicate_position` returns 1-based positions; LSP tools use 0-based
+  - Note: #find_class_position finds `class` definitions only, not `module` definitions
+  - Note: #find_predicate_position returns 1-based positions; LSP tools use 0-based
 
 ### Phase 5: Generate Explanation
 

@@ -28,7 +28,7 @@ Before creating a workshop, ensure you have:
 ### Phase 1: Analyze the Target Query
 
 - [ ] **Locate query files**
-  - Tool: `find_codeql_query_files`
+  - Tool: #find_codeql_query_files
   - Parameters: `queryPath` (path to the `.ql` or `.qlref` file)
   - Note: Returns query file, test files, expected results, and metadata
 
@@ -39,7 +39,7 @@ Before creating a workshop, ensure you have:
   - Generates: detailed explanation with mermaid evaluation diagram
 
 - [ ] **Verify existing tests pass**
-  - Tool: `codeql_test_run`
+  - Tool: #codeql_test_run
   - Parameters: `tests` (array of test directories)
   - Confirm: 100% pass rate before proceeding
 
@@ -48,7 +48,7 @@ Before creating a workshop, ensure you have:
 > **⚠️ CRITICAL**: Run tools queries to understand the test code structure.
 
 - [ ] **Run PrintAST on test code**
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `queryName`: `"PrintAST"`
     - `queryLanguage`: Your language (e.g., `"cpp"`, `"javascript"`)
@@ -58,7 +58,7 @@ Before creating a workshop, ensure you have:
   - Verify: Output contains hierarchical AST nodes (not empty)
 
 - [ ] **Run PrintCFG on key functions**
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `queryName`: `"PrintCFG"`
     - `queryLanguage`: Your language
@@ -68,7 +68,7 @@ Before creating a workshop, ensure you have:
   - Verify: Output contains nodes and edges
 
 - [ ] **Run CallGraph queries** (if query involves data flow)
-  - Tool: `codeql_query_run`
+  - Tool: #codeql_query_run
   - Parameters:
     - `queryName`: `"CallGraphFrom"` or `"CallGraphTo"`
     - `database`: Path to database
@@ -146,9 +146,9 @@ workshop-name/
 For each stage, create a complete solution query. Use the iterative LSP tools
 for efficient development (see `codeql://prompts/ql_lsp_iterative_development`):
 
-- Use `codeql_lsp_completion` to explore types and member predicates while writing queries
-- Use `codeql_lsp_definition` to navigate to library class definitions
-- Use `find_predicate_position` + `quick_evaluate` to test predicates in isolation
+- Use #codeql_lsp_completion to explore types and member predicates while writing queries
+- Use #codeql_lsp_definition to navigate to library class definitions
+- Use #find_predicate_position + #quick_evaluate to test predicates in isolation
 - Set `workspace_uri` to the solutions pack root for dependency resolution
 
 - [ ] **Stage 1 Solution**: Simplest working version
@@ -201,7 +201,7 @@ Transform solutions into exercises by removing implementation details:
   - Expected behavior description
 
 - [ ] **Ensure exercises compile**
-  - Tool: `codeql_query_compile`
+  - Tool: #codeql_query_compile
   - Exercises should compile (even if tests fail)
 
 ### Phase 7: Create Tests
@@ -215,23 +215,23 @@ Transform solutions into exercises by removing implementation details:
 
 - [ ] **Create .expected files**
   - Run solution queries to generate expected output
-  - Tool: `codeql_test_run` with `--learn` flag
-  - Or: `codeql_test_accept` after running tests
+  - Tool: #codeql_test_run with `--learn` flag
+  - Or: #codeql_test_accept after running tests
 
 ### Phase 8: Validate Workshop
 
 - [ ] **Run all solution tests**
-  - Tool: `codeql_test_run`
+  - Tool: #codeql_test_run
   - Parameters: `tests` pointing to `solutions-tests/`
   - Verify: 100% pass rate
 
 - [ ] **Verify exercise stubs compile**
-  - Tool: `codeql_query_compile`
+  - Tool: #codeql_query_compile
   - Parameters: Each exercise query
   - Verify: No compilation errors
 
 - [ ] **Test pack dependencies**
-  - Tool: `codeql_pack_install`
+  - Tool: #codeql_pack_install
   - Run in each pack directory
   - Verify: Dependencies resolve correctly
 
@@ -269,29 +269,29 @@ When creating workshops outside the MCP server repository:
 
 | Tool/Prompt                    | Type   | Purpose                                                      |
 | ------------------------------ | ------ | ------------------------------------------------------------ |
-| `find_codeql_query_files`      | Tool   | Locate query and related files                               |
+| #find_codeql_query_files       | Tool   | Locate query and related files                               |
 | `explain_codeql_query`         | Prompt | Generate detailed explanations for workshop learning content |
 | `document_codeql_query`        | Prompt | Create/update query documentation files                      |
 | `ql_lsp_iterative_development` | Prompt | Iterative query development with LSP tools                   |
-| `codeql_query_run`             | Tool   | Run tools queries (PrintAST, PrintCFG, etc.)                 |
-| `codeql_test_run`              | Tool   | Validate tests pass                                          |
-| `codeql_test_accept`           | Tool   | Accept test results as expected baseline                     |
-| `codeql_query_compile`         | Tool   | Verify queries compile                                       |
-| `codeql_pack_install`          | Tool   | Install pack dependencies                                    |
-| `codeql_resolve_metadata`      | Tool   | Extract query metadata                                       |
-| `codeql_lsp_completion`        | Tool   | Explore types and member predicates during query writing     |
-| `codeql_lsp_definition`        | Tool   | Navigate to class/predicate definitions in library code      |
-| `find_predicate_position`      | Tool   | Locate predicate positions for quick_evaluate                |
-| `quick_evaluate`               | Tool   | Test individual predicates against a database                |
-| `profile_codeql_query`         | Tool   | Profile query execution to understand evaluation order       |
-| `create_codeql_query`          | Tool   | Scaffold new query structure                                 |
+| #codeql_query_run              | Tool   | Run tools queries (PrintAST, PrintCFG, etc.)                 |
+| #codeql_test_run               | Tool   | Validate tests pass                                          |
+| #codeql_test_accept            | Tool   | Accept test results as expected baseline                     |
+| #codeql_query_compile          | Tool   | Verify queries compile                                       |
+| #codeql_pack_install           | Tool   | Install pack dependencies                                    |
+| #codeql_resolve_metadata       | Tool   | Extract query metadata                                       |
+| #codeql_lsp_completion         | Tool   | Explore types and member predicates during query writing     |
+| #codeql_lsp_definition         | Tool   | Navigate to class/predicate definitions in library code      |
+| #find_predicate_position       | Tool   | Locate predicate positions for quick_evaluate                |
+| #quick_evaluate                | Tool   | Test individual predicates against a database                |
+| #profile_codeql_query          | Tool   | Profile query execution to understand evaluation order       |
+| #create_codeql_query           | Tool   | Scaffold new query structure                                 |
 
 ## Troubleshooting
 
-| Issue                    | Likely Cause                    | Resolution                                           |
-| ------------------------ | ------------------------------- | ---------------------------------------------------- |
-| "Nothing to extract"     | Missing test source files       | Run `initialize-qltests.sh` or copy from shared dir  |
-| Pack not found           | Older pack version not cached   | Run `codeql pack install` in pack directory          |
-| Empty AST/CFG output     | Wrong sourceFiles/Function      | Use just filenames, verify function name spelling    |
-| Tests fail unexpectedly  | Expected file outdated          | Re-run solution and accept with `codeql_test_accept` |
-| Exercise doesn't compile | Missing imports or syntax error | Ensure valid QL syntax with `none()` placeholder     |
+| Issue                    | Likely Cause                    | Resolution                                          |
+| ------------------------ | ------------------------------- | --------------------------------------------------- |
+| "Nothing to extract"     | Missing test source files       | Run `initialize-qltests.sh` or copy from shared dir |
+| Pack not found           | Older pack version not cached   | Run `codeql pack install` in pack directory         |
+| Empty AST/CFG output     | Wrong sourceFiles/Function      | Use just filenames, verify function name spelling   |
+| Tests fail unexpectedly  | Expected file outdated          | Re-run solution and accept with #codeql_test_accept |
+| Exercise doesn't compile | Missing imports or syntax error | Ensure valid QL syntax with `none()` placeholder    |

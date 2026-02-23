@@ -1,7 +1,7 @@
 {
   "name": "vscode-codeql-development-mcp-server",
   "displayName": "CodeQL Development MCP Server",
-  "description": "Automatically installs, configures, and manages the CodeQL Development MCP Server in VS Code.",
+  "description": "LLM-assisted development of CodeQL queries, libraries, and tests via #ql-mcp prompts, resources, and tools.",
   "version": "2.24.1",
   "publisher": "advanced-security",
   "license": "SEE LICENSE IN LICENSE",

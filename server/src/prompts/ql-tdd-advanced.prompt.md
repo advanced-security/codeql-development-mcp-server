@@ -18,7 +18,7 @@ For basic TDD workflow, see: `codeql://prompts/ql-tdd-basic`
 
 ## Core Advanced Tools
 
-### 1. AST/CFG Visualization with `codeql_query_run`
+### 1. AST/CFG Visualization with #codeql_query_run
 
 Use the bundled tools queries to visualize code structure:
 
@@ -62,9 +62,9 @@ codeql_query_run: {
 
 **Critical**: Always verify that tools queries return **non-empty output** with actual nodes/edges, not just headers.
 
-### 2. Quick Evaluation with `quick_evaluate`
+### 2. Quick Evaluation with #quick_evaluate
 
-Use `quick_evaluate` for rapid iteration on specific predicates or classes:
+Use #quick_evaluate for rapid iteration on specific predicates or classes:
 
 ```typescript
 // First, find the position of a predicate
@@ -129,11 +129,11 @@ codeql_lsp_references: {
 
 - `workspace_uri` must be a **plain directory path** (not a `file://` URI) pointing to the pack root containing `codeql-pack.yml`
 - All LSP tools use **0-based** line/character positions
-- `find_predicate_position` and `find_class_position` return **1-based** positions — subtract 1 before passing to LSP tools
-- Run `codeql_pack_install` before using LSP tools — they require resolved dependencies
+- #find_predicate_position and #find_class_position return **1-based** positions — subtract 1 before passing to LSP tools
+- Run #codeql_pack_install before using LSP tools — they require resolved dependencies
 - Request completions **after a dot** (e.g., `pw.`) to see all member predicates with full documentation
 
-### 4. Query File Discovery with `find_codeql_query_files`
+### 4. Query File Discovery with #find_codeql_query_files
 
 Use this tool frequently to understand query dependencies and test structure:
 
@@ -216,7 +216,7 @@ Instead of writing the full query at once:
    }
    ```
 
-2. **Use quick_evaluate to test it**:
+2. **Use #quick_evaluate to test it**:
 
    ```typescript
    quick_evaluate: {
@@ -245,7 +245,7 @@ Instead of writing the full query at once:
    }
    ```
 
-3. **Use find_codeql_query_files** to track all related files:
+3. **Use #find_codeql_query_files** to track all related files:
 
    ```typescript
    find_codeql_query_files: {
@@ -322,7 +322,7 @@ codeql_query_run: {
 ### When Results Are Empty
 
 1. **Check AST first**: Run `PrintAST` to verify the code structure matches expectations
-2. **Simplify the query**: Remove constraints one by one using `quick_evaluate`
+2. **Simplify the query**: Remove constraints one by one using #quick_evaluate
 3. **Check enclosing callables**: Lambda bodies may have different `getEnclosingCallable()` than expected
 4. **Verify test database extraction**: Ensure the `.testproj` directory was created successfully
 
@@ -390,16 +390,16 @@ class ThrowingMethod extends Method {
 
 ### During Development
 
-- [ ] Each predicate/class tested with `quick_evaluate`
-- [ ] `find_codeql_query_files` used to track dependencies
+- [ ] Each predicate/class tested with #quick_evaluate
+- [ ] #find_codeql_query_files used to track dependencies
 - [ ] CFG consulted for control flow patterns
 - [ ] Call graphs generated for cross-function analysis
 
 ### After Each Change
 
-- [ ] Query compiles with `codeql_query_compile`
+- [ ] Query compiles with #codeql_query_compile
 - [ ] Quick evaluation shows expected results
-- [ ] Full tests pass with `codeql_test_run`
+- [ ] Full tests pass with #codeql_test_run
 - [ ] No duplicate or missing results
 
 ### Final Validation
@@ -407,8 +407,8 @@ class ThrowingMethod extends Method {
 - [ ] All test cases pass
 - [ ] No false positives in results
 - [ ] No false negatives (all expected cases caught)
-- [ ] Query formatted with `codeql_query_format`
-- [ ] Performance acceptable (check with `profile_codeql_query`)
+- [ ] Query formatted with #codeql_query_format
+- [ ] Performance acceptable (check with #profile_codeql_query)
 
 ## Test Acceptance Workflow
 
@@ -429,18 +429,18 @@ When your query produces correct results but differs from the `.expected` file:
 
 ## Tool Reference
 
-| Tool                             | Purpose                           | When to Use                     |
-| -------------------------------- | --------------------------------- | ------------------------------- |
-| `codeql_query_run` (PrintAST)    | Visualize AST structure           | Start of development, debugging |
-| `codeql_query_run` (PrintCFG)    | Visualize control flow            | Control flow queries            |
-| `codeql_query_run` (CallGraph\*) | Analyze call relationships        | Cross-function queries          |
-| `codeql_bqrs_interpret`          | Convert BQRS to readable format   | After running graph queries     |
-| `quick_evaluate`                 | Test individual predicates        | Iterative development           |
-| `find_predicate_position`        | Locate predicate for quickeval    | Before quick_evaluate           |
-| `find_class_position`            | Locate class for quickeval        | Before quick_evaluate           |
-| `find_codeql_query_files`        | Discover related files            | Planning, tracking changes      |
-| `codeql_test_accept`             | Accept actual results as expected | After verifying correct output  |
-| `profile_codeql_query`           | Performance analysis              | Optimization                    |
+| Tool                            | Purpose                           | When to Use                     |
+| ------------------------------- | --------------------------------- | ------------------------------- |
+| #codeql_query_run (PrintAST)    | Visualize AST structure           | Start of development, debugging |
+| #codeql_query_run (PrintCFG)    | Visualize control flow            | Control flow queries            |
+| #codeql_query_run (CallGraph\*) | Analyze call relationships        | Cross-function queries          |
+| #codeql_bqrs_interpret          | Convert BQRS to readable format   | After running graph queries     |
+| #quick_evaluate                 | Test individual predicates        | Iterative development           |
+| #find_predicate_position        | Locate predicate for quickeval    | Before quick_evaluate           |
+| #find_class_position            | Locate class for quickeval        | Before quick_evaluate           |
+| #find_codeql_query_files        | Discover related files            | Planning, tracking changes      |
+| #codeql_test_accept             | Accept actual results as expected | After verifying correct output  |
+| #profile_codeql_query           | Performance analysis              | Optimization                    |
 
 ## Interpreting Graph Query Results
 
@@ -462,9 +462,9 @@ codeql_bqrs_interpret: {
 
 When creating CodeQL workshops, this advanced methodology is essential:
 
-1. **Analyze production query** with `find_codeql_query_files`
+1. **Analyze production query** with #find_codeql_query_files
 2. **Generate AST/CFG** for workshop test code
-3. **Decompose query** into stages, validating each with `quick_evaluate`
+3. **Decompose query** into stages, validating each with #quick_evaluate
 4. **Create exercises** with scaffolding based on AST understanding
 5. **Validate solutions** ensure each stage produces correct results
 
