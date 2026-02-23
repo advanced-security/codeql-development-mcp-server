@@ -20,10 +20,13 @@ import { execFile } from 'child_process';
 import { access, readFile } from 'fs/promises';
 import { accessSync } from 'fs';
 
-function createMockContext() {
+function createMockContext(extensionVersion = '2.24.2') {
   return {
     extensionUri: { fsPath: '/mock/extension' },
     globalStorageUri: { fsPath: '/mock/global-storage' },
+    extension: {
+      packageJSON: { version: extensionVersion },
+    },
     globalState: {
       get: vi.fn(),
       update: vi.fn().mockResolvedValue(undefined),
@@ -172,14 +175,102 @@ describe('ServerManager', () => {
     expect(version).toBeUndefined();
   });
 
-  it('should skip install in ensureInstalled when already current', async () => {
-    vi.mocked(access).mockResolvedValue(undefined);
-    vi.mocked(readFile).mockResolvedValue(JSON.stringify({ version: '2.24.1' }));
+  it('should return extension version from context', () => {
+    expect(manager.getExtensionVersion()).toBe('2.24.2');
+  });
 
-    const installed = await manager.ensureInstalled();
+  describe('getBundledQlRoot', () => {
+    it('should return VSIX server/ path when bundle exists', () => {
+      vi.mocked(accessSync).mockImplementation(() => undefined);
+      expect(manager.getBundledQlRoot()).toBe('/mock/extension/server');
+    });
 
-    expect(installed).toBe(false); // No fresh install
-    expect(execFile).not.toHaveBeenCalled();
+    it('should fall back to monorepo server/ when VSIX bundle is missing', () => {
+      let callCount = 0;
+      vi.mocked(accessSync).mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) throw new Error('ENOENT');
+        return undefined;
+      });
+      const root = manager.getBundledQlRoot();
+      expect(root).toContain('server');
+    });
+
+    it('should return undefined when no bundle exists', () => {
+      vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
+      expect(manager.getBundledQlRoot()).toBeUndefined();
+    });
+  });
+
+  describe('ensureInstalled', () => {
+    it('should skip npm install when VSIX bundle is present', async () => {
+      // Bundle exists
+      vi.mocked(accessSync).mockImplementation(() => undefined);
+
+      const installed = await manager.ensureInstalled();
+
+      expect(installed).toBe(false);
+      expect(execFile).not.toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('VSIX-bundled server'),
+      );
+    });
+
+    it('should npm install when bundle is missing and nothing installed', async () => {
+      // No bundle
+      vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
+      // Not installed
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'));
+      // npm succeeds
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          cb(null, '', '');
+          return {} as any;
+        },
+      );
+
+      const installed = await manager.ensureInstalled();
+
+      expect(installed).toBe(true);
+      expect(execFile).toHaveBeenCalled();
+    });
+
+    it('should skip npm install when bundle is missing but matching version installed', async () => {
+      // No bundle
+      vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
+      // Already installed with matching version
+      vi.mocked(access).mockResolvedValue(undefined);
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify({ version: '2.24.2' }));
+
+      const installed = await manager.ensureInstalled();
+
+      expect(installed).toBe(false);
+      expect(execFile).not.toHaveBeenCalled();
+    });
+
+    it('should upgrade npm install when bundle is missing and version differs', async () => {
+      // No bundle
+      vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
+      // Old version installed
+      vi.mocked(access).mockResolvedValue(undefined);
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify({ version: '2.24.1' }));
+      // npm succeeds
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          cb(null, '', '');
+          return {} as any;
+        },
+      );
+
+      const installed = await manager.ensureInstalled();
+
+      expect(installed).toBe(true);
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('differs from target'),
+      );
+    });
   });
 
   it('should return undefined version when using latest', () => {

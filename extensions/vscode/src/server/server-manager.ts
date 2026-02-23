@@ -24,18 +24,18 @@ export interface InstallOptions {
 }
 
 /**
- * Manages the local npm installation of `codeql-development-mcp-server`
- * into the extension's global storage directory.
+ * Manages the MCP server lifecycle for the VS Code extension.
  *
- * The local install serves two purposes:
- *  1. Provides the qlpack source files so PackInstaller can run
- *     `codeql pack install` to fetch their CodeQL library dependencies.
- *  2. Provides a fallback entry point if the bundled server is missing.
+ * When the extension is installed from a VSIX, the `vscode:prepublish`
+ * step bundles `server/dist/`, `server/ql/`, and `server/package.json`
+ * inside the extension root. In that case no npm install is needed —
+ * the VSIX is fully self-contained.
  *
- * The MCP server is launched from the **bundled** copy inside the VSIX
- * (`server/dist/codeql-development-mcp-server.js`) so the extension is
- * fully self-contained. Override via `codeql-mcp.serverCommand` /
- * `codeql-mcp.serverArgs` settings for local development.
+ * A local npm install into `globalStorage` is performed **only** as a
+ * fallback when the bundled server is missing (e.g. running from the
+ * Extension Development Host without a prepublish build). Override via
+ * `codeql-mcp.serverCommand` / `codeql-mcp.serverArgs` settings for
+ * local development.
  */
 export class ServerManager extends DisposableObject {
   private readonly storageRoot: string;
@@ -90,19 +90,54 @@ export class ServerManager extends DisposableObject {
   }
 
   /**
-   * Ensure the npm package is installed locally.
-   * Returns `true` if a fresh install was performed.
+   * Get the extension's own version from its packageJSON.
+   *
+   * This is the version baked into the VSIX and is used to determine
+   * whether the locally installed npm package is still up-to-date.
+   */
+  getExtensionVersion(): string {
+    return this.context.extension.packageJSON.version as string;
+  }
+
+  /**
+   * Ensure the npm package is available locally.
+   *
+   * When the VSIX bundle is present (the normal installed case), no npm
+   * install is needed — the bundle already ships `server/dist/`,
+   * `server/ql/`, and `server/package.json`. Returns `false` immediately.
+   *
+   * When the bundle is missing (Extension Development Host without a
+   * prepublish build), falls back to npm-installing the package into
+   * `globalStorage`. Returns `true` if a fresh install was performed.
    */
   async ensureInstalled(): Promise<boolean> {
+    // VSIX bundle is self-contained — no npm install required.
+    if (this.getBundledQlRoot()) {
+      this.logger.info(
+        `Using VSIX-bundled server (v${this.getExtensionVersion()}). ` +
+        'No npm install required.',
+      );
+      return false;
+    }
+
+    // Fallback: no bundle — install via npm.
+    this.logger.info(
+      'Bundled server not found — falling back to npm install...',
+    );
     const config = vscode.workspace.getConfiguration('codeql-mcp');
     const targetVersion = config.get<string>('serverVersion', 'latest');
 
     if (await this.isInstalled()) {
       const current = await this.getInstalledVersion();
-      if (targetVersion === 'latest' || current === targetVersion) {
+      const effectiveTarget =
+        targetVersion === 'latest' ? this.getExtensionVersion() : targetVersion;
+      if (current === effectiveTarget) {
         this.logger.info(`MCP server package already installed (v${current}).`);
         return false;
       }
+      this.logger.info(
+        `Installed npm package (v${current}) differs from target (v${effectiveTarget}) — upgrading...`,
+      );
     }
 
     await this.install({ version: targetVersion });
@@ -127,6 +162,34 @@ export class ServerManager extends DisposableObject {
   // ---------------------------------------------------------------------------
   // Server launch configuration (for McpProvider)
   // ---------------------------------------------------------------------------
+
+  /**
+   * Root of the bundled `server/` directory inside the VSIX.
+   *
+   * In VSIX layout the `vscode:prepublish` step copies `server/dist/`,
+   * `server/ql/`, and `server/package.json` into the extension so the VSIX
+   * is self-contained. Returns the path to that `server/` directory, or
+   * `undefined` if the bundle is missing (local dev without a prepublish
+   * build).
+   */
+  getBundledQlRoot(): string | undefined {
+    const extensionRoot = this.context.extensionUri.fsPath;
+    const candidate = join(extensionRoot, 'server');
+    try {
+      accessSync(join(candidate, 'package.json'), constants.R_OK);
+      return candidate;
+    } catch {
+      // Not in VSIX layout — check monorepo
+    }
+
+    const monorepo = join(extensionRoot, '..', '..', 'server');
+    try {
+      accessSync(join(monorepo, 'package.json'), constants.R_OK);
+      return monorepo;
+    } catch {
+      return undefined;
+    }
+  }
 
   /**
    * Absolute path to the MCP server entry point.

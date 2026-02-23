@@ -16,13 +16,19 @@ export interface PackInstallOptions {
 
 /**
  * Installs CodeQL pack dependencies for the bundled tool query packs
- * shipped with the `codeql-development-mcp-server` npm package.
+ * shipped inside the VSIX (or, as fallback, in the locally-installed
+ * `codeql-development-mcp-server` npm package).
  *
- * The npm package bundles the qlpack source files (`.ql` + lock files),
- * but their CodeQL library dependencies (e.g. `codeql/javascript-all`)
- * must be fetched from GHCR via `codeql pack install`. This class
- * automates the `codeql-development-mcp-server-setup-packs` step
- * documented in the getting-started guide.
+ * The VSIX bundles the qlpack source files (`.ql` + lock files) at
+ * `<extensionRoot>/server/ql/<lang>/tools/src/`, and the npm install
+ * mirrors them at `globalStorage/mcp-server/node_modules/.../ql/...`.
+ * The bundled copy is always preferred so that the packs used by
+ * `codeql pack install` match the server code running from the VSIX.
+ *
+ * CodeQL library dependencies (e.g. `codeql/javascript-all`) must be
+ * fetched from GHCR via `codeql pack install`. This class automates
+ * the `codeql-development-mcp-server-setup-packs` step documented in
+ * the getting-started guide.
  */
 export class PackInstaller extends DisposableObject {
   static readonly SUPPORTED_LANGUAGES = [
@@ -46,13 +52,25 @@ export class PackInstaller extends DisposableObject {
   }
 
   /**
-   * Get the qlpack source directories for all languages under the
-   * locally installed npm package.
+   * Get the root directory for qlpack resolution.
+   *
+   * Prefers the bundled `server/` directory inside the VSIX so that the
+   * packs installed match the server version. Falls back to the
+   * npm-installed package root in `globalStorage` (for local dev or when
+   * the VSIX bundle is missing).
+   */
+  private getQlpackRoot(): string {
+    return this.serverManager.getBundledQlRoot()
+      ?? this.serverManager.getPackageRoot();
+  }
+
+  /**
+   * Get the qlpack source directories for all languages.
    */
   getQlpackPaths(): string[] {
-    const packageRoot = this.serverManager.getPackageRoot();
+    const root = this.getQlpackRoot();
     return PackInstaller.SUPPORTED_LANGUAGES.map((lang) =>
-      join(packageRoot, 'ql', lang, 'tools', 'src'),
+      join(root, 'ql', lang, 'tools', 'src'),
     );
   }
 
@@ -69,12 +87,12 @@ export class PackInstaller extends DisposableObject {
       return;
     }
 
-    const packageRoot = this.serverManager.getPackageRoot();
+    const qlRoot = this.getQlpackRoot();
     const languages =
       options?.languages ?? [...PackInstaller.SUPPORTED_LANGUAGES];
 
     for (const lang of languages) {
-      const packDir = join(packageRoot, 'ql', lang, 'tools', 'src');
+      const packDir = join(qlRoot, 'ql', lang, 'tools', 'src');
 
       // Check if the pack directory exists
       try {

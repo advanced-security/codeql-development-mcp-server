@@ -17,12 +17,12 @@ to do by hand.
 
 ### From `.vsix` (GitHub Releases)
 
-Download `codeql-development-mcp-server.vsix` from the latest
+Download `codeql-development-mcp-server-vX.Y.Z.vsix` from the latest
 [GitHub Release](https://github.com/advanced-security/codeql-development-mcp-server/releases),
 then install:
 
 ```bash
-code --install-extension codeql-development-mcp-server.vsix
+code --install-extension codeql-development-mcp-server-vX.Y.Z.vsix
 ```
 
 Or in VS Code: **Extensions** sidebar → `⋯` menu → **Install from VSIX…** → select the file.
@@ -40,7 +40,7 @@ From the repository root:
 
 ```bash
 npm run package:vsix
-code --install-extension extensions/vscode/codeql-development-mcp-server.vsix
+code --install-extension extensions/vscode/codeql-development-mcp-server-vX.Y.Z.vsix
 ```
 
 The extension requires the [CodeQL extension](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-codeql) (`GitHub.vscode-codeql`) and will prompt you to install it if missing.

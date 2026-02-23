@@ -172,12 +172,7 @@ export async function activate(
     // Run in background — don't block activation
     void (async () => {
       try {
-        const freshInstall = await serverManager.ensureInstalled();
-        if (freshInstall) {
-          logger.info('Fresh npm install completed — running CodeQL pack setup...');
-        } else {
-          logger.info('npm package already present — checking CodeQL packs...');
-        }
+        await serverManager.ensureInstalled();
         await packInstaller.installAll();
         mcpProvider.fireDidChange();
         logger.info('✅ MCP server setup complete. Server is ready to be started.');
