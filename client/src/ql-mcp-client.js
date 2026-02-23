@@ -123,13 +123,9 @@ class CodeQLMCPClient {
       });
 
       if (this.mcpMode === "stdio") {
-        const serverPath = path.join(
-          __dirname,
-          "..",
-          "server",
-          "dist",
-          "codeql-development-mcp-server.js"
-        );
+        const serverPath =
+          process.env.MCP_SERVER_PATH ||
+          path.join(__dirname, "..", "server", "dist", "codeql-development-mcp-server.js");
         this.transport = new StdioClientTransport({
           command: "node",
           args: [serverPath],
