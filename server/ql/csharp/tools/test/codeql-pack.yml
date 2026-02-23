@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-csharp-tools-test
-version: 2.24.2-rc2
+version: 2.24.2-rc3
 dependencies:
   advanced-security/ql-mcp-csharp-tools-src: ${workspace}
 extractor: csharp

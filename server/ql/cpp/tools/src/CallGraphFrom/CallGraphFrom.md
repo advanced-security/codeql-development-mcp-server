@@ -32,6 +32,7 @@ void sourceFunc() {  // Source function for analysis
 ```
 
 Running with `sourceFunction = "sourceFunc"` produces results showing each call site with the message pattern `Call from 'sourceFunc' to 'helper1'`.
+
 ## Output Format
 
 The query is a `@kind problem` query producing rows of:
