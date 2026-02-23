@@ -97,6 +97,7 @@ fi
 run_tests_in_mode() {
     local mode_name="$1"
     local enable_monitoring="$2"
+    shift 2
 
     echo ""
     echo "═══════════════════════════════════════════════════════════════"

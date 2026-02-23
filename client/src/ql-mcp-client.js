@@ -37,7 +37,7 @@ class CodeQLMCPClient {
   constructor(options = {}) {
     this.client = null;
     this.transport = null;
-    this.mcpMode = process.env.MCP_MODE || "stdio";
+    this.mcpMode = (process.env.MCP_MODE || "stdio").toLowerCase();
     this.serverUrl = process.env.MCP_SERVER_URL || DEFAULT_SERVER_URL;
     this.timeout = parseInt(options.timeout || process.env.TIMEOUT_SECONDS || "30") * 1000;
     this.logger = new TestLogger();
@@ -122,7 +122,7 @@ class CodeQLMCPClient {
         version: "1.0.0"
       });
 
-      if (this.mcpMode === "stdio") {
+      if (this.mcpMode !== "http") {
         const repoRoot = path.join(__dirname, "..", "..");
         const serverPath =
           process.env.MCP_SERVER_PATH ||
