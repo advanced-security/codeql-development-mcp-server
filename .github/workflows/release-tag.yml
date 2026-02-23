@@ -46,7 +46,6 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ github.event.repository.default_branch }}
 
       - name: Tag - Validate and parse version
         id: version
@@ -90,80 +89,50 @@ jobs:
             echo "ℹ️ Tag ${TAG} does not exist yet"
           fi
 
-      - name: Tag - Validate versions at existing tag
-        id: validate-tag
-        if: steps.check-tag.outputs.tag_exists == 'true'
-        run: |
-          TAG="${{ steps.version.outputs.version }}"
-          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
-          echo "Validating version consistency at existing tag ${TAG}..."
-
-          # Check out the tagged commit to inspect version files
-          git checkout "refs/tags/${TAG}"
-
-          if ./server/scripts/update-release-version.sh --check "${RELEASE_NAME}"; then
-            echo "tag_valid=true" >> $GITHUB_OUTPUT
-            echo "✅ Existing tag has correct versions"
-          else
-            echo "tag_valid=false" >> $GITHUB_OUTPUT
-            echo ""
-            echo "⚠️ Existing tag ${TAG} has incorrect versions."
-            echo "Deleting tag and recreating with correct versions..."
-
-            # Return to the original branch
-            git checkout -
-
-            # Delete the remote and local tag so it can be recreated
-            git push --delete origin "${TAG}" || true
-            git tag -d "${TAG}" || true
-
-            echo "🗑️ Deleted tag ${TAG} — will recreate with correct versions"
-          fi
-
       - name: Tag - Setup CodeQL environment
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         uses: ./.github/actions/setup-codeql-environment
         with:
           add-to-path: true
           install-language-runtimes: false
 
       - name: Tag - Setup Node.js
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         uses: actions/setup-node@v6
         with:
           cache: 'npm'
           node-version-file: '.node-version'
 
       - name: Tag - Update release version
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         run: |
           TAG_VERSION="${{ steps.version.outputs.release_name }}"
           echo "Updating all version-bearing files to '${TAG_VERSION}'..."
           ./server/scripts/update-release-version.sh "${TAG_VERSION}"
 
       - name: Tag - Install dependencies
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         run: npm install --include=optional
 
       - name: Tag - Install CodeQL pack dependencies
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         run: server/scripts/install-packs.sh
 
       - name: Tag - Tidy (lint and format)
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         run: npm run tidy
 
       - name: Tag - Build server
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         run: npm run build -w server
 
       - name: Tag - Run tests
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         run: npm run test:server
 
       - name: Tag - Commit version changes and create tag
         id: create-tag
-        if: steps.check-tag.outputs.tag_exists != 'true' || steps.validate-tag.outputs.tag_valid == 'false'
+        if: steps.check-tag.outputs.tag_exists != 'true'
         run: |
           TAG="${{ steps.version.outputs.version }}"
           RELEASE_NAME="${{ steps.version.outputs.release_name }}"
@@ -175,8 +144,8 @@ jobs:
           # Stage version-bearing files and lockfile changes
           git add -A
           # Ensure CodeQL-generated artifacts are not staged for commit
-          git restore --staged .codeql || true
-          git restore --staged '*.qlx' || true
+          git restore --staged .codeql 2>/dev/null || true
+          git restore --staged '*.qlx' 2>/dev/null || true
 
           # Check if there are changes to commit
           if git diff --cached --quiet; then
@@ -197,14 +166,14 @@ jobs:
 
       - name: Tag - Output existing tag SHA
         id: existing-tag
-        if: steps.check-tag.outputs.tag_exists == 'true' && steps.validate-tag.outputs.tag_valid != 'false'
+        if: steps.check-tag.outputs.tag_exists == 'true'
         run: |
           echo "tag_sha=${{ steps.check-tag.outputs.tag_sha }}" >> $GITHUB_OUTPUT
 
       - name: Tag - Set final tag SHA output
         id: final-sha
         run: |
-          if [ "${{ steps.check-tag.outputs.tag_exists }}" == "true" ] && [ "${{ steps.validate-tag.outputs.tag_valid }}" != "false" ]; then
+          if [ "${{ steps.check-tag.outputs.tag_exists }}" == "true" ]; then
             SHA="${{ steps.check-tag.outputs.tag_sha }}"
           else
             SHA="${{ steps.create-tag.outputs.tag_sha }}"
@@ -216,7 +185,7 @@ jobs:
           TAG="${{ steps.version.outputs.version }}"
           echo "## Release Tag Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check-tag.outputs.tag_exists }}" == "true" ] && [ "${{ steps.validate-tag.outputs.tag_valid }}" != "false" ]; then
+          if [ "${{ steps.check-tag.outputs.tag_exists }}" == "true" ]; then
             echo "ℹ️ Tag \`${TAG}\` already existed at \`${{ steps.check-tag.outputs.tag_sha }}\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "✅ Created tag \`${TAG}\` at \`${{ steps.create-tag.outputs.tag_sha }}\`" >> $GITHUB_STEP_SUMMARY
