@@ -243,7 +243,7 @@ jobs:
           files: |
             codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.tar.gz
             dist-packs/*.tar.gz
-            dist-vsix/codeql-development-mcp-server.vsix
+            dist-vsix/codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.vsix
           generate_release_notes: true
           tag_name: ${{ needs.resolve-version.outputs.version }}
 

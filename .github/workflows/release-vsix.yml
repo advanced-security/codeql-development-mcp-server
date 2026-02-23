@@ -15,7 +15,7 @@ on:
         description: 'The full version string with "v" prefix (e.g., vX.Y.Z)'
         value: ${{ jobs.publish-vsix.outputs.version }}
       vsix_name:
-        description: 'The VSIX filename (e.g., codeql-development-mcp-server.vsix)'
+        description: 'The VSIX filename (e.g., codeql-development-mcp-server-vX.Y.Z.vsix)'
         value: ${{ jobs.publish-vsix.outputs.vsix_name }}
 
 # Note: This workflow is called exclusively via workflow_call from release.yml.
@@ -85,7 +85,8 @@ jobs:
         id: package
         working-directory: extensions/vscode
         run: |
-          VSIX_NAME="codeql-development-mcp-server.vsix"
+          VERSION="${{ steps.version.outputs.version }}"
+          VSIX_NAME="codeql-development-mcp-server-${VERSION}.vsix"
           npx @vscode/vsce package --no-dependencies --out "${VSIX_NAME}"
           echo "vsix_name=${VSIX_NAME}" >> $GITHUB_OUTPUT
           echo "✅ Packaged ${VSIX_NAME}"

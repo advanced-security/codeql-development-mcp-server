@@ -26,6 +26,7 @@ codeql-development-mcp-server.code-workspace
 *.swo
 *.tgz
 *.tar.gz
+*.vsix
 *~
 
 .vscode/mcp.json

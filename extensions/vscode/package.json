@@ -140,7 +140,7 @@
     "clean": "rm -rf dist server *.vsix",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
-    "package": "vsce package --no-dependencies --out codeql-development-mcp-server.vsix",
+    "package": "vsce package --no-dependencies --out codeql-development-mcp-server-v$(node -e 'process.stdout.write(require(`./package.json`).version)').vsix",
     "test": "npm run test:coverage && npm run test:integration",
     "test:coverage": "vitest --run --coverage",
     "test:integration": "vscode-test",

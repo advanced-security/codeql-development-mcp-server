@@ -115,7 +115,8 @@ jobs:
           for lang in ${LANGUAGES}; do
             PACK_DIR="server/ql/${lang}/tools/src"
             if [ -d "${PACK_DIR}" ]; then
-              PACK_NAME="ql-mcp-${lang}-tools-src"
+              VERSION="${{ steps.version.outputs.version }}"
+              PACK_NAME="ql-mcp-${lang}-tools-src-${VERSION}"
               OUTPUT="dist-packs/${PACK_NAME}.tar.gz"
               echo "📦 Bundling ${PACK_DIR} -> ${OUTPUT}..."
               codeql pack bundle --threads=-1 --output="${OUTPUT}" -- "${PACK_DIR}"

@@ -69,7 +69,9 @@ jobs:
 
       - name: Verify VSIX packaging
         working-directory: extensions/vscode
-        run: npx @vscode/vsce package --no-dependencies --out codeql-development-mcp-server.vsix
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          npx @vscode/vsce package --no-dependencies --out "codeql-development-mcp-server-v${VERSION}.vsix"
 
       - name: Verify VSIX contents
         working-directory: extensions/vscode
