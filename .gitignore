@@ -19,6 +19,8 @@ codeql-development-mcp-server.code-workspace
 
 ## Globs to ignore
 *.log
+# Allow *.log files committed as test fixtures
+!extensions/vscode/test/fixtures/**/*.log
 *.pid
 *.swp
 *.swo
