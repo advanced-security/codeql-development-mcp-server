@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { execFile } from 'child_process';
 import { access, readFile, mkdir } from 'fs/promises';
-import { accessSync, constants } from 'fs';
+import { accessSync, constants, readFileSync } from 'fs';
 import { join } from 'path';
 import { DisposableObject } from '../common/disposable';
 import type { Logger } from '../common/logger';
@@ -92,11 +92,21 @@ export class ServerManager extends DisposableObject {
   /**
    * Get the extension's own version from its packageJSON.
    *
+   * Reads `package.json` from the extension root (`context.extensionUri`)
+   * so that this works in all environments (VSIX, Extension Development
+   * Host, and tests) without relying on `vscode.extensions.getExtension`.
+   *
    * This is the version baked into the VSIX and is used to determine
    * whether the locally installed npm package is still up-to-date.
    */
   getExtensionVersion(): string {
-    return this.context.extension.packageJSON.version as string;
+    try {
+      const pkgPath = join(this.context.extensionUri.fsPath, 'package.json');
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string };
+      return pkg.version ?? 'unknown';
+    } catch {
+      return 'unknown';
+    }
   }
 
   /**
@@ -111,10 +121,10 @@ export class ServerManager extends DisposableObject {
    * `globalStorage`. Returns `true` if a fresh install was performed.
    */
   async ensureInstalled(): Promise<boolean> {
-    // VSIX bundle is self-contained — no npm install required.
+    // VSIX bundle or monorepo server is present — no npm install required.
     if (this.getBundledQlRoot()) {
       this.logger.info(
-        `Using VSIX-bundled server (v${this.getExtensionVersion()}). ` +
+        `Using bundled server (v${this.getExtensionVersion()}). ` +
         'No npm install required.',
       );
       return false;
@@ -164,13 +174,15 @@ export class ServerManager extends DisposableObject {
   // ---------------------------------------------------------------------------
 
   /**
-   * Root of the bundled `server/` directory inside the VSIX.
+   * Root of the `server/` directory, checked in two locations:
    *
-   * In VSIX layout the `vscode:prepublish` step copies `server/dist/`,
-   * `server/ql/`, and `server/package.json` into the extension so the VSIX
-   * is self-contained. Returns the path to that `server/` directory, or
-   * `undefined` if the bundle is missing (local dev without a prepublish
-   * build).
+   * 1. **VSIX layout**: `<extensionRoot>/server/` (created by `vscode:prepublish`)
+   *    — the extension is self-contained, no npm install required.
+   * 2. **Monorepo dev layout**: `<extensionRoot>/../../server/` — used when
+   *    running from the Extension Development Host without a prepublish build.
+   *
+   * Returns the first location whose `server/package.json` is readable, or
+   * `undefined` if neither location exists.
    */
   getBundledQlRoot(): string | undefined {
     const extensionRoot = this.context.extensionUri.fsPath;

@@ -13,12 +13,13 @@ vi.mock('fs/promises', () => ({
 
 vi.mock('fs', () => ({
   accessSync: vi.fn(),
+  readFileSync: vi.fn(),
   constants: { R_OK: 4 },
 }));
 
 import { execFile } from 'child_process';
 import { access, readFile } from 'fs/promises';
-import { accessSync } from 'fs';
+import { accessSync, readFileSync } from 'fs';
 
 function createMockContext(extensionVersion = '2.24.2') {
   return {
@@ -176,6 +177,7 @@ describe('ServerManager', () => {
   });
 
   it('should return extension version from context', () => {
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ version: '2.24.2' }));
     expect(manager.getExtensionVersion()).toBe('2.24.2');
   });
 
@@ -212,7 +214,7 @@ describe('ServerManager', () => {
       expect(installed).toBe(false);
       expect(execFile).not.toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('VSIX-bundled server'),
+        expect.stringContaining('bundled server'),
       );
     });
 
@@ -239,6 +241,8 @@ describe('ServerManager', () => {
     it('should skip npm install when bundle is missing but matching version installed', async () => {
       // No bundle
       vi.mocked(accessSync).mockImplementation(() => { throw new Error('ENOENT'); });
+      // Extension version from package.json
+      vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ version: '2.24.2' }));
       // Already installed with matching version
       vi.mocked(access).mockResolvedValue(undefined);
       vi.mocked(readFile).mockResolvedValue(JSON.stringify({ version: '2.24.2' }));
