@@ -15,7 +15,6 @@ This query is primarily used for:
 - Mapping outbound dependencies of a specific method
 - Understanding what a method calls and in what order
 - Analyzing call chains for refactoring or security review
-- IDE integration for call hierarchy navigation
 
 ## Example
 
@@ -31,13 +30,13 @@ void SourceMethod() {  // Source method for analysis
 }
 ```
 
-Running with `sourceFunction = "SourceMethod"` produces results showing each call site with the message pattern `Call from 'SourceMethod' to 'Helper1'`.
+Running with `sourceFunction = "SourceMethod"` produces results showing each call site with the message pattern ``Call from `SourceMethod` to `Helper1``.
 
 ## Output Format
 
 The query is a `@kind problem` query producing rows of:
 
-- `select call, "Call from 'source' to 'callee'"`
+- ``select call, "Call from `source` to `callee`"``
 
 ## References
 

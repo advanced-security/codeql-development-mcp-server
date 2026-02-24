@@ -27,7 +27,7 @@ Each language directory follows a standardized structure that enables automatic 
 - ALWAYS create `.qlref` files that reference the correct query path relative to the tools directory.
 - ALWAYS create `.expected` files with the expected output for each test case.
 - ALWAYS implement test code source files that test both the query's ability to ignore `COMPLIANT` code patterns AND to detect `NON_COMPLIANT` code patterns for detection-style queries (`@kind problem` / `@kind path-problem`).
-- ALWAYS comment test cases as either `COMPLIANT` (i.e. query should not match) or `NON-COMPLIANT` (i.e. query should match) for detection-style queries.
+- ALWAYS comment test cases as either `COMPLIANT` (i.e. query should not match) or `NON_COMPLIANT` (i.e. query should match) for detection-style queries.
 - ALWAYS omit `COMPLIANT` and `NON_COMPLIANT` annotations from `@kind graph` query documentation and test code, because these queries produce structural output (ASTs, CFGs, call graphs) rather than detecting problems.
 - ALWAYS use the `server/scripts/install-packs.sh` script to install dependencies for CodeQL packs defined under the `server/ql/*/language/tools/` directories.
 - ALWAYS use explicit version numbers in `codeql-pack.yml` files; never use wildcards (`*`).
