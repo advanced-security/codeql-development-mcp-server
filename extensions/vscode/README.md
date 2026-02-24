@@ -13,7 +13,7 @@ A VS Code extension that automatically installs, configures, and manages the [Co
 ### From `.vsix`
 
 ```bash
-code --install-extension codeql-development-mcp-server.vsix
+code --install-extension codeql-development-mcp-server-vX.Y.Z.vsix
 ```
 
 Or in VS Code: **Extensions** sidebar → `⋯` menu → **Install from VSIX…** → select the file.
@@ -23,7 +23,7 @@ Or in VS Code: **Extensions** sidebar → `⋯` menu → **Install from VSIX…*
 ```bash
 cd extensions/vscode
 npm run package
-code --install-extension codeql-development-mcp-server.vsix
+code --install-extension codeql-development-mcp-server-vX.Y.Z.vsix
 ```
 
 ## What It Does

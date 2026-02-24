@@ -47,7 +47,7 @@ npx -y codeql-development-mcp-server
 ### From GitHub Releases
 
 1. Download the latest release from [Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
-2. Extract: `tar -xzf codeql-development-mcp-server-vX.X.X.tar.gz -C /path/to/destination`
+2. Extract: `tar -xzf codeql-development-mcp-server-vX.Y.Z.tar.gz -C /path/to/destination`
 
 ### From Source
 

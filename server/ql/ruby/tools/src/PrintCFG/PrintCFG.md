@@ -24,13 +24,13 @@ The following Ruby code demonstrates control flow through conditional statements
 
 ```ruby
 def example(x)
-    if x > 0                      # COMPLIANT - Branching creates CFG edges
+    if x > 0  # Branching creates CFG edges
         puts "Positive"
     else
         puts "Non-positive"
     end
 
-    (0..2).each do |i|            # COMPLIANT - Iterator creates CFG paths
+    (0..2).each do |i|  # Iterator creates CFG paths
         puts i
     end
 end

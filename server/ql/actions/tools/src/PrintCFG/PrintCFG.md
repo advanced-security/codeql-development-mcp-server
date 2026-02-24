@@ -26,11 +26,11 @@ The following GitHub Actions workflow demonstrates control flow through jobs and
 name: Example Workflow
 on: [push]
 jobs:
-  test: # COMPLIANT - Job creates CFG node
+  test: # Job creates CFG node
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2 # COMPLIANT - Step creates CFG node
-      - name: Run tests # COMPLIANT - Steps execute sequentially
+      - uses: actions/checkout@v2 # Step creates CFG node
+      - name: Run tests # Steps execute sequentially
         run: echo "Testing"
 ```
 

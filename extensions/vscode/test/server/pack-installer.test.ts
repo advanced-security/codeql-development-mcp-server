@@ -22,8 +22,9 @@ function createMockCliResolver() {
   } as any;
 }
 
-function createMockServerManager() {
+function createMockServerManager(bundledQlRoot?: string) {
   return {
+    getBundledQlRoot: vi.fn().mockReturnValue(bundledQlRoot ?? undefined),
     getPackageRoot: vi.fn().mockReturnValue('/mock/global-storage/mcp-server/node_modules/codeql-development-mcp-server'),
     getInstallDir: vi.fn().mockReturnValue('/mock/global-storage/mcp-server'),
     getCommand: vi.fn().mockReturnValue('npx'),
@@ -70,13 +71,30 @@ describe('PackInstaller', () => {
     expect(languages).toHaveLength(9);
   });
 
-  it('should resolve qlpack paths under the package root', () => {
+  it('should resolve qlpack paths under the npm package root when no bundle', () => {
     const paths = installer.getQlpackPaths();
     expect(paths).toHaveLength(9);
     for (const p of paths) {
       expect(p).toContain('codeql-development-mcp-server/ql/');
       expect(p).toContain('/tools/src');
     }
+  });
+
+  it('should prefer bundled ql root when VSIX bundle exists', () => {
+    const bundledManager = createMockServerManager('/mock/extension/server');
+    const bundledInstaller = new PackInstaller(
+      cliResolver,
+      bundledManager,
+      logger,
+    );
+    const paths = bundledInstaller.getQlpackPaths();
+    expect(paths).toHaveLength(9);
+    for (const p of paths) {
+      expect(p).toMatch(/^\/mock\/extension\/server\/ql\//);
+      expect(p).toContain('/tools/src');
+    }
+    // Should NOT have used npm package root
+    expect(bundledManager.getPackageRoot).not.toHaveBeenCalled();
   });
 
   it('should skip installation when CLI is not found', async () => {

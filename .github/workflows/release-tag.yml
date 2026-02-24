@@ -63,11 +63,27 @@ jobs:
         id: check-tag
         run: |
           TAG="${{ steps.version.outputs.version }}"
+          RELEASE_NAME="${{ steps.version.outputs.release_name }}"
           if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
             TAG_SHA=$(git rev-parse "refs/tags/${TAG}^{commit}" 2>/dev/null || git rev-parse "refs/tags/${TAG}")
-            echo "tag_exists=true" >> $GITHUB_OUTPUT
-            echo "tag_sha=${TAG_SHA}" >> $GITHUB_OUTPUT
             echo "ℹ️ Tag ${TAG} already exists at commit ${TAG_SHA:0:8}"
+
+            # Verify version-bearing files at the tagged commit match the release
+            TAG_SERVER_VERSION=$(git show "${TAG_SHA}:server/package.json" \
+              | grep -m1 '"version"' \
+              | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+            if [[ "${TAG_SERVER_VERSION}" == "${RELEASE_NAME}" ]]; then
+              echo "tag_exists=true" >> $GITHUB_OUTPUT
+              echo "tag_sha=${TAG_SHA}" >> $GITHUB_OUTPUT
+              echo "✅ Existing tag ${TAG} has correct version (${RELEASE_NAME})"
+            else
+              echo "⚠️ Version mismatch at tag ${TAG}: found ${TAG_SERVER_VERSION}, expected ${RELEASE_NAME}"
+              echo "  Removing stale tag to recreate with correct versions..."
+              git tag -d "${TAG}" 2>/dev/null || true
+              git push origin ":refs/tags/${TAG}" 2>/dev/null || true
+              echo "tag_exists=false" >> $GITHUB_OUTPUT
+              echo "ℹ️ Stale tag ${TAG} removed — will recreate with updated versions"
+            fi
           else
             echo "tag_exists=false" >> $GITHUB_OUTPUT
             echo "ℹ️ Tag ${TAG} does not exist yet"
@@ -128,8 +144,8 @@ jobs:
           # Stage version-bearing files and lockfile changes
           git add -A
           # Ensure CodeQL-generated artifacts are not staged for commit
-          git restore --staged .codeql || true
-          git restore --staged '*.qlx' || true
+          git restore --staged .codeql 2>/dev/null || true
+          git restore --staged '*.qlx' 2>/dev/null || true
 
           # Check if there are changes to commit
           if git diff --cached --quiet; then

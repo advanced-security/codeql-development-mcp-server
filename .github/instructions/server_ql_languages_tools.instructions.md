@@ -22,10 +22,13 @@ Each language directory follows a standardized structure that enables automatic 
 - ALWAYS place query implementation files in `tools/src/<query-name>/` subdirectories.
 - ALWAYS place corresponding test files in `tools/test/<query-name>/` subdirectories.
 - ALWAYS include proper CodeQL query metadata using `@name`, `@description`, `@id`, `@kind`, and `@tags` annotations.
+- ALWAYS create a `.md` query documentation file alongside every `.ql` query in `tools/src/<query-name>/` (e.g., `PrintAST.md` next to `PrintAST.ql`). This is enforced by the `query-documentation.test.ts` unit test.
+- ALWAYS use the existing `server/ql/*/tools/src/PrintCFG/PrintCFG.md` files as the canonical style reference for `@kind graph` query documentation. These docs describe the structural output (nodes/edges) rather than flagging problems, so code examples should illustrate what structure the query visualizes — not whether code is compliant or non-compliant.
 - ALWAYS create `.qlref` files that reference the correct query path relative to the tools directory.
 - ALWAYS create `.expected` files with the expected output for each test case.
-- ALWAYS implement test code source files that test both the query's ability to ignore `COMPLIANT` code patterns AND to detect `NON_COMPLIANT` code patterns.
-- ALWAYS comment test cases as either `COMPLIANT` (i.e. query should not match) or `NON-COMPLIANT` (i.e. query should match).
+- ALWAYS implement test code source files that test both the query's ability to ignore `COMPLIANT` code patterns AND to detect `NON_COMPLIANT` code patterns for detection-style queries (`@kind problem` / `@kind path-problem`).
+- ALWAYS comment test cases as either `COMPLIANT` (i.e. query should not match) or `NON_COMPLIANT` (i.e. query should match) for detection-style queries.
+- ALWAYS omit `COMPLIANT` and `NON_COMPLIANT` annotations from `@kind graph` query documentation and test code, because these queries produce structural output (ASTs, CFGs, call graphs) rather than detecting problems.
 - ALWAYS use the `server/scripts/install-packs.sh` script to install dependencies for CodeQL packs defined under the `server/ql/*/language/tools/` directories.
 - ALWAYS use explicit version numbers in `codeql-pack.yml` files; never use wildcards (`*`).
 - ALWAYS set `ql-mcp-*` pack versions to match the CodeQL CLI version from `.codeql-version` (without the `v` prefix).
@@ -51,4 +54,5 @@ Each language directory follows a standardized structure that enables automatic 
 - NEVER create `.qlref` files with incorrect paths or missing target queries.
 - NEVER mix different query purposes within a single query file.
 - NEVER omit required CodeQL query metadata annotations.
+- NEVER omit query documentation (`.md`) for any query published in a `tools/src/` pack directory.
 - NEVER create test cases that don't actually exercise the query logic being tested.
