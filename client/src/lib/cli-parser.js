@@ -133,6 +133,12 @@ OPTIONS:
                        Example: --timeout 600
 
   --help               Display help information
+
+ENVIRONMENT VARIABLES:
+  MCP_MODE             MCP transport mode: stdio (default) or http
+  MCP_SERVER_PATH      Path to the MCP server JS entry point (stdio mode only)
+  MCP_SERVER_URL       MCP server URL (http mode only, default: http://localhost:3000/mcp)
+  ENABLE_MONITORING_TOOLS  Enable session_* monitoring tools (default: false)
 `;
 }
 

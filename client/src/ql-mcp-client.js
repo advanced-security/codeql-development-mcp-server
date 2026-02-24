@@ -8,6 +8,7 @@
 /* global URL, setTimeout */
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { execSync } from "child_process";
 import dotenv from "dotenv";
@@ -36,6 +37,7 @@ class CodeQLMCPClient {
   constructor(options = {}) {
     this.client = null;
     this.transport = null;
+    this.mcpMode = (process.env.MCP_MODE || "stdio").toLowerCase();
     this.serverUrl = process.env.MCP_SERVER_URL || DEFAULT_SERVER_URL;
     this.timeout = parseInt(options.timeout || process.env.TIMEOUT_SECONDS || "30") * 1000;
     this.logger = new TestLogger();
@@ -113,14 +115,32 @@ class CodeQLMCPClient {
    */
   async connect() {
     try {
-      this.logger.log(`Connecting to MCP server at ${this.serverUrl}`);
+      this.logger.log(`Connecting to MCP server (mode: ${this.mcpMode})`);
 
       this.client = new Client({
         name: "codeql-development-mcp-client",
         version: "1.0.0"
       });
 
-      this.transport = new StreamableHTTPClientTransport(new URL(this.serverUrl));
+      if (this.mcpMode !== "http") {
+        const repoRoot = path.join(__dirname, "..", "..");
+        const serverPath =
+          process.env.MCP_SERVER_PATH ||
+          path.join(repoRoot, "server", "dist", "codeql-development-mcp-server.js");
+        this.transport = new StdioClientTransport({
+          command: "node",
+          args: [serverPath],
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            TRANSPORT_MODE: "stdio"
+          },
+          stderr: "pipe"
+        });
+      } else {
+        this.logger.log(`Server URL: ${this.serverUrl}`);
+        this.transport = new StreamableHTTPClientTransport(new URL(this.serverUrl));
+      }
 
       // Set up timeout
       const connectPromise = this.client.connect(this.transport);
@@ -169,7 +189,10 @@ class CodeQLMCPClient {
    */
   async runTests() {
     this.logger.log("Starting CodeQL MCP Client Integration Tests");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
+    if (this.mcpMode === "http") {
+      this.logger.log(`Server URL: ${this.serverUrl}`);
+    }
     this.logger.log(`Timeout: ${this.timeout}ms`);
 
     // Check CodeQL CLI availability first
@@ -194,17 +217,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Test execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print test summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print test summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**
@@ -212,7 +242,7 @@ class CodeQLMCPClient {
    */
   async runMonitoringDemo() {
     this.logger.log("🚀 Starting MCP Server Monitoring Demo");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
 
     let connected = false;
 
@@ -225,17 +255,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Demo execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print demo summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**
@@ -315,7 +352,7 @@ class CodeQLMCPClient {
    */
   async runWorkflowTests() {
     this.logger.log("🔄 Starting Workflow Integration Tests");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
 
     let connected = false;
 
@@ -329,17 +366,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Workflow test execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print test summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print test summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**
@@ -347,7 +391,7 @@ class CodeQLMCPClient {
    */
   async runMonitoringIntegrationTests() {
     this.logger.log("📊 Starting Monitoring Integration Tests");
-    this.logger.log(`Server URL: ${this.serverUrl}`);
+    this.logger.log(`MCP Mode: ${this.mcpMode}`);
 
     let connected = false;
 
@@ -366,17 +410,24 @@ class CodeQLMCPClient {
       }
     } catch (error) {
       this.logger.log(`Monitoring test execution failed: ${error.message}`, "ERROR");
-    } finally {
-      if (connected) {
+    }
+
+    // Print test summary and set exit code BEFORE disconnect.
+    // On Windows, StdioClientTransport.close() can cause the Node.js
+    // process to exit abruptly, so we must report results first.
+    this.logger.printTestSummary();
+    const exitCode = this.logger.isSuccess() ? 0 : 1;
+    process.exitCode = exitCode;
+
+    if (connected) {
+      try {
         await this.disconnect();
+      } catch {
+        // Ignore disconnect errors — results are already reported
       }
     }
 
-    // Print test summary
-    this.logger.printTestSummary();
-
-    // Exit with appropriate code
-    process.exit(this.logger.isSuccess() ? 0 : 1);
+    process.exit(exitCode);
   }
 
   /**

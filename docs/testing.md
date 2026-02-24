@@ -40,12 +40,14 @@ Unit tests verify the VS Code extension's TypeScript code outside of the Extensi
 
 Integration tests exercise individual MCP tools against a live server instance using the custom MCP client.
 
-- **Client**: `client/src/ql-mcp-client.js` — starts the MCP server, invokes tools, and validates results.
+- **Client**: `client/src/ql-mcp-client.js` — connects to the MCP server, invokes tools, and validates results.
+- **Transport modes**: The client supports both `stdio` (default) and `http` transport modes, controlled by the `MCP_MODE` environment variable. In `stdio` mode the client spawns the server as a child process via `StdioClientTransport`; in `http` mode it connects to a separately started HTTP server via `StreamableHTTPClientTransport`.
 - **Test data**: `client/integration-tests/primitives/tools/` — each test has `before/` and `after/` directories that define the initial fixture state and, for file-based tests, the expected final state.
 - **Run command**: `npm run test:integration:default -w client` (or `npm run test:client` from the repo root).
 - **Key properties**:
   - Tests are deterministic and repeatable.
   - No mocks — tests use real CodeQL databases and queries bundled under `server/ql/`.
+  - The default transport is `stdio`, matching the primary user experience.
   - The `before/monitoring-state.json` file supplies tool arguments. For file-based tests, the integration-test runner diffs filesystem state from `before/` to `after/`; for monitoring-based tests, `after/` artifacts are generally not diffed and are only interpreted for specific validations (for example, `codeql_query_run` interpreted output).
 
 ### 2b — Extension integration tests
@@ -81,6 +83,7 @@ From the repository root:
 
 ```bash
 # Build everything and run all layers (1a + 1b + 2a + 2b)
+# Integration tests use stdio transport by default
 npm run build-and-test
 
 # Run only server unit tests (1a)
@@ -89,8 +92,12 @@ npm run test:server
 # Run extension unit tests + integration tests (1b + 2b)
 npm run test:vscode
 
-# Run only MCP tool integration tests (2a)
+# Run only MCP tool integration tests (2a) - stdio mode (default)
 npm run test:client
+
+# Run MCP tool integration tests with explicit transport mode
+MCP_MODE=stdio npm run test:client   # stdio transport (default)
+MCP_MODE=http npm run test:client    # HTTP transport
 
 # Run only extension integration tests (2b)
 npm run test:integration -w extensions/vscode
