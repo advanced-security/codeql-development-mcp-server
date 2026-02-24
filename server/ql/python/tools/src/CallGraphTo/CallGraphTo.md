@@ -15,7 +15,6 @@ This query is primarily used for:
 - Finding all callers of a specific function
 - Impact analysis before modifying a function signature
 - Understanding usage patterns and entry points
-- IDE integration for call hierarchy navigation
 
 ## Example
 
@@ -32,13 +31,13 @@ def caller2():
     target_func()
 ```
 
-Running with `targetFunction = "target_func"` produces results showing each call site with the message pattern `Call to 'target_func' from 'caller1'`.
+Running with `targetFunction = "target_func"` produces results showing each call site with the message pattern ``Call to `target_func` from `caller1``.
 
 ## Output Format
 
 The query is a `@kind problem` query producing rows of:
 
-- `select call, "Call to 'target' from 'caller'"`
+- ``select call, "Call to `target` from `caller`"``
 
 ## References
 

@@ -15,7 +15,6 @@ This query is primarily used for:
 - Finding all callers of a specific method
 - Impact analysis before modifying a method signature
 - Understanding usage patterns and entry points
-- IDE integration for call hierarchy navigation
 
 ## Example
 
@@ -28,13 +27,13 @@ void Caller1() { TargetMethod(); }
 void Caller2() { TargetMethod(); }
 ```
 
-Running with `targetFunction = "TargetMethod"` produces results showing each call site with the message pattern `Call to 'TargetMethod' from 'Caller1'`.
+Running with `targetFunction = "TargetMethod"` produces results showing each call site with the message pattern ``Call to `TargetMethod` from `Caller1``.
 
 ## Output Format
 
 The query is a `@kind problem` query producing rows of:
 
-- `select call, "Call to 'target' from 'caller'"`
+- ``select call, "Call to `target` from `caller`"``
 
 ## References
 
