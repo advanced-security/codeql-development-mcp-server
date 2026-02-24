@@ -143,7 +143,7 @@ jobs:
 
           # workflow_call checkouts may leave us in detached HEAD when the
           # caller is triggered from a tag ref. Create a temporary local
-          # branch so that `git commit` works and we can push to main.
+          # branch so that `git commit` and `git tag` work correctly.
           TEMP_BRANCH="tmp/release-${TAG}"
           git checkout -B "${TEMP_BRANCH}"
 
@@ -160,13 +160,16 @@ jobs:
           else
             git commit -m "Release ${TAG}: update versions to ${RELEASE_NAME}"
             CURRENT_SHA=$(git rev-parse HEAD)
-            git push origin "${TEMP_BRANCH}:refs/heads/main"
             echo "✅ Committed version changes at ${CURRENT_SHA:0:8}"
           fi
 
-          # Create and push the tag
+          # Create the annotated tag on the (possibly new) commit and push
+          # it. We intentionally do NOT push the commit to main because
+          # branch protection rules require PRs and status checks. The
+          # tagged commit is reachable via the tag ref and is used by all
+          # downstream release jobs to build artifacts.
           git tag -a "${TAG}" -m "Release ${TAG}" "${CURRENT_SHA}"
-          git push origin "${TAG}"
+          git push origin "refs/tags/${TAG}"
           echo "✅ Created and pushed tag ${TAG} at commit ${CURRENT_SHA:0:8}"
           echo "tag_sha=${CURRENT_SHA}" >> $GITHUB_OUTPUT
 
