@@ -141,6 +141,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # workflow_call checkouts may leave us in detached HEAD when the
+          # caller is triggered from a tag ref. Create a temporary local
+          # branch so that `git commit` works and we can push to main.
+          TEMP_BRANCH="tmp/release-${TAG}"
+          git checkout -B "${TEMP_BRANCH}"
+
           # Stage version-bearing files and lockfile changes
           git add -A
           # Ensure CodeQL-generated artifacts are not staged for commit
@@ -154,7 +160,7 @@ jobs:
           else
             git commit -m "Release ${TAG}: update versions to ${RELEASE_NAME}"
             CURRENT_SHA=$(git rev-parse HEAD)
-            git push origin HEAD
+            git push origin "${TEMP_BRANCH}:refs/heads/main"
             echo "✅ Committed version changes at ${CURRENT_SHA:0:8}"
           fi
 
