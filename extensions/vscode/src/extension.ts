@@ -24,10 +24,10 @@ export async function activate(
   logger.info('CodeQL Development MCP Server extension activating...');
 
   // --- Core components ---
-  const cliResolver = new CliResolver(logger);
+  const storagePaths = new StoragePaths(context);
+  const cliResolver = new CliResolver(logger, storagePaths.getCodeqlGlobalStoragePath());
   const serverManager = new ServerManager(context, logger);
   const packInstaller = new PackInstaller(cliResolver, serverManager, logger);
-  const storagePaths = new StoragePaths(context);
   const envBuilder = new EnvironmentBuilder(
     context,
     cliResolver,

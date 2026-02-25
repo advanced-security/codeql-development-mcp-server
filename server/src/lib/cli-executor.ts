@@ -3,8 +3,9 @@
  */
 
 import { execFile } from 'child_process';
-import { existsSync } from 'fs';
-import { basename, delimiter, dirname, isAbsolute } from 'path';
+import { existsSync, readdirSync, readFileSync } from 'fs';
+import { basename, delimiter, dirname, isAbsolute, join } from 'path';
+import { homedir } from 'os';
 import { promisify } from 'util';
 import { logger } from '../utils/logger';
 
@@ -117,13 +118,145 @@ let resolvedCodeQLDir: string | null = null;
 let resolvedBinaryResult: string | undefined;
 
 /**
+ * Expected binary name for the CodeQL CLI on the current platform.
+ */
+const CODEQL_BINARY_NAME = process.platform === 'win32' ? 'codeql.exe' : 'codeql';
+
+/**
+ * VS Code application names whose global-storage directories may contain a
+ * `github.vscode-codeql` managed CLI distribution.
+ */
+const VSCODE_APP_NAMES = ['Code', 'Code - Insiders', 'VSCodium'];
+
+/**
+ * Compute candidate VS Code global-storage root directories for the current
+ * platform. Returns an array of absolute paths that may or may not exist.
+ */
+export function getVsCodeGlobalStorageCandidates(): string[] {
+  const home = homedir();
+  const candidates: string[] = [];
+
+  for (const appName of VSCODE_APP_NAMES) {
+    if (process.platform === 'darwin') {
+      candidates.push(join(home, 'Library', 'Application Support', appName, 'User', 'globalStorage'));
+    } else if (process.platform === 'win32') {
+      const appData = process.env.APPDATA ?? join(home, 'AppData', 'Roaming');
+      candidates.push(join(appData, appName, 'User', 'globalStorage'));
+    } else {
+      // Linux / other
+      candidates.push(join(home, '.config', appName, 'User', 'globalStorage'));
+    }
+  }
+  return candidates;
+}
+
+/**
+ * Discover the CodeQL CLI binary managed by the `GitHub.vscode-codeql`
+ * extension, if present.
+ *
+ * The vscode-codeql extension stores its managed CLI in:
+ *   `<globalStorage>/github.vscode-codeql/distribution<N>/codeql/codeql`
+ *
+ * A `distribution.json` file in the storage root contains a `folderIndex`
+ * property that identifies the current distribution directory. We use that
+ * as a fast-path hint and fall back to scanning for the highest-numbered
+ * `distribution*` directory.
+ *
+ * @returns Absolute path to the `codeql` binary, or `undefined` if not found.
+ */
+export function discoverVsCodeCodeQLDistribution(): string | undefined {
+  const globalStorageCandidates = getVsCodeGlobalStorageCandidates();
+
+  for (const gsRoot of globalStorageCandidates) {
+    // The extension ID is always lowercased on disk by VS Code
+    const codeqlStorage = join(gsRoot, 'github.vscode-codeql');
+
+    if (!existsSync(codeqlStorage)) continue;
+
+    // Fast path: read distribution.json for the exact folder index
+    const hintResult = discoverFromDistributionJson(codeqlStorage);
+    if (hintResult) return hintResult;
+
+    // Fallback: scan distribution* directories
+    const scanResult = discoverFromDistributionScan(codeqlStorage);
+    if (scanResult) return scanResult;
+  }
+
+  return undefined;
+}
+
+/**
+ * Read `distribution.json` and validate the binary at the indicated path.
+ */
+function discoverFromDistributionJson(codeqlStorage: string): string | undefined {
+  try {
+    const jsonPath = join(codeqlStorage, 'distribution.json');
+    if (!existsSync(jsonPath)) return undefined;
+
+    const content = readFileSync(jsonPath, 'utf-8');
+    const data = JSON.parse(content) as { folderIndex?: number };
+    if (typeof data.folderIndex !== 'number') return undefined;
+
+    const binaryPath = join(
+      codeqlStorage,
+      `distribution${data.folderIndex}`,
+      'codeql',
+      CODEQL_BINARY_NAME,
+    );
+    if (existsSync(binaryPath)) {
+      logger.debug(`Discovered CLI via distribution.json (folderIndex=${data.folderIndex})`);
+      return binaryPath;
+    }
+  } catch {
+    // Ignore parse errors — fall through to directory scan
+  }
+  return undefined;
+}
+
+/**
+ * Scan for `distribution*` directories and return the binary from the
+ * highest-numbered one.
+ */
+function discoverFromDistributionScan(codeqlStorage: string): string | undefined {
+  try {
+    const entries = readdirSync(codeqlStorage, { withFileTypes: true });
+
+    const distDirs = entries
+      .filter(e => e.isDirectory() && /^distribution\d*$/.test(e.name))
+      .map(e => ({
+        name: e.name,
+        num: parseInt(e.name.replace('distribution', '') || '0', 10),
+      }))
+      .sort((a, b) => b.num - a.num);
+
+    for (const dir of distDirs) {
+      const binaryPath = join(
+        codeqlStorage,
+        dir.name,
+        'codeql',
+        CODEQL_BINARY_NAME,
+      );
+      if (existsSync(binaryPath)) {
+        logger.debug(`Discovered CLI via distribution scan: ${dir.name}`);
+        return binaryPath;
+      }
+    }
+  } catch {
+    // Directory not readable — skip
+  }
+  return undefined;
+}
+
+/**
  * Resolve the CodeQL CLI binary path.
  *
  * Resolution order:
  * 1. `CODEQL_PATH` environment variable — must point to an existing file whose
  *    basename is `codeql` (or `codeql.exe` / `codeql.cmd` on Windows).
  *    The parent directory is prepended to PATH for child processes.
- * 2. Falls back to the bare `codeql` command (resolved via PATH at exec time).
+ * 2. Auto-discovery of the `vscode-codeql` managed CLI distribution from VS
+ *    Code's global storage directory.
+ * 3. Falls back to the bare `codeql` command (resolved via PATH at exec time).
  *
  * The resolved value is cached for the lifetime of the process. Call this once
  * at startup; subsequent calls are a no-op and return the cached value.
@@ -137,6 +270,15 @@ export function resolveCodeQLBinary(): string {
   const envPath = process.env.CODEQL_PATH;
 
   if (!envPath) {
+    // Try auto-discovery of the vscode-codeql managed distribution
+    const discovered = discoverVsCodeCodeQLDistribution();
+    if (discovered) {
+      resolvedCodeQLDir = dirname(discovered);
+      resolvedBinaryResult = 'codeql';
+      logger.info(`CodeQL CLI auto-discovered via vscode-codeql distribution: ${discovered} (dir: ${resolvedCodeQLDir})`);
+      return resolvedBinaryResult;
+    }
+
     resolvedCodeQLDir = null;
     resolvedBinaryResult = 'codeql';
     return resolvedBinaryResult;

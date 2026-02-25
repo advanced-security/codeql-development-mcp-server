@@ -31257,7 +31257,7 @@ var require_view = __commonJS({
     var dirname9 = path4.dirname;
     var basename7 = path4.basename;
     var extname2 = path4.extname;
-    var join19 = path4.join;
+    var join20 = path4.join;
     var resolve13 = path4.resolve;
     module.exports = View;
     function View(name, options) {
@@ -31319,12 +31319,12 @@ var require_view = __commonJS({
     };
     View.prototype.resolve = function resolve14(dir, file) {
       var ext = this.ext;
-      var path5 = join19(dir, file);
+      var path5 = join20(dir, file);
       var stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
       }
-      path5 = join19(dir, basename7(file, ext), "index" + ext);
+      path5 = join20(dir, basename7(file, ext), "index" + ext);
       stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
@@ -34969,7 +34969,7 @@ var require_send = __commonJS({
     var Stream = __require("stream");
     var util2 = __require("util");
     var extname2 = path4.extname;
-    var join19 = path4.join;
+    var join20 = path4.join;
     var normalize = path4.normalize;
     var resolve13 = path4.resolve;
     var sep2 = path4.sep;
@@ -35141,7 +35141,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = path5.split(sep2);
-        path5 = normalize(join19(root, path5));
+        path5 = normalize(join20(root, path5));
       } else {
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
@@ -35274,7 +35274,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join19(path5, self._index[i]);
+        var p = join20(path5, self._index[i]);
         debug('stat "%s"', p);
         fs3.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -38159,12 +38159,14 @@ __export(cli_executor_exports, {
   buildCodeQLArgs: () => buildCodeQLArgs,
   buildQLTArgs: () => buildQLTArgs,
   disableTestCommands: () => disableTestCommands,
+  discoverVsCodeCodeQLDistribution: () => discoverVsCodeCodeQLDistribution,
   enableTestCommands: () => enableTestCommands,
   executeCLICommand: () => executeCLICommand,
   executeCodeQLCommand: () => executeCodeQLCommand,
   executeQLTCommand: () => executeQLTCommand,
   getCommandHelp: () => getCommandHelp,
   getResolvedCodeQLDir: () => getResolvedCodeQLDir,
+  getVsCodeGlobalStorageCandidates: () => getVsCodeGlobalStorageCandidates,
   resetResolvedCodeQLBinary: () => resetResolvedCodeQLBinary,
   resolveCodeQLBinary: () => resolveCodeQLBinary,
   sanitizeCLIArgument: () => sanitizeCLIArgument,
@@ -38173,8 +38175,9 @@ __export(cli_executor_exports, {
   validateCommandExists: () => validateCommandExists
 });
 import { execFile } from "child_process";
-import { existsSync as existsSync2 } from "fs";
-import { basename, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute2 } from "path";
+import { existsSync as existsSync2, readdirSync, readFileSync as readFileSync2 } from "fs";
+import { basename, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute2, join as join4 } from "path";
+import { homedir } from "os";
 import { promisify } from "util";
 function enableTestCommands() {
   testCommands = /* @__PURE__ */ new Set([
@@ -38191,12 +38194,90 @@ function disableTestCommands() {
 function isCommandAllowed(command) {
   return ALLOWED_COMMANDS.has(command) || testCommands !== null && testCommands.has(command);
 }
+function getVsCodeGlobalStorageCandidates() {
+  const home = homedir();
+  const candidates = [];
+  for (const appName of VSCODE_APP_NAMES) {
+    if (process.platform === "darwin") {
+      candidates.push(join4(home, "Library", "Application Support", appName, "User", "globalStorage"));
+    } else if (process.platform === "win32") {
+      const appData = process.env.APPDATA ?? join4(home, "AppData", "Roaming");
+      candidates.push(join4(appData, appName, "User", "globalStorage"));
+    } else {
+      candidates.push(join4(home, ".config", appName, "User", "globalStorage"));
+    }
+  }
+  return candidates;
+}
+function discoverVsCodeCodeQLDistribution() {
+  const globalStorageCandidates = getVsCodeGlobalStorageCandidates();
+  for (const gsRoot of globalStorageCandidates) {
+    const codeqlStorage = join4(gsRoot, "github.vscode-codeql");
+    if (!existsSync2(codeqlStorage)) continue;
+    const hintResult = discoverFromDistributionJson(codeqlStorage);
+    if (hintResult) return hintResult;
+    const scanResult = discoverFromDistributionScan(codeqlStorage);
+    if (scanResult) return scanResult;
+  }
+  return void 0;
+}
+function discoverFromDistributionJson(codeqlStorage) {
+  try {
+    const jsonPath = join4(codeqlStorage, "distribution.json");
+    if (!existsSync2(jsonPath)) return void 0;
+    const content = readFileSync2(jsonPath, "utf-8");
+    const data = JSON.parse(content);
+    if (typeof data.folderIndex !== "number") return void 0;
+    const binaryPath = join4(
+      codeqlStorage,
+      `distribution${data.folderIndex}`,
+      "codeql",
+      CODEQL_BINARY_NAME
+    );
+    if (existsSync2(binaryPath)) {
+      logger.debug(`Discovered CLI via distribution.json (folderIndex=${data.folderIndex})`);
+      return binaryPath;
+    }
+  } catch {
+  }
+  return void 0;
+}
+function discoverFromDistributionScan(codeqlStorage) {
+  try {
+    const entries = readdirSync(codeqlStorage, { withFileTypes: true });
+    const distDirs = entries.filter((e) => e.isDirectory() && /^distribution\d*$/.test(e.name)).map((e) => ({
+      name: e.name,
+      num: parseInt(e.name.replace("distribution", "") || "0", 10)
+    })).sort((a, b) => b.num - a.num);
+    for (const dir of distDirs) {
+      const binaryPath = join4(
+        codeqlStorage,
+        dir.name,
+        "codeql",
+        CODEQL_BINARY_NAME
+      );
+      if (existsSync2(binaryPath)) {
+        logger.debug(`Discovered CLI via distribution scan: ${dir.name}`);
+        return binaryPath;
+      }
+    }
+  } catch {
+  }
+  return void 0;
+}
 function resolveCodeQLBinary() {
   if (resolvedBinaryResult !== void 0) {
     return resolvedBinaryResult;
   }
   const envPath = process.env.CODEQL_PATH;
   if (!envPath) {
+    const discovered = discoverVsCodeCodeQLDistribution();
+    if (discovered) {
+      resolvedCodeQLDir = dirname2(discovered);
+      resolvedBinaryResult = "codeql";
+      logger.info(`CodeQL CLI auto-discovered via vscode-codeql distribution: ${discovered} (dir: ${resolvedCodeQLDir})`);
+      return resolvedBinaryResult;
+    }
     resolvedCodeQLDir = null;
     resolvedBinaryResult = "codeql";
     return resolvedBinaryResult;
@@ -38443,7 +38524,7 @@ async function validateCommandExists(command) {
     return false;
   }
 }
-var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult, FRESH_PROCESS_SUBCOMMANDS;
+var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult, CODEQL_BINARY_NAME, VSCODE_APP_NAMES, FRESH_PROCESS_SUBCOMMANDS;
 var init_cli_executor = __esm({
   "src/lib/cli-executor.ts"() {
     "use strict";
@@ -38492,6 +38573,8 @@ var init_cli_executor = __esm({
     ];
     DANGEROUS_CONTROL_CHARS = /[\x01-\x08\x0B\x0C\x0E-\x1F]/;
     resolvedCodeQLDir = null;
+    CODEQL_BINARY_NAME = process.platform === "win32" ? "codeql.exe" : "codeql";
+    VSCODE_APP_NAMES = ["Code", "Code - Insiders", "VSCodium"];
     FRESH_PROCESS_SUBCOMMANDS = /* @__PURE__ */ new Set([
       "database analyze",
       "database create",
@@ -40430,8 +40513,8 @@ var require_adm_zip = __commonJS({
         return null;
       }
       function fixPath(zipPath) {
-        const { join: join19, normalize, sep: sep2 } = pth.posix;
-        return join19(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
+        const { join: join20, normalize, sep: sep2 } = pth.posix;
+        return join20(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
       }
       function filenameFilter(filterfn) {
         if (filterfn instanceof RegExp) {
@@ -56438,7 +56521,7 @@ init_logger();
 // src/lib/query-results-evaluator.ts
 init_cli_executor();
 init_logger();
-import { writeFileSync, readFileSync as readFileSync2 } from "fs";
+import { writeFileSync, readFileSync as readFileSync3 } from "fs";
 import { dirname as dirname3, isAbsolute as isAbsolute3 } from "path";
 import { mkdirSync as mkdirSync3 } from "fs";
 var BUILT_IN_EVALUATORS = {
@@ -56448,7 +56531,7 @@ var BUILT_IN_EVALUATORS = {
 };
 async function extractQueryMetadata(queryPath) {
   try {
-    const queryContent = readFileSync2(queryPath, "utf-8");
+    const queryContent = readFileSync3(queryPath, "utf-8");
     const metadata = {};
     const kindMatch = queryContent.match(/@kind\s+([^\s]+)/);
     if (kindMatch) metadata.kind = kindMatch[1];
@@ -56698,7 +56781,7 @@ async function evaluateWithCustomScript(_bqrsPath, _queryPath, _scriptPath, _out
 // src/lib/log-directory-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync4, existsSync as existsSync3 } from "fs";
-import { join as join4, resolve as resolve3 } from "path";
+import { join as join5, resolve as resolve3 } from "path";
 import { randomBytes } from "crypto";
 function ensurePathWithinBase(baseDir, targetPath) {
   const absBase = resolve3(baseDir);
@@ -56722,7 +56805,7 @@ function getOrCreateLogDirectory(logDir) {
   }
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
   const uniqueId = randomBytes(4).toString("hex");
-  const uniqueLogDir = join4(baseLogDir, `query-run-${timestamp2}-${uniqueId}`);
+  const uniqueLogDir = join5(baseLogDir, `query-run-${timestamp2}-${uniqueId}`);
   mkdirSync4(uniqueLogDir, { recursive: true });
   return uniqueLogDir;
 }
@@ -56731,7 +56814,7 @@ function getOrCreateLogDirectory(logDir) {
 init_package_paths();
 init_temp_dir();
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync5 } from "fs";
-import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join5, resolve as resolve4 } from "path";
+import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join6, resolve as resolve4 } from "path";
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -56900,7 +56983,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join5(tempDir, "selectedSourceFiles.csv");
+                csvPath = join6(tempDir, "selectedSourceFiles.csv");
                 const csvContent = filePaths.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -56920,7 +57003,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join5(tempDir, "sourceFunction.csv");
+                csvPath = join6(tempDir, "sourceFunction.csv");
                 const csvContent = functionNames.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -56940,7 +57023,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join5(tempDir, "targetFunction.csv");
+                csvPath = join6(tempDir, "targetFunction.csv");
                 const csvContent = functionNames.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -56973,21 +57056,21 @@ function registerCLITool(server, definition) {
         if (name === "codeql_query_run" || name === "codeql_test_run" || name === "codeql_database_analyze") {
           queryLogDir = getOrCreateLogDirectory(customLogDir);
           logger.info(`Using log directory for ${name}: ${queryLogDir}`);
-          const timestampPath = join5(queryLogDir, "timestamp");
+          const timestampPath = join6(queryLogDir, "timestamp");
           writeFileSync2(timestampPath, Date.now().toString(), "utf8");
           options.logdir = queryLogDir;
           if (!options.verbosity) {
             options.verbosity = "progress+";
           }
           if (!options["evaluator-log"]) {
-            options["evaluator-log"] = join5(queryLogDir, "evaluator-log.jsonl");
+            options["evaluator-log"] = join6(queryLogDir, "evaluator-log.jsonl");
           }
           if (options["tuple-counting"] === void 0) {
             options["tuple-counting"] = true;
           }
           if (name === "codeql_query_run") {
             if (!options.output) {
-              options.output = join5(queryLogDir, "results.bqrs");
+              options.output = join6(queryLogDir, "results.bqrs");
             }
           }
           if (options.output && typeof options.output === "string") {
@@ -57018,7 +57101,7 @@ function registerCLITool(server, definition) {
         }
         if (name === "codeql_query_run" && result.success && queryLogDir) {
           const bqrsPath = options.output;
-          const sarifPath = join5(queryLogDir, "results-interpreted.sarif");
+          const sarifPath = join6(queryLogDir, "results-interpreted.sarif");
           const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : void 0;
           if (existsSync4(bqrsPath) && queryFilePath) {
             try {
@@ -60562,8 +60645,8 @@ var codeqlGenerateQueryHelpTool = {
 };
 
 // src/tools/codeql/list-databases.ts
-import { existsSync as existsSync6, readdirSync as readdirSync2, readFileSync as readFileSync4, statSync as statSync2 } from "fs";
-import { join as join7 } from "path";
+import { existsSync as existsSync6, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync2 } from "fs";
+import { join as join8 } from "path";
 
 // src/lib/discovery-config.ts
 function parsePathList(envValue) {
@@ -60586,7 +60669,7 @@ function getQueryRunResultsDirs() {
 init_logger();
 function parseDatabaseYml(ymlPath) {
   try {
-    const content = readFileSync4(ymlPath, "utf-8");
+    const content = readFileSync5(ymlPath, "utf-8");
     const info = {};
     for (const line of content.split("\n")) {
       const trimmed = line.trim();
@@ -60619,12 +60702,12 @@ async function discoverDatabases(baseDirs, language) {
     }
     let entries;
     try {
-      entries = readdirSync2(baseDir);
+      entries = readdirSync3(baseDir);
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const entryPath = join7(baseDir, entry);
+      const entryPath = join8(baseDir, entry);
       try {
         if (!statSync2(entryPath).isDirectory()) {
           continue;
@@ -60632,7 +60715,7 @@ async function discoverDatabases(baseDirs, language) {
       } catch {
         continue;
       }
-      const ymlPath = join7(entryPath, "codeql-database.yml");
+      const ymlPath = join8(entryPath, "codeql-database.yml");
       if (!existsSync6(ymlPath)) {
         continue;
       }
@@ -60715,8 +60798,8 @@ function registerListDatabasesTool(server) {
 }
 
 // src/tools/codeql/list-mrva-run-results.ts
-import { existsSync as existsSync7, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync3 } from "fs";
-import { join as join8 } from "path";
+import { existsSync as existsSync7, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync3 } from "fs";
+import { join as join9 } from "path";
 init_logger();
 var NUMERIC_DIR_PATTERN = /^\d+$/;
 var SKIP_DIRS = /* @__PURE__ */ new Set([".DS_Store", "exported-results"]);
@@ -60728,12 +60811,12 @@ async function discoverMrvaRunResults(resultsDirs, runId) {
     }
     let entries;
     try {
-      entries = readdirSync3(dir);
+      entries = readdirSync4(dir);
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const entryPath = join8(dir, entry);
+      const entryPath = join9(dir, entry);
       try {
         if (!statSync3(entryPath).isDirectory()) {
           continue;
@@ -60748,10 +60831,10 @@ async function discoverMrvaRunResults(resultsDirs, runId) {
         continue;
       }
       let timestamp2;
-      const timestampPath = join8(entryPath, "timestamp");
+      const timestampPath = join9(entryPath, "timestamp");
       if (existsSync7(timestampPath)) {
         try {
-          timestamp2 = readFileSync5(timestampPath, "utf-8").trim();
+          timestamp2 = readFileSync6(timestampPath, "utf-8").trim();
         } catch {
         }
       }
@@ -60770,7 +60853,7 @@ function discoverRepoResults(runPath) {
   const repos = [];
   let ownerEntries;
   try {
-    ownerEntries = readdirSync3(runPath);
+    ownerEntries = readdirSync4(runPath);
   } catch {
     return repos;
   }
@@ -60778,7 +60861,7 @@ function discoverRepoResults(runPath) {
     if (SKIP_DIRS.has(ownerEntry)) {
       continue;
     }
-    const ownerPath = join8(runPath, ownerEntry);
+    const ownerPath = join9(runPath, ownerEntry);
     try {
       if (!statSync3(ownerPath).isDirectory()) {
         continue;
@@ -60788,12 +60871,12 @@ function discoverRepoResults(runPath) {
     }
     let repoEntries;
     try {
-      repoEntries = readdirSync3(ownerPath);
+      repoEntries = readdirSync4(ownerPath);
     } catch {
       continue;
     }
     for (const repoEntry of repoEntries) {
-      const repoPath = join8(ownerPath, repoEntry);
+      const repoPath = join9(ownerPath, repoEntry);
       try {
         if (!statSync3(repoPath).isDirectory()) {
           continue;
@@ -60804,10 +60887,10 @@ function discoverRepoResults(runPath) {
       const fullName = `${ownerEntry}/${repoEntry}`;
       let analysisStatus;
       let resultCount;
-      const repoTaskPath = join8(repoPath, "repo_task.json");
+      const repoTaskPath = join9(repoPath, "repo_task.json");
       if (existsSync7(repoTaskPath)) {
         try {
-          const raw = readFileSync5(repoTaskPath, "utf-8");
+          const raw = readFileSync6(repoTaskPath, "utf-8");
           const task = JSON.parse(raw);
           if (typeof task.analysisStatus === "string") {
             analysisStatus = task.analysisStatus;
@@ -60818,8 +60901,8 @@ function discoverRepoResults(runPath) {
         } catch {
         }
       }
-      const hasSarif = existsSync7(join8(repoPath, "results", "results.sarif"));
-      const hasBqrs = existsSync7(join8(repoPath, "results", "results.bqrs"));
+      const hasSarif = existsSync7(join9(repoPath, "results", "results.sarif"));
+      const hasBqrs = existsSync7(join9(repoPath, "results", "results.bqrs"));
       repos.push({
         analysisStatus,
         fullName,
@@ -60902,8 +60985,8 @@ function registerListMrvaRunResultsTool(server) {
 }
 
 // src/tools/codeql/list-query-run-results.ts
-import { existsSync as existsSync8, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync4 } from "fs";
-import { join as join9 } from "path";
+import { existsSync as existsSync8, readdirSync as readdirSync5, readFileSync as readFileSync7, statSync as statSync4 } from "fs";
+import { join as join10 } from "path";
 init_logger();
 var QUERY_RUN_DIR_PATTERN = /^(.+\.ql)-(.+)$/;
 var RUN_QUERY_PATTERN = /runQuery called with\s+(\S+)/;
@@ -60944,12 +61027,12 @@ async function discoverQueryRunResults(resultsDirs, filter) {
     }
     let entries;
     try {
-      entries = readdirSync4(dir);
+      entries = readdirSync5(dir);
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const entryPath = join9(dir, entry);
+      const entryPath = join10(dir, entry);
       try {
         if (!statSync4(entryPath).isDirectory()) {
           continue;
@@ -60965,23 +61048,23 @@ async function discoverQueryRunResults(resultsDirs, filter) {
       if (normalizedFilter?.queryName && name !== normalizedFilter.queryName) {
         continue;
       }
-      const hasEvaluatorLog = existsSync8(join9(entryPath, "evaluator-log.jsonl"));
-      const hasBqrs = existsSync8(join9(entryPath, "results.bqrs"));
-      const hasSarif = existsSync8(join9(entryPath, "results-interpreted.sarif"));
-      const hasQueryLog = existsSync8(join9(entryPath, "query.log"));
-      const hasSummaryLog = existsSync8(join9(entryPath, "evaluator-log.summary.jsonl"));
+      const hasEvaluatorLog = existsSync8(join10(entryPath, "evaluator-log.jsonl"));
+      const hasBqrs = existsSync8(join10(entryPath, "results.bqrs"));
+      const hasSarif = existsSync8(join10(entryPath, "results-interpreted.sarif"));
+      const hasQueryLog = existsSync8(join10(entryPath, "query.log"));
+      const hasSummaryLog = existsSync8(join10(entryPath, "evaluator-log.summary.jsonl"));
       let timestamp2;
-      const timestampPath = join9(entryPath, "timestamp");
+      const timestampPath = join10(entryPath, "timestamp");
       if (existsSync8(timestampPath)) {
         try {
-          timestamp2 = readFileSync6(timestampPath, "utf-8").trim();
+          timestamp2 = readFileSync7(timestampPath, "utf-8").trim();
         } catch {
         }
       }
       let metadata = {};
       if (hasQueryLog) {
         try {
-          const logContent = readFileSync6(join9(entryPath, "query.log"), "utf-8");
+          const logContent = readFileSync7(join10(entryPath, "query.log"), "utf-8");
           metadata = parseQueryLogMetadata(logContent);
         } catch {
         }
@@ -61089,7 +61172,7 @@ function registerListQueryRunResultsTool(server) {
             if (run.queryPath) parts.push(`    Query: ${run.queryPath}`);
             if (run.databasePath) parts.push(`    Database: ${run.databasePath}`);
             parts.push(`    Artifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "none"}`);
-            if (run.hasBqrs) parts.push(`    BQRS: ${join9(run.path, "results.bqrs")}`);
+            if (run.hasBqrs) parts.push(`    BQRS: ${join10(run.path, "results.bqrs")}`);
             return parts.join("\n");
           })
         ];
@@ -61155,11 +61238,11 @@ var codeqlPackLsTool = {
 
 // src/tools/codeql/profile-codeql-query-from-logs.ts
 import { existsSync as existsSync9, mkdirSync as mkdirSync6, writeFileSync as writeFileSync3 } from "fs";
-import { basename as basename4, dirname as dirname6, join as join10 } from "path";
+import { basename as basename4, dirname as dirname6, join as join11 } from "path";
 
 // src/lib/evaluator-log-parser.ts
 init_logger();
-import { readFileSync as readFileSync7 } from "fs";
+import { readFileSync as readFileSync8 } from "fs";
 function detectLogFormat(firstEvent) {
   if (typeof firstEvent.type === "string") {
     return "raw";
@@ -61186,7 +61269,7 @@ function splitJsonObjects(content) {
   });
 }
 function parseJsonObjects(logPath) {
-  const content = readFileSync7(logPath, "utf-8");
+  const content = readFileSync8(logPath, "utf-8");
   const objectStrings = splitJsonObjects(content);
   const results = [];
   for (const objStr of objectStrings) {
@@ -61549,13 +61632,13 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
         const profile = parseEvaluatorLog(evaluatorLog);
         const profileOutputDir = outputDir ?? dirname6(evaluatorLog);
         mkdirSync6(profileOutputDir, { recursive: true });
-        const jsonPath = join10(
+        const jsonPath = join11(
           profileOutputDir,
           "query-evaluation-profile.json"
         );
         writeFileSync3(jsonPath, formatAsJson(profile));
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join10(
+        const mdPath = join11(
           profileOutputDir,
           "query-evaluation-profile.md"
         );
@@ -61596,11 +61679,11 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
 // src/tools/codeql/profile-codeql-query.ts
 init_cli_executor();
 init_logger();
-import { writeFileSync as writeFileSync4, readFileSync as readFileSync8, existsSync as existsSync10 } from "fs";
-import { join as join11, dirname as dirname7, basename as basename5 } from "path";
+import { writeFileSync as writeFileSync4, readFileSync as readFileSync9, existsSync as existsSync10 } from "fs";
+import { join as join12, dirname as dirname7, basename as basename5 } from "path";
 import { mkdirSync as mkdirSync7 } from "fs";
 function parseEvaluatorLog2(logPath) {
-  const logContent = readFileSync8(logPath, "utf-8");
+  const logContent = readFileSync9(logPath, "utf-8");
   const jsonObjects = logContent.split("\n\n").filter((s) => s.trim());
   const events = jsonObjects.map((obj) => {
     try {
@@ -61734,11 +61817,11 @@ function registerProfileCodeQLQueryTool(server) {
         let sarifPath;
         if (!logPath) {
           logger.info("No evaluator log provided, running query to generate one");
-          const defaultOutputDir = outputDir || join11(dirname7(query), "profile-output");
+          const defaultOutputDir = outputDir || join12(dirname7(query), "profile-output");
           mkdirSync7(defaultOutputDir, { recursive: true });
-          logPath = join11(defaultOutputDir, "evaluator-log.jsonl");
-          bqrsPath = join11(defaultOutputDir, "query-results.bqrs");
-          sarifPath = join11(defaultOutputDir, "query-results.sarif");
+          logPath = join12(defaultOutputDir, "evaluator-log.jsonl");
+          bqrsPath = join12(defaultOutputDir, "query-results.bqrs");
+          sarifPath = join12(defaultOutputDir, "query-results.sarif");
           const queryResult = await executeCodeQLCommand(
             "query run",
             {
@@ -61791,11 +61874,11 @@ function registerProfileCodeQLQueryTool(server) {
         const profile = parseEvaluatorLog2(logPath);
         const profileOutputDir = outputDir || dirname7(logPath);
         mkdirSync7(profileOutputDir, { recursive: true });
-        const jsonPath = join11(profileOutputDir, "query-evaluation-profile.json");
+        const jsonPath = join12(profileOutputDir, "query-evaluation-profile.json");
         const jsonContent = formatAsJson2(profile);
         writeFileSync4(jsonPath, jsonContent);
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join11(profileOutputDir, "query-evaluation-profile.md");
+        const mdPath = join12(profileOutputDir, "query-evaluation-profile.md");
         const mdContent = formatAsMermaid2(profile);
         writeFileSync4(mdPath, mdContent);
         logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
@@ -61946,7 +62029,7 @@ var codeqlQueryRunTool = {
 };
 
 // src/tools/codeql/quick-evaluate.ts
-import { join as join12, resolve as resolve6 } from "path";
+import { join as join13, resolve as resolve6 } from "path";
 init_logger();
 init_temp_dir();
 async function quickEvaluate({
@@ -61965,7 +62048,7 @@ async function quickEvaluate({
         throw new Error(`Symbol '${symbol}' not found as class or predicate in file: ${file}`);
       }
     }
-    const resolvedOutput = resolve6(output_path || join12(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
+    const resolvedOutput = resolve6(output_path || join13(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error2) {
     throw new Error(`CodeQL evaluation failed: ${error2 instanceof Error ? error2.message : "Unknown error"}`, { cause: error2 });
@@ -62005,8 +62088,8 @@ function registerQuickEvaluateTool(server) {
 
 // src/tools/codeql/read-database-source.ts
 var import_adm_zip = __toESM(require_adm_zip(), 1);
-import { existsSync as existsSync11, readdirSync as readdirSync5, readFileSync as readFileSync9, statSync as statSync5 } from "fs";
-import { join as join13, resolve as resolve7 } from "path";
+import { existsSync as existsSync11, readdirSync as readdirSync6, readFileSync as readFileSync10, statSync as statSync5 } from "fs";
+import { join as join14, resolve as resolve7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 init_logger();
 var DEFAULT_MAX_LISTING_ENTRIES = 1e3;
@@ -62022,8 +62105,8 @@ function toFilesystemPath(uri) {
   return uri;
 }
 function* walkDirectory(dir, base = dir) {
-  for (const entry of readdirSync5(dir)) {
-    const fullPath = join13(dir, entry);
+  for (const entry of readdirSync6(dir)) {
+    const fullPath = join14(dir, entry);
     if (statSync5(fullPath).isDirectory()) {
       yield* walkDirectory(fullPath, base);
     } else {
@@ -62090,8 +62173,8 @@ async function readDatabaseSource(params) {
   if (!existsSync11(resolvedDbPath)) {
     throw new Error(`Database path does not exist: ${databasePath}`);
   }
-  const srcZipPath = join13(resolvedDbPath, "src.zip");
-  const srcDirPath = join13(resolvedDbPath, "src");
+  const srcZipPath = join14(resolvedDbPath, "src.zip");
+  const srcDirPath = join14(resolvedDbPath, "src");
   const hasSrcZip = existsSync11(srcZipPath);
   const hasSrcDir = existsSync11(srcDirPath);
   if (!hasSrcZip && !hasSrcDir) {
@@ -62166,8 +62249,8 @@ Archive contains ${availableEntries.length} entries. Use read_database_source wi
 Directory contains ${availableEntries.length} entries. Use read_database_source without filePath to list available entries.`
       );
     }
-    const fullPath = join13(srcDirPath, matchedRelative);
-    const rawContent = readFileSync9(fullPath, "utf-8");
+    const fullPath = join14(srcDirPath, matchedRelative);
+    const rawContent = readFileSync10(fullPath, "utf-8");
     const { content, effectiveEnd, effectiveStart, totalLines } = applyLineRange(
       rawContent,
       startLine,
@@ -62763,35 +62846,35 @@ function registerCodeQLTools(server) {
 }
 
 // src/lib/resources.ts
-import { readFileSync as readFileSync10 } from "fs";
-import { join as join15, dirname as dirname8 } from "path";
+import { readFileSync as readFileSync11 } from "fs";
+import { join as join16, dirname as dirname8 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 var __filename2 = fileURLToPath3(import.meta.url);
 var __dirname2 = dirname8(__filename2);
 function getGettingStartedGuide() {
   try {
-    return readFileSync10(join15(__dirname2, "../resources/getting-started.md"), "utf-8");
+    return readFileSync11(join16(__dirname2, "../resources/getting-started.md"), "utf-8");
   } catch {
     return "Getting started guide not available";
   }
 }
 function getQueryBasicsGuide() {
   try {
-    return readFileSync10(join15(__dirname2, "../resources/query-basics.md"), "utf-8");
+    return readFileSync11(join16(__dirname2, "../resources/query-basics.md"), "utf-8");
   } catch {
     return "Query basics guide not available";
   }
 }
 function getSecurityTemplates() {
   try {
-    return readFileSync10(join15(__dirname2, "../resources/security-templates.md"), "utf-8");
+    return readFileSync11(join16(__dirname2, "../resources/security-templates.md"), "utf-8");
   } catch {
     return "Security templates not available";
   }
 }
 function getPerformancePatterns() {
   try {
-    return readFileSync10(join15(__dirname2, "../resources/performance-patterns.md"), "utf-8");
+    return readFileSync11(join16(__dirname2, "../resources/performance-patterns.md"), "utf-8");
   } catch {
     return "Performance patterns not available";
   }
@@ -62880,7 +62963,7 @@ function registerCodeQLResources(server) {
 // src/tools/lsp/lsp-diagnostics.ts
 init_logger();
 init_temp_dir();
-import { join as join16 } from "path";
+import { join as join17 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/lsp/lsp-server-helper.ts
@@ -62978,7 +63061,7 @@ async function lspDiagnostics({
       serverOptions,
       workspaceUri
     });
-    const evalUri = pathToFileURL3(join16(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
+    const evalUri = pathToFileURL3(join17(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     const summary = {
       errorCount: diagnostics.filter((d) => d.severity === 1).length,
@@ -63252,8 +63335,8 @@ function registerLSPTools(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync11, existsSync as existsSync12 } from "fs";
-import { join as join17 } from "path";
+import { readFileSync as readFileSync12, existsSync as existsSync12 } from "fs";
+import { join as join18 } from "path";
 
 // src/types/language-types.ts
 var LANGUAGE_RESOURCES = [
@@ -63313,12 +63396,12 @@ function getQLBasePath() {
 }
 function loadResourceContent(relativePath) {
   try {
-    const fullPath = join17(getQLBasePath(), relativePath);
+    const fullPath = join18(getQLBasePath(), relativePath);
     if (!existsSync12(fullPath)) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync11(fullPath, "utf-8");
+    return readFileSync12(fullPath, "utf-8");
   } catch (error2) {
     logger.error(`Error loading resource file ${relativePath}:`, error2);
     return null;
@@ -64010,7 +64093,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync12, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
+import { readFileSync as readFileSync13, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -64023,7 +64106,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync12(this.#filename, "utf-8");
+      data = readFileSync13(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -64074,7 +64157,7 @@ var JSONFileSync = class extends DataFileSync {
 // src/lib/session-data-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync9, writeFileSync as writeFileSync7 } from "fs";
-import { join as join18 } from "path";
+import { join as join19 } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
 
 // src/types/monitoring.ts
@@ -64218,7 +64301,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join18(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join19(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -64250,9 +64333,9 @@ var SessionDataManager = class {
       mkdirSync9(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync9(join18(this.storageDir, subdir), { recursive: true });
+        mkdirSync9(join19(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join18(this.storageDir, "config.json");
+      const configPath = join19(this.storageDir, "config.json");
       try {
         writeFileSync7(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
@@ -64431,9 +64514,9 @@ var SessionDataManager = class {
       if (!session) return;
       const date3 = new Date(session.endTime || session.startTime);
       const monthDir = `${date3.getFullYear()}-${String(date3.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join18(this.storageDir, "sessions-archive", monthDir);
+      const archiveDir = join19(this.storageDir, "sessions-archive", monthDir);
       mkdirSync9(archiveDir, { recursive: true });
-      const archiveFile = join18(archiveDir, `${sessionId}.json`);
+      const archiveFile = join19(archiveDir, `${sessionId}.json`);
       writeFileSync7(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
@@ -64485,7 +64568,7 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join18(this.storageDir, "config.json");
+    const configPath = join19(this.storageDir, "config.json");
     writeFileSync7(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
@@ -64495,7 +64578,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join18(getProjectTmpBase(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join19(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
