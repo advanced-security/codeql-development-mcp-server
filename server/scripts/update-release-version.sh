@@ -11,6 +11,7 @@ set -euo pipefail
 ##   client/package.json                                  (X.Y.Z format)
 ##   extensions/vscode/package.json                       (X.Y.Z format)
 ##   server/package.json                                  (X.Y.Z format)
+##   server/src/codeql-development-mcp-server.ts          (X.Y.Z format, const VERSION)
 ##   server/ql/*/tools/src/codeql-pack.yml                (X.Y.Z format)
 ##   server/ql/*/tools/test/codeql-pack.yml               (X.Y.Z format)
 ##
@@ -107,6 +108,17 @@ collect_versions() {
 			fi
 		done
 	done
+
+	## TypeScript VERSION constant in server entrypoint
+	local ts_entrypoint="server/src/codeql-development-mcp-server.ts"
+	local ts_full_path="${REPO_ROOT}/${ts_entrypoint}"
+	if [[ -f "${ts_full_path}" ]]; then
+		local ts_version
+		ts_version=$(grep -m1 "const VERSION" "${ts_full_path}" | sed "s/.*'\([^']*\)'.*/\1/")
+		versions+=("${ts_entrypoint}|${ts_version}")
+	else
+		echo "WARNING: ${ts_entrypoint} not found" >&2
+	fi
 
 	printf '%s\n' "${versions[@]}"
 }
@@ -262,6 +274,14 @@ update_pack_version() {
 	rm -f "${file}.bak"
 }
 
+## Update the const VERSION = '...' line in a TypeScript file
+update_ts_version() {
+	local file="$1"
+	local new_version="$2"
+	sed -i.bak "s/const VERSION = '[^']*'/const VERSION = '${new_version}'/" "${file}"
+	rm -f "${file}.bak"
+}
+
 ## Update all version-bearing files
 update_versions() {
 	local new_version="$1"
@@ -324,6 +344,21 @@ update_versions() {
 			fi
 		done
 	done
+
+	## 4. Update TypeScript VERSION constant in server entrypoint
+	local ts_entrypoint="server/src/codeql-development-mcp-server.ts"
+	local ts_full_path="${REPO_ROOT}/${ts_entrypoint}"
+	if [[ -f "${ts_full_path}" ]]; then
+		local old_version
+		old_version=$(grep -m1 "const VERSION" "${ts_full_path}" | sed "s/.*'\([^']*\)'.*/\1/")
+		if [[ "${dry_run}" == true ]]; then
+			echo "  [DRY RUN] ${ts_entrypoint}: ${old_version} -> ${new_version}"
+		else
+			update_ts_version "${ts_full_path}" "${new_version}"
+			echo "  ✅ ${ts_entrypoint}: ${old_version} -> ${new_version}"
+		fi
+		updated_count=$((updated_count + 1))
+	fi
 
 	echo ""
 	if [[ "${dry_run}" == true ]]; then
