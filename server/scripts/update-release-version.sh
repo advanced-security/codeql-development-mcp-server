@@ -278,6 +278,17 @@ update_pack_version() {
 update_ts_version() {
 	local file="$1"
 	local new_version="$2"
+	local matches
+
+	## Ensure there is exactly one VERSION constant to update
+	matches=$(grep -c "const VERSION = '" "${file}" || true)
+	if [[ "${matches}" -eq 0 ]]; then
+		echo "Error: Could not find a 'const VERSION = ...' definition in ${file}" >&2
+		exit 1
+	elif [[ "${matches}" -gt 1 ]]; then
+		echo "Error: Found multiple 'const VERSION = ...' definitions in ${file}" >&2
+		exit 1
+	fi
 	sed -i.bak "s/const VERSION = '[^']*'/const VERSION = '${new_version}'/" "${file}"
 	rm -f "${file}.bak"
 }
