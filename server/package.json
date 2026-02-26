@@ -55,7 +55,7 @@
     "npm": ">=11.6.2"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "adm-zip": "^0.5.16",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
