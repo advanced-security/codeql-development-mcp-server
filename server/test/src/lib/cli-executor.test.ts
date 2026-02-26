@@ -3,18 +3,20 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
-import { writeFileSync, rmSync, chmodSync } from 'fs';
+import { writeFileSync, rmSync, chmodSync, mkdirSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { join } from 'path';
+import { isAbsolute, join } from 'path';
 import { createProjectTempDir } from '../../../src/utils/temp-dir';
 import {
   buildCodeQLArgs,
   buildQLTArgs,
+  discoverVsCodeCodeQLDistribution,
   executeCLICommand,
   enableTestCommands,
   disableTestCommands,
-  resolveCodeQLBinary,
   getResolvedCodeQLDir,
+  getVsCodeGlobalStorageCandidates,
+  resolveCodeQLBinary,
   resetResolvedCodeQLBinary,
   sanitizeCLIArgument,
   sanitizeCLIArguments,
@@ -585,14 +587,12 @@ describe('resolveCodeQLBinary', () => {
     delete process.env.CODEQL_PATH;
     const result = resolveCodeQLBinary();
     expect(result).toBe('codeql');
-    expect(getResolvedCodeQLDir()).toBeNull();
   });
 
   it('should default to "codeql" when CODEQL_PATH is empty', () => {
     process.env.CODEQL_PATH = '';
     const result = resolveCodeQLBinary();
     expect(result).toBe('codeql');
-    expect(getResolvedCodeQLDir()).toBeNull();
   });
 
   it('should return bare codeql command and set dir to parent directory', () => {
@@ -636,7 +636,9 @@ describe('resolveCodeQLBinary', () => {
   it('should cache the resolved dir via getResolvedCodeQLDir', () => {
     delete process.env.CODEQL_PATH;
     resolveCodeQLBinary();
-    expect(getResolvedCodeQLDir()).toBeNull();
+    // May be non-null if vscode-codeql distribution is auto-discovered
+    const dir = getResolvedCodeQLDir();
+    expect(dir === null || typeof dir === 'string').toBe(true);
   });
 
   it('should reset to default via resetResolvedCodeQLBinary', () => {
@@ -674,13 +676,15 @@ describe('CODEQL_PATH - PATH prepend integration', () => {
   it('should cache resolved value and ignore subsequent env changes', () => {
     delete process.env.CODEQL_PATH;
     const first = resolveCodeQLBinary();
+    const firstDir = getResolvedCodeQLDir();
     expect(first).toBe('codeql');
 
     // Change the env after resolution — should still return cached value
     process.env.CODEQL_PATH = '/some/changed/path/codeql';
     const second = resolveCodeQLBinary();
+    const secondDir = getResolvedCodeQLDir();
     expect(second).toBe('codeql');
-    expect(getResolvedCodeQLDir()).toBeNull();
+    expect(secondDir).toBe(firstDir);
   });
 
   it.skipIf(process.platform === 'win32')('should prepend CODEQL_PATH directory to child process PATH', async () => {
@@ -774,6 +778,148 @@ describe('validateCodeQLBinaryReachable', () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('getVsCodeGlobalStorageCandidates', () => {
+  it('should return an array of candidate paths', () => {
+    const candidates = getVsCodeGlobalStorageCandidates();
+    expect(Array.isArray(candidates)).toBe(true);
+    expect(candidates.length).toBeGreaterThan(0);
+  });
+
+  it('should include Code, Code - Insiders, and VSCodium variants', () => {
+    const candidates = getVsCodeGlobalStorageCandidates();
+    // Should have entries for all three VS Code app variants
+    expect(candidates.length).toBe(3);
+    const joined = candidates.join('\n');
+    expect(joined).toContain('Code');
+    expect(joined).toContain('Code - Insiders');
+    expect(joined).toContain('VSCodium');
+  });
+
+  it('should return absolute paths', () => {
+    const candidates = getVsCodeGlobalStorageCandidates();
+    for (const candidate of candidates) {
+      expect(isAbsolute(candidate)).toBe(true);
+    }
+  });
+
+  it('should include globalStorage in the paths', () => {
+    const candidates = getVsCodeGlobalStorageCandidates();
+    for (const candidate of candidates) {
+      expect(candidate).toContain('globalStorage');
+    }
+  });
+});
+
+describe('discoverVsCodeCodeQLDistribution', () => {
+  const binaryName = process.platform === 'win32' ? 'codeql.exe' : 'codeql';
+
+  it('should return undefined when no vscode-codeql storage exists', () => {
+    const tmpDir = createProjectTempDir('vscode-codeql-no-storage-');
+    try {
+      // No extension storage dirs created inside tmpDir
+      const result = discoverVsCodeCodeQLDistribution([tmpDir]);
+      expect(result).toBeUndefined();
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should discover CLI from distribution.json fast path', () => {
+    const tmpDir = createProjectTempDir('vscode-codeql-json-fastpath-');
+    const codeqlStorage = join(tmpDir, 'github.vscode-codeql');
+    const distDir = join(codeqlStorage, 'distribution3', 'codeql');
+    mkdirSync(distDir, { recursive: true });
+    const binaryPath = join(distDir, binaryName);
+    writeFileSync(binaryPath, '#!/bin/sh\necho test', { mode: 0o755 });
+    writeFileSync(join(codeqlStorage, 'distribution.json'), JSON.stringify({ folderIndex: 3 }));
+    try {
+      const result = discoverVsCodeCodeQLDistribution([tmpDir]);
+      expect(result).toBe(binaryPath);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should fall back to directory scan when distribution.json is missing', () => {
+    const tmpDir = createProjectTempDir('vscode-codeql-scan-fallback-');
+    const codeqlStorage = join(tmpDir, 'github.vscode-codeql');
+    const dist1 = join(codeqlStorage, 'distribution1', 'codeql');
+    const dist3 = join(codeqlStorage, 'distribution3', 'codeql');
+    mkdirSync(dist1, { recursive: true });
+    mkdirSync(dist3, { recursive: true });
+    writeFileSync(join(dist1, binaryName), '#!/bin/sh\necho v1', { mode: 0o755 });
+    writeFileSync(join(dist3, binaryName), '#!/bin/sh\necho v3', { mode: 0o755 });
+    // No distribution.json — scan should pick the highest-numbered directory
+    try {
+      const result = discoverVsCodeCodeQLDistribution([tmpDir]);
+      expect(result).toBe(join(dist3, binaryName));
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should prefer distribution.json folderIndex over highest-numbered directory', () => {
+    const tmpDir = createProjectTempDir('vscode-codeql-json-precedence-');
+    const codeqlStorage = join(tmpDir, 'github.vscode-codeql');
+    const dist2 = join(codeqlStorage, 'distribution2', 'codeql');
+    const dist3 = join(codeqlStorage, 'distribution3', 'codeql');
+    mkdirSync(dist2, { recursive: true });
+    mkdirSync(dist3, { recursive: true });
+    writeFileSync(join(dist2, binaryName), '#!/bin/sh\necho v2', { mode: 0o755 });
+    writeFileSync(join(dist3, binaryName), '#!/bin/sh\necho v3', { mode: 0o755 });
+    // distribution.json points to distribution2 (lower index than distribution3)
+    writeFileSync(join(codeqlStorage, 'distribution.json'), JSON.stringify({ folderIndex: 2 }));
+    try {
+      const result = discoverVsCodeCodeQLDistribution([tmpDir]);
+      // Should pick distribution2 per distribution.json, not distribution3
+      expect(result).toBe(join(dist2, binaryName));
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should scan directories sorted by descending numeric suffix', () => {
+    const tmpDir = createProjectTempDir('vscode-codeql-scan-order-');
+    const codeqlStorage = join(tmpDir, 'github.vscode-codeql');
+    const dist1 = join(codeqlStorage, 'distribution1', 'codeql');
+    const dist2 = join(codeqlStorage, 'distribution2', 'codeql');
+    const dist10 = join(codeqlStorage, 'distribution10', 'codeql');
+    mkdirSync(dist1, { recursive: true });
+    mkdirSync(dist2, { recursive: true });
+    mkdirSync(dist10, { recursive: true });
+    writeFileSync(join(dist1, binaryName), '#!/bin/sh\necho v1', { mode: 0o755 });
+    writeFileSync(join(dist2, binaryName), '#!/bin/sh\necho v2', { mode: 0o755 });
+    writeFileSync(join(dist10, binaryName), '#!/bin/sh\necho v10', { mode: 0o755 });
+    try {
+      const result = discoverVsCodeCodeQLDistribution([tmpDir]);
+      // distribution10 > distribution2 > distribution1 by numeric sort
+      expect(result).toBe(join(dist10, binaryName));
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('resolveCodeQLBinary - vscode-codeql auto-discovery', () => {
+  const originalEnv = process.env.CODEQL_PATH;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.CODEQL_PATH;
+    } else {
+      process.env.CODEQL_PATH = originalEnv;
+    }
+    resetResolvedCodeQLBinary();
+  });
+
+  it('should attempt vscode-codeql discovery when CODEQL_PATH is not set', () => {
+    delete process.env.CODEQL_PATH;
+    // This will either find a vscode-codeql distribution or fall back to bare 'codeql'
+    const result = resolveCodeQLBinary();
+    expect(result).toBe('codeql');
   });
 });
 

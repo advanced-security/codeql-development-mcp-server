@@ -6,60 +6,71 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // on the vscode mock from setup.ts for createOutputChannel.
 
 vi.mock('../src/codeql/cli-resolver', () => ({
-  CliResolver: vi.fn().mockImplementation(() => ({
-    resolve: vi.fn().mockResolvedValue('/mock/codeql'),
-    invalidateCache: vi.fn(),
-    dispose: vi.fn(),
-  })),
+  CliResolver: vi.fn().mockImplementation(function () {
+    return {
+      resolve: vi.fn().mockResolvedValue('/mock/codeql'),
+      invalidateCache: vi.fn(),
+      dispose: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock('../src/server/server-manager', () => ({
-  ServerManager: vi.fn().mockImplementation(() => ({
-    ensureInstalled: vi.fn().mockResolvedValue(false),
-    install: vi.fn().mockResolvedValue(undefined),
-    isInstalled: vi.fn().mockResolvedValue(true),
-    getCommand: vi.fn().mockReturnValue('npx'),
-    getArgs: vi.fn().mockReturnValue(['-y', 'codeql-development-mcp-server']),
-    getVersion: vi.fn().mockReturnValue(undefined),
-    getDescription: vi.fn().mockReturnValue('npx -y codeql-development-mcp-server'),
-    getInstallDir: vi.fn().mockReturnValue('/mock/install'),
-    getPackageRoot: vi.fn().mockReturnValue('/mock/install/node_modules/codeql-development-mcp-server'),
-    getInstalledVersion: vi.fn().mockResolvedValue('2.24.1'),
-    dispose: vi.fn(),
-  })),
+  ServerManager: vi.fn().mockImplementation(function () {
+    return {
+      ensureInstalled: vi.fn().mockResolvedValue(false),
+      install: vi.fn().mockResolvedValue(undefined),
+      isInstalled: vi.fn().mockResolvedValue(true),
+      getCommand: vi.fn().mockReturnValue('npx'),
+      getArgs: vi.fn().mockReturnValue(['-y', 'codeql-development-mcp-server']),
+      getVersion: vi.fn().mockReturnValue(undefined),
+      getDescription: vi.fn().mockReturnValue('npx -y codeql-development-mcp-server'),
+      getInstallDir: vi.fn().mockReturnValue('/mock/install'),
+      getPackageRoot: vi.fn().mockReturnValue('/mock/install/node_modules/codeql-development-mcp-server'),
+      getInstalledVersion: vi.fn().mockResolvedValue('2.24.1'),
+      dispose: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock('../src/server/pack-installer', () => ({
-  PackInstaller: vi.fn().mockImplementation(() => ({
-    installAll: vi.fn().mockResolvedValue(undefined),
-    getQlpackPaths: vi.fn().mockReturnValue([]),
-    dispose: vi.fn(),
-  })),
+  PackInstaller: vi.fn().mockImplementation(function () {
+    return {
+      installAll: vi.fn().mockResolvedValue(undefined),
+      getQlpackPaths: vi.fn().mockReturnValue([]),
+      dispose: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock('../src/server/mcp-provider', () => ({
-  McpProvider: vi.fn().mockImplementation(() => ({
-    provideMcpServerDefinitions: vi.fn().mockResolvedValue([]),
-    resolveMcpServerDefinition: vi.fn().mockResolvedValue(undefined),
-    onDidChangeMcpServerDefinitions: vi.fn(),
-    fireDidChange: vi.fn(),
-    dispose: vi.fn(),
-  })),
+  McpProvider: vi.fn().mockImplementation(function () {
+    return {
+      provideMcpServerDefinitions: vi.fn().mockResolvedValue([]),
+      resolveMcpServerDefinition: vi.fn().mockResolvedValue(undefined),
+      onDidChangeMcpServerDefinitions: vi.fn(),
+      fireDidChange: vi.fn(),
+      dispose: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock('../src/bridge/storage-paths', () => ({
-  StoragePaths: vi.fn().mockImplementation(() => ({
-    getCodeqlGlobalStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage'),
-    getDatabaseStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage'),
-    getQueryStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage/queries'),
-    getVariantAnalysisStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage/variant-analyses'),
-    getGlobalStorageRoot: vi.fn().mockReturnValue('/mock/global-storage'),
-    dispose: vi.fn(),
-  })),
+  StoragePaths: vi.fn().mockImplementation(function () {
+    return {
+      getCodeqlGlobalStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage'),
+      getDatabaseStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage'),
+      getAllDatabaseStoragePaths: vi.fn().mockReturnValue(['/mock/codeql-storage']),
+      getQueryStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage/queries'),
+      getVariantAnalysisStoragePath: vi.fn().mockReturnValue('/mock/codeql-storage/variant-analyses'),
+      getGlobalStorageRoot: vi.fn().mockReturnValue('/mock/global-storage'),
+      dispose: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock('../src/bridge/database-watcher', () => ({
-  DatabaseWatcher: vi.fn().mockImplementation(() => {
+  DatabaseWatcher: vi.fn().mockImplementation(function () {
     const listeners: Function[] = [];
     return {
       onDidChange: (listener: Function) => { listeners.push(listener); return { dispose: () => {} }; },
@@ -70,7 +81,7 @@ vi.mock('../src/bridge/database-watcher', () => ({
 }));
 
 vi.mock('../src/bridge/query-results-watcher', () => ({
-  QueryResultsWatcher: vi.fn().mockImplementation(() => {
+  QueryResultsWatcher: vi.fn().mockImplementation(function () {
     const listeners: Function[] = [];
     return {
       onDidChange: (listener: Function) => { listeners.push(listener); return { dispose: () => {} }; },
@@ -80,11 +91,13 @@ vi.mock('../src/bridge/query-results-watcher', () => ({
 }));
 
 vi.mock('../src/bridge/environment-builder', () => ({
-  EnvironmentBuilder: vi.fn().mockImplementation(() => ({
-    build: vi.fn().mockResolvedValue({ CODEQL_PATH: '/mock/codeql' }),
-    invalidate: vi.fn(),
-    dispose: vi.fn(),
-  })),
+  EnvironmentBuilder: vi.fn().mockImplementation(function () {
+    return {
+      build: vi.fn().mockResolvedValue({ CODEQL_PATH: '/mock/codeql' }),
+      invalidate: vi.fn(),
+      dispose: vi.fn(),
+    };
+  }),
 }));
 
 import { activate, deactivate } from '../src/extension';
@@ -125,7 +138,7 @@ describe('Extension', () => {
   let ctx: vscode.ExtensionContext;
 
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     ctx = createMockContext();
   });
 

@@ -16,3 +16,6 @@ node_modules
 server/dist/
 query-results*
 workshops/
+
+.vscode-test
+
