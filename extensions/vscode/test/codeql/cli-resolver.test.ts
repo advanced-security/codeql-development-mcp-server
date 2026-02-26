@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { CliResolver } from '../../src/codeql/cli-resolver';
 
 // Mock child_process
@@ -171,8 +171,10 @@ describe('CliResolver', () => {
     const storagePath = '/mock/globalStorage/github.vscode-codeql';
     const binaryName = process.platform === 'win32' ? 'codeql.exe' : 'codeql';
 
+    let originalEnv: string | undefined;
+
     beforeEach(() => {
-      const originalEnv = process.env.CODEQL_PATH;
+      originalEnv = process.env.CODEQL_PATH;
       delete process.env.CODEQL_PATH;
 
       // Make `which codeql` fail
@@ -190,14 +192,14 @@ describe('CliResolver', () => {
 
       // All known filesystem locations fail
       vi.mocked(access).mockRejectedValue(new Error('ENOENT'));
+    });
 
-      return () => {
-        if (originalEnv === undefined) {
-          delete process.env.CODEQL_PATH;
-        } else {
-          process.env.CODEQL_PATH = originalEnv;
-        }
-      };
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.CODEQL_PATH;
+      } else {
+        process.env.CODEQL_PATH = originalEnv;
+      }
     });
 
     it('should resolve from distribution.json hint', async () => {

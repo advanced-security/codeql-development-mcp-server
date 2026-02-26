@@ -129,6 +129,14 @@ const CODEQL_BINARY_NAME = process.platform === 'win32' ? 'codeql.exe' : 'codeql
 const VSCODE_APP_NAMES = ['Code', 'Code - Insiders', 'VSCodium'];
 
 /**
+ * Possible directory names for the vscode-codeql extension's global storage.
+ * VS Code lowercases the extension ID on some platforms/versions, but the
+ * extension's publisher casing (`GitHub`) may also appear on disk. We check
+ * both to ensure discovery works on case-sensitive filesystems.
+ */
+const VSCODE_CODEQL_STORAGE_DIR_NAMES = ['github.vscode-codeql', 'GitHub.vscode-codeql'];
+
+/**
  * Compute candidate VS Code global-storage root directories for the current
  * platform. Returns an array of absolute paths that may or may not exist.
  */
@@ -155,7 +163,11 @@ export function getVsCodeGlobalStorageCandidates(): string[] {
  * extension, if present.
  *
  * The vscode-codeql extension stores its managed CLI in:
- *   `<globalStorage>/github.vscode-codeql/distribution<N>/codeql/codeql`
+ *   `<globalStorage>/<extensionDirName>/distribution<N>/codeql/codeql`
+ *
+ * where `<extensionDirName>` may be `github.vscode-codeql` (lowercased by
+ * some VS Code versions) or `GitHub.vscode-codeql` (original publisher casing).
+ * Both casings are checked to ensure discovery works on case-sensitive filesystems.
  *
  * A `distribution.json` file in the storage root contains a `folderIndex`
  * property that identifies the current distribution directory. We use that
@@ -168,18 +180,21 @@ export function discoverVsCodeCodeQLDistribution(): string | undefined {
   const globalStorageCandidates = getVsCodeGlobalStorageCandidates();
 
   for (const gsRoot of globalStorageCandidates) {
-    // The extension ID is always lowercased on disk by VS Code
-    const codeqlStorage = join(gsRoot, 'github.vscode-codeql');
+    // Check both casings: VS Code may lowercase the extension ID on disk,
+    // but the original publisher casing (GitHub.vscode-codeql) can also appear.
+    for (const dirName of VSCODE_CODEQL_STORAGE_DIR_NAMES) {
+      const codeqlStorage = join(gsRoot, dirName);
 
-    if (!existsSync(codeqlStorage)) continue;
+      if (!existsSync(codeqlStorage)) continue;
 
-    // Fast path: read distribution.json for the exact folder index
-    const hintResult = discoverFromDistributionJson(codeqlStorage);
-    if (hintResult) return hintResult;
+      // Fast path: read distribution.json for the exact folder index
+      const hintResult = discoverFromDistributionJson(codeqlStorage);
+      if (hintResult) return hintResult;
 
-    // Fallback: scan distribution* directories
-    const scanResult = discoverFromDistributionScan(codeqlStorage);
-    if (scanResult) return scanResult;
+      // Fallback: scan distribution* directories
+      const scanResult = discoverFromDistributionScan(codeqlStorage);
+      if (scanResult) return scanResult;
+    }
   }
 
   return undefined;

@@ -38212,12 +38212,14 @@ function getVsCodeGlobalStorageCandidates() {
 function discoverVsCodeCodeQLDistribution() {
   const globalStorageCandidates = getVsCodeGlobalStorageCandidates();
   for (const gsRoot of globalStorageCandidates) {
-    const codeqlStorage = join4(gsRoot, "github.vscode-codeql");
-    if (!existsSync2(codeqlStorage)) continue;
-    const hintResult = discoverFromDistributionJson(codeqlStorage);
-    if (hintResult) return hintResult;
-    const scanResult = discoverFromDistributionScan(codeqlStorage);
-    if (scanResult) return scanResult;
+    for (const dirName of VSCODE_CODEQL_STORAGE_DIR_NAMES) {
+      const codeqlStorage = join4(gsRoot, dirName);
+      if (!existsSync2(codeqlStorage)) continue;
+      const hintResult = discoverFromDistributionJson(codeqlStorage);
+      if (hintResult) return hintResult;
+      const scanResult = discoverFromDistributionScan(codeqlStorage);
+      if (scanResult) return scanResult;
+    }
   }
   return void 0;
 }
@@ -38524,7 +38526,7 @@ async function validateCommandExists(command) {
     return false;
   }
 }
-var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult, CODEQL_BINARY_NAME, VSCODE_APP_NAMES, FRESH_PROCESS_SUBCOMMANDS;
+var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult, CODEQL_BINARY_NAME, VSCODE_APP_NAMES, VSCODE_CODEQL_STORAGE_DIR_NAMES, FRESH_PROCESS_SUBCOMMANDS;
 var init_cli_executor = __esm({
   "src/lib/cli-executor.ts"() {
     "use strict";
@@ -38575,6 +38577,7 @@ var init_cli_executor = __esm({
     resolvedCodeQLDir = null;
     CODEQL_BINARY_NAME = process.platform === "win32" ? "codeql.exe" : "codeql";
     VSCODE_APP_NAMES = ["Code", "Code - Insiders", "VSCodium"];
+    VSCODE_CODEQL_STORAGE_DIR_NAMES = ["github.vscode-codeql", "GitHub.vscode-codeql"];
     FRESH_PROCESS_SUBCOMMANDS = /* @__PURE__ */ new Set([
       "database analyze",
       "database create",
