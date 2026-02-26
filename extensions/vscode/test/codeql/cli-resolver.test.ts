@@ -324,6 +324,31 @@ describe('CliResolver', () => {
       expect(result).toBe(expectedPath);
     });
 
+    it('should discover CLI from alternate casing of storage path', async () => {
+      // Simulate the caller providing 'GitHub.vscode-codeql' (StoragePaths publisher casing)
+      // but the actual directory on disk is 'github.vscode-codeql' (lowercased by VS Code).
+      const lowercaseExtStorage = '/mock/globalStorage/github.vscode-codeql';
+      const publisherCaseExtStorage = '/mock/globalStorage/GitHub.vscode-codeql';
+      resolver = new CliResolver(logger, publisherCaseExtStorage);
+
+      // distribution.json at the publisher-cased path throws; the lowercase path returns valid JSON
+      vi.mocked(readFile).mockImplementation((path: any) => {
+        if (String(path).startsWith(publisherCaseExtStorage)) {
+          return Promise.reject(new Error('ENOENT'));
+        }
+        return Promise.resolve(JSON.stringify({ folderIndex: 1 }) as any);
+      });
+
+      const expectedPath = `${lowercaseExtStorage}/distribution1/codeql/${binaryName}`;
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path) === expectedPath) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      const result = await resolver.resolve();
+      expect(result).toBe(expectedPath);
+    });
+
     it('should handle distribution.json without folderIndex property', async () => {
       resolver = new CliResolver(logger, storagePath);
 
