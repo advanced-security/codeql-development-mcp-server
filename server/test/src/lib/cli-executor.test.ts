@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { writeFileSync, rmSync, chmodSync, mkdirSync, existsSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { join } from 'path';
+import { isAbsolute, join } from 'path';
 import { createProjectTempDir } from '../../../src/utils/temp-dir';
 import {
   buildCodeQLArgs,
@@ -810,7 +810,7 @@ describe('getVsCodeGlobalStorageCandidates', () => {
   it('should return absolute paths', () => {
     const candidates = getVsCodeGlobalStorageCandidates();
     for (const candidate of candidates) {
-      expect(candidate.startsWith('/')).toBe(true);
+      expect(isAbsolute(candidate)).toBe(true);
     }
   });
 
