@@ -1,7 +1,7 @@
 import { execFile } from 'child_process';
 import { access, readdir, readFile } from 'fs/promises';
 import { constants } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { DisposableObject } from '../common/disposable';
 import type { Logger } from '../common/logger';
 
@@ -122,33 +122,48 @@ export class CliResolver extends DisposableObject {
   private async resolveFromVsCodeDistribution(): Promise<string | undefined> {
     if (!this.vsCodeCodeqlStoragePath) return undefined;
 
-    try {
-      // Fast path: read distribution.json for the exact folder index
-      const hintPath = await this.resolveFromDistributionJson();
-      if (hintPath) return hintPath;
-    } catch {
-      this.logger.debug('distribution.json hint unavailable, falling back to directory scan');
-    }
+    const parent = dirname(this.vsCodeCodeqlStoragePath);
+    // VS Code stores the extension directory as either 'GitHub.vscode-codeql'
+    // (original publisher casing) or 'github.vscode-codeql' (lowercased by VS Code
+    // on some platforms/versions). Probe both to ensure discovery works on
+    // case-sensitive filesystems.
+    const candidatePaths = [
+      ...new Set([
+        this.vsCodeCodeqlStoragePath,
+        join(parent, 'github.vscode-codeql'),
+        join(parent, 'GitHub.vscode-codeql'),
+      ]),
+    ];
 
-    // Fallback: scan for distribution* directories
-    return this.resolveFromDistributionScan();
+    for (const storagePath of candidatePaths) {
+      try {
+        // Fast path: read distribution.json for the exact folder index
+        const hintPath = await this.resolveFromDistributionJson(storagePath);
+        if (hintPath) return hintPath;
+      } catch {
+        this.logger.debug('distribution.json hint unavailable, falling back to directory scan');
+      }
+
+      // Fallback: scan for distribution* directories
+      const scanPath = await this.resolveFromDistributionScan(storagePath);
+      if (scanPath) return scanPath;
+    }
+    return undefined;
   }
 
   /**
    * Read `distribution.json` to get the current `folderIndex` and validate
    * the binary at the corresponding path.
    */
-  private async resolveFromDistributionJson(): Promise<string | undefined> {
-    if (!this.vsCodeCodeqlStoragePath) return undefined;
-
-    const jsonPath = join(this.vsCodeCodeqlStoragePath, 'distribution.json');
+  private async resolveFromDistributionJson(storagePath: string): Promise<string | undefined> {
+    const jsonPath = join(storagePath, 'distribution.json');
     const content = await readFile(jsonPath, 'utf-8');
     const data = JSON.parse(content) as { folderIndex?: number };
 
     if (typeof data.folderIndex !== 'number') return undefined;
 
     const binaryPath = join(
-      this.vsCodeCodeqlStoragePath,
+      storagePath,
       `distribution${data.folderIndex}`,
       'codeql',
       CODEQL_BINARY_NAME,
@@ -165,11 +180,9 @@ export class CliResolver extends DisposableObject {
    * Scan for `distribution*` directories sorted by numeric suffix (highest
    * first) and return the first one containing a valid `codeql` binary.
    */
-  private async resolveFromDistributionScan(): Promise<string | undefined> {
-    if (!this.vsCodeCodeqlStoragePath) return undefined;
-
+  private async resolveFromDistributionScan(storagePath: string): Promise<string | undefined> {
     try {
-      const entries = await readdir(this.vsCodeCodeqlStoragePath, { withFileTypes: true });
+      const entries = await readdir(storagePath, { withFileTypes: true });
 
       const distDirs = entries
         .filter(e => e.isDirectory() && /^distribution\d*$/.test(e.name))
@@ -181,7 +194,7 @@ export class CliResolver extends DisposableObject {
 
       for (const dir of distDirs) {
         const binaryPath = join(
-          this.vsCodeCodeqlStoragePath,
+          storagePath,
           dir.name,
           'codeql',
           CODEQL_BINARY_NAME,
@@ -194,7 +207,7 @@ export class CliResolver extends DisposableObject {
       }
     } catch {
       this.logger.debug(
-        `Could not scan vscode-codeql distribution directory: ${this.vsCodeCodeqlStoragePath}`,
+        `Could not scan vscode-codeql distribution directory: ${storagePath}`,
       );
     }
     return undefined;
