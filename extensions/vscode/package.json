@@ -2,7 +2,7 @@
   "name": "vscode-codeql-development-mcp-server",
   "displayName": "CodeQL Development MCP Server",
   "description": "LLM-assisted development of CodeQL queries, libraries, and tests via #ql-mcp prompts, resources, and tools.",
-  "version": "2.24.2-rc3",
+  "version": "2.24.2",
   "publisher": "advanced-security",
   "license": "SEE LICENSE IN LICENSE",
   "icon": "media/codeql-icon.png",
