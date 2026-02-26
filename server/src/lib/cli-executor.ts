@@ -176,8 +176,8 @@ export function getVsCodeGlobalStorageCandidates(): string[] {
  *
  * @returns Absolute path to the `codeql` binary, or `undefined` if not found.
  */
-export function discoverVsCodeCodeQLDistribution(): string | undefined {
-  const globalStorageCandidates = getVsCodeGlobalStorageCandidates();
+export function discoverVsCodeCodeQLDistribution(candidateStorageRoots?: string[]): string | undefined {
+  const globalStorageCandidates = candidateStorageRoots ?? getVsCodeGlobalStorageCandidates();
 
   for (const gsRoot of globalStorageCandidates) {
     // Check both casings: VS Code may lowercase the extension ID on disk,
