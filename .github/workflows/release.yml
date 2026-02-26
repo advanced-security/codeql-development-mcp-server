@@ -232,7 +232,7 @@ jobs:
           tar -czvf codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.tar.gz -C dist-package .
 
       - name: Release - Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}
           path: codeql-development-mcp-server-${{ needs.resolve-version.outputs.version }}.tar.gz
