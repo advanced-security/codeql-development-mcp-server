@@ -38209,8 +38209,8 @@ function getVsCodeGlobalStorageCandidates() {
   }
   return candidates;
 }
-function discoverVsCodeCodeQLDistribution() {
-  const globalStorageCandidates = getVsCodeGlobalStorageCandidates();
+function discoverVsCodeCodeQLDistribution(candidateStorageRoots) {
+  const globalStorageCandidates = candidateStorageRoots ?? getVsCodeGlobalStorageCandidates();
   for (const gsRoot of globalStorageCandidates) {
     for (const dirName of VSCODE_CODEQL_STORAGE_DIR_NAMES) {
       const codeqlStorage = join4(gsRoot, dirName);
