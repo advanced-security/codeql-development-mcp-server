@@ -676,12 +676,15 @@ describe('CODEQL_PATH - PATH prepend integration', () => {
   it('should cache resolved value and ignore subsequent env changes', () => {
     delete process.env.CODEQL_PATH;
     const first = resolveCodeQLBinary();
+    const firstDir = getResolvedCodeQLDir();
     expect(first).toBe('codeql');
 
     // Change the env after resolution — should still return cached value
     process.env.CODEQL_PATH = '/some/changed/path/codeql';
     const second = resolveCodeQLBinary();
+    const secondDir = getResolvedCodeQLDir();
     expect(second).toBe('codeql');
+    expect(secondDir).toBe(firstDir);
   });
 
   it.skipIf(process.platform === 'win32')('should prepend CODEQL_PATH directory to child process PATH', async () => {
