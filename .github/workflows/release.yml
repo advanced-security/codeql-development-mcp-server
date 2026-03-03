@@ -181,18 +181,18 @@ jobs:
 
     steps:
       - name: Release - Download release build artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-build-${{ needs.resolve-version.outputs.version }}
 
       - name: Release - Download CodeQL pack artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: codeql-tool-query-packs-${{ needs.resolve-version.outputs.version }}
           path: dist-packs
 
       - name: Release - Download VSIX artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: codeql-development-mcp-server-vsix-${{ needs.resolve-version.outputs.version }}
           path: dist-vsix
