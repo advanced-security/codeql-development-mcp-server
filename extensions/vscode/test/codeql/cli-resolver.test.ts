@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { CliResolver } from '../../src/codeql/cli-resolver';
 
 // Mock child_process
@@ -9,10 +9,12 @@ vi.mock('child_process', () => ({
 // Mock fs/promises
 vi.mock('fs/promises', () => ({
   access: vi.fn(),
+  readdir: vi.fn(),
+  readFile: vi.fn(),
 }));
 
 import { execFile } from 'child_process';
-import { access } from 'fs/promises';
+import { access, readdir, readFile } from 'fs/promises';
 
 function createMockLogger() {
   return {
@@ -163,5 +165,209 @@ describe('CliResolver', () => {
 
   it('should be disposable', () => {
     expect(() => resolver.dispose()).not.toThrow();
+  });
+
+  describe('vscode-codeql distribution discovery', () => {
+    const storagePath = '/mock/globalStorage/github.vscode-codeql';
+    const binaryName = process.platform === 'win32' ? 'codeql.exe' : 'codeql';
+
+    let originalEnv: string | undefined;
+
+    beforeEach(() => {
+      originalEnv = process.env.CODEQL_PATH;
+      delete process.env.CODEQL_PATH;
+
+      // Make `which codeql` fail
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, callback: any) => {
+          if (String(_cmd) === 'which' || String(_cmd) === 'where') {
+            callback(new Error('not found'), '', '');
+          } else {
+            // codeql --version for validateBinary
+            callback(null, 'CodeQL CLI 2.24.2\n', '');
+          }
+          return {} as any;
+        },
+      );
+
+      // All known filesystem locations fail
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'));
+    });
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.CODEQL_PATH;
+      } else {
+        process.env.CODEQL_PATH = originalEnv;
+      }
+    });
+
+    it('should resolve from distribution.json hint', async () => {
+      resolver = new CliResolver(logger, storagePath);
+
+      // distribution.json exists with folderIndex=3
+      vi.mocked(readFile).mockResolvedValueOnce(
+        JSON.stringify({ folderIndex: 3, release: { name: 'v2.24.2' } }),
+      );
+
+      // The binary at distribution3/codeql/codeql is valid
+      const expectedPath = `${storagePath}/distribution3/codeql/${binaryName}`;
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path) === expectedPath) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      const result = await resolver.resolve();
+      expect(result).toBe(expectedPath);
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('vscode-codeql distribution'),
+      );
+    });
+
+    it('should fall back to directory scan when distribution.json is missing', async () => {
+      resolver = new CliResolver(logger, storagePath);
+
+      // distribution.json read fails
+      vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT'));
+
+      // Directory listing returns distribution directories
+      vi.mocked(readdir).mockResolvedValueOnce([
+        { name: 'distribution1', isDirectory: () => true },
+        { name: 'distribution3', isDirectory: () => true },
+        { name: 'distribution2', isDirectory: () => true },
+        { name: 'queries', isDirectory: () => true },
+        { name: 'distribution.json', isDirectory: () => false },
+      ] as any);
+
+      // Only distribution3 has a valid binary
+      const expectedPath = `${storagePath}/distribution3/codeql/${binaryName}`;
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path) === expectedPath) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      const result = await resolver.resolve();
+      expect(result).toBe(expectedPath);
+    });
+
+    it('should scan directories sorted by descending number', async () => {
+      resolver = new CliResolver(logger, storagePath);
+
+      vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT'));
+
+      vi.mocked(readdir).mockResolvedValueOnce([
+        { name: 'distribution1', isDirectory: () => true },
+        { name: 'distribution10', isDirectory: () => true },
+        { name: 'distribution2', isDirectory: () => true },
+      ] as any);
+
+      // All binaries are valid — should pick distribution10 (highest number)
+      vi.mocked(access).mockResolvedValue(undefined as any);
+
+      const result = await resolver.resolve();
+      expect(result).toBe(`${storagePath}/distribution10/codeql/${binaryName}`);
+    });
+
+    it('should return undefined when no storage path is provided', async () => {
+      resolver = new CliResolver(logger); // no storage path
+
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, callback: any) => {
+          callback(new Error('not found'), '', '');
+          return {} as any;
+        },
+      );
+
+      const result = await resolver.resolve();
+      expect(result).toBeUndefined();
+    });
+
+    it('should skip distribution directories without a valid binary', async () => {
+      resolver = new CliResolver(logger, storagePath);
+
+      vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT'));
+
+      vi.mocked(readdir).mockResolvedValueOnce([
+        { name: 'distribution3', isDirectory: () => true },
+        { name: 'distribution2', isDirectory: () => true },
+        { name: 'distribution1', isDirectory: () => true },
+      ] as any);
+
+      const expectedPath = `${storagePath}/distribution1/codeql/${binaryName}`;
+      vi.mocked(access).mockImplementation((path: any) => {
+        // Only distribution1 has the binary
+        if (String(path) === expectedPath) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      const result = await resolver.resolve();
+      expect(result).toBe(expectedPath);
+    });
+
+    it('should handle distribution.json with invalid JSON gracefully', async () => {
+      resolver = new CliResolver(logger, storagePath);
+
+      // Return non-JSON content
+      vi.mocked(readFile).mockResolvedValueOnce('not-valid-json');
+
+      vi.mocked(readdir).mockResolvedValueOnce([
+        { name: 'distribution1', isDirectory: () => true },
+      ] as any);
+
+      const expectedPath = `${storagePath}/distribution1/codeql/${binaryName}`;
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path) === expectedPath) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      const result = await resolver.resolve();
+      expect(result).toBe(expectedPath);
+    });
+
+    it('should discover CLI from alternate casing of storage path', async () => {
+      // Simulate the caller providing 'GitHub.vscode-codeql' (StoragePaths publisher casing)
+      // but the actual directory on disk is 'github.vscode-codeql' (lowercased by VS Code).
+      const lowercaseExtStorage = '/mock/globalStorage/github.vscode-codeql';
+      const publisherCaseExtStorage = '/mock/globalStorage/GitHub.vscode-codeql';
+      resolver = new CliResolver(logger, publisherCaseExtStorage);
+
+      // distribution.json at the publisher-cased path throws; the lowercase path returns valid JSON
+      vi.mocked(readFile).mockImplementation((path: any) => {
+        if (String(path).startsWith(publisherCaseExtStorage)) {
+          return Promise.reject(new Error('ENOENT'));
+        }
+        return Promise.resolve(JSON.stringify({ folderIndex: 1 }) as any);
+      });
+
+      const expectedPath = `${lowercaseExtStorage}/distribution1/codeql/${binaryName}`;
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path) === expectedPath) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      const result = await resolver.resolve();
+      expect(result).toBe(expectedPath);
+    });
+
+    it('should handle distribution.json without folderIndex property', async () => {
+      resolver = new CliResolver(logger, storagePath);
+
+      vi.mocked(readFile).mockResolvedValueOnce(
+        JSON.stringify({ release: { name: 'v2.24.2' } }),
+      );
+
+      vi.mocked(readdir).mockResolvedValueOnce([
+        { name: 'distribution1', isDirectory: () => true },
+      ] as any);
+
+      const expectedPath = `${storagePath}/distribution1/codeql/${binaryName}`;
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path) === expectedPath) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      const result = await resolver.resolve();
+      expect(result).toBe(expectedPath);
+    });
   });
 });
