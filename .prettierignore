@@ -12,7 +12,10 @@ build
 client/**/after/
 client/**/before/
 coverage
+extensions/vscode/.vscode-test
+extensions/vscode/test/fixtures/
 node_modules
-server/dist/
 query-results*
+server/dist/
 workshops/
+
