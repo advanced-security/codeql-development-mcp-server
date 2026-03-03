@@ -112,7 +112,7 @@ jobs:
           done
 
       - name: VSIX - Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: codeql-development-mcp-server-vsix-${{ steps.version.outputs.version }}
           path: extensions/vscode/${{ steps.package.outputs.vsix_name }}
