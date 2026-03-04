@@ -336,6 +336,14 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               positionalArgs = [...positionalArgs, query as string];
             }
             break;
+
+          case 'codeql_resolve_library-path':
+            // --query is a named flag for resolve library-path, not positional.
+            // It was extracted from options so we need to restore it.
+            if (query) {
+              options.query = query;
+            }
+            break;
             
           case 'codeql_resolve_queries':
             // Handle directory parameter as positional argument
