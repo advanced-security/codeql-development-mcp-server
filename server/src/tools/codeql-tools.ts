@@ -26,6 +26,7 @@ import {
   codeqlResolveLanguagesTool,
   codeqlResolveLibraryPathTool,
   codeqlResolveMetadataTool,
+  codeqlResolvePacksTool,
   codeqlResolveQlrefTool,
   codeqlResolveQueriesTool,
   codeqlResolveTestsTool,
@@ -155,6 +156,7 @@ export function registerCodeQLTools(server: McpServer): void {
   registerCLITool(server, codeqlResolveLanguagesTool);
   registerCLITool(server, codeqlResolveLibraryPathTool);
   registerCLITool(server, codeqlResolveMetadataTool);
+  registerCLITool(server, codeqlResolvePacksTool);
   registerCLITool(server, codeqlResolveQlrefTool);
   registerCLITool(server, codeqlResolveQueriesTool);
   registerCLITool(server, codeqlResolveTestsTool);

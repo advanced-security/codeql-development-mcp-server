@@ -102,6 +102,62 @@ export interface CompletionItem {
   sortText?: string;
 }
 
+/**
+ * Symbol kinds as defined by the LSP spec.
+ */
+/* eslint-disable no-unused-vars */
+export enum SymbolKind {
+  File = 1,
+  Module = 2,
+  Namespace = 3,
+  Package = 4,
+  Class = 5,
+  Method = 6,
+  Property = 7,
+  Field = 8,
+  Constructor = 9,
+  Enum = 10,
+  Interface = 11,
+  Function = 12,
+  Variable = 13,
+  Constant = 14,
+  String = 15,
+  Number = 16,
+  Boolean = 17,
+  Array = 18,
+  Object = 19,
+  Key = 20,
+  Null = 21,
+  EnumMember = 22,
+  Struct = 23,
+  Event = 24,
+  Operator = 25,
+  TypeParameter = 26,
+}
+/* eslint-enable no-unused-vars */
+
+/**
+ * Hierarchical document symbol (returned when the server supports hierarchical symbols).
+ */
+export interface DocumentSymbol {
+  children?: DocumentSymbol[];
+  detail?: string;
+  kind: SymbolKind;
+  name: string;
+  range: LSPRange;
+  selectionRange: LSPRange;
+}
+
+/**
+ * Flat symbol information (returned when the server does not support hierarchical symbols).
+ */
+export interface SymbolInformation {
+  containerName?: string;
+  kind: SymbolKind;
+  location: LSPLocation;
+  name: string;
+}
+
 export class CodeQLLanguageServer extends EventEmitter {
   private server: ChildProcess | null = null;
   private messageId = 1;
@@ -469,6 +525,31 @@ export class CodeQLLanguageServer extends EventEmitter {
       context: params.context ?? { includeDeclaration: true },
     });
     return this.normalizeLocations(result);
+  }
+
+  /**
+   * Get document symbols (i.e. top-level declarations) for a file.
+   * Returns a hierarchical DocumentSymbol[] when the server supports it, or a
+   * flat SymbolInformation[] otherwise.  Top-level symbols are the root nodes
+   * of the returned array.
+   */
+  async getDocumentSymbols(params: { textDocument: TextDocumentIdentifier }): Promise<DocumentSymbol[] | SymbolInformation[]> {
+    if (!this.isInitialized) {
+      throw new Error('Language server is not initialized');
+    }
+    if (!this.isRunning()) {
+      throw new Error('Language server process is not running');
+    }
+    const result = await this.sendRequest('textDocument/documentSymbol', params);
+    if (!result || !Array.isArray(result) || result.length === 0) {
+      return [];
+    }
+    // Hierarchical DocumentSymbol items have a `selectionRange` field.
+    if ('selectionRange' in (result[0] as object)) {
+      return result as DocumentSymbol[];
+    }
+    // Flat SymbolInformation items have a `location` field.
+    return result as SymbolInformation[];
   }
 
   /**

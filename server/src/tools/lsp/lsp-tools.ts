@@ -1,19 +1,22 @@
 /**
  * CodeQL LSP MCP tool definitions.
  *
- * Registers four LSP-based tools:
- * - codeql_lsp_completion     – code completions at cursor position
- * - codeql_lsp_definition     – go to definition
- * - codeql_lsp_diagnostics    – QL code validation via LSP diagnostics
- * - codeql_lsp_references     – find all references
+ * Registers five LSP-based tools:
+ * - codeql_lsp_completion        – code completions at cursor position
+ * - codeql_lsp_definition        – go to definition
+ * - codeql_lsp_diagnostics       – QL code validation via LSP diagnostics
+ * - codeql_lsp_document_symbols  – list top-level definitions in a file
+ * - codeql_lsp_references        – find all references
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registerLspDiagnosticsTool } from './lsp-diagnostics';
 import {
+  extractNamesFromDocumentSymbols,
   lspCompletion,
   lspDefinition,
+  lspDocumentSymbols,
   lspReferences,
 } from './lsp-handlers';
 import { logger } from '../../utils/logger';
@@ -50,6 +53,17 @@ function toHandlerParams(input: {
     workspaceUri: input.workspace_uri,
   };
 }
+
+/**
+ * Zod schema for file-level LSP tools that do not require a position.
+ */
+const lspFileParamsSchema = {
+  file_content: z.string().optional().describe('Optional file content override (reads from disk if omitted)'),
+  file_path: z.string().describe('Path to the CodeQL (.ql/.qll) file. Relative paths are resolved against the user workspace directory (see CODEQL_MCP_WORKSPACE).'),
+  search_path: z.string().optional().describe('Optional search path for CodeQL libraries'),
+  workspace_uri: z.string().optional().describe('Optional workspace URI for context (defaults to ./ql directory)'),
+};
+
 
 /**
  * Register all LSP-based tools with the MCP server.
@@ -149,6 +163,44 @@ export function registerLSPTools(server: McpServer): void {
         };
       } catch (error) {
         logger.error('codeql_lsp_references error:', error);
+        return {
+          content: [{ text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'text' as const }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // --- codeql_lsp_document_symbols ---
+  server.tool(
+    'codeql_lsp_document_symbols',
+    'List all top-level definitions (classes, predicates, modules) in a CodeQL file. Response contains location and type information unless names_only is set to true.',
+    {
+      names_only: z.boolean().optional().describe('If true, returns only symbol names as a compact string array instead of full symbol objects. Use this when you only need to know what names a file defines.'),
+      ...lspFileParamsSchema,
+    },
+    async (input) => {
+      try {
+        const symbols = await lspDocumentSymbols({
+          fileContent: input.file_content,
+          filePath: input.file_path,
+          searchPath: input.search_path,
+          workspaceUri: input.workspace_uri,
+        });
+        let result;
+        if (input.names_only) {
+          result = extractNamesFromDocumentSymbols(symbols);
+        } else {
+          result = symbols;
+        }
+        return {
+          content: [{
+            text: JSON.stringify({ symbolCount: result.length, symbols: result }, null, 2),
+            type: 'text' as const,
+          }],
+        };
+      } catch (error) {
+        logger.error('codeql_lsp_document_symbols error:', error);
         return {
           content: [{ text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'text' as const }],
           isError: true,

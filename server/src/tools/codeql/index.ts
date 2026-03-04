@@ -31,6 +31,7 @@ export { codeqlResolveFilesTool } from './resolve-files';
 export { codeqlResolveLanguagesTool } from './resolve-languages';
 export { codeqlResolveLibraryPathTool } from './resolve-library-path';
 export { codeqlResolveMetadataTool } from './resolve-metadata';
+export { codeqlResolvePacksTool } from './resolve-packs';
 export { codeqlResolveQlrefTool } from './resolve-qlref';
 export { codeqlResolveQueriesTool } from './resolve-queries';
 export { codeqlResolveTestsTool } from './resolve-tests';
