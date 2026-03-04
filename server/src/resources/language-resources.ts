@@ -7,16 +7,18 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { LANGUAGE_RESOURCES } from '../types/language-types';
-import { workspaceRootDir } from '../utils/package-paths';
+import { packageRootDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
 
 /**
  * Get the base path for ql resources.
- * Uses the workspace root (monorepo root or package root) so that
- * resource files are found regardless of the server's process.cwd().
+ * Uses the server package root so that resource files under `ql/` are found
+ * regardless of the deployment layout (monorepo source, npm install, or VSIX
+ * bundle). The `ql/` directory ships alongside the server package root in
+ * all supported layouts.
  */
 function getQLBasePath(): string {
-  return workspaceRootDir;
+  return packageRootDir;
 }
 
 /**
