@@ -12,59 +12,43 @@ import {
 
 describe('Resources', () => {
   describe('getGettingStartedGuide', () => {
-    it('should return content or fallback message', () => {
+    it('should return embedded getting started guide content', () => {
       const result = getGettingStartedGuide();
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
-      // Either returns actual content or fallback - case insensitive check
-      expect(
-        result.toLowerCase().includes('getting started') ||
-        result.toLowerCase().includes('not available') ||
-        result.toLowerCase().includes('guide')
-      ).toBe(true);
+      // Content is embedded at build time, so it always contains real content
+      expect(result).toContain('Getting Started');
     });
   });
 
   describe('getQueryBasicsGuide', () => {
-    it('should return content or fallback message', () => {
+    it('should return embedded query basics guide content', () => {
       const result = getQueryBasicsGuide();
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
-      // Either returns actual content or fallback
-      expect(
-        result.toLowerCase().includes('query') ||
-        result === 'Query basics guide not available'
-      ).toBe(true);
+      expect(result).toContain('Query');
     });
   });
 
   describe('getSecurityTemplates', () => {
-    it('should return content or fallback message', () => {
+    it('should return embedded security templates content', () => {
       const result = getSecurityTemplates();
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
-      // Either returns actual content or fallback
-      expect(
-        result.toLowerCase().includes('security') ||
-        result === 'Security templates not available'
-      ).toBe(true);
+      expect(result).toContain('Security');
     });
   });
 
   describe('getPerformancePatterns', () => {
-    it('should return content or fallback message', () => {
+    it('should return embedded performance patterns content', () => {
       const result = getPerformancePatterns();
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
-      // Either returns actual content or fallback
-      expect(
-        result.toLowerCase().includes('performance') ||
-        result === 'Performance patterns not available'
-      ).toBe(true);
+      expect(result).toContain('Performance');
     });
   });
 });
