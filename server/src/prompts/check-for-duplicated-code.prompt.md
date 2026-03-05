@@ -165,7 +165,7 @@ Parameters:
 
 For each promising candidate, identify the predicate or class definitions that may overlap. One definition will be in the query file (`.ql`) and the other will be in the library file (`.qll`).
 
-Using the tools `find_predicate_location` and `find_class_location`, you can retrieve the full definition of each predicate or class, and compare them to determine whether they are identical, equivalent, overlapping, or if one is a superior implementation that could be reused by the query file.
+Using the tools `find_predicate_position` and `find_class_position`, you can retrieve the full definition of each predicate or class, and compare them to determine whether they are identical, equivalent, overlapping, or if one is a superior implementation that could be reused by the query file.
 
 Dutifully analyze whether the shared library file definition would reduce code duplication in the categories identified before: maintenance, simplicity, readability, consistency, and completeness/correctness. Consider contextual factors such as comments explaining why the local definition differs from the library one, or whether the local definition is a thin wrapper around the library definition that adds value (e.g. by improving naming or adding extra checks).
 
