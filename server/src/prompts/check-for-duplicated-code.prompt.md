@@ -84,7 +84,7 @@ the findings as code improvement recommendations to the user.
 3. **Find available .qll files** in the `.ql` file's pack, and its dependencies, including the standard library
 4. **Identify promising .qll file candidates** based on their file name and path
 5. **Enumerate top-level definitions in candidate `.qll` files** with `codeql_lsp_document_symbols`
-6. **Detect overlap, comparing definitions if unclear** (e.g. by using `find_predicate_location` and `find_class_location` tools)
+6. **Detect overlap, comparing definitions if unclear** (e.g. by using `find_predicate_position` and `find_class_position` tools)
 7. **Report findings** as a set of recommendations to the user about which definitions could be improved, by reusing which existing definitions
 
 ## Step 1: Read the File and Note Its Imports
