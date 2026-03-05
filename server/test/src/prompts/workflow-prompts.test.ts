@@ -17,9 +17,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   buildToolsQueryContext,
   buildWorkshopContext,
+  checkForDuplicatedCodeSchema,
   describeFalsePositivesSchema,
   documentCodeqlQuerySchema,
   explainCodeqlQuerySchema,
+  findOverlappingQueriesSchema,
   qlLspIterativeDevelopmentSchema,
   qlTddAdvancedSchema,
   qlTddBasicSchema,
@@ -96,8 +98,8 @@ describe('Workflow Prompts', () => {
   // WORKFLOW_PROMPT_NAMES
   // -----------------------------------------------------------------------
   describe('WORKFLOW_PROMPT_NAMES', () => {
-    it('should contain 11 prompt names', () => {
-      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(11);
+    it('should contain 13 prompt names', () => {
+      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(13);
     });
 
     it('should be sorted alphabetically', () => {
@@ -817,6 +819,18 @@ describe('Workflow Prompts', () => {
         required: [],
         optional: ['language', 'queryPath', 'workspaceUri'],
       },
+      {
+        name: 'checkForDuplicatedCodeSchema',
+        schema: checkForDuplicatedCodeSchema,
+        required: ['queryPath'],
+        optional: ['workspaceUri'],
+      },
+      {
+        name: 'findOverlappingQueriesSchema',
+        schema: findOverlappingQueriesSchema,
+        required: ['language', 'queryDescription'],
+        optional: ['packRoot'],
+      },
     ];
 
     it.each(schemaSpecs)(
@@ -889,9 +903,11 @@ describe('Workflow Prompts', () => {
   // -----------------------------------------------------------------------
   describe('Schema field descriptions (VS Code placeholder text)', () => {
     const allSchemas = {
+      checkForDuplicatedCodeSchema,
       describeFalsePositivesSchema,
       documentCodeqlQuerySchema,
       explainCodeqlQuerySchema,
+      findOverlappingQueriesSchema,
       qlLspIterativeDevelopmentSchema,
       qlTddAdvancedSchema,
       qlTddBasicSchema,
@@ -979,8 +995,10 @@ describe('Workflow Prompts', () => {
     describe('schema-to-registration consistency', () => {
       /** Map prompt name → exported schema .shape */
       const expectedSchemaShapes: Record<string, Record<string, unknown>> = {
+        check_for_duplicated_code: checkForDuplicatedCodeSchema.shape,
         document_codeql_query: documentCodeqlQuerySchema.shape,
         explain_codeql_query: explainCodeqlQuerySchema.shape,
+        find_overlapping_queries: findOverlappingQueriesSchema.shape,
         ql_lsp_iterative_development: qlLspIterativeDevelopmentSchema.shape,
         ql_tdd_advanced: qlTddAdvancedSchema.shape,
         ql_tdd_basic: qlTddBasicSchema.shape,
@@ -1022,8 +1040,10 @@ describe('Workflow Prompts', () => {
 
       // Build a minimal-valid args map for each prompt to invoke its handler.
       const minimalArgs: Record<string, Record<string, string>> = {
+        check_for_duplicated_code: { queryPath: '/q.ql' },
         document_codeql_query: { language: 'java', queryPath: '/q.ql' },
         explain_codeql_query: { language: 'java', queryPath: '/q.ql' },
+        find_overlapping_queries: { language: 'cpp', queryDescription: 'detect placement-new on non-trivial types' },
         ql_lsp_iterative_development: {},
         ql_tdd_advanced: {},
         ql_tdd_basic: {},
