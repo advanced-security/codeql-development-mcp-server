@@ -55658,15 +55658,17 @@ var Response2 = class _Response {
       this.#init = init;
     }
     if (typeof body === "string" || typeof body?.getReader !== "undefined" || body instanceof Blob || body instanceof Uint8Array) {
-      headers ||= init?.headers || { "content-type": "text/plain; charset=UTF-8" };
-      this[cacheKey] = [init?.status || 200, body, headers];
+      ;
+      this[cacheKey] = [init?.status || 200, body, headers || init?.headers];
     }
   }
   get headers() {
     const cache = this[cacheKey];
     if (cache) {
       if (!(cache[2] instanceof Headers)) {
-        cache[2] = new Headers(cache[2]);
+        cache[2] = new Headers(
+          cache[2] || { "content-type": "text/plain; charset=UTF-8" }
+        );
       }
       return cache[2];
     }
@@ -55791,15 +55793,32 @@ var flushHeaders = (outgoing) => {
 };
 var responseViaCache = async (res, outgoing) => {
   let [status, body, header] = res[cacheKey];
-  if (header instanceof Headers) {
+  let hasContentLength = false;
+  if (!header) {
+    header = { "content-type": "text/plain; charset=UTF-8" };
+  } else if (header instanceof Headers) {
+    hasContentLength = header.has("content-length");
     header = buildOutgoingHttpHeaders(header);
+  } else if (Array.isArray(header)) {
+    const headerObj = new Headers(header);
+    hasContentLength = headerObj.has("content-length");
+    header = buildOutgoingHttpHeaders(headerObj);
+  } else {
+    for (const key in header) {
+      if (key.length === 14 && key.toLowerCase() === "content-length") {
+        hasContentLength = true;
+        break;
+      }
+    }
   }
-  if (typeof body === "string") {
-    header["Content-Length"] = Buffer.byteLength(body);
-  } else if (body instanceof Uint8Array) {
-    header["Content-Length"] = body.byteLength;
-  } else if (body instanceof Blob) {
-    header["Content-Length"] = body.size;
+  if (!hasContentLength) {
+    if (typeof body === "string") {
+      header["Content-Length"] = Buffer.byteLength(body);
+    } else if (body instanceof Uint8Array) {
+      header["Content-Length"] = body.byteLength;
+    } else if (body instanceof Blob) {
+      header["Content-Length"] = body.size;
+    }
   }
   outgoing.writeHead(status, header);
   if (typeof body === "string" || body instanceof Uint8Array) {
@@ -65618,7 +65637,7 @@ init_package_paths();
 init_logger();
 import_dotenv.default.config({ path: resolve12(packageRootDir, ".env"), quiet: true });
 var PACKAGE_NAME = "codeql-development-mcp-server";
-var VERSION = "2.24.2";
+var VERSION = "2.24.3";
 async function startServer(mode = "stdio") {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
   const codeqlBinary = resolveCodeQLBinary();
