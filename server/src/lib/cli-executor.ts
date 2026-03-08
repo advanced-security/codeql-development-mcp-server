@@ -218,10 +218,11 @@ function discoverFromDistributionJson(codeqlStorage: string): string | undefined
       'codeql',
       CODEQL_BINARY_NAME,
     );
-    if (existsSync(binaryPath)) {
+    if (isExecutableBinary(binaryPath)) {
       logger.debug(`Discovered CLI via distribution.json (folderIndex=${data.folderIndex})`);
       return binaryPath;
     }
+    logger.debug(`distribution.json hint (folderIndex=${data.folderIndex}) exists but is not a usable executable; falling through to scan`);
   } catch {
     // Ignore parse errors — fall through to directory scan
   }
@@ -251,7 +252,7 @@ function discoverFromDistributionScan(codeqlStorage: string): string | undefined
         'codeql',
         CODEQL_BINARY_NAME,
       );
-      if (existsSync(binaryPath)) {
+      if (isExecutableBinary(binaryPath)) {
         logger.debug(`Discovered CLI via distribution scan: ${dir.name}`);
         return binaryPath;
       }
@@ -305,20 +306,15 @@ export function resolveCodeQLBinary(candidateStorageRoots?: string[]): string {
   const envPath = process.env.CODEQL_PATH;
 
   if (!envPath) {
-    // Try auto-discovery of the vscode-codeql managed distribution
+    // Try auto-discovery of the vscode-codeql managed distribution.
+    // Discovery helpers validate that the binary is a regular executable file
+    // before returning it, so a non-undefined result is safe to use directly.
     const discovered = discoverVsCodeCodeQLDistribution(candidateStorageRoots);
-    if (discovered && isExecutableBinary(discovered)) {
+    if (discovered) {
       resolvedCodeQLDir = dirname(discovered);
       resolvedBinaryResult = 'codeql';
       logger.info(`CodeQL CLI auto-discovered via vscode-codeql distribution: ${discovered} (dir: ${resolvedCodeQLDir})`);
       return resolvedBinaryResult;
-    }
-
-    if (discovered) {
-      logger.warn(
-        `Discovered vscode-codeql distribution at ${discovered} but the binary ` +
-        `is not a regular executable file; falling back to PATH lookup`,
-      );
     }
 
     resolvedCodeQLDir = null;

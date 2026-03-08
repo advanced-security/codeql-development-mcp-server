@@ -38236,10 +38236,11 @@ function discoverFromDistributionJson(codeqlStorage) {
       "codeql",
       CODEQL_BINARY_NAME
     );
-    if (existsSync2(binaryPath)) {
+    if (isExecutableBinary(binaryPath)) {
       logger.debug(`Discovered CLI via distribution.json (folderIndex=${data.folderIndex})`);
       return binaryPath;
     }
+    logger.debug(`distribution.json hint (folderIndex=${data.folderIndex}) exists but is not a usable executable; falling through to scan`);
   } catch {
   }
   return void 0;
@@ -38258,7 +38259,7 @@ function discoverFromDistributionScan(codeqlStorage) {
         "codeql",
         CODEQL_BINARY_NAME
       );
-      if (existsSync2(binaryPath)) {
+      if (isExecutableBinary(binaryPath)) {
         logger.debug(`Discovered CLI via distribution scan: ${dir.name}`);
         return binaryPath;
       }
@@ -38284,16 +38285,11 @@ function resolveCodeQLBinary(candidateStorageRoots) {
   const envPath = process.env.CODEQL_PATH;
   if (!envPath) {
     const discovered = discoverVsCodeCodeQLDistribution(candidateStorageRoots);
-    if (discovered && isExecutableBinary(discovered)) {
+    if (discovered) {
       resolvedCodeQLDir = dirname2(discovered);
       resolvedBinaryResult = "codeql";
       logger.info(`CodeQL CLI auto-discovered via vscode-codeql distribution: ${discovered} (dir: ${resolvedCodeQLDir})`);
       return resolvedBinaryResult;
-    }
-    if (discovered) {
-      logger.warn(
-        `Discovered vscode-codeql distribution at ${discovered} but the binary is not a regular executable file; falling back to PATH lookup`
-      );
     }
     resolvedCodeQLDir = null;
     resolvedBinaryResult = "codeql";
@@ -55662,15 +55658,17 @@ var Response2 = class _Response {
       this.#init = init;
     }
     if (typeof body === "string" || typeof body?.getReader !== "undefined" || body instanceof Blob || body instanceof Uint8Array) {
-      headers ||= init?.headers || { "content-type": "text/plain; charset=UTF-8" };
-      this[cacheKey] = [init?.status || 200, body, headers];
+      ;
+      this[cacheKey] = [init?.status || 200, body, headers || init?.headers];
     }
   }
   get headers() {
     const cache = this[cacheKey];
     if (cache) {
       if (!(cache[2] instanceof Headers)) {
-        cache[2] = new Headers(cache[2]);
+        cache[2] = new Headers(
+          cache[2] || { "content-type": "text/plain; charset=UTF-8" }
+        );
       }
       return cache[2];
     }
@@ -55795,15 +55793,32 @@ var flushHeaders = (outgoing) => {
 };
 var responseViaCache = async (res, outgoing) => {
   let [status, body, header] = res[cacheKey];
-  if (header instanceof Headers) {
+  let hasContentLength = false;
+  if (!header) {
+    header = { "content-type": "text/plain; charset=UTF-8" };
+  } else if (header instanceof Headers) {
+    hasContentLength = header.has("content-length");
     header = buildOutgoingHttpHeaders(header);
+  } else if (Array.isArray(header)) {
+    const headerObj = new Headers(header);
+    hasContentLength = headerObj.has("content-length");
+    header = buildOutgoingHttpHeaders(headerObj);
+  } else {
+    for (const key in header) {
+      if (key.length === 14 && key.toLowerCase() === "content-length") {
+        hasContentLength = true;
+        break;
+      }
+    }
   }
-  if (typeof body === "string") {
-    header["Content-Length"] = Buffer.byteLength(body);
-  } else if (body instanceof Uint8Array) {
-    header["Content-Length"] = body.byteLength;
-  } else if (body instanceof Blob) {
-    header["Content-Length"] = body.size;
+  if (!hasContentLength) {
+    if (typeof body === "string") {
+      header["Content-Length"] = Buffer.byteLength(body);
+    } else if (body instanceof Uint8Array) {
+      header["Content-Length"] = body.byteLength;
+    } else if (body instanceof Blob) {
+      header["Content-Length"] = body.size;
+    }
   }
   outgoing.writeHead(status, header);
   if (typeof body === "string" || body instanceof Uint8Array) {

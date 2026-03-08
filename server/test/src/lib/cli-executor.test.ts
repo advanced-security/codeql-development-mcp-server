@@ -585,13 +585,13 @@ describe('resolveCodeQLBinary', () => {
 
   it('should default to "codeql" when CODEQL_PATH is not set', () => {
     delete process.env.CODEQL_PATH;
-    const result = resolveCodeQLBinary();
+    const result = resolveCodeQLBinary([]);
     expect(result).toBe('codeql');
   });
 
   it('should default to "codeql" when CODEQL_PATH is empty', () => {
     process.env.CODEQL_PATH = '';
-    const result = resolveCodeQLBinary();
+    const result = resolveCodeQLBinary([]);
     expect(result).toBe('codeql');
   });
 
@@ -635,15 +635,15 @@ describe('resolveCodeQLBinary', () => {
 
   it('should cache the resolved dir via getResolvedCodeQLDir', () => {
     delete process.env.CODEQL_PATH;
-    resolveCodeQLBinary();
-    // May be non-null if vscode-codeql distribution is auto-discovered
+    resolveCodeQLBinary([]);
+    // With empty candidateStorageRoots, no vscode-codeql distribution is discovered
     const dir = getResolvedCodeQLDir();
-    expect(dir === null || typeof dir === 'string').toBe(true);
+    expect(dir).toBeNull();
   });
 
   it('should reset to default via resetResolvedCodeQLBinary', () => {
     delete process.env.CODEQL_PATH;
-    resolveCodeQLBinary();
+    resolveCodeQLBinary([]);
     resetResolvedCodeQLBinary();
     expect(getResolvedCodeQLDir()).toBeNull();
   });
