@@ -38175,7 +38175,7 @@ __export(cli_executor_exports, {
   validateCommandExists: () => validateCommandExists
 });
 import { execFile } from "child_process";
-import { existsSync as existsSync2, readdirSync, readFileSync as readFileSync2 } from "fs";
+import { accessSync, constants as fsConstants, existsSync as existsSync2, readdirSync, readFileSync as readFileSync2, statSync } from "fs";
 import { basename, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute2, join as join4 } from "path";
 import { homedir } from "os";
 import { promisify } from "util";
@@ -38267,18 +38267,33 @@ function discoverFromDistributionScan(codeqlStorage) {
   }
   return void 0;
 }
-function resolveCodeQLBinary() {
+function isExecutableBinary(binaryPath) {
+  try {
+    const stat = statSync(binaryPath);
+    if (!stat.isFile()) return false;
+    accessSync(binaryPath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function resolveCodeQLBinary(candidateStorageRoots) {
   if (resolvedBinaryResult !== void 0) {
     return resolvedBinaryResult;
   }
   const envPath = process.env.CODEQL_PATH;
   if (!envPath) {
-    const discovered = discoverVsCodeCodeQLDistribution();
-    if (discovered) {
+    const discovered = discoverVsCodeCodeQLDistribution(candidateStorageRoots);
+    if (discovered && isExecutableBinary(discovered)) {
       resolvedCodeQLDir = dirname2(discovered);
       resolvedBinaryResult = "codeql";
       logger.info(`CodeQL CLI auto-discovered via vscode-codeql distribution: ${discovered} (dir: ${resolvedCodeQLDir})`);
       return resolvedBinaryResult;
+    }
+    if (discovered) {
+      logger.warn(
+        `Discovered vscode-codeql distribution at ${discovered} but the binary is not a regular executable file; falling back to PATH lookup`
+      );
     }
     resolvedCodeQLDir = null;
     resolvedBinaryResult = "codeql";
@@ -53862,147 +53877,6 @@ var ExperimentalServerTasks = class {
     return this._server.requestStream(request, resultSchema, options);
   }
   /**
-   * Sends a sampling request and returns an AsyncGenerator that yields response messages.
-   * The generator is guaranteed to end with either a 'result' or 'error' message.
-   *
-   * For task-augmented requests, yields 'taskCreated' and 'taskStatus' messages
-   * before the final result.
-   *
-   * @example
-   * ```typescript
-   * const stream = server.experimental.tasks.createMessageStream({
-   *     messages: [{ role: 'user', content: { type: 'text', text: 'Hello' } }],
-   *     maxTokens: 100
-   * }, {
-   *     onprogress: (progress) => {
-   *         // Handle streaming tokens via progress notifications
-   *         console.log('Progress:', progress.message);
-   *     }
-   * });
-   *
-   * for await (const message of stream) {
-   *     switch (message.type) {
-   *         case 'taskCreated':
-   *             console.log('Task created:', message.task.taskId);
-   *             break;
-   *         case 'taskStatus':
-   *             console.log('Task status:', message.task.status);
-   *             break;
-   *         case 'result':
-   *             console.log('Final result:', message.result);
-   *             break;
-   *         case 'error':
-   *             console.error('Error:', message.error);
-   *             break;
-   *     }
-   * }
-   * ```
-   *
-   * @param params - The sampling request parameters
-   * @param options - Optional request options (timeout, signal, task creation params, onprogress, etc.)
-   * @returns AsyncGenerator that yields ResponseMessage objects
-   *
-   * @experimental
-   */
-  createMessageStream(params, options) {
-    const clientCapabilities = this._server.getClientCapabilities();
-    if ((params.tools || params.toolChoice) && !clientCapabilities?.sampling?.tools) {
-      throw new Error("Client does not support sampling tools capability.");
-    }
-    if (params.messages.length > 0) {
-      const lastMessage = params.messages[params.messages.length - 1];
-      const lastContent = Array.isArray(lastMessage.content) ? lastMessage.content : [lastMessage.content];
-      const hasToolResults = lastContent.some((c) => c.type === "tool_result");
-      const previousMessage = params.messages.length > 1 ? params.messages[params.messages.length - 2] : void 0;
-      const previousContent = previousMessage ? Array.isArray(previousMessage.content) ? previousMessage.content : [previousMessage.content] : [];
-      const hasPreviousToolUse = previousContent.some((c) => c.type === "tool_use");
-      if (hasToolResults) {
-        if (lastContent.some((c) => c.type !== "tool_result")) {
-          throw new Error("The last message must contain only tool_result content if any is present");
-        }
-        if (!hasPreviousToolUse) {
-          throw new Error("tool_result blocks are not matching any tool_use from the previous message");
-        }
-      }
-      if (hasPreviousToolUse) {
-        const toolUseIds = new Set(previousContent.filter((c) => c.type === "tool_use").map((c) => c.id));
-        const toolResultIds = new Set(lastContent.filter((c) => c.type === "tool_result").map((c) => c.toolUseId));
-        if (toolUseIds.size !== toolResultIds.size || ![...toolUseIds].every((id) => toolResultIds.has(id))) {
-          throw new Error("ids of tool_result blocks and tool_use blocks from previous message do not match");
-        }
-      }
-    }
-    return this.requestStream({
-      method: "sampling/createMessage",
-      params
-    }, CreateMessageResultSchema, options);
-  }
-  /**
-   * Sends an elicitation request and returns an AsyncGenerator that yields response messages.
-   * The generator is guaranteed to end with either a 'result' or 'error' message.
-   *
-   * For task-augmented requests (especially URL-based elicitation), yields 'taskCreated'
-   * and 'taskStatus' messages before the final result.
-   *
-   * @example
-   * ```typescript
-   * const stream = server.experimental.tasks.elicitInputStream({
-   *     mode: 'url',
-   *     message: 'Please authenticate',
-   *     elicitationId: 'auth-123',
-   *     url: 'https://example.com/auth'
-   * }, {
-   *     task: { ttl: 300000 } // Task-augmented for long-running auth flow
-   * });
-   *
-   * for await (const message of stream) {
-   *     switch (message.type) {
-   *         case 'taskCreated':
-   *             console.log('Task created:', message.task.taskId);
-   *             break;
-   *         case 'taskStatus':
-   *             console.log('Task status:', message.task.status);
-   *             break;
-   *         case 'result':
-   *             console.log('User action:', message.result.action);
-   *             break;
-   *         case 'error':
-   *             console.error('Error:', message.error);
-   *             break;
-   *     }
-   * }
-   * ```
-   *
-   * @param params - The elicitation request parameters
-   * @param options - Optional request options (timeout, signal, task creation params, etc.)
-   * @returns AsyncGenerator that yields ResponseMessage objects
-   *
-   * @experimental
-   */
-  elicitInputStream(params, options) {
-    const clientCapabilities = this._server.getClientCapabilities();
-    const mode = params.mode ?? "form";
-    switch (mode) {
-      case "url": {
-        if (!clientCapabilities?.elicitation?.url) {
-          throw new Error("Client does not support url elicitation.");
-        }
-        break;
-      }
-      case "form": {
-        if (!clientCapabilities?.elicitation?.form) {
-          throw new Error("Client does not support form elicitation.");
-        }
-        break;
-      }
-    }
-    const normalizedParams = mode === "form" && params.mode === void 0 ? { ...params, mode: "form" } : params;
-    return this.requestStream({
-      method: "elicitation/create",
-      params: normalizedParams
-    }, ElicitResultSchema, options);
-  }
-  /**
    * Gets the current status of a task.
    *
    * @param taskId - The task identifier
@@ -56097,7 +55971,6 @@ data:
   async handleGetRequest(req) {
     const acceptHeader = req.headers.get("accept");
     if (!acceptHeader?.includes("text/event-stream")) {
-      this.onerror?.(new Error("Not Acceptable: Client must accept text/event-stream"));
       return this.createJsonErrorResponse(406, -32e3, "Not Acceptable: Client must accept text/event-stream");
     }
     const sessionError = this.validateSession(req);
@@ -56115,7 +55988,6 @@ data:
       }
     }
     if (this._streamMapping.get(this._standaloneSseStreamId) !== void 0) {
-      this.onerror?.(new Error("Conflict: Only one SSE stream is allowed per session"));
       return this.createJsonErrorResponse(409, -32e3, "Conflict: Only one SSE stream is allowed per session");
     }
     const encoder = new TextEncoder();
@@ -56155,7 +56027,6 @@ data:
    */
   async replayEvents(lastEventId) {
     if (!this._eventStore) {
-      this.onerror?.(new Error("Event store not configured"));
       return this.createJsonErrorResponse(400, -32e3, "Event store not configured");
     }
     try {
@@ -56163,11 +56034,9 @@ data:
       if (this._eventStore.getStreamIdForEventId) {
         streamId = await this._eventStore.getStreamIdForEventId(lastEventId);
         if (!streamId) {
-          this.onerror?.(new Error("Invalid event ID format"));
           return this.createJsonErrorResponse(400, -32e3, "Invalid event ID format");
         }
         if (this._streamMapping.get(streamId) !== void 0) {
-          this.onerror?.(new Error("Conflict: Stream already has an active connection"));
           return this.createJsonErrorResponse(409, -32e3, "Conflict: Stream already has an active connection");
         }
       }
@@ -56233,8 +56102,7 @@ data:
 `;
       controller.enqueue(encoder.encode(eventData));
       return true;
-    } catch (error2) {
-      this.onerror?.(error2);
+    } catch {
       return false;
     }
   }
@@ -56242,7 +56110,6 @@ data:
    * Handles unsupported requests (PUT, PATCH, etc.)
    */
   handleUnsupportedRequest() {
-    this.onerror?.(new Error("Method not allowed."));
     return new Response(JSON.stringify({
       jsonrpc: "2.0",
       error: {
@@ -56265,17 +56132,14 @@ data:
     try {
       const acceptHeader = req.headers.get("accept");
       if (!acceptHeader?.includes("application/json") || !acceptHeader.includes("text/event-stream")) {
-        this.onerror?.(new Error("Not Acceptable: Client must accept both application/json and text/event-stream"));
         return this.createJsonErrorResponse(406, -32e3, "Not Acceptable: Client must accept both application/json and text/event-stream");
       }
       const ct = req.headers.get("content-type");
       if (!ct || !ct.includes("application/json")) {
-        this.onerror?.(new Error("Unsupported Media Type: Content-Type must be application/json"));
         return this.createJsonErrorResponse(415, -32e3, "Unsupported Media Type: Content-Type must be application/json");
       }
       const requestInfo = {
-        headers: Object.fromEntries(req.headers.entries()),
-        url: new URL(req.url)
+        headers: Object.fromEntries(req.headers.entries())
       };
       let rawMessage;
       if (options?.parsedBody !== void 0) {
@@ -56284,7 +56148,6 @@ data:
         try {
           rawMessage = await req.json();
         } catch {
-          this.onerror?.(new Error("Parse error: Invalid JSON"));
           return this.createJsonErrorResponse(400, -32700, "Parse error: Invalid JSON");
         }
       }
@@ -56296,17 +56159,14 @@ data:
           messages = [JSONRPCMessageSchema.parse(rawMessage)];
         }
       } catch {
-        this.onerror?.(new Error("Parse error: Invalid JSON-RPC message"));
         return this.createJsonErrorResponse(400, -32700, "Parse error: Invalid JSON-RPC message");
       }
       const isInitializationRequest = messages.some(isInitializeRequest);
       if (isInitializationRequest) {
         if (this._initialized && this.sessionId !== void 0) {
-          this.onerror?.(new Error("Invalid Request: Server already initialized"));
           return this.createJsonErrorResponse(400, -32600, "Invalid Request: Server already initialized");
         }
         if (messages.length > 1) {
-          this.onerror?.(new Error("Invalid Request: Only one initialization request is allowed"));
           return this.createJsonErrorResponse(400, -32600, "Invalid Request: Only one initialization request is allowed");
         }
         this.sessionId = this.sessionIdGenerator?.();
@@ -56432,16 +56292,13 @@ data:
       return void 0;
     }
     if (!this._initialized) {
-      this.onerror?.(new Error("Bad Request: Server not initialized"));
       return this.createJsonErrorResponse(400, -32e3, "Bad Request: Server not initialized");
     }
     const sessionId = req.headers.get("mcp-session-id");
     if (!sessionId) {
-      this.onerror?.(new Error("Bad Request: Mcp-Session-Id header is required"));
       return this.createJsonErrorResponse(400, -32e3, "Bad Request: Mcp-Session-Id header is required");
     }
     if (sessionId !== this.sessionId) {
-      this.onerror?.(new Error("Session not found"));
       return this.createJsonErrorResponse(404, -32001, "Session not found");
     }
     return void 0;
@@ -56462,7 +56319,6 @@ data:
   validateProtocolVersion(req) {
     const protocolVersion = req.headers.get("mcp-protocol-version");
     if (protocolVersion !== null && !SUPPORTED_PROTOCOL_VERSIONS.includes(protocolVersion)) {
-      this.onerror?.(new Error(`Bad Request: Unsupported protocol version: ${protocolVersion} (supported versions: ${SUPPORTED_PROTOCOL_VERSIONS.join(", ")})`));
       return this.createJsonErrorResponse(400, -32e3, `Bad Request: Unsupported protocol version: ${protocolVersion} (supported versions: ${SUPPORTED_PROTOCOL_VERSIONS.join(", ")})`);
     }
     return void 0;
@@ -60807,7 +60663,7 @@ var codeqlGenerateQueryHelpTool = {
 };
 
 // src/tools/codeql/list-databases.ts
-import { existsSync as existsSync6, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync2 } from "fs";
+import { existsSync as existsSync6, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync3 } from "fs";
 import { join as join8 } from "path";
 
 // src/lib/discovery-config.ts
@@ -60871,7 +60727,7 @@ async function discoverDatabases(baseDirs, language) {
     for (const entry of entries) {
       const entryPath = join8(baseDir, entry);
       try {
-        if (!statSync2(entryPath).isDirectory()) {
+        if (!statSync3(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -60960,7 +60816,7 @@ function registerListDatabasesTool(server) {
 }
 
 // src/tools/codeql/list-mrva-run-results.ts
-import { existsSync as existsSync7, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync3 } from "fs";
+import { existsSync as existsSync7, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync4 } from "fs";
 import { join as join9 } from "path";
 init_logger();
 var NUMERIC_DIR_PATTERN = /^\d+$/;
@@ -60980,7 +60836,7 @@ async function discoverMrvaRunResults(resultsDirs, runId) {
     for (const entry of entries) {
       const entryPath = join9(dir, entry);
       try {
-        if (!statSync3(entryPath).isDirectory()) {
+        if (!statSync4(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -61025,7 +60881,7 @@ function discoverRepoResults(runPath) {
     }
     const ownerPath = join9(runPath, ownerEntry);
     try {
-      if (!statSync3(ownerPath).isDirectory()) {
+      if (!statSync4(ownerPath).isDirectory()) {
         continue;
       }
     } catch {
@@ -61040,7 +60896,7 @@ function discoverRepoResults(runPath) {
     for (const repoEntry of repoEntries) {
       const repoPath = join9(ownerPath, repoEntry);
       try {
-        if (!statSync3(repoPath).isDirectory()) {
+        if (!statSync4(repoPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -61147,7 +61003,7 @@ function registerListMrvaRunResultsTool(server) {
 }
 
 // src/tools/codeql/list-query-run-results.ts
-import { existsSync as existsSync8, readdirSync as readdirSync5, readFileSync as readFileSync7, statSync as statSync4 } from "fs";
+import { existsSync as existsSync8, readdirSync as readdirSync5, readFileSync as readFileSync7, statSync as statSync5 } from "fs";
 import { join as join10 } from "path";
 init_logger();
 var QUERY_RUN_DIR_PATTERN = /^(.+\.ql)-(.+)$/;
@@ -61196,7 +61052,7 @@ async function discoverQueryRunResults(resultsDirs, filter) {
     for (const entry of entries) {
       const entryPath = join10(dir, entry);
       try {
-        if (!statSync4(entryPath).isDirectory()) {
+        if (!statSync5(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -62250,7 +62106,7 @@ function registerQuickEvaluateTool(server) {
 
 // src/tools/codeql/read-database-source.ts
 var import_adm_zip = __toESM(require_adm_zip(), 1);
-import { existsSync as existsSync11, readdirSync as readdirSync6, readFileSync as readFileSync10, statSync as statSync5 } from "fs";
+import { existsSync as existsSync11, readdirSync as readdirSync6, readFileSync as readFileSync10, statSync as statSync6 } from "fs";
 import { join as join14, resolve as resolve7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 init_logger();
@@ -62269,7 +62125,7 @@ function toFilesystemPath(uri) {
 function* walkDirectory(dir, base = dir) {
   for (const entry of readdirSync6(dir)) {
     const fullPath = join14(dir, entry);
-    if (statSync5(fullPath).isDirectory()) {
+    if (statSync6(fullPath).isDirectory()) {
       yield* walkDirectory(fullPath, base);
     } else {
       yield fullPath.slice(base.length).replace(/\\/g, "/").replace(/^\//, "");

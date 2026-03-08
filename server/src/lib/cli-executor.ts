@@ -3,7 +3,7 @@
  */
 
 import { execFile } from 'child_process';
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import { accessSync, constants as fsConstants, existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { basename, delimiter, dirname, isAbsolute, join } from 'path';
 import { homedir } from 'os';
 import { promisify } from 'util';
@@ -263,6 +263,21 @@ function discoverFromDistributionScan(codeqlStorage: string): string | undefined
 }
 
 /**
+ * Validate that a discovered binary path is a regular, executable file.
+ * Returns `true` when the binary appears usable, `false` otherwise.
+ */
+function isExecutableBinary(binaryPath: string): boolean {
+  try {
+    const stat = statSync(binaryPath);
+    if (!stat.isFile()) return false;
+    accessSync(binaryPath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Resolve the CodeQL CLI binary path.
  *
  * Resolution order:
@@ -270,13 +285,18 @@ function discoverFromDistributionScan(codeqlStorage: string): string | undefined
  *    basename is `codeql` (or `codeql.exe` / `codeql.cmd` on Windows).
  *    The parent directory is prepended to PATH for child processes.
  * 2. Auto-discovery of the `vscode-codeql` managed CLI distribution from VS
- *    Code's global storage directory.
+ *    Code's global storage directory. The discovered binary must be a regular
+ *    file with execute permission; otherwise discovery is skipped and
+ *    resolution falls through to PATH.
  * 3. Falls back to the bare `codeql` command (resolved via PATH at exec time).
  *
  * The resolved value is cached for the lifetime of the process. Call this once
  * at startup; subsequent calls are a no-op and return the cached value.
+ *
+ * @param candidateStorageRoots - Optional override for VS Code global-storage
+ *   candidate directories (used in tests).
  */
-export function resolveCodeQLBinary(): string {
+export function resolveCodeQLBinary(candidateStorageRoots?: string[]): string {
   // Short-circuit if already resolved
   if (resolvedBinaryResult !== undefined) {
     return resolvedBinaryResult;
@@ -286,12 +306,19 @@ export function resolveCodeQLBinary(): string {
 
   if (!envPath) {
     // Try auto-discovery of the vscode-codeql managed distribution
-    const discovered = discoverVsCodeCodeQLDistribution();
-    if (discovered) {
+    const discovered = discoverVsCodeCodeQLDistribution(candidateStorageRoots);
+    if (discovered && isExecutableBinary(discovered)) {
       resolvedCodeQLDir = dirname(discovered);
       resolvedBinaryResult = 'codeql';
       logger.info(`CodeQL CLI auto-discovered via vscode-codeql distribution: ${discovered} (dir: ${resolvedCodeQLDir})`);
       return resolvedBinaryResult;
+    }
+
+    if (discovered) {
+      logger.warn(
+        `Discovered vscode-codeql distribution at ${discovered} but the binary ` +
+        `is not a regular executable file; falling back to PATH lookup`,
+      );
     }
 
     resolvedCodeQLDir = null;

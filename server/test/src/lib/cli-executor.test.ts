@@ -921,6 +921,71 @@ describe('resolveCodeQLBinary - vscode-codeql auto-discovery', () => {
     const result = resolveCodeQLBinary();
     expect(result).toBe('codeql');
   });
+
+  it('should skip discovered binary that is a directory, not a file', () => {
+    // Create a distribution layout where 'codeql' is a directory, not a binary
+    const tmpDir = createProjectTempDir('vscode-codeql-dir-binary-');
+    const codeqlStorage = join(tmpDir, 'github.vscode-codeql');
+    const distDir = join(codeqlStorage, 'distribution1', 'codeql');
+    mkdirSync(distDir, { recursive: true });
+    // Create a directory named like the expected binary
+    const binaryName = process.platform === 'win32' ? 'codeql.exe' : 'codeql';
+    mkdirSync(join(distDir, binaryName));
+    writeFileSync(join(codeqlStorage, 'distribution.json'), JSON.stringify({ folderIndex: 1 }));
+
+    try {
+      delete process.env.CODEQL_PATH;
+      const result = resolveCodeQLBinary([tmpDir]);
+      expect(result).toBe('codeql');
+      // Should NOT have set resolvedCodeQLDir since the binary was a directory
+      expect(getResolvedCodeQLDir()).toBeNull();
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform === 'win32')('should skip discovered binary that lacks execute permission', () => {
+    // Create a distribution layout where the binary exists but is not executable
+    // Skipped on Windows: POSIX execute permissions do not apply
+    const tmpDir = createProjectTempDir('vscode-codeql-no-exec-');
+    const codeqlStorage = join(tmpDir, 'github.vscode-codeql');
+    const distDir = join(codeqlStorage, 'distribution1', 'codeql');
+    mkdirSync(distDir, { recursive: true });
+    const binaryPath = join(distDir, 'codeql');
+    writeFileSync(binaryPath, '#!/bin/sh\necho test', { mode: 0o644 });
+    writeFileSync(join(codeqlStorage, 'distribution.json'), JSON.stringify({ folderIndex: 1 }));
+
+    try {
+      delete process.env.CODEQL_PATH;
+      const result = resolveCodeQLBinary([tmpDir]);
+      expect(result).toBe('codeql');
+      // Should NOT have set resolvedCodeQLDir since the binary is not executable
+      expect(getResolvedCodeQLDir()).toBeNull();
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should accept discovered binary that is a valid executable file', () => {
+    const tmpDir = createProjectTempDir('vscode-codeql-valid-exec-');
+    const codeqlStorage = join(tmpDir, 'github.vscode-codeql');
+    const distDir = join(codeqlStorage, 'distribution1', 'codeql');
+    mkdirSync(distDir, { recursive: true });
+    const binaryName = process.platform === 'win32' ? 'codeql.exe' : 'codeql';
+    const binaryPath = join(distDir, binaryName);
+    writeFileSync(binaryPath, '#!/bin/sh\necho test', { mode: 0o755 });
+    writeFileSync(join(codeqlStorage, 'distribution.json'), JSON.stringify({ folderIndex: 1 }));
+
+    try {
+      delete process.env.CODEQL_PATH;
+      const result = resolveCodeQLBinary([tmpDir]);
+      expect(result).toBe('codeql');
+      // Should have set resolvedCodeQLDir since the binary is a valid executable
+      expect(getResolvedCodeQLDir()).toBe(distDir);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('executeCodeQLCommand cli-server routing', () => {
