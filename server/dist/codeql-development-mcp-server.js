@@ -55658,17 +55658,15 @@ var Response2 = class _Response {
       this.#init = init;
     }
     if (typeof body === "string" || typeof body?.getReader !== "undefined" || body instanceof Blob || body instanceof Uint8Array) {
-      ;
-      this[cacheKey] = [init?.status || 200, body, headers || init?.headers];
+      headers ||= init?.headers || { "content-type": "text/plain; charset=UTF-8" };
+      this[cacheKey] = [init?.status || 200, body, headers];
     }
   }
   get headers() {
     const cache = this[cacheKey];
     if (cache) {
       if (!(cache[2] instanceof Headers)) {
-        cache[2] = new Headers(
-          cache[2] || { "content-type": "text/plain; charset=UTF-8" }
-        );
+        cache[2] = new Headers(cache[2]);
       }
       return cache[2];
     }
@@ -55793,32 +55791,15 @@ var flushHeaders = (outgoing) => {
 };
 var responseViaCache = async (res, outgoing) => {
   let [status, body, header] = res[cacheKey];
-  let hasContentLength = false;
-  if (!header) {
-    header = { "content-type": "text/plain; charset=UTF-8" };
-  } else if (header instanceof Headers) {
-    hasContentLength = header.has("content-length");
+  if (header instanceof Headers) {
     header = buildOutgoingHttpHeaders(header);
-  } else if (Array.isArray(header)) {
-    const headerObj = new Headers(header);
-    hasContentLength = headerObj.has("content-length");
-    header = buildOutgoingHttpHeaders(headerObj);
-  } else {
-    for (const key in header) {
-      if (key.length === 14 && key.toLowerCase() === "content-length") {
-        hasContentLength = true;
-        break;
-      }
-    }
   }
-  if (!hasContentLength) {
-    if (typeof body === "string") {
-      header["Content-Length"] = Buffer.byteLength(body);
-    } else if (body instanceof Uint8Array) {
-      header["Content-Length"] = body.byteLength;
-    } else if (body instanceof Blob) {
-      header["Content-Length"] = body.size;
-    }
+  if (typeof body === "string") {
+    header["Content-Length"] = Buffer.byteLength(body);
+  } else if (body instanceof Uint8Array) {
+    header["Content-Length"] = body.byteLength;
+  } else if (body instanceof Blob) {
+    header["Content-Length"] = body.size;
   }
   outgoing.writeHead(status, header);
   if (typeof body === "string" || body instanceof Uint8Array) {
