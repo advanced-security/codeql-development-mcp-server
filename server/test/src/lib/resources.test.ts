@@ -5,9 +5,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   getGettingStartedGuide,
+  getPerformancePatterns,
   getQueryBasicsGuide,
   getSecurityTemplates,
-  getPerformancePatterns
+  getServerPrompts,
+  getServerTools,
+  getTestDrivenDevelopment,
 } from '../../../src/lib/resources';
 
 describe('Resources', () => {
@@ -19,6 +22,16 @@ describe('Resources', () => {
       expect(result.length).toBeGreaterThan(0);
       // Content is embedded at build time, so it always contains real content
       expect(result).toContain('Getting Started');
+    });
+  });
+
+  describe('getPerformancePatterns', () => {
+    it('should return embedded performance patterns content', () => {
+      const result = getPerformancePatterns();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('Performance');
     });
   });
 
@@ -42,13 +55,33 @@ describe('Resources', () => {
     });
   });
 
-  describe('getPerformancePatterns', () => {
-    it('should return embedded performance patterns content', () => {
-      const result = getPerformancePatterns();
+  describe('getServerPrompts', () => {
+    it('should return embedded server prompts content', () => {
+      const result = getServerPrompts();
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
-      expect(result).toContain('Performance');
+      expect(result).toContain('Prompts');
+    });
+  });
+
+  describe('getServerTools', () => {
+    it('should return embedded server tools content', () => {
+      const result = getServerTools();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('Tools');
+    });
+  });
+
+  describe('getTestDrivenDevelopment', () => {
+    it('should return embedded test-driven development content', () => {
+      const result = getTestDrivenDevelopment();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('Test-Driven Development');
     });
   });
 });

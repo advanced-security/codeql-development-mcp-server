@@ -5,28 +5,31 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   getGettingStartedGuide,
+  getPerformancePatterns,
   getQueryBasicsGuide,
   getSecurityTemplates,
-  getPerformancePatterns,
+  getServerPrompts,
+  getServerTools,
+  getTestDrivenDevelopment,
 } from '../lib/resources';
 
 /**
  * Register all CodeQL resources with the MCP server
  */
 export function registerCodeQLResources(server: McpServer): void {
-  // Getting Started Guide
+  // Server Overview (primary onboarding guide)
   server.resource(
-    'CodeQL Getting Started',
-    'codeql://learning/getting-started',
+    'CodeQL Server Overview',
+    'codeql://server/overview',
     {
-      description: 'Comprehensive introduction to CodeQL for beginners',
+      description: 'MCP server orientation guide: available tools, prompts, resources, and workflows',
       mimeType: 'text/markdown',
     },
     async () => {
       return {
         contents: [
           {
-            uri: 'codeql://learning/getting-started',
+            uri: 'codeql://server/overview',
             mimeType: 'text/markdown',
             text: getGettingStartedGuide(),
           },
@@ -35,21 +38,84 @@ export function registerCodeQLResources(server: McpServer): void {
     }
   );
 
-  // Query Basics Guide
+  // Server Prompts Overview
   server.resource(
-    'CodeQL Query Basics',
-    'codeql://learning/query-basics',
+    'CodeQL Server Prompts',
+    'codeql://server/prompts',
     {
-      description: 'Learn the fundamentals of writing CodeQL queries',
+      description: 'Complete reference of MCP prompts for CodeQL development workflows',
       mimeType: 'text/markdown',
     },
     async () => {
       return {
         contents: [
           {
-            uri: 'codeql://learning/query-basics',
+            uri: 'codeql://server/prompts',
+            mimeType: 'text/markdown',
+            text: getServerPrompts(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Server Queries Guide
+  server.resource(
+    'CodeQL Query Writing Guide',
+    'codeql://server/queries',
+    {
+      description: 'Practical reference for writing and validating CodeQL queries using MCP tools',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://server/queries',
             mimeType: 'text/markdown',
             text: getQueryBasicsGuide(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Server Tools Overview
+  server.resource(
+    'CodeQL Server Tools',
+    'codeql://server/tools',
+    {
+      description: 'Complete reference of default MCP tools for CodeQL development',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://server/tools',
+            mimeType: 'text/markdown',
+            text: getServerTools(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Test-Driven Development Guide
+  server.resource(
+    'CodeQL Test-Driven Development',
+    'codeql://learning/test-driven-development',
+    {
+      description: 'TDD theory and workflow for developing CodeQL queries with MCP tools',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://learning/test-driven-development',
+            mimeType: 'text/markdown',
+            text: getTestDrivenDevelopment(),
           },
         ],
       };
@@ -61,7 +127,7 @@ export function registerCodeQLResources(server: McpServer): void {
     'CodeQL Security Templates',
     'codeql://templates/security',
     {
-      description: 'Ready-to-use security query templates',
+      description: 'Security query templates for multiple languages and vulnerability classes',
       mimeType: 'text/markdown',
     },
     async () => {
@@ -82,7 +148,7 @@ export function registerCodeQLResources(server: McpServer): void {
     'CodeQL Performance Patterns',
     'codeql://patterns/performance',
     {
-      description: 'Best practices for writing efficient CodeQL queries',
+      description: 'Performance profiling and optimization for CodeQL queries',
       mimeType: 'text/markdown',
     },
     async () => {
