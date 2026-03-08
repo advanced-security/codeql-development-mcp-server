@@ -9,7 +9,7 @@ The `profile_codeql_query_from_logs` tool is the primary means of evaluating the
 ### Workflow
 
 1. **Run the query**: Use `codeql_query_run` with `evaluationOutput` set to a directory path. This generates evaluator log files.
-2. **Generate a log summary**: Use `codeql_generate_log_summary` to create a human-readable summary of the evaluator log.
+2. **Generate a log summary**: Use `codeql_generate_log-summary` to create a human-readable summary of the evaluator log.
 3. **Profile**: Use `profile_codeql_query_from_logs` to parse the evaluator log into a structured performance profile identifying expensive predicates, pipeline stages, and tuple counts.
 4. **Identify bottlenecks**: Review the profile output for predicates with high evaluation times or unexpectedly large result sets.
 5. **Refine**: Modify the query to address identified bottlenecks, then re-run and re-profile to verify improvements.
@@ -87,7 +87,7 @@ For monorepos with multiple independent applications separated by process/networ
 | ------------------------------------------------ | -------------------------------------------------------------------- |
 | `profile_codeql_query`                           | Profile a query run against a database (runs the query and profiles) |
 | `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (no re-run needed)              |
-| `codeql_generate_log_summary`                    | Generate a human-readable evaluator log summary                      |
+| `codeql_generate_log-summary`                    | Generate a human-readable evaluator log summary                      |
 | `codeql_query_run`                               | Execute a query (set `evaluationOutput` to capture logs)             |
 | `explain_codeql_query` prompt                    | Understand query evaluation flow with Mermaid diagrams               |
 | `run_query_and_summarize_false_positives` prompt | Assess result quality (precision)                                    |
@@ -95,6 +95,6 @@ For monorepos with multiple independent applications separated by process/networ
 ## Related Resources
 
 - `codeql://server/overview` — MCP server orientation guide
-- `codeql://server/queries` — Query structure and compilation tools
+- `codeql://learning/query-basics` — Query structure and compilation tools
 - `codeql://server/tools` — Complete tool reference
 - `codeql://learning/test-driven-development` — TDD workflow for iterative query improvement

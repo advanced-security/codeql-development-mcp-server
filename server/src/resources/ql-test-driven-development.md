@@ -114,7 +114,7 @@ The `.expected` file contains one line per query result, matching the `select` c
 ## Related Resources
 
 - `codeql://server/overview` — MCP server orientation and quick-start guide
-- `codeql://server/queries` — Query structure, metadata, and compilation reference
+- `codeql://learning/query-basics` — Query structure, metadata, and compilation reference
 - `codeql://server/tools` — Complete tool reference
 - `codeql://templates/security` — Security query templates with TDD workflow
 - `codeql://patterns/performance` — Performance profiling tools

@@ -4,24 +4,24 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  getGettingStartedGuide,
+  getLearningQueryBasics,
   getPerformancePatterns,
-  getQueryBasicsGuide,
   getSecurityTemplates,
+  getServerOverview,
   getServerPrompts,
+  getServerQueries,
   getServerTools,
   getTestDrivenDevelopment,
 } from '../../../src/lib/resources';
 
 describe('Resources', () => {
-  describe('getGettingStartedGuide', () => {
-    it('should return embedded getting started guide content', () => {
-      const result = getGettingStartedGuide();
+  describe('getLearningQueryBasics', () => {
+    it('should return embedded query basics learning content', () => {
+      const result = getLearningQueryBasics();
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
-      // Content is embedded at build time, so it always contains real content
-      expect(result).toContain('Getting Started');
+      expect(result).toContain('Query');
     });
   });
 
@@ -35,16 +35,6 @@ describe('Resources', () => {
     });
   });
 
-  describe('getQueryBasicsGuide', () => {
-    it('should return embedded query basics guide content', () => {
-      const result = getQueryBasicsGuide();
-
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-      expect(result).toContain('Query');
-    });
-  });
-
   describe('getSecurityTemplates', () => {
     it('should return embedded security templates content', () => {
       const result = getSecurityTemplates();
@@ -55,6 +45,16 @@ describe('Resources', () => {
     });
   });
 
+  describe('getServerOverview', () => {
+    it('should return embedded server overview content', () => {
+      const result = getServerOverview();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('Getting Started');
+    });
+  });
+
   describe('getServerPrompts', () => {
     it('should return embedded server prompts content', () => {
       const result = getServerPrompts();
@@ -62,6 +62,16 @@ describe('Resources', () => {
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
       expect(result).toContain('Prompts');
+    });
+  });
+
+  describe('getServerQueries', () => {
+    it('should return embedded server queries content', () => {
+      const result = getServerQueries();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('PrintAST');
     });
   });
 

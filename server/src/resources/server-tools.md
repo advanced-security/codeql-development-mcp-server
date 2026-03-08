@@ -75,7 +75,7 @@ This resource provides a complete reference of the default tools exposed by the 
 
 1. `codeql_query_run` with `evaluationOutput` — run query and capture evaluator logs
 2. `profile_codeql_query_from_logs` — analyze evaluator logs for bottlenecks
-3. `codeql_generate_log_summary` — generate a human-readable log summary
+3. `codeql_generate_log-summary` — generate a human-readable log summary
 
 ### Interactive Development
 
@@ -94,5 +94,5 @@ This resource provides a complete reference of the default tools exposed by the 
 
 - `codeql://server/overview` — MCP server orientation guide
 - `codeql://server/prompts` — Complete prompt reference
-- `codeql://server/queries` — Query writing reference
+- `codeql://learning/query-basics` — Query writing reference
 - `codeql://patterns/performance` — Performance profiling guide

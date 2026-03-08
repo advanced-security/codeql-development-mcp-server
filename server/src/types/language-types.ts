@@ -1,60 +1,80 @@
 /**
- * Type definitions and constants for language-specific resources
+ * Type definitions and constants for language-specific resources.
+ *
+ * Content is imported statically at build time via esbuild's `.md: 'text'`
+ * loader, following the same pattern as `server/src/lib/resources.ts`.
  */
 
-// Language mappings to resource files
+import actionsAst from '../resources/languages/actions_ast.md';
+import cppAst from '../resources/languages/cpp_ast.md';
+import cppSecurity from '../resources/languages/cpp_security_query_guide.md';
+import csharpAst from '../resources/languages/csharp_ast.md';
+import csharpSecurity from '../resources/languages/csharp_security_query_guide.md';
+import goAst from '../resources/languages/go_ast.md';
+import goBasicQueries from '../resources/languages/go_basic_queries.md';
+import goDataflow from '../resources/languages/go_dataflow.md';
+import goLibraryModeling from '../resources/languages/go_library_modeling.md';
+import goSecurity from '../resources/languages/go_security_query_guide.md';
+import javaAst from '../resources/languages/java_ast.md';
+import javascriptAst from '../resources/languages/javascript_ast.md';
+import javascriptSecurity from '../resources/languages/javascript_security_query_guide.md';
+import pythonAst from '../resources/languages/python_ast.md';
+import pythonSecurity from '../resources/languages/python_security_query_guide.md';
+import qlAst from '../resources/languages/ql_ast.md';
+import rubyAst from '../resources/languages/ruby_ast.md';
+
 export interface LanguageResource {
   language: string;
-  astFile?: string;
-  securityFile?: string;
-  additionalFiles?: Record<string, string>;
+  astContent?: string;
+  securityContent?: string;
+  additionalResources?: Record<string, string>;
 }
 
 export const LANGUAGE_RESOURCES: LanguageResource[] = [
   {
     language: 'actions',
-    astFile: 'ql/languages/actions/tools/dev/actions_ast.prompt.md'
+    astContent: actionsAst
   },
   {
     language: 'cpp',
-    astFile: 'ql/languages/cpp/tools/dev/cpp_ast.prompt.md',
-    securityFile: 'ql/languages/cpp/tools/dev/cpp_security_query_guide.prompt.md'
+    astContent: cppAst,
+    securityContent: cppSecurity
   },
   {
     language: 'csharp',
-    astFile: 'ql/languages/csharp/tools/dev/csharp_ast.prompt.md',
-    securityFile: 'ql/languages/csharp/tools/dev/csharp_security_query_guide.prompt.md'
+    astContent: csharpAst,
+    securityContent: csharpSecurity
   },
   {
     language: 'go',
-    astFile: 'ql/languages/go/tools/dev/go_ast.prompt.md',
-    securityFile: 'ql/languages/go/tools/dev/go_security_query_guide.prompt.md',
-    additionalFiles: {
-      'dataflow': 'ql/languages/go/tools/dev/go_dataflow.prompt.md',
-      'library-modeling': 'ql/languages/go/tools/dev/go_library_modeling.prompt.md',
-      'basic-queries': 'ql/languages/go/tools/dev/go_basic_queries.prompt.md'
+    astContent: goAst,
+    securityContent: goSecurity,
+    additionalResources: {
+      'basic-queries': goBasicQueries,
+      'dataflow': goDataflow,
+      'library-modeling': goLibraryModeling,
     }
   },
   {
     language: 'java',
-    astFile: 'ql/languages/java/tools/dev/java_ast.prompt.md'
+    astContent: javaAst,
   },
   {
     language: 'javascript',
-    astFile: 'ql/languages/javascript/tools/dev/javascript_ast.prompt.md',
-    securityFile: 'ql/languages/javascript/tools/dev/javascript_security_query_guide.prompt.md'
+    astContent: javascriptAst,
+    securityContent: javascriptSecurity
   },
   {
     language: 'python',
-    astFile: 'ql/languages/python/tools/dev/python_ast.prompt.md',
-    securityFile: 'ql/languages/python/tools/dev/python_security_query_guide.prompt.md'
+    astContent: pythonAst,
+    securityContent: pythonSecurity
   },
   {
     language: 'ql',
-    astFile: 'ql/languages/ql/tools/dev/ql_ast.prompt.md'
+    astContent: qlAst
   },
   {
     language: 'ruby',
-    astFile: 'ql/languages/ruby/tools/dev/ruby_ast.prompt.md'
+    astContent: rubyAst
   }
 ];

@@ -155,7 +155,7 @@ Each language has pre-built security libraries in the CodeQL standard library. I
 
 ## Related Resources
 
-- `codeql://server/queries` — Query structure and metadata reference
+- `codeql://learning/query-basics` — Query structure and metadata reference
 - `codeql://learning/test-driven-development` — TDD workflow for developing queries
 - `codeql://patterns/performance` — Performance optimization guidance
 - `codeql://languages/{language}/security` — Language-specific security patterns and framework modeling

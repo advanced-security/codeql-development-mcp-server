@@ -4,19 +4,20 @@
 
 ## Overview
 
-The server exposes **7 static resources** and a set of **dynamic per-language resources** that supply AI assistants with CodeQL reference material. Resources are read-only and backed by `.md` files bundled with the server.
+The server exposes **8 static resources** and a set of **dynamic per-language resources** that supply AI assistants with CodeQL reference material. Resources are read-only and backed by `.md` files bundled with the server.
 
 ## Static Resources
 
-| Resource                       | URI                                         | Description                                                               |
-| ------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------- |
-| CodeQL Server Overview         | `codeql://server/overview`                  | MCP server orientation guide: tools, prompts, resources, and workflows    |
-| CodeQL Server Prompts          | `codeql://server/prompts`                   | Complete reference of MCP prompts for CodeQL development workflows        |
-| CodeQL Query Writing Guide     | `codeql://server/queries`                   | Practical reference for writing and validating CodeQL queries             |
-| CodeQL Server Tools            | `codeql://server/tools`                     | Complete reference of default MCP tools for CodeQL development            |
-| CodeQL Test-Driven Development | `codeql://learning/test-driven-development` | TDD theory and workflow for developing CodeQL queries                     |
-| CodeQL Security Templates      | `codeql://templates/security`               | Security query templates for multiple languages and vulnerability classes |
-| CodeQL Performance Patterns    | `codeql://patterns/performance`             | Performance profiling and optimization for CodeQL queries                 |
+| Resource                       | URI                                         | Description                                                                       |
+| ------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| CodeQL Query Basics            | `codeql://learning/query-basics`            | QL query writing reference: syntax, metadata, patterns, testing                   |
+| CodeQL Test-Driven Development | `codeql://learning/test-driven-development` | TDD theory and workflow for developing CodeQL queries                             |
+| CodeQL Performance Patterns    | `codeql://patterns/performance`             | Performance profiling and optimization for CodeQL queries                         |
+| CodeQL Server Overview         | `codeql://server/overview`                  | MCP server orientation guide: tools, prompts, resources, and workflows            |
+| CodeQL Server Prompts          | `codeql://server/prompts`                   | Complete reference of MCP prompts for CodeQL development workflows                |
+| CodeQL Server Queries          | `codeql://server/queries`                   | Overview of bundled tools queries: PrintAST, PrintCFG, CallGraphFrom, CallGraphTo |
+| CodeQL Server Tools            | `codeql://server/tools`                     | Complete reference of default MCP tools for CodeQL development                    |
+| CodeQL Security Templates      | `codeql://templates/security`               | Security query templates for multiple languages and vulnerability classes         |
 
 ## Language-Specific Resources
 

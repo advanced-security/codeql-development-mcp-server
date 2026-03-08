@@ -4,11 +4,12 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  getGettingStartedGuide,
+  getLearningQueryBasics,
   getPerformancePatterns,
-  getQueryBasicsGuide,
   getSecurityTemplates,
+  getServerOverview,
   getServerPrompts,
+  getServerQueries,
   getServerTools,
   getTestDrivenDevelopment,
 } from '../lib/resources';
@@ -17,91 +18,28 @@ import {
  * Register all CodeQL resources with the MCP server
  */
 export function registerCodeQLResources(server: McpServer): void {
-  // Server Overview (primary onboarding guide)
+  // Learning: Query Basics
   server.resource(
-    'CodeQL Server Overview',
-    'codeql://server/overview',
+    'CodeQL Query Basics',
+    'codeql://learning/query-basics',
     {
-      description: 'MCP server orientation guide: available tools, prompts, resources, and workflows',
+      description: 'QL query writing reference: syntax, metadata, from/where/select, common patterns, testing conventions',
       mimeType: 'text/markdown',
     },
     async () => {
       return {
         contents: [
           {
-            uri: 'codeql://server/overview',
+            uri: 'codeql://learning/query-basics',
             mimeType: 'text/markdown',
-            text: getGettingStartedGuide(),
+            text: getLearningQueryBasics(),
           },
         ],
       };
     }
   );
 
-  // Server Prompts Overview
-  server.resource(
-    'CodeQL Server Prompts',
-    'codeql://server/prompts',
-    {
-      description: 'Complete reference of MCP prompts for CodeQL development workflows',
-      mimeType: 'text/markdown',
-    },
-    async () => {
-      return {
-        contents: [
-          {
-            uri: 'codeql://server/prompts',
-            mimeType: 'text/markdown',
-            text: getServerPrompts(),
-          },
-        ],
-      };
-    }
-  );
-
-  // Server Queries Guide
-  server.resource(
-    'CodeQL Query Writing Guide',
-    'codeql://server/queries',
-    {
-      description: 'Practical reference for writing and validating CodeQL queries using MCP tools',
-      mimeType: 'text/markdown',
-    },
-    async () => {
-      return {
-        contents: [
-          {
-            uri: 'codeql://server/queries',
-            mimeType: 'text/markdown',
-            text: getQueryBasicsGuide(),
-          },
-        ],
-      };
-    }
-  );
-
-  // Server Tools Overview
-  server.resource(
-    'CodeQL Server Tools',
-    'codeql://server/tools',
-    {
-      description: 'Complete reference of default MCP tools for CodeQL development',
-      mimeType: 'text/markdown',
-    },
-    async () => {
-      return {
-        contents: [
-          {
-            uri: 'codeql://server/tools',
-            mimeType: 'text/markdown',
-            text: getServerTools(),
-          },
-        ],
-      };
-    }
-  );
-
-  // Test-Driven Development Guide
+  // Learning: Test-Driven Development
   server.resource(
     'CodeQL Test-Driven Development',
     'codeql://learning/test-driven-development',
@@ -122,28 +60,7 @@ export function registerCodeQLResources(server: McpServer): void {
     }
   );
 
-  // Security Templates
-  server.resource(
-    'CodeQL Security Templates',
-    'codeql://templates/security',
-    {
-      description: 'Security query templates for multiple languages and vulnerability classes',
-      mimeType: 'text/markdown',
-    },
-    async () => {
-      return {
-        contents: [
-          {
-            uri: 'codeql://templates/security',
-            mimeType: 'text/markdown',
-            text: getSecurityTemplates(),
-          },
-        ],
-      };
-    }
-  );
-
-  // Performance Patterns
+  // Patterns: Performance
   server.resource(
     'CodeQL Performance Patterns',
     'codeql://patterns/performance',
@@ -158,6 +75,111 @@ export function registerCodeQLResources(server: McpServer): void {
             uri: 'codeql://patterns/performance',
             mimeType: 'text/markdown',
             text: getPerformancePatterns(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Server: Overview (primary onboarding guide)
+  server.resource(
+    'CodeQL Server Overview',
+    'codeql://server/overview',
+    {
+      description: 'MCP server orientation guide: available tools, prompts, resources, and workflows',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://server/overview',
+            mimeType: 'text/markdown',
+            text: getServerOverview(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Server: Prompts
+  server.resource(
+    'CodeQL Server Prompts',
+    'codeql://server/prompts',
+    {
+      description: 'Complete reference of MCP prompts for CodeQL development workflows',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://server/prompts',
+            mimeType: 'text/markdown',
+            text: getServerPrompts(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Server: Queries (bundled tools queries overview)
+  server.resource(
+    'CodeQL Server Queries',
+    'codeql://server/queries',
+    {
+      description: 'Overview of bundled tools queries: PrintAST, PrintCFG, CallGraphFrom, CallGraphTo',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://server/queries',
+            mimeType: 'text/markdown',
+            text: getServerQueries(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Server: Tools
+  server.resource(
+    'CodeQL Server Tools',
+    'codeql://server/tools',
+    {
+      description: 'Complete reference of default MCP tools for CodeQL development',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://server/tools',
+            mimeType: 'text/markdown',
+            text: getServerTools(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Templates: Security
+  server.resource(
+    'CodeQL Security Templates',
+    'codeql://templates/security',
+    {
+      description: 'Security query templates for multiple languages and vulnerability classes',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://templates/security',
+            mimeType: 'text/markdown',
+            text: getSecurityTemplates(),
           },
         ],
       };

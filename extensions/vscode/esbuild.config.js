@@ -36,6 +36,7 @@ const testSuiteConfig = {
     'test/suite/index.ts',
     'test/suite/bridge.integration.test.ts',
     'test/suite/extension.integration.test.ts',
+    'test/suite/mcp-resource-e2e.integration.test.ts',
     'test/suite/mcp-server.integration.test.ts',
     'test/suite/mcp-tool-e2e.integration.test.ts',
     'test/suite/workspace-scenario.integration.test.ts',

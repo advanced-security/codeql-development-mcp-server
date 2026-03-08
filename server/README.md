@@ -87,9 +87,9 @@ Full reference: [Prompts](https://github.com/advanced-security/codeql-developmen
 
 Static reference materials and per-language references served to AI assistants:
 
-- **Server Overview** / **Query Writing Guide** — MCP server orientation and query development reference
+- **Server Overview** / **Server Queries** — MCP server orientation and bundled tools queries reference
 - **Server Tools** / **Server Prompts** — Complete tool and prompt references
-- **Test-Driven Development** — TDD theory and workflow for CodeQL queries
+- **Query Basics** / **Test-Driven Development** — QL query writing guide and TDD workflow
 - **Security Templates** / **Performance Patterns** — Multi-language security templates and profiling guidance
 - **Language AST References** — For actions, cpp, csharp, go, java, javascript, python, ql, ruby
 - **Language Security Patterns** — For cpp, csharp, go, javascript, python
