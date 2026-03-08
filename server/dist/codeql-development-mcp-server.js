@@ -31254,10 +31254,10 @@ var require_view = __commonJS({
     var debug = require_src()("express:view");
     var path4 = __require("node:path");
     var fs3 = __require("node:fs");
-    var dirname9 = path4.dirname;
+    var dirname8 = path4.dirname;
     var basename7 = path4.basename;
     var extname2 = path4.extname;
-    var join20 = path4.join;
+    var join19 = path4.join;
     var resolve13 = path4.resolve;
     module.exports = View;
     function View(name, options) {
@@ -31293,7 +31293,7 @@ var require_view = __commonJS({
       for (var i = 0; i < roots.length && !path5; i++) {
         var root = roots[i];
         var loc = resolve13(root, name);
-        var dir = dirname9(loc);
+        var dir = dirname8(loc);
         var file = basename7(loc);
         path5 = this.resolve(dir, file);
       }
@@ -31319,12 +31319,12 @@ var require_view = __commonJS({
     };
     View.prototype.resolve = function resolve14(dir, file) {
       var ext = this.ext;
-      var path5 = join20(dir, file);
+      var path5 = join19(dir, file);
       var stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
       }
-      path5 = join20(dir, basename7(file, ext), "index" + ext);
+      path5 = join19(dir, basename7(file, ext), "index" + ext);
       stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
@@ -34969,7 +34969,7 @@ var require_send = __commonJS({
     var Stream = __require("stream");
     var util2 = __require("util");
     var extname2 = path4.extname;
-    var join20 = path4.join;
+    var join19 = path4.join;
     var normalize = path4.normalize;
     var resolve13 = path4.resolve;
     var sep2 = path4.sep;
@@ -35141,7 +35141,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = path5.split(sep2);
-        path5 = normalize(join20(root, path5));
+        path5 = normalize(join19(root, path5));
       } else {
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
@@ -35274,7 +35274,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join20(path5, self._index[i]);
+        var p = join19(path5, self._index[i]);
         debug('stat "%s"', p);
         fs3.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -40516,8 +40516,8 @@ var require_adm_zip = __commonJS({
         return null;
       }
       function fixPath(zipPath) {
-        const { join: join20, normalize, sep: sep2 } = pth.posix;
-        return join20(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
+        const { join: join19, normalize, sep: sep2 } = pth.posix;
+        return join19(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
       }
       function filenameFilter(filterfn) {
         if (filterfn instanceof RegExp) {
@@ -63007,39 +63007,30 @@ function registerCodeQLTools(server) {
   registerRegisterDatabaseTool(server);
 }
 
+// src/resources/getting-started.md
+var getting_started_default = "# CodeQL Getting Started Guide\n\n## What is CodeQL?\n\nCodeQL is a semantic code analysis engine that allows you to write queries to find problems in source code.\n\n## Installation\n\n1. Download CodeQL CLI from GitHub releases\n2. Add to PATH\n3. Verify: `codeql version`\n\n## First Steps\n\n### 1. Create a Database\n\n```bash\ncodeql database create my-db --language=java --source-root=./src\n```\n\n### 2. Run Analysis\n\n```bash\ncodeql database analyze my-db --format=sarif --output=results.sarif\n```\n\n## Resources\n\n- [CodeQL Documentation](https://codeql.github.com/)\n- [GitHub Security Lab](https://securitylab.github.com/)\n";
+
+// src/resources/performance-patterns.md
+var performance_patterns_default = '# Performance Optimization Patterns\n\n## Efficient Joins\n\n```ql\n// Efficient - Proper join condition\nfrom Method m, MethodAccess ma\nwhere ma.getMethod() = m\nselect m, ma\n```\n\n## Early Filtering\n\n```ql\n// Filter early for better performance\nfrom Expr e\nwhere e.getEnclosingCallable().getDeclaringType().hasName("Controller")\n  and e.getType().hasName("String")\n```\n';
+
+// src/resources/query-basics.md
+var query_basics_default = '# CodeQL Query Basics\n\n## Query Structure\n\n```ql\n/**\n * @name Query Name\n * @description What this query finds\n */\n\nimport language\n\nfrom Variable declarations\nwhere Conditions\nselect Results\n```\n\n## Core Clauses\n\n- **from**: Declares variables and types\n- **where**: Specifies conditions\n- **select**: Defines output\n\n## Example\n\n```ql\nfrom Method m\nwhere m.getName() = "execute"\nselect m, "Found execute method"\n```\n';
+
+// src/resources/security-templates.md
+var security_templates_default = '# Security Query Templates\n\n## SQL Injection Detection (Go)\n\nBased on the real CodeQL query from github/codeql repository:\n\n```ql\n/**\n * @name Database query built from user-controlled sources\n * @description Building a database query from user-controlled sources is vulnerable to insertion of\n *              malicious code by the user.\n * @kind path-problem\n * @problem.severity error\n * @security-severity 8.8\n * @precision high\n * @id go/sql-injection\n * @tags security\n *       external/cwe/cwe-089\n */\n\nimport go\nimport semmle.go.security.SqlInjection\nimport SqlInjection::Flow::PathGraph\n\nfrom SqlInjection::Flow::PathNode source, SqlInjection::Flow::PathNode sink\nwhere SqlInjection::Flow::flowPath(source, sink)\nselect sink.getNode(), source, sink, "This query depends on a $@.", source.getNode(),\n  "user-provided value"\n```\n\n## Cross-Site Scripting (XSS) Template\n\n```ql\n/**\n * @name Cross-site scripting\n * @description Writing user input directly to a web page\n *              allows for a cross-site scripting vulnerability.\n * @kind path-problem\n * @problem.severity error\n * @security-severity 6.1\n * @precision high\n * @id js/xss\n * @tags security\n *       external/cwe/cwe-079\n */\n\nimport javascript\nimport semmle.javascript.security.dataflow.DomBasedXss\nimport DomBasedXss::Flow::PathGraph\n\nfrom DomBasedXss::Flow::PathNode source, DomBasedXss::Flow::PathNode sink\nwhere DomBasedXss::Flow::flowPath(source, sink)\nselect sink.getNode(), source, sink, "Cross-site scripting vulnerability due to $@.",\n  source.getNode(), "user-provided value"\n```\n';
+
 // src/lib/resources.ts
-import { readFileSync as readFileSync11 } from "fs";
-import { join as join16, dirname as dirname8 } from "path";
-import { fileURLToPath as fileURLToPath3 } from "url";
-var __filename2 = fileURLToPath3(import.meta.url);
-var __dirname2 = dirname8(__filename2);
 function getGettingStartedGuide() {
-  try {
-    return readFileSync11(join16(__dirname2, "../resources/getting-started.md"), "utf-8");
-  } catch {
-    return "Getting started guide not available";
-  }
+  return getting_started_default;
 }
 function getQueryBasicsGuide() {
-  try {
-    return readFileSync11(join16(__dirname2, "../resources/query-basics.md"), "utf-8");
-  } catch {
-    return "Query basics guide not available";
-  }
+  return query_basics_default;
 }
 function getSecurityTemplates() {
-  try {
-    return readFileSync11(join16(__dirname2, "../resources/security-templates.md"), "utf-8");
-  } catch {
-    return "Security templates not available";
-  }
+  return security_templates_default;
 }
 function getPerformancePatterns() {
-  try {
-    return readFileSync11(join16(__dirname2, "../resources/performance-patterns.md"), "utf-8");
-  } catch {
-    return "Performance patterns not available";
-  }
+  return performance_patterns_default;
 }
 
 // src/tools/codeql-resources.ts
@@ -63125,7 +63116,7 @@ function registerCodeQLResources(server) {
 // src/tools/lsp/lsp-diagnostics.ts
 init_logger();
 init_temp_dir();
-import { join as join17 } from "path";
+import { join as join16 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/lsp/lsp-server-helper.ts
@@ -63223,7 +63214,7 @@ async function lspDiagnostics({
       serverOptions,
       workspaceUri
     });
-    const evalUri = pathToFileURL3(join17(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
+    const evalUri = pathToFileURL3(join16(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     const summary = {
       errorCount: diagnostics.filter((d) => d.severity === 1).length,
@@ -63497,8 +63488,8 @@ function registerLSPTools(server) {
 }
 
 // src/resources/language-resources.ts
-import { readFileSync as readFileSync12, existsSync as existsSync12 } from "fs";
-import { join as join18 } from "path";
+import { readFileSync as readFileSync11, existsSync as existsSync12 } from "fs";
+import { join as join17 } from "path";
 
 // src/types/language-types.ts
 var LANGUAGE_RESOURCES = [
@@ -63554,16 +63545,16 @@ var LANGUAGE_RESOURCES = [
 init_package_paths();
 init_logger();
 function getQLBasePath() {
-  return workspaceRootDir;
+  return packageRootDir;
 }
 function loadResourceContent(relativePath) {
   try {
-    const fullPath = join18(getQLBasePath(), relativePath);
+    const fullPath = join17(getQLBasePath(), relativePath);
     if (!existsSync12(fullPath)) {
       logger.warn(`Resource file not found: ${fullPath}`);
       return null;
     }
-    return readFileSync12(fullPath, "utf-8");
+    return readFileSync11(fullPath, "utf-8");
   } catch (error2) {
     logger.error(`Error loading resource file ${relativePath}:`, error2);
     return null;
@@ -64255,7 +64246,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync13, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
+import { readFileSync as readFileSync12, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -64268,7 +64259,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync13(this.#filename, "utf-8");
+      data = readFileSync12(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -64319,7 +64310,7 @@ var JSONFileSync = class extends DataFileSync {
 // src/lib/session-data-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync9, writeFileSync as writeFileSync7 } from "fs";
-import { join as join19 } from "path";
+import { join as join18 } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
 
 // src/types/monitoring.ts
@@ -64463,7 +64454,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join19(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join18(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -64495,9 +64486,9 @@ var SessionDataManager = class {
       mkdirSync9(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync9(join19(this.storageDir, subdir), { recursive: true });
+        mkdirSync9(join18(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join19(this.storageDir, "config.json");
+      const configPath = join18(this.storageDir, "config.json");
       try {
         writeFileSync7(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
@@ -64676,9 +64667,9 @@ var SessionDataManager = class {
       if (!session) return;
       const date3 = new Date(session.endTime || session.startTime);
       const monthDir = `${date3.getFullYear()}-${String(date3.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join19(this.storageDir, "sessions-archive", monthDir);
+      const archiveDir = join18(this.storageDir, "sessions-archive", monthDir);
       mkdirSync9(archiveDir, { recursive: true });
-      const archiveFile = join19(archiveDir, `${sessionId}.json`);
+      const archiveFile = join18(archiveDir, `${sessionId}.json`);
       writeFileSync7(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
@@ -64730,7 +64721,7 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join19(this.storageDir, "config.json");
+    const configPath = join18(this.storageDir, "config.json");
     writeFileSync7(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
@@ -64740,7 +64731,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join19(getProjectTmpBase(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join18(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
