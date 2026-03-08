@@ -38248,9 +38248,9 @@ function discoverFromDistributionJson(codeqlStorage) {
 function discoverFromDistributionScan(codeqlStorage) {
   try {
     const entries = readdirSync(codeqlStorage, { withFileTypes: true });
-    const distDirs = entries.filter((e) => e.isDirectory() && /^distribution\d*$/.test(e.name)).map((e) => ({
+    const distDirs = entries.filter((e) => e.isDirectory() && /^distribution\d+$/.test(e.name)).map((e) => ({
       name: e.name,
-      num: parseInt(e.name.replace("distribution", "") || "0", 10)
+      num: parseInt(e.name.replace("distribution", ""), 10)
     })).sort((a, b) => b.num - a.num);
     for (const dir of distDirs) {
       const binaryPath = join4(

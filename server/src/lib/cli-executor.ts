@@ -238,10 +238,10 @@ function discoverFromDistributionScan(codeqlStorage: string): string | undefined
     const entries = readdirSync(codeqlStorage, { withFileTypes: true });
 
     const distDirs = entries
-      .filter(e => e.isDirectory() && /^distribution\d*$/.test(e.name))
+      .filter(e => e.isDirectory() && /^distribution\d+$/.test(e.name))
       .map(e => ({
         name: e.name,
-        num: parseInt(e.name.replace('distribution', '') || '0', 10),
+        num: parseInt(e.name.replace('distribution', ''), 10),
       }))
       .sort((a, b) => b.num - a.num);
 
