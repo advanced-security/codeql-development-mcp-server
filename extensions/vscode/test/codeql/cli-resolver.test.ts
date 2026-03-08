@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { CliResolver } from '../../src/codeql/cli-resolver';
 
@@ -211,7 +212,7 @@ describe('CliResolver', () => {
       );
 
       // The binary at distribution3/codeql/codeql is valid
-      const expectedPath = `${storagePath}/distribution3/codeql/${binaryName}`;
+      const expectedPath = join(storagePath, 'distribution3', 'codeql', binaryName);
       vi.mocked(access).mockImplementation((path: any) => {
         if (String(path) === expectedPath) return Promise.resolve(undefined as any);
         return Promise.reject(new Error('ENOENT'));
@@ -240,7 +241,7 @@ describe('CliResolver', () => {
       ] as any);
 
       // Only distribution3 has a valid binary
-      const expectedPath = `${storagePath}/distribution3/codeql/${binaryName}`;
+      const expectedPath = join(storagePath, 'distribution3', 'codeql', binaryName);
       vi.mocked(access).mockImplementation((path: any) => {
         if (String(path) === expectedPath) return Promise.resolve(undefined as any);
         return Promise.reject(new Error('ENOENT'));
@@ -265,7 +266,7 @@ describe('CliResolver', () => {
       vi.mocked(access).mockResolvedValue(undefined as any);
 
       const result = await resolver.resolve();
-      expect(result).toBe(`${storagePath}/distribution10/codeql/${binaryName}`);
+      expect(result).toBe(join(storagePath, 'distribution10', 'codeql', binaryName));
     });
 
     it('should return undefined when no storage path is provided', async () => {
@@ -293,7 +294,7 @@ describe('CliResolver', () => {
         { name: 'distribution1', isDirectory: () => true },
       ] as any);
 
-      const expectedPath = `${storagePath}/distribution1/codeql/${binaryName}`;
+      const expectedPath = join(storagePath, 'distribution1', 'codeql', binaryName);
       vi.mocked(access).mockImplementation((path: any) => {
         // Only distribution1 has the binary
         if (String(path) === expectedPath) return Promise.resolve(undefined as any);
@@ -314,7 +315,7 @@ describe('CliResolver', () => {
         { name: 'distribution1', isDirectory: () => true },
       ] as any);
 
-      const expectedPath = `${storagePath}/distribution1/codeql/${binaryName}`;
+      const expectedPath = join(storagePath, 'distribution1', 'codeql', binaryName);
       vi.mocked(access).mockImplementation((path: any) => {
         if (String(path) === expectedPath) return Promise.resolve(undefined as any);
         return Promise.reject(new Error('ENOENT'));
@@ -339,7 +340,7 @@ describe('CliResolver', () => {
         return Promise.resolve(JSON.stringify({ folderIndex: 1 }) as any);
       });
 
-      const expectedPath = `${lowercaseExtStorage}/distribution1/codeql/${binaryName}`;
+      const expectedPath = join(lowercaseExtStorage, 'distribution1', 'codeql', binaryName);
       vi.mocked(access).mockImplementation((path: any) => {
         if (String(path) === expectedPath) return Promise.resolve(undefined as any);
         return Promise.reject(new Error('ENOENT'));
@@ -360,7 +361,7 @@ describe('CliResolver', () => {
         { name: 'distribution1', isDirectory: () => true },
       ] as any);
 
-      const expectedPath = `${storagePath}/distribution1/codeql/${binaryName}`;
+      const expectedPath = join(storagePath, 'distribution1', 'codeql', binaryName);
       vi.mocked(access).mockImplementation((path: any) => {
         if (String(path) === expectedPath) return Promise.resolve(undefined as any);
         return Promise.reject(new Error('ENOENT'));

@@ -106,12 +106,12 @@ function isCommandAllowed(command: string): boolean {
   return ALLOWED_COMMANDS.has(command) || (testCommands !== null && testCommands.has(command));
 }
 
-// Resolved CodeQL binary directory from CODEQL_PATH.
-// When set, this directory is prepended to PATH for all child processes
-// so that `execFile('codeql', ...)` finds the correct binary via execvp().
-// Using PATH lookup (rather than an absolute path) is essential because
-// execvp() handles shell-script shebangs correctly, whereas passing an
-// absolute path to execFile() can fail with ENOENT for shell scripts.
+// Resolved CodeQL binary directory from CODEQL_PATH or vscode-codeql
+// distribution auto-discovery. When set, this directory is prepended to PATH
+// for all child processes so that `execFile('codeql', ...)` finds the correct
+// binary via execvp(). Using PATH lookup (rather than an absolute path) is
+// essential because execvp() handles shell-script shebangs correctly, whereas
+// passing an absolute path to execFile() can fail with ENOENT for shell scripts.
 let resolvedCodeQLDir: string | null = null;
 
 // Cached result from resolveCodeQLBinary(). `undefined` means not yet resolved.
