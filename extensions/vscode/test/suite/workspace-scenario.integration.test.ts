@@ -109,8 +109,11 @@ suite('Workspace Scenario Tests', () => {
       // With copyDatabases enabled (default), CODEQL_DATABASES_BASE_DIRS points
       // to a managed databases/ directory under our globalStorage instead of the
       // original workspaceStorage paths. Accept either layout.
-      const hasManagedDir = dirs.includes('/databases');
-      const hasWorkspaceStorage = dirs.includes('workspaceStorage');
+      const dirList = String(dirs)
+        .split(path.delimiter)
+        .filter((p: string) => p);
+      const hasManagedDir = dirList.some((p: string) => path.basename(p) === 'databases');
+      const hasWorkspaceStorage = dirList.some((p: string) => p.includes('workspaceStorage'));
       assert.ok(
         hasManagedDir || hasWorkspaceStorage,
         `With workspace open, CODEQL_DATABASES_BASE_DIRS should include managed databases dir or workspaceStorage: ${dirs}`,

@@ -31,7 +31,14 @@ export class DatabaseCopier {
    *          are ready for use (absolute paths).
    */
   async syncAll(sourceDirs: string[]): Promise<string[]> {
-    await mkdir(this.destinationBase, { recursive: true });
+    try {
+      await mkdir(this.destinationBase, { recursive: true });
+    } catch (err) {
+      this.logger.error(
+        `Failed to create managed database directory ${this.destinationBase}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return [];
+    }
 
     const copied: string[] = [];
 
@@ -76,8 +83,15 @@ export class DatabaseCopier {
     this.logger.info(`Copying database ${src} → ${dest}`);
     try {
       // Remove stale destination if present
-      if (existsSync(dest)) {
-        await rm(dest, { recursive: true, force: true });
+      try {
+        if (existsSync(dest)) {
+          await rm(dest, { recursive: true, force: true });
+        }
+      } catch (rmErr) {
+        this.logger.error(
+          `Failed to remove stale destination ${dest}: ${rmErr instanceof Error ? rmErr.message : String(rmErr)}`,
+        );
+        return;
       }
 
       await cp(src, dest, { recursive: true });
