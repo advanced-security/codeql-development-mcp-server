@@ -64,7 +64,7 @@ Use the `ql_lsp_iterative_development` prompt:
 
 ## Tool Categories
 
-The server provides **38 default tools** across these categories (see `codeql://server/tools` for the full reference):
+The server provides default tools across these categories (see `codeql://server/tools` for the full reference):
 
 - **CodeQL CLI tools** — Database creation, query compilation, execution, result decoding, pack management
 - **LSP tools** — Code completion, go-to-definition, find references, diagnostics

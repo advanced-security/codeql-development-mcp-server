@@ -52,6 +52,7 @@ This resource provides a complete reference of the default tools exposed by the 
 | `profile_codeql_query`           | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log     |
 | `profile_codeql_query_from_logs` | Parse existing CodeQL evaluator logs into a performance profile without re-running the query                 |
 | `quick_evaluate`                 | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                 |
+| `read_database_source`           | Read source file contents from a CodeQL database source archive. Omit `filePath` to list all files           |
 | `register_database`              | Register a CodeQL database given a local path to the database directory                                      |
 | `validate_codeql_query`          | Quick heuristic validation for CodeQL query structure (does not compile the query)                           |
 

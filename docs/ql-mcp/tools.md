@@ -4,7 +4,7 @@
 
 ## Overview
 
-The server exposes **38 default tools** and **11 opt-in monitoring tools**. Default tools are registered on startup; monitoring tools require explicit opt-in (see [Monitoring and Reporting](../mcp-server-monitoring-and-reporting.md)). Users control which tools are enabled in their MCP client configuration.
+The server exposes default tools and opt-in monitoring tools. Default tools are registered on startup; monitoring tools require explicit opt-in (see [Monitoring and Reporting](../mcp-server-monitoring-and-reporting.md)). Users control which tools are enabled in their MCP client configuration.
 
 > **Authoritative reference**: The MCP-served resource at `codeql://server/tools` ([`server/src/resources/server-tools.md`](../../server/src/resources/server-tools.md)) is the canonical documentation for default tools. Update that file when adding, removing, or changing any default tool.
 
