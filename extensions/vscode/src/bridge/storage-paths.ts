@@ -88,6 +88,14 @@ export class StoragePaths extends DisposableObject {
     return join(this.getCodeqlGlobalStoragePath(), 'variant-analyses');
   }
 
+  /**
+   * Directory where the MCP extension stores lock-free copies of databases.
+   * Path: `<our-globalStorageUri>/databases/`
+   */
+  getManagedDatabaseStoragePath(): string {
+    return join(this.context.globalStorageUri.fsPath, 'databases');
+  }
+
   /** The VS Code global storage root (parent of all extension storage dirs). */
   getGlobalStorageRoot(): string {
     return this.vsCodeGlobalStorageRoot;

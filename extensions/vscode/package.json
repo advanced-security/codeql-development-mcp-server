@@ -48,33 +48,13 @@
     "configuration": {
       "title": "CodeQL MCP Server",
       "properties": {
-        "codeql-mcp.autoInstall": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically install and update the CodeQL Development MCP Server on activation."
-        },
-        "codeql-mcp.serverVersion": {
-          "type": "string",
-          "default": "latest",
-          "description": "The npm version of codeql-development-mcp-server to install. Use 'latest' for the most recent release."
-        },
-        "codeql-mcp.serverCommand": {
-          "type": "string",
-          "default": "node",
-          "description": "Command to launch the MCP server. The default 'node' runs the bundled server. Override to 'npx' to download from npm, or provide a custom path."
-        },
-        "codeql-mcp.serverArgs": {
+        "codeql-mcp.additionalDatabaseDirs": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "default": [],
-          "description": "Custom arguments for the MCP server command. When empty, the bundled server entry point is used automatically. Set to e.g. ['/path/to/server/dist/codeql-development-mcp-server.js'] for local development."
-        },
-        "codeql-mcp.watchCodeqlExtension": {
-          "type": "boolean",
-          "default": true,
-          "description": "Watch for CodeQL databases and query results created by the CodeQL extension."
+          "description": "Additional directories to search for CodeQL databases. Appended to CODEQL_DATABASES_BASE_DIRS alongside the vscode-codeql storage paths."
         },
         "codeql-mcp.additionalEnv": {
           "type": "object",
@@ -83,14 +63,6 @@
           "additionalProperties": {
             "type": "string"
           }
-        },
-        "codeql-mcp.additionalDatabaseDirs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Additional directories to search for CodeQL databases. Appended to CODEQL_DATABASES_BASE_DIRS alongside the vscode-codeql storage paths."
         },
         "codeql-mcp.additionalMrvaRunResultsDirs": {
           "type": "array",
@@ -107,6 +79,39 @@
           },
           "default": [],
           "description": "Additional directories containing query run result subdirectories. Appended to CODEQL_QUERY_RUN_RESULTS_DIRS alongside the vscode-codeql query storage path."
+        },
+        "codeql-mcp.autoInstall": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically install and update the CodeQL Development MCP Server on activation."
+        },
+        "codeql-mcp.copyDatabases": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Copy CodeQL databases from the `GitHub.vscode-codeql` extension storage into a managed directory, removing query-server lock files so the MCP server CLI can operate without contention. Disable to use databases in-place (may fail when the CodeQL query server is running)."
+        },
+        "codeql-mcp.serverArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Custom arguments for the MCP server command. When empty, the bundled server entry point is used automatically. Set to e.g. ['/path/to/server/dist/codeql-development-mcp-server.js'] for local development."
+        },
+        "codeql-mcp.serverCommand": {
+          "type": "string",
+          "default": "node",
+          "description": "Command to launch the MCP server. The default 'node' runs the bundled server. Override to 'npx' to download from npm, or provide a custom path."
+        },
+        "codeql-mcp.serverVersion": {
+          "type": "string",
+          "default": "latest",
+          "description": "The npm version of codeql-development-mcp-server to install. Use 'latest' for the most recent release."
+        },
+        "codeql-mcp.watchCodeqlExtension": {
+          "type": "boolean",
+          "default": true,
+          "description": "Watch for CodeQL databases and query results created by the CodeQL extension."
         }
       }
     },
