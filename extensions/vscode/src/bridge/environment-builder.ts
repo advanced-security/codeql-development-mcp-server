@@ -4,6 +4,13 @@ import { DisposableObject } from '../common/disposable';
 import type { Logger } from '../common/logger';
 import type { CliResolver } from '../codeql/cli-resolver';
 import type { StoragePaths } from './storage-paths';
+import { DatabaseCopier } from './database-copier';
+
+/** Factory that creates a DatabaseCopier for a given destination. */
+export type DatabaseCopierFactory = (dest: string, logger: Logger) => DatabaseCopier;
+
+const defaultCopierFactory: DatabaseCopierFactory = (dest, logger) =>
+  new DatabaseCopier(dest, logger);
 
 /**
  * Assembles the environment variables for the MCP server process.
@@ -19,14 +26,17 @@ import type { StoragePaths } from './storage-paths';
  */
 export class EnvironmentBuilder extends DisposableObject {
   private cachedEnv: Record<string, string> | null = null;
+  private readonly copierFactory: DatabaseCopierFactory;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly cliResolver: CliResolver,
     private readonly storagePaths: StoragePaths,
     private readonly logger: Logger,
+    copierFactory?: DatabaseCopierFactory,
   ) {
     super();
+    this.copierFactory = copierFactory ?? defaultCopierFactory;
   }
 
   /** Invalidate the cached environment so the next `build()` recomputes. */
@@ -83,9 +93,22 @@ export class EnvironmentBuilder extends DisposableObject {
 
     // Database discovery directories for list_codeql_databases
     // Includes: global storage, workspace storage, and user-configured dirs
-    const dbDirs = [...this.storagePaths.getAllDatabaseStoragePaths()];
+    const sourceDirs = this.storagePaths.getAllDatabaseStoragePaths();
     const userDbDirs = config.get<string[]>('additionalDatabaseDirs', []);
-    dbDirs.push(...userDbDirs);
+
+    // When copyDatabases is enabled, copy databases from vscode-codeql
+    // storage to our own managed directory, removing query-server lock
+    // files so the MCP server CLI can operate without contention.
+    const copyEnabled = config.get<boolean>('copyDatabases', true);
+    let dbDirs: string[];
+    if (copyEnabled) {
+      const managedDir = this.storagePaths.getManagedDatabaseStoragePath();
+      const copier = this.copierFactory(managedDir, this.logger);
+      copier.syncAll(sourceDirs);
+      dbDirs = [managedDir, ...userDbDirs];
+    } else {
+      dbDirs = [...sourceDirs, ...userDbDirs];
+    }
     env.CODEQL_DATABASES_BASE_DIRS = dbDirs.join(':');
 
     // MRVA run results directory for variant analysis discovery

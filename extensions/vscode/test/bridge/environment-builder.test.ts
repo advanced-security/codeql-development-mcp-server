@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-
 import { EnvironmentBuilder } from '../../src/bridge/environment-builder';
+import type { DatabaseCopierFactory } from '../../src/bridge/environment-builder';
 
 function createMockContext() {
   return {
@@ -23,6 +23,7 @@ function createMockStoragePaths() {
   return {
     getCodeqlGlobalStoragePath: vi.fn().mockReturnValue('/mock/global-storage/GitHub.vscode-codeql'),
     getDatabaseStoragePath: vi.fn().mockReturnValue('/mock/global-storage/GitHub.vscode-codeql'),
+    getManagedDatabaseStoragePath: vi.fn().mockReturnValue('/mock/global-storage/codeql-mcp/databases'),
     getWorkspaceDatabaseStoragePath: vi.fn().mockReturnValue('/mock/workspace-storage/ws-123/GitHub.vscode-codeql'),
     getAllDatabaseStoragePaths: vi.fn().mockReturnValue([
       '/mock/global-storage/GitHub.vscode-codeql',
@@ -47,18 +48,27 @@ function createMockLogger() {
   } as any;
 }
 
+function createMockCopierFactory(): { factory: DatabaseCopierFactory; syncAll: ReturnType<typeof vi.fn> } {
+  const syncAll = vi.fn().mockReturnValue([]);
+  const factory: DatabaseCopierFactory = () => ({ syncAll } as any);
+  return { factory, syncAll };
+}
+
 describe('EnvironmentBuilder', () => {
   let builder: EnvironmentBuilder;
   let cliResolver: any;
+  let mockCopier: ReturnType<typeof createMockCopierFactory>;
 
   beforeEach(() => {
     vi.resetAllMocks();
     cliResolver = createMockCliResolver();
+    mockCopier = createMockCopierFactory();
     builder = new EnvironmentBuilder(
       createMockContext(),
       cliResolver,
       createMockStoragePaths(),
       createMockLogger(),
+      mockCopier.factory,
     );
   });
 
@@ -87,11 +97,15 @@ describe('EnvironmentBuilder', () => {
     expect(env.CODEQL_ADDITIONAL_PACKS).toContain('GitHub.vscode-codeql');
   });
 
-  it('should include CODEQL_DATABASES_BASE_DIRS with global and workspace storage paths', async () => {
+  it('should include CODEQL_DATABASES_BASE_DIRS pointing to managed copy directory by default', async () => {
     const env = await builder.build();
-    expect(env.CODEQL_DATABASES_BASE_DIRS).toBe(
-      '/mock/global-storage/GitHub.vscode-codeql:/mock/workspace-storage/ws-123/GitHub.vscode-codeql',
-    );
+    // With copyDatabases enabled (default), CODEQL_DATABASES_BASE_DIRS
+    // should point to the managed directory, not the source directories.
+    expect(env.CODEQL_DATABASES_BASE_DIRS).toBe('/mock/global-storage/codeql-mcp/databases');
+    expect(mockCopier.syncAll).toHaveBeenCalledWith([
+      '/mock/global-storage/GitHub.vscode-codeql',
+      '/mock/workspace-storage/ws-123/GitHub.vscode-codeql',
+    ]);
   });
 
   it('should include CODEQL_QUERY_RUN_RESULTS_DIRS from storage paths', async () => {
@@ -143,7 +157,7 @@ describe('EnvironmentBuilder', () => {
     expect(cliResolver.resolve).toHaveBeenCalledTimes(2);
   });
 
-  it('should append user-configured dirs to CODEQL_DATABASES_BASE_DIRS', async () => {
+  it('should append user-configured dirs to CODEQL_DATABASES_BASE_DIRS alongside managed dir', async () => {
     const vscode = await import('vscode');
     const originalGetConfig = vscode.workspace.getConfiguration;
     vscode.workspace.getConfiguration = () => ({
@@ -161,7 +175,32 @@ describe('EnvironmentBuilder', () => {
     builder.invalidate();
     const env = await builder.build();
     expect(env.CODEQL_DATABASES_BASE_DIRS).toContain('/custom/databases');
-    expect(env.CODEQL_DATABASES_BASE_DIRS).toContain('/mock/global-storage/GitHub.vscode-codeql');
+    expect(env.CODEQL_DATABASES_BASE_DIRS).toContain('/mock/global-storage/codeql-mcp/databases');
+
+    vscode.workspace.getConfiguration = originalGetConfig;
+  });
+
+  it('should use source paths directly when copyDatabases is disabled', async () => {
+    const vscode = await import('vscode');
+    const originalGetConfig = vscode.workspace.getConfiguration;
+    vscode.workspace.getConfiguration = () => ({
+      get: (_key: string, defaultVal?: any) => {
+        if (_key === 'copyDatabases') return false;
+        if (_key === 'additionalDatabaseDirs') return [];
+        if (_key === 'additionalQueryRunResultsDirs') return [];
+        if (_key === 'additionalMrvaRunResultsDirs') return [];
+        return defaultVal;
+      },
+      has: () => false,
+      inspect: () => undefined as any,
+      update: () => Promise.resolve(),
+    }) as any;
+
+    builder.invalidate();
+    const env = await builder.build();
+    expect(env.CODEQL_DATABASES_BASE_DIRS).toBe(
+      '/mock/global-storage/GitHub.vscode-codeql:/mock/workspace-storage/ws-123/GitHub.vscode-codeql',
+    );
 
     vscode.workspace.getConfiguration = originalGetConfig;
   });

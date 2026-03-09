@@ -96,7 +96,7 @@ suite('Workspace Scenario Tests', () => {
     }
   });
 
-  test('CODEQL_DATABASES_BASE_DIRS should include workspaceStorage when workspace is open', async () => {
+  test('CODEQL_DATABASES_BASE_DIRS should include managed database path or workspaceStorage when workspace is open', async () => {
     const envBuilder = api.environmentBuilder;
     if (!envBuilder) return;
 
@@ -105,9 +105,14 @@ suite('Workspace Scenario Tests', () => {
     const dirs = env.CODEQL_DATABASES_BASE_DIRS;
 
     if (folders && folders.length > 0) {
+      // With copyDatabases enabled (default), CODEQL_DATABASES_BASE_DIRS points
+      // to a managed databases/ directory under our globalStorage instead of the
+      // original workspaceStorage paths. Accept either layout.
+      const hasManagedDir = dirs.includes('/databases');
+      const hasWorkspaceStorage = dirs.includes('workspaceStorage');
       assert.ok(
-        dirs.includes('workspaceStorage'),
-        `With workspace open, CODEQL_DATABASES_BASE_DIRS should include workspaceStorage: ${dirs}`,
+        hasManagedDir || hasWorkspaceStorage,
+        `With workspace open, CODEQL_DATABASES_BASE_DIRS should include managed databases dir or workspaceStorage: ${dirs}`,
       );
     }
     // Without a workspace, only globalStorage is present — already tested above
@@ -141,5 +146,27 @@ suite('Workspace Scenario Tests', () => {
     );
     console.log(`[workspace-scenario] Server command: ${command}`);
     console.log(`[workspace-scenario] Server args: ${JSON.stringify(serverManager.getArgs())}`);
+  });
+
+  test('copyDatabases: CODEQL_DATABASES_BASE_DIRS should use managed dir under our globalStorage', async () => {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) return;
+
+    const env = await envBuilder.build();
+    const dirs = env.CODEQL_DATABASES_BASE_DIRS;
+    assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS should be set');
+
+    // With copyDatabases: true (default), the first path segment should be
+    // under our extension's globalStorage (not GitHub.vscode-codeql's).
+    const parts = dirs.split(':');
+    const managedParts = parts.filter((p: string) => p.endsWith('/databases'));
+    assert.ok(
+      managedParts.length >= 1,
+      `Expected a managed /databases path in CODEQL_DATABASES_BASE_DIRS: ${dirs}`,
+    );
+
+    // Log for diagnostic purposes
+    console.log(`[workspace-scenario] CODEQL_DATABASES_BASE_DIRS: ${dirs}`);
+    console.log(`[workspace-scenario] Managed database dirs: ${managedParts.join(', ')}`);
   });
 });
