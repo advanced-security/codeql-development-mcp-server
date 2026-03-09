@@ -8,9 +8,11 @@
  */
 
 // Static imports — esbuild inlines the file contents as string literals.
+import dataflowMigrationContent from '../resources/dataflow-migration-v1-to-v2.md';
 import learningQueryBasicsContent from '../resources/learning-query-basics.md';
 import performancePatternsContent from '../resources/performance-patterns.md';
 import qlTestDrivenDevelopmentContent from '../resources/ql-test-driven-development.md';
+import queryUnitTestingContent from '../resources/codeql-query-unit-testing.md';
 import securityTemplatesContent from '../resources/security-templates.md';
 import serverOverviewContent from '../resources/server-overview.md';
 import serverPromptsContent from '../resources/server-prompts.md';
@@ -71,4 +73,18 @@ export function getServerTools(): string {
  */
 export function getTestDrivenDevelopment(): string {
   return qlTestDrivenDevelopmentContent;
+}
+
+/**
+ * Get the query unit testing guide content
+ */
+export function getQueryUnitTesting(): string {
+  return queryUnitTestingContent;
+}
+
+/**
+ * Get the dataflow migration (v1 to v2) guide content
+ */
+export function getDataflowMigration(): string {
+  return dataflowMigrationContent;
 }

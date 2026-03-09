@@ -4,8 +4,10 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
+  getDataflowMigration,
   getLearningQueryBasics,
   getPerformancePatterns,
+  getQueryUnitTesting,
   getSecurityTemplates,
   getServerOverview,
   getServerPrompts,
@@ -180,6 +182,48 @@ export function registerCodeQLResources(server: McpServer): void {
             uri: 'codeql://templates/security',
             mimeType: 'text/markdown',
             text: getSecurityTemplates(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Guides: Query Unit Testing
+  server.resource(
+    'CodeQL Query Unit Testing',
+    'codeql://guides/query-unit-testing',
+    {
+      description: 'Guide for creating and running CodeQL query unit tests across all supported languages',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://guides/query-unit-testing',
+            mimeType: 'text/markdown',
+            text: getQueryUnitTesting(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Guides: Dataflow Migration v1 to v2
+  server.resource(
+    'CodeQL Dataflow Migration v1 to v2',
+    'codeql://guides/dataflow-migration-v1-to-v2',
+    {
+      description: 'Guide for migrating CodeQL queries from legacy v1 dataflow API to modern v2 module-based API',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://guides/dataflow-migration-v1-to-v2',
+            mimeType: 'text/markdown',
+            text: getDataflowMigration(),
           },
         ],
       };

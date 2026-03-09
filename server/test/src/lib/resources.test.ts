@@ -4,8 +4,10 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  getDataflowMigration,
   getLearningQueryBasics,
   getPerformancePatterns,
+  getQueryUnitTesting,
   getSecurityTemplates,
   getServerOverview,
   getServerPrompts,
@@ -92,6 +94,26 @@ describe('Resources', () => {
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
       expect(result).toContain('Test-Driven Development');
+    });
+  });
+
+  describe('getQueryUnitTesting', () => {
+    it('should return embedded query unit testing content', () => {
+      const result = getQueryUnitTesting();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('Unit Testing');
+    });
+  });
+
+  describe('getDataflowMigration', () => {
+    it('should return embedded dataflow migration content', () => {
+      const result = getDataflowMigration();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('v1 to v2');
     });
   });
 });
