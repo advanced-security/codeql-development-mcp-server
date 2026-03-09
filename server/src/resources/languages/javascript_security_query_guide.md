@@ -350,10 +350,9 @@ app.get('/safe', (req, res) => {
 - **Handle dynamic property access**: Account for bracket notation and computed properties
 - **Framework method chaining**: Track fluent API calls through multiple steps
 
-## CLI References
+## MCP Tools for Query Development
 
-- [qlt query generate new-query](../../../resources/cli/qlt/qlt_query_generate_new-query.prompt.md)
-- [codeql query format](../../../resources/cli/codeql/codeql_query_format.prompt.md)
-- [codeql query compile](../../../resources/cli/codeql/codeql_query_compile.prompt.md)
-- [codeql query run](../../../resources/cli/codeql/codeql_query_run.prompt.md)
-- [codeql test run](../../../resources/cli/codeql/codeql_test_run.prompt.md)
+- `codeql_query_format` — automatically format CodeQL source code files
+- `codeql_query_compile` — compile and validate CodeQL queries
+- `codeql_query_run` — execute a CodeQL query against a database
+- `codeql_test_run` — run CodeQL query tests

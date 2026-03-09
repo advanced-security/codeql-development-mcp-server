@@ -214,7 +214,30 @@ Based on comprehensive analysis of CodeQL's Java test results from GitHub, here 
 
 ### Example AST Hierarchy
 
-Based on CodeQL's comprehensive Java analysis capabilities:
+A typical Java method declaration produces the following AST node hierarchy:
+
+```text
+CompilationUnit
+  └── ClassDecl
+        ├── FieldDecl
+        │     ├── TypeAccess
+        │     └── VarDeclExpr
+        ├── MethodDecl
+        │     ├── TypeAccess (return type)
+        │     ├── Parameter
+        │     │     └── TypeAccess
+        │     └── Block
+        │           ├── ExprStmt
+        │           │     └── MethodCall
+        │           │           ├── VarAccess
+        │           │           └── StringLiteral
+        │           └── ReturnStmt
+        │                 └── VarAccess
+        └── ConstructorDecl
+              └── Block
+```
+
+Use `PrintAST` on your test code to see the exact hierarchy for your specific source patterns.
 
 ## Expected test results for local `PrintAst.ql` query
 

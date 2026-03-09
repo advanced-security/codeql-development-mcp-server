@@ -91,7 +91,7 @@ Static reference materials and per-language references served to AI assistants:
 - **Server Tools** / **Server Prompts** — Complete tool and prompt references
 - **Query Basics** / **Test-Driven Development** — QL query writing guide and TDD workflow
 - **Security Templates** / **Performance Patterns** — Multi-language security templates and profiling guidance
-- **Language AST References** — For actions, cpp, csharp, go, java, javascript, python, ql, ruby
+- **Language AST References** — For actions, cpp, csharp, go, java, javascript, python, ruby
 - **Language Security Patterns** — For cpp, csharp, go, javascript, python
 
 Full reference: [Resources](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/docs/ql-mcp/resources.md)

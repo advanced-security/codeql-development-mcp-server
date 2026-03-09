@@ -400,7 +400,7 @@ class EntityFrameworkSink extends DataFlow::Node {
 
 - Use specific type restrictions to limit analysis scope
 - Leverage existing security libraries rather than reimplementing
-- Use `isAdditionalTaintStep` for custom propagation rules
+- In your `DataFlow::ConfigSig` module, use `isAdditionalFlowStep` for custom propagation rules
 - Consider using `isBarrier` to stop false positive flows
 
 ### Memory and Runtime Optimization
@@ -420,13 +420,13 @@ predicate isSecurityRelevantFile(File f) {
 }
 ```
 
-## CLI References
+## MCP Tools for Query Development
 
 For C# security query development and testing:
 
-- [codeql query format](../../../../resources/cli/codeql/codeql_query_format.prompt.md)
-- [codeql query compile](../../../../resources/cli/codeql/codeql_query_compile.prompt.md)
-- [codeql query run](../../../../resources/cli/codeql/codeql_query_run.prompt.md)
-- [codeql database analyze](../../../../resources/cli/codeql/codeql_database_analyze.prompt.md)
-- [codeql test run](../../../../resources/cli/codeql/codeql_test_run.prompt.md)
-- [codeql test extract](../../../../resources/cli/codeql/codeql_test_extract.prompt.md)
+- `codeql_query_format` — automatically format CodeQL source code files
+- `codeql_query_compile` — compile and validate CodeQL queries
+- `codeql_query_run` — execute a CodeQL query against a database
+- `codeql_database_analyze` — run queries or query suites against CodeQL databases
+- `codeql_test_run` — run CodeQL query tests
+- `codeql_test_extract` — extract test databases for CodeQL query tests

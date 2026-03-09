@@ -446,7 +446,7 @@ Once run check the output of the command to ensure that all tests have passed.
 If the test has failed, check the test file and the implementation of the class to ensure that the test is correct.
 Iterate on the implementation of the class and the test until the test passes.
 
-Reference [resources/cli/codeql/codeql_test_run.prompt.md](../../../../resources/cli/codeql/codeql_test_run.prompt.md) for more details on how to use the `codeql test run` command.
+Reference the `codeql_test_run` tool for more details on how to use the `codeql test run` command.
 
 ### Inline Tests
 

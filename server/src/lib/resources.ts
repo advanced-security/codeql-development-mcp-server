@@ -10,12 +10,12 @@
 // Static imports — esbuild inlines the file contents as string literals.
 import learningQueryBasicsContent from '../resources/learning-query-basics.md';
 import performancePatternsContent from '../resources/performance-patterns.md';
+import qlTestDrivenDevelopmentContent from '../resources/ql-test-driven-development.md';
 import securityTemplatesContent from '../resources/security-templates.md';
 import serverOverviewContent from '../resources/server-overview.md';
 import serverPromptsContent from '../resources/server-prompts.md';
 import serverQueriesContent from '../resources/server-queries.md';
 import serverToolsContent from '../resources/server-tools.md';
-import testDrivenDevelopmentContent from '../resources/ql-test-driven-development.md';
 
 /**
  * Get the query basics learning guide content
@@ -70,5 +70,5 @@ export function getServerTools(): string {
  * Get the test-driven development guide content
  */
 export function getTestDrivenDevelopment(): string {
-  return testDrivenDevelopmentContent;
+  return qlTestDrivenDevelopmentContent;
 }
