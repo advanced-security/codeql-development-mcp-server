@@ -9,6 +9,7 @@
  */
 
 import * as assert from 'assert';
+import * as path from 'path';
 import * as vscode from 'vscode';
 
 const EXTENSION_ID = 'advanced-security.vscode-codeql-development-mcp-server';
@@ -158,8 +159,8 @@ suite('Workspace Scenario Tests', () => {
 
     // With copyDatabases: true (default), the first path segment should be
     // under our extension's globalStorage (not GitHub.vscode-codeql's).
-    const parts = dirs.split(':');
-    const managedParts = parts.filter((p: string) => p.endsWith('/databases'));
+    const parts = dirs.split(path.delimiter);
+    const managedParts = parts.filter((p: string) => path.basename(p) === 'databases');
     assert.ok(
       managedParts.length >= 1,
       `Expected a managed /databases path in CODEQL_DATABASES_BASE_DIRS: ${dirs}`,

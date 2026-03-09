@@ -2,7 +2,8 @@
  * Discovery configuration for locating CodeQL databases, query run results,
  * and MRVA (Multi-Repository Variant Analysis) run results.
  *
- * Reads colon-separated directory lists from environment variables:
+ * Reads directory lists from environment variables using the platform-native
+ * path-list delimiter (`path.delimiter`: `:` on POSIX, `;` on Windows):
  * - `CODEQL_DATABASES_BASE_DIRS` — directories to search for CodeQL databases
  * - `CODEQL_MRVA_RUN_RESULTS_DIRS` — directories containing MRVA run result subdirectories
  * - `CODEQL_QUERY_RUN_RESULTS_DIRS` — directories containing per-run query result subdirectories
@@ -11,15 +12,17 @@
  * CLI users can set them manually.
  */
 
+import { delimiter } from 'path';
+
 /**
- * Parse a colon-separated list of directories from an environment variable.
+ * Parse a platform-delimited list of directories from an environment variable.
  */
 function parsePathList(envValue: string | undefined): string[] {
   if (!envValue) {
     return [];
   }
   return envValue
-    .split(':')
+    .split(delimiter)
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
 }

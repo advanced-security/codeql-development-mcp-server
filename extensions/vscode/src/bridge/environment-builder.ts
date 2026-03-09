@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import { DisposableObject } from '../common/disposable';
 import type { Logger } from '../common/logger';
 import type { CliResolver } from '../codeql/cli-resolver';
@@ -89,7 +89,7 @@ export class EnvironmentBuilder extends DisposableObject {
       }
     }
 
-    env.CODEQL_ADDITIONAL_PACKS = additionalPaths.join(':');
+    env.CODEQL_ADDITIONAL_PACKS = additionalPaths.join(delimiter);
 
     // Database discovery directories for list_codeql_databases
     // Includes: global storage, workspace storage, and user-configured dirs
@@ -104,24 +104,24 @@ export class EnvironmentBuilder extends DisposableObject {
     if (copyEnabled) {
       const managedDir = this.storagePaths.getManagedDatabaseStoragePath();
       const copier = this.copierFactory(managedDir, this.logger);
-      copier.syncAll(sourceDirs);
+      await copier.syncAll(sourceDirs);
       dbDirs = [managedDir, ...userDbDirs];
     } else {
       dbDirs = [...sourceDirs, ...userDbDirs];
     }
-    env.CODEQL_DATABASES_BASE_DIRS = dbDirs.join(':');
+    env.CODEQL_DATABASES_BASE_DIRS = dbDirs.join(delimiter);
 
     // MRVA run results directory for variant analysis discovery
     const mrvaDirs = [this.storagePaths.getVariantAnalysisStoragePath()];
     const userMrvaDirs = config.get<string[]>('additionalMrvaRunResultsDirs', []);
     mrvaDirs.push(...userMrvaDirs);
-    env.CODEQL_MRVA_RUN_RESULTS_DIRS = mrvaDirs.join(':');
+    env.CODEQL_MRVA_RUN_RESULTS_DIRS = mrvaDirs.join(delimiter);
 
     // Query run results directory for query history discovery
     const queryDirs = [this.storagePaths.getQueryStoragePath()];
     const userQueryDirs = config.get<string[]>('additionalQueryRunResultsDirs', []);
     queryDirs.push(...userQueryDirs);
-    env.CODEQL_QUERY_RUN_RESULTS_DIRS = queryDirs.join(':');
+    env.CODEQL_QUERY_RUN_RESULTS_DIRS = queryDirs.join(delimiter);
 
     // User-configured additional environment variables
     const additionalEnv = config.get<Record<string, string>>('additionalEnv', {});

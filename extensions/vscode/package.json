@@ -54,7 +54,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "Additional directories to search for CodeQL databases. Appended to CODEQL_DATABASES_BASE_DIRS alongside the vscode-codeql storage paths."
+          "description": "Additional directories to search for CodeQL databases. Appended to CODEQL_DATABASES_BASE_DIRS. When copyDatabases is enabled (default), they are appended alongside the managed databases directory; when copyDatabases is disabled, they are appended alongside the original vscode-codeql database storage directories."
         },
         "codeql-mcp.additionalEnv": {
           "type": "object",

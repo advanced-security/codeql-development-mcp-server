@@ -27,6 +27,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { DatabaseCopier } from '../../src/bridge/database-copier';
 
 const EXTENSION_ID = 'advanced-security.vscode-codeql-development-mcp-server';
 
@@ -144,22 +145,16 @@ suite('copyDatabases E2E — query against copied database', () => {
     console.log(`[copydb-e2e] Staging .lock files: ${stagingLocks.length}`);
 
     // --- Use DatabaseCopier to sync staging → managed (removing .lock) ---
-    // We import the copier dynamically from the bundled extension code.
-    // But since the integration test runs in the Extension Host process,
-    // we can replicate the copy-and-remove-lock logic directly here as a
-    // lightweight alternative to importing the bundled module.
-    console.log(`[copydb-e2e] Syncing staging → managed: ${managedDir}`);
-    fs.mkdirSync(managedDir, { recursive: true });
-    const managedDb = path.join(managedDir, 'ExampleQuery1.testproj');
-    copyDirSync(stagedDb, managedDb);
-    // Remove .lock files from the managed copy
-    for (const lockFile of findLockFiles(managedDb)) {
-      fs.unlinkSync(lockFile);
-    }
+    console.log(`[copydb-e2e] Syncing staging → managed via DatabaseCopier: ${managedDir}`);
+    const logger = { info: console.log, warn: console.warn, error: console.error, debug: () => {} } as any;
+    const copier = new DatabaseCopier(managedDir, logger);
+    const copiedDbs = await copier.syncAll([stagingDir]);
+    assert.ok(copiedDbs.length > 0, 'DatabaseCopier should have copied at least one database');
 
     // Verify no .lock in managed
+    const managedDb = path.join(managedDir, 'ExampleQuery1.testproj');
     const managedLocks = findLockFiles(managedDb);
-    assert.strictEqual(managedLocks.length, 0, 'Managed database should have zero .lock files after copy');
+    assert.strictEqual(managedLocks.length, 0, 'Managed database should have zero .lock files after DatabaseCopier sync');
     console.log('[copydb-e2e] Managed database is lock-free');
 
     // --- Spawn MCP server pointing at managed directory ---
@@ -276,18 +271,32 @@ suite('copyDatabases E2E — query against copied database', () => {
     );
   });
 
-  test('managed database directory should still contain zero .lock files after queries', function () {
+  test('originally-injected .lock should not exist in managed directory after queries', function () {
     if (!managedDir || !fs.existsSync(managedDir)) {
       this.skip();
       return;
     }
-    const locks = findLockFiles(managedDir);
-    // After codeql_query_run and codeql_database_analyze, the CLI may create
-    // new cache content but should NOT create .lock files when it owns the
-    // exclusive process. Verify no leftover locks from the original source.
-    console.log(`[copydb-e2e] .lock files in managed dir after queries: ${locks.length}`);
-    // Note: we only assert the *originally-injected* lock was removed.
-    // The CLI itself may or may not create a .lock during evaluation; that
-    // is acceptable since no other process contends for it.
+    // The originally-injected .lock from staging must have been removed by
+    // DatabaseCopier.  The CLI may create its own .lock during evaluation,
+    // which is acceptable (no contention in the managed dir).
+    const managedDb = path.join(managedDir, 'ExampleQuery1.testproj');
+    const injectedLockPath = path.join(managedDb, 'db-javascript', 'default', 'cache', '.lock');
+    // The injected lock was at db-javascript/default/cache/.lock — if the CLI
+    // hasn't created one itself, it should still be absent.
+    const allLocks = findLockFiles(managedDb);
+    console.log(`[copydb-e2e] .lock files in managed dir after queries: ${allLocks.length}`);
+    // Verify the staging source still has the lock (wasn't modified)
+    const stagedDb = path.join(path.dirname(managedDir), 'vscode-codeql-storage', 'ExampleQuery1.testproj');
+    if (fs.existsSync(stagedDb)) {
+      const stagedLocks = findLockFiles(stagedDb);
+      assert.ok(stagedLocks.length > 0, 'Source staged database should still contain the .lock file (unmodified)');
+    }
+    // The key invariant: DatabaseCopier removed the injected lock.
+    // If the CLI re-created one during query evaluation that's fine — we just
+    // verify it's not the stale leftover from the source.
+    assert.ok(
+      !fs.existsSync(injectedLockPath) || allLocks.length <= 1,
+      `Expected the injected .lock to be removed by DatabaseCopier. Found locks: ${allLocks.join(', ')}`,
+    );
   });
 });

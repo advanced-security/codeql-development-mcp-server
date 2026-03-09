@@ -61,27 +61,27 @@ describe('DatabaseCopier', () => {
     expect(copier).toBeDefined();
   });
 
-  it('should copy a database to the destination', () => {
+  it('should copy a database to the destination', async () => {
     createFakeDatabase(sourceDir, 'my-db');
 
     const copier = new DatabaseCopier(destDir, logger);
-    const results = copier.syncAll([sourceDir]);
+    const results = await copier.syncAll([sourceDir]);
 
     expect(results).toHaveLength(1);
     expect(results[0]).toBe(join(destDir, 'my-db'));
     expect(existsSync(join(destDir, 'my-db', 'codeql-database.yml'))).toBe(true);
   });
 
-  it('should create the destination directory if it does not exist', () => {
+  it('should create the destination directory if it does not exist', async () => {
     createFakeDatabase(sourceDir, 'db-1');
 
     const copier = new DatabaseCopier(destDir, logger);
-    copier.syncAll([sourceDir]);
+    await copier.syncAll([sourceDir]);
 
     expect(existsSync(destDir)).toBe(true);
   });
 
-  it('should remove .lock files from the copy', () => {
+  it('should remove .lock files from the copy', async () => {
     createFakeDatabase(sourceDir, 'locked-db', { withLock: true });
 
     // Verify lock exists in source
@@ -89,7 +89,7 @@ describe('DatabaseCopier', () => {
     expect(existsSync(srcLock)).toBe(true);
 
     const copier = new DatabaseCopier(destDir, logger);
-    copier.syncAll([sourceDir]);
+    await copier.syncAll([sourceDir]);
 
     // Lock file should NOT exist in the copy
     const destLock = join(destDir, 'locked-db', 'db-javascript', 'default', 'cache', '.lock');
@@ -100,25 +100,25 @@ describe('DatabaseCopier', () => {
     expect(existsSync(join(destDir, 'locked-db', 'db-javascript', 'default', 'cache'))).toBe(true);
   });
 
-  it('should not re-copy a database that has not changed', () => {
+  it('should not re-copy a database that has not changed', async () => {
     createFakeDatabase(sourceDir, 'stable-db');
 
     const copier = new DatabaseCopier(destDir, logger);
-    copier.syncAll([sourceDir]);
+    await copier.syncAll([sourceDir]);
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Copying database'));
 
     logger.info.mockClear();
-    copier.syncAll([sourceDir]);
+    await copier.syncAll([sourceDir]);
 
     // Second call should NOT log a copy (database unchanged)
     expect(logger.info).not.toHaveBeenCalledWith(expect.stringContaining('Copying database'));
   });
 
-  it('should re-copy a database when source is newer', () => {
+  it('should re-copy a database when source is newer', async () => {
     createFakeDatabase(sourceDir, 'updated-db');
 
     const copier = new DatabaseCopier(destDir, logger);
-    copier.syncAll([sourceDir]);
+    await copier.syncAll([sourceDir]);
 
     // Advance the source codeql-database.yml mtime into the future
     const srcYml = join(sourceDir, 'updated-db', 'codeql-database.yml');
@@ -126,12 +126,12 @@ describe('DatabaseCopier', () => {
     utimesSync(srcYml, future, future);
 
     logger.info.mockClear();
-    copier.syncAll([sourceDir]);
+    await copier.syncAll([sourceDir]);
 
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Copying database'));
   });
 
-  it('should handle multiple source directories', () => {
+  it('should handle multiple source directories', async () => {
     const sourceDir2 = join(tmpDir, 'source2');
     mkdirSync(sourceDir2, { recursive: true });
 
@@ -139,55 +139,61 @@ describe('DatabaseCopier', () => {
     createFakeDatabase(sourceDir2, 'db-b');
 
     const copier = new DatabaseCopier(destDir, logger);
-    const results = copier.syncAll([sourceDir, sourceDir2]);
+    const results = await copier.syncAll([sourceDir, sourceDir2]);
 
     expect(results).toHaveLength(2);
     expect(existsSync(join(destDir, 'db-a', 'codeql-database.yml'))).toBe(true);
     expect(existsSync(join(destDir, 'db-b', 'codeql-database.yml'))).toBe(true);
   });
 
-  it('should skip non-existent source directories', () => {
+  it('should skip non-existent source directories', async () => {
     const copier = new DatabaseCopier(destDir, logger);
-    const results = copier.syncAll(['/nonexistent/path']);
+    const results = await copier.syncAll(['/nonexistent/path']);
 
     expect(results).toHaveLength(0);
   });
 
-  it('should skip directories that are not CodeQL databases', () => {
+  it('should skip directories that are not CodeQL databases', async () => {
     // Create a regular directory (no codeql-database.yml)
     const notADb = join(sourceDir, 'not-a-db');
     mkdirSync(notADb, { recursive: true });
     writeFileSync(join(notADb, 'README.md'), '# Not a database');
 
     const copier = new DatabaseCopier(destDir, logger);
-    const results = copier.syncAll([sourceDir]);
+    const results = await copier.syncAll([sourceDir]);
 
     expect(results).toHaveLength(0);
   });
 
-  it('should not modify the source .lock files', () => {
+  it('should not modify the source .lock files', async () => {
     createFakeDatabase(sourceDir, 'locked-db', { withLock: true });
     const srcLock = join(sourceDir, 'locked-db', 'db-javascript', 'default', 'cache', '.lock');
 
     const copier = new DatabaseCopier(destDir, logger);
-    copier.syncAll([sourceDir]);
+    await copier.syncAll([sourceDir]);
 
     // Source lock file must remain untouched
     expect(existsSync(srcLock)).toBe(true);
   });
 
-  it('should log an error when copy fails', () => {
+  it('should log an error and exclude database when copy fails', async () => {
     createFakeDatabase(sourceDir, 'bad-db');
 
-    // Make destination read-only to cause a copy failure
-    mkdirSync(destDir, { recursive: true });
-    const blockerPath = join(destDir, 'bad-db');
-    writeFileSync(blockerPath, 'I am a file, not a directory');
+    // Make the destination base directory read-only to prevent cp from writing
+    mkdirSync(destDir, { mode: 0o444, recursive: true });
 
     const copier = new DatabaseCopier(destDir, logger);
-    // rmSync on a file should succeed, then cpSync should work — but
-    // this tests the error path if something goes truly wrong.
-    // Actually, since rmSync handles files, let's just verify no throw:
-    expect(() => copier.syncAll([sourceDir])).not.toThrow();
+    const results = await copier.syncAll([sourceDir]);
+
+    // Restore permissions for cleanup
+    const { chmod } = await import('fs/promises');
+    await chmod(destDir, 0o755);
+
+    // Should have logged the error
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to copy database'),
+    );
+    // Should NOT include the failed database in results
+    expect(results).toHaveLength(0);
   });
 });

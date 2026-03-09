@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { delimiter } from 'path';
 
 import { EnvironmentBuilder } from '../../src/bridge/environment-builder';
 import type { DatabaseCopierFactory } from '../../src/bridge/environment-builder';
@@ -49,7 +50,7 @@ function createMockLogger() {
 }
 
 function createMockCopierFactory(): { factory: DatabaseCopierFactory; syncAll: ReturnType<typeof vi.fn> } {
-  const syncAll = vi.fn().mockReturnValue([]);
+  const syncAll = vi.fn().mockResolvedValue([]);
   const factory: DatabaseCopierFactory = () => ({ syncAll } as any);
   return { factory, syncAll };
 }
@@ -199,7 +200,7 @@ describe('EnvironmentBuilder', () => {
     builder.invalidate();
     const env = await builder.build();
     expect(env.CODEQL_DATABASES_BASE_DIRS).toBe(
-      '/mock/global-storage/GitHub.vscode-codeql:/mock/workspace-storage/ws-123/GitHub.vscode-codeql',
+      ['/mock/global-storage/GitHub.vscode-codeql', '/mock/workspace-storage/ws-123/GitHub.vscode-codeql'].join(delimiter),
     );
 
     vscode.workspace.getConfiguration = originalGetConfig;
