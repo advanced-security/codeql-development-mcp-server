@@ -4,8 +4,8 @@
 
 This repo contains a variant of the open-source `PrintAst.ql` query for `python` language, with modifications for local testing:
 
-- [local python PrintAst.ql query](../src/PrintAST/PrintAST.ql)
-- [local python PrintAst.expected results](../test/PrintAST/PrintAST.expected)
+- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="python"` to run the bundled PrintAST query
+- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results
 
 ## CodeQL's core AST classes for `python` language
 

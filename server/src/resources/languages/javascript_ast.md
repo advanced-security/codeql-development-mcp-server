@@ -185,8 +185,8 @@ Based on comprehensive analysis of CodeQL's JavaScript test results from GitHub,
 
 This repo contains a variant of the open-source `PrintAst.ql` query for `javascript` language, with modifications for local testing:
 
-- [local javascript PrintAst.ql query](../src/PrintAST/PrintAST.ql)
-- [local javascript PrintAst.expected results](../test/PrintAST/PrintAST.expected)
+- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="javascript"` to run the bundled PrintAST query
+- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results
 
 ## Expected test results for open-source `PrintAst.ql` query
 

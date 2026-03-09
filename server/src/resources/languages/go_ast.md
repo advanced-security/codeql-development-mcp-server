@@ -285,8 +285,8 @@ select call
 
 This repo contains a variant of the open-source `PrintAst.ql` query for `go` language, with modifications for local testing:
 
-- [local go PrintAst.ql query](../src/PrintAST/PrintAST.ql)
-- [local go PrintAst.expected results](../test/PrintAST/PrintAST.expected)
+- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="go"` to run the bundled PrintAST query
+- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results
 
 ## Expected test results for open-source `PrintAst.ql` query
 

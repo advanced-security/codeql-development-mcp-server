@@ -191,5 +191,5 @@ ExpressionImpl (expressions like ${{ inputs.name }})
 
 This repo contains a variant of the open-source `PrintAst.ql` query for `actions` language, with modifications for local testing:
 
-- [local actions PrintAst.ql query](../src/PrintAST/PrintAST.ql)
-- [local actions PrintAst.expected results](../test/PrintAST/PrintAST.expected)
+- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="actions"` to run the bundled PrintAST query
+- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results

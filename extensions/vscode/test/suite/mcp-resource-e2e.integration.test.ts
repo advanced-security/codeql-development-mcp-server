@@ -108,7 +108,7 @@ suite('MCP Resource Integration Tests', () => {
     const response = await client.listResources();
     const staticUris = response.resources
       .map(r => r.uri)
-      .filter(uri => uri.startsWith('codeql://server/') || uri.startsWith('codeql://templates/') || uri.startsWith('codeql://patterns/') || uri.startsWith('codeql://learning/'));
+      .filter(uri => uri.startsWith('codeql://server/') || uri.startsWith('codeql://templates/') || uri.startsWith('codeql://patterns/') || uri.startsWith('codeql://learning/') || uri.startsWith('codeql://guides/'));
 
     assert.ok(staticUris.length > 0, 'Should have at least one static resource');
 

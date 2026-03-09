@@ -10,18 +10,20 @@ The CodeQL Development MCP Server wraps the CodeQL CLI and supporting utilities 
 
 Read these resources via `resources/read` to deepen your understanding:
 
-| URI                                         | Purpose                                             |
-| ------------------------------------------- | --------------------------------------------------- |
-| `codeql://server/overview`                  | This guide — MCP server orientation                 |
-| `codeql://server/queries`                   | Bundled tools queries (PrintAST, PrintCFG, etc.)    |
-| `codeql://server/tools`                     | Complete default tool reference                     |
-| `codeql://server/prompts`                   | Complete prompt reference                           |
-| `codeql://learning/query-basics`            | QL query writing reference (syntax, metadata, etc.) |
-| `codeql://learning/test-driven-development` | TDD theory and workflow for CodeQL                  |
-| `codeql://templates/security`               | Security query templates (multi-language)           |
-| `codeql://patterns/performance`             | Performance profiling and optimization              |
-| `codeql://languages/{language}/ast`         | Language-specific AST class reference               |
-| `codeql://languages/{language}/security`    | Language-specific security patterns                 |
+| URI                                           | Purpose                                             |
+| --------------------------------------------- | --------------------------------------------------- |
+| `codeql://server/overview`                    | This guide — MCP server orientation                 |
+| `codeql://server/queries`                     | Bundled tools queries (PrintAST, PrintCFG, etc.)    |
+| `codeql://server/tools`                       | Complete default tool reference                     |
+| `codeql://server/prompts`                     | Complete prompt reference                           |
+| `codeql://learning/query-basics`              | QL query writing reference (syntax, metadata, etc.) |
+| `codeql://learning/test-driven-development`   | TDD theory and workflow for CodeQL                  |
+| `codeql://templates/security`                 | Security query templates (multi-language)           |
+| `codeql://patterns/performance`               | Performance profiling and optimization              |
+| `codeql://guides/query-unit-testing`          | Guide for creating and running CodeQL query tests   |
+| `codeql://guides/dataflow-migration-v1-to-v2` | Migrating from v1 to v2 dataflow API                |
+| `codeql://languages/{language}/ast`           | Language-specific AST class reference               |
+| `codeql://languages/{language}/security`      | Language-specific security patterns                 |
 
 ## Quick-Start Workflows
 

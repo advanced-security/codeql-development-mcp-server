@@ -6,7 +6,7 @@ Guide for creating and running unit tests for CodeQL queries. For the broader TD
 
 There is no one single way to arrange CodeQL unit tests, though there are some commonalities.
 
-For a recommended setup that uses separate "qlpacks" for CodeQL queries versus tests, a given CodeQL query and associated unit test may be layed out on the filesystem like:
+For a recommended setup that uses separate "qlpacks" for CodeQL queries versus tests, a given CodeQL query and associated unit test may be laid out on the filesystem like:
 
 ```text
 <query-pack-root>/<optional-queries-subdir>/{QueryName}/
