@@ -31,7 +31,7 @@ import { logger } from './utils/logger';
 dotenv.config({ path: resolve(packageRootDir, '.env'), quiet: true });
 
 const PACKAGE_NAME = 'codeql-development-mcp-server';
-const VERSION = '2.24.2';
+const VERSION = '2.24.3';
 
 /**
  * Start the MCP server

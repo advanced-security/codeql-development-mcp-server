@@ -213,8 +213,9 @@ validate_cli_version() {
 
 	## Try the installed CLI first
 	if command -v codeql >/dev/null 2>&1; then
+		echo "  Querying installed CodeQL CLI (this may download the CLI if needed)..."
 		local installed_version
-		installed_version=$(codeql version --format=terse 2>/dev/null || echo "unknown")
+		installed_version=$(codeql version --format=terse || echo "unknown")
 		echo "  Installed CLI version: ${installed_version}"
 		if [[ "${installed_version}" == "${base_version}" ]]; then
 			echo "  ✅ Base version ${base_version} matches installed CodeQL CLI"
