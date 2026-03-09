@@ -59,7 +59,7 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_DATABASES_BASE_DIRS;
     assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
 
-    for (const dir of dirs.split(':')) {
+    for (const dir of dirs.split(path.delimiter)) {
       if (dir.length === 0) continue;
       // Parent must exist (the leaf directory may not yet exist if no databases
       // have been created, but the parent storage root should).
@@ -79,13 +79,13 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_DATABASES_BASE_DIRS;
     assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
 
-    const parts = dirs.split(':');
+    const parts = dirs.split(path.delimiter);
 
     // When copyDatabases is enabled (default), the managed databases/ directory
     // under our globalStorage replaces individual source paths. When disabled,
     // the original global + workspace storage paths are used.
     const hasWorkspaceStorage = parts.some((p: string) => p.includes('workspaceStorage'));
-    const hasManagedDir = parts.some((p: string) => p.endsWith('/databases'));
+    const hasManagedDir = parts.some((p: string) => path.basename(p) === 'databases');
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
       assert.ok(
         hasWorkspaceStorage || hasManagedDir,
@@ -111,7 +111,7 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_QUERY_RUN_RESULTS_DIRS;
     assert.ok(dirs, 'CODEQL_QUERY_RUN_RESULTS_DIRS not set');
 
-    for (const dir of dirs.split(':')) {
+    for (const dir of dirs.split(path.delimiter)) {
       if (dir.length === 0) continue;
       // The immediate parent (GitHub.vscode-codeql storage root) only exists
       // after first activation.  Verify the grandparent (VS Code's globalStorage
@@ -135,7 +135,7 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_MRVA_RUN_RESULTS_DIRS;
     assert.ok(dirs, 'CODEQL_MRVA_RUN_RESULTS_DIRS not set');
 
-    for (const dir of dirs.split(':')) {
+    for (const dir of dirs.split(path.delimiter)) {
       if (dir.length === 0) continue;
       // The immediate parent (GitHub.vscode-codeql storage root) only exists
       // after first activation.  Verify the grandparent (VS Code's globalStorage
@@ -188,8 +188,8 @@ suite('vscode-codeql Bridge Tests', () => {
     // With the default setting (copyDatabases: true), the env should contain
     // a single managed path ending with /databases that lives under the MCP
     // extension's own globalStorage — NOT under GitHub.vscode-codeql.
-    const parts = dirs.split(':');
-    const managedParts = parts.filter((p: string) => p.endsWith('/databases'));
+    const parts = dirs.split(path.delimiter);
+    const managedParts = parts.filter((p: string) => path.basename(p) === 'databases');
     assert.ok(
       managedParts.length >= 1,
       `Expected at least one path ending with /databases in CODEQL_DATABASES_BASE_DIRS: ${dirs}`,
@@ -210,9 +210,9 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_DATABASES_BASE_DIRS;
     assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
 
-    const parts = dirs.split(':');
+    const parts = dirs.split(path.delimiter);
     for (const dir of parts) {
-      if (!dir.endsWith('/databases')) continue;
+      if (path.basename(dir) !== 'databases') continue;
       // The parent of the managed databases/ dir is our extension's
       // globalStorage, which VS Code creates on activation.
       const parent = path.dirname(dir);
@@ -231,8 +231,8 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_DATABASES_BASE_DIRS;
     assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
 
-    for (const dir of dirs.split(':')) {
-      if (!dir.endsWith('/databases') || !fs.existsSync(dir)) continue;
+    for (const dir of dirs.split(path.delimiter)) {
+      if (path.basename(dir) !== 'databases' || !fs.existsSync(dir)) continue;
       // Walk the managed database directory and assert no .lock files exist
       const lockFiles = findLockFiles(dir);
       assert.strictEqual(

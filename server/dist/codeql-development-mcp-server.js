@@ -12713,8 +12713,8 @@ var require_common = __commonJS({
         }
         return debug;
       }
-      function extend4(namespace, delimiter5) {
-        const newDebug = createDebug(this.namespace + (typeof delimiter5 === "undefined" ? ":" : delimiter5) + namespace);
+      function extend4(namespace, delimiter6) {
+        const newDebug = createDebug(this.namespace + (typeof delimiter6 === "undefined" ? ":" : delimiter6) + namespace);
         newDebug.log = this.log;
         return newDebug;
       }
@@ -32564,9 +32564,9 @@ var require_dist2 = __commonJS({
       return new TokenData(consumeUntil("end"), str2);
     }
     function compile(path4, options = {}) {
-      const { encode = encodeURIComponent, delimiter: delimiter5 = DEFAULT_DELIMITER } = options;
+      const { encode = encodeURIComponent, delimiter: delimiter6 = DEFAULT_DELIMITER } = options;
       const data = typeof path4 === "object" ? path4 : parse4(path4, options);
-      const fn = tokensToFunction(data.tokens, delimiter5, encode);
+      const fn = tokensToFunction(data.tokens, delimiter6, encode);
       return function path5(params = {}) {
         const [path6, ...missing] = fn(params);
         if (missing.length) {
@@ -32575,8 +32575,8 @@ var require_dist2 = __commonJS({
         return path6;
       };
     }
-    function tokensToFunction(tokens, delimiter5, encode) {
-      const encoders = tokens.map((token) => tokenToFunction(token, delimiter5, encode));
+    function tokensToFunction(tokens, delimiter6, encode) {
+      const encoders = tokens.map((token) => tokenToFunction(token, delimiter6, encode));
       return (data) => {
         const result = [""];
         for (const encoder of encoders) {
@@ -32587,11 +32587,11 @@ var require_dist2 = __commonJS({
         return result;
       };
     }
-    function tokenToFunction(token, delimiter5, encode) {
+    function tokenToFunction(token, delimiter6, encode) {
       if (token.type === "text")
         return () => [token.value];
       if (token.type === "group") {
-        const fn = tokensToFunction(token.tokens, delimiter5, encode);
+        const fn = tokensToFunction(token.tokens, delimiter6, encode);
         return (data) => {
           const [value, ...missing] = fn(data);
           if (!missing.length)
@@ -32614,7 +32614,7 @@ var require_dist2 = __commonJS({
                 throw new TypeError(`Expected "${token.name}/${index}" to be a string`);
               }
               return encodeValue(value2);
-            }).join(delimiter5)
+            }).join(delimiter6)
           ];
         };
       }
@@ -32629,14 +32629,14 @@ var require_dist2 = __commonJS({
       };
     }
     function match(path4, options = {}) {
-      const { decode = decodeURIComponent, delimiter: delimiter5 = DEFAULT_DELIMITER } = options;
+      const { decode = decodeURIComponent, delimiter: delimiter6 = DEFAULT_DELIMITER } = options;
       const { regexp, keys } = pathToRegexp(path4, options);
       const decoders = keys.map((key) => {
         if (decode === false)
           return NOOP_VALUE;
         if (key.type === "param")
           return decode;
-        return (value) => value.split(delimiter5).map(decode);
+        return (value) => value.split(delimiter6).map(decode);
       });
       return function match2(input) {
         const m = regexp.exec(input);
@@ -32655,20 +32655,20 @@ var require_dist2 = __commonJS({
       };
     }
     function pathToRegexp(path4, options = {}) {
-      const { delimiter: delimiter5 = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
+      const { delimiter: delimiter6 = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
       const keys = [];
       const flags = sensitive ? "" : "i";
       const sources = [];
       for (const input of pathsToArray(path4, [])) {
         const data = typeof input === "object" ? input : parse4(input, options);
         for (const tokens of flatten(data.tokens, 0, [])) {
-          sources.push(toRegExpSource(tokens, delimiter5, keys, data.originalPath));
+          sources.push(toRegExpSource(tokens, delimiter6, keys, data.originalPath));
         }
       }
       let pattern = `^(?:${sources.join("|")})`;
       if (trailing)
-        pattern += `(?:${escape2(delimiter5)}$)?`;
-      pattern += end ? "$" : `(?=${escape2(delimiter5)}|$)`;
+        pattern += `(?:${escape2(delimiter6)}$)?`;
+      pattern += end ? "$" : `(?=${escape2(delimiter6)}|$)`;
       const regexp = new RegExp(pattern, flags);
       return { regexp, keys };
     }
@@ -32695,7 +32695,7 @@ var require_dist2 = __commonJS({
       }
       yield* flatten(tokens, index + 1, init);
     }
-    function toRegExpSource(tokens, delimiter5, keys, originalPath) {
+    function toRegExpSource(tokens, delimiter6, keys, originalPath) {
       let result = "";
       let backtrack = "";
       let isSafeSegmentParam = true;
@@ -32703,7 +32703,7 @@ var require_dist2 = __commonJS({
         if (token.type === "text") {
           result += escape2(token.value);
           backtrack += token.value;
-          isSafeSegmentParam || (isSafeSegmentParam = token.value.includes(delimiter5));
+          isSafeSegmentParam || (isSafeSegmentParam = token.value.includes(delimiter6));
           continue;
         }
         if (token.type === "param" || token.type === "wildcard") {
@@ -32711,7 +32711,7 @@ var require_dist2 = __commonJS({
             throw new PathError(`Missing text before "${token.name}" ${token.type}`, originalPath);
           }
           if (token.type === "param") {
-            result += `(${negate(delimiter5, isSafeSegmentParam ? "" : backtrack)}+)`;
+            result += `(${negate(delimiter6, isSafeSegmentParam ? "" : backtrack)}+)`;
           } else {
             result += `([\\s\\S]+)`;
           }
@@ -32723,16 +32723,16 @@ var require_dist2 = __commonJS({
       }
       return result;
     }
-    function negate(delimiter5, backtrack) {
+    function negate(delimiter6, backtrack) {
       if (backtrack.length < 2) {
-        if (delimiter5.length < 2)
-          return `[^${escape2(delimiter5 + backtrack)}]`;
-        return `(?:(?!${escape2(delimiter5)})[^${escape2(backtrack)}])`;
+        if (delimiter6.length < 2)
+          return `[^${escape2(delimiter6 + backtrack)}]`;
+        return `(?:(?!${escape2(delimiter6)})[^${escape2(backtrack)}])`;
       }
-      if (delimiter5.length < 2) {
-        return `(?:(?!${escape2(backtrack)})[^${escape2(delimiter5)}])`;
+      if (delimiter6.length < 2) {
+        return `(?:(?!${escape2(backtrack)})[^${escape2(delimiter6)}])`;
       }
-      return `(?:(?!${escape2(backtrack)}|${escape2(delimiter5)})[\\s\\S])`;
+      return `(?:(?!${escape2(backtrack)}|${escape2(delimiter6)})[\\s\\S])`;
     }
     function stringifyTokens(tokens) {
       let value = "";
@@ -60841,11 +60841,12 @@ import { existsSync as existsSync6, readdirSync as readdirSync3, readFileSync as
 import { join as join8 } from "path";
 
 // src/lib/discovery-config.ts
+import { delimiter as delimiter5 } from "path";
 function parsePathList(envValue) {
   if (!envValue) {
     return [];
   }
-  return envValue.split(":").map((p) => p.trim()).filter((p) => p.length > 0);
+  return envValue.split(delimiter5).map((p) => p.trim()).filter((p) => p.length > 0);
 }
 function getDatabaseBaseDirs() {
   return parsePathList(process.env.CODEQL_DATABASES_BASE_DIRS);

@@ -1,4 +1,5 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from 'fs';
+import { existsSync } from 'fs';
+import { cp, mkdir, readdir, rm, stat, unlink } from 'fs/promises';
 import { join } from 'path';
 import type { Logger } from '../common/logger';
 
@@ -29,8 +30,8 @@ export class DatabaseCopier {
    * @returns The list of database paths in the managed destination that
    *          are ready for use (absolute paths).
    */
-  syncAll(sourceDirs: string[]): string[] {
-    mkdirSync(this.destinationBase, { recursive: true });
+  async syncAll(sourceDirs: string[]): Promise<string[]> {
+    await mkdir(this.destinationBase, { recursive: true });
 
     const copied: string[] = [];
 
@@ -41,24 +42,26 @@ export class DatabaseCopier {
 
       let entries: string[];
       try {
-        entries = readdirSync(sourceDir);
+        entries = await readdir(sourceDir);
       } catch {
         continue;
       }
 
       for (const entry of entries) {
         const srcDbPath = join(sourceDir, entry);
-        if (!isCodeQLDatabase(srcDbPath)) {
+        if (!(await isCodeQLDatabase(srcDbPath))) {
           continue;
         }
 
         const destDbPath = join(this.destinationBase, entry);
 
-        if (this.needsCopy(srcDbPath, destDbPath)) {
-          this.copyDatabase(srcDbPath, destDbPath);
+        if (await this.needsCopy(srcDbPath, destDbPath)) {
+          await this.copyDatabase(srcDbPath, destDbPath);
         }
 
-        copied.push(destDbPath);
+        if (await isCodeQLDatabase(destDbPath)) {
+          copied.push(destDbPath);
+        }
       }
     }
 
@@ -69,16 +72,16 @@ export class DatabaseCopier {
    * Copy a single database directory, then strip any `.lock` files that
    * the CodeQL query server may have left behind.
    */
-  private copyDatabase(src: string, dest: string): void {
+  private async copyDatabase(src: string, dest: string): Promise<void> {
     this.logger.info(`Copying database ${src} → ${dest}`);
     try {
       // Remove stale destination if present
       if (existsSync(dest)) {
-        rmSync(dest, { recursive: true, force: true });
+        await rm(dest, { recursive: true, force: true });
       }
 
-      cpSync(src, dest, { recursive: true });
-      removeLockFiles(dest);
+      await cp(src, dest, { recursive: true });
+      await removeLockFiles(dest);
       this.logger.info(`Database copied successfully: ${dest}`);
     } catch (err) {
       this.logger.error(
@@ -91,7 +94,7 @@ export class DatabaseCopier {
    * A copy is needed when the destination does not exist, or the source
    * `codeql-database.yml` is newer than the destination's.
    */
-  private needsCopy(src: string, dest: string): boolean {
+  private async needsCopy(src: string, dest: string): Promise<boolean> {
     const destYml = join(dest, 'codeql-database.yml');
     if (!existsSync(destYml)) {
       return true;
@@ -99,8 +102,8 @@ export class DatabaseCopier {
 
     const srcYml = join(src, 'codeql-database.yml');
     try {
-      const srcMtime = statSync(srcYml).mtimeMs;
-      const destMtime = statSync(destYml).mtimeMs;
+      const srcMtime = (await stat(srcYml)).mtimeMs;
+      const destMtime = (await stat(destYml)).mtimeMs;
       return srcMtime > destMtime;
     } catch {
       // If stat fails, re-copy to be safe
@@ -110,9 +113,9 @@ export class DatabaseCopier {
 }
 
 /** Check whether a directory looks like a CodeQL database. */
-function isCodeQLDatabase(dirPath: string): boolean {
+async function isCodeQLDatabase(dirPath: string): Promise<boolean> {
   try {
-    return statSync(dirPath).isDirectory() && existsSync(join(dirPath, 'codeql-database.yml'));
+    return (await stat(dirPath)).isDirectory() && existsSync(join(dirPath, 'codeql-database.yml'));
   } catch {
     return false;
   }
@@ -123,10 +126,10 @@ function isCodeQLDatabase(dirPath: string): boolean {
  * These are empty sentinel files created by the CodeQL query server in
  * `<dataset>/default/cache/.lock`.
  */
-function removeLockFiles(dir: string): void {
+async function removeLockFiles(dir: string): Promise<void> {
   let entries: string[];
   try {
-    entries = readdirSync(dir);
+    entries = await readdir(dir);
   } catch {
     return;
   }
@@ -134,11 +137,11 @@ function removeLockFiles(dir: string): void {
   for (const entry of entries) {
     const fullPath = join(dir, entry);
     try {
-      const stat = statSync(fullPath);
-      if (stat.isDirectory()) {
-        removeLockFiles(fullPath);
+      const st = await stat(fullPath);
+      if (st.isDirectory()) {
+        await removeLockFiles(fullPath);
       } else if (entry === '.lock') {
-        unlinkSync(fullPath);
+        await unlink(fullPath);
       }
     } catch {
       // Best-effort removal
