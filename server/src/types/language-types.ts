@@ -20,7 +20,6 @@ import javascriptAst from '../resources/languages/javascript_ast.md';
 import javascriptSecurity from '../resources/languages/javascript_security_query_guide.md';
 import pythonAst from '../resources/languages/python_ast.md';
 import pythonSecurity from '../resources/languages/python_security_query_guide.md';
-import qlAst from '../resources/languages/ql_ast.md';
 import rubyAst from '../resources/languages/ruby_ast.md';
 
 export interface LanguageResource {
@@ -68,10 +67,6 @@ export const LANGUAGE_RESOURCES: LanguageResource[] = [
     language: 'python',
     astContent: pythonAst,
     securityContent: pythonSecurity
-  },
-  {
-    language: 'ql',
-    astContent: qlAst
   },
   {
     language: 'ruby',

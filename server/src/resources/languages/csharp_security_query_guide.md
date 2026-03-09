@@ -205,22 +205,20 @@ class EncodingMethod extends MethodCall {
 
 ```ql
 // Configuration for inappropriate encoding detection
-private class InappropriateEncodingConfiguration extends TaintTracking::Configuration {
-  InappropriateEncodingConfiguration() { this = "InappropriateEncodingConfiguration" }
-
-  override predicate isSource(DataFlow::Node source) {
+module InappropriateEncodingConfig implements DataFlow::ConfigSig {
+  predicate isSource(DataFlow::Node source) {
     // Encoded values that might be inappropriate for their context
     source.asExpr() instanceof EncodingMethod
   }
 
-  override predicate isSink(DataFlow::Node sink) {
+  predicate isSink(DataFlow::Node sink) {
     // Sinks that require specific encoding types
     sink instanceof SqlCommandSink or
     sink instanceof HtmlOutputSink or
     sink instanceof UrlRedirectSink
   }
 
-  override predicate isAdditionalTaintStep(DataFlow::Node node1, DataFlow::Node node2) {
+  predicate isAdditionalFlowStep(DataFlow::Node node1, DataFlow::Node node2) {
     // String concatenation and formatting preserve taint
     exists(AddExpr add |
       add.getAnOperand() = node1.asExpr() and
@@ -235,6 +233,8 @@ private class InappropriateEncodingConfiguration extends TaintTracking::Configur
     )
   }
 }
+
+module InappropriateEncodingFlow = TaintTracking::Global<InappropriateEncodingConfig>;
 ```
 
 ## Security Query Implementation Guide

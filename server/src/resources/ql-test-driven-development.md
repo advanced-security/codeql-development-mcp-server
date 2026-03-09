@@ -40,7 +40,7 @@ TDD provides the LLM with a concrete, automated signal (tests pass / tests fail)
          ▼
 ┌──────────────────┐
 │  6. Repeat       │ ← Add more tests for additional scenarios
-└────────┘─────────┘
+└──────────────────┘
 ```
 
 ## The Value of AST Data in Test Code

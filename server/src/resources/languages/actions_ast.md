@@ -1,3 +1,5 @@
+# CodeQL AST nodes for `actions` language
+
 ## CodeQL's core AST classes for `actions` language
 
 Based on analysis of CodeQL's Actions AST test results from local test files, here are the core AST classes for GitHub Actions analysis:

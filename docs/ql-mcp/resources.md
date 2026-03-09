@@ -32,7 +32,6 @@ Each supported language can expose one or more of the following resource types u
 | java       |       ✓       |                   |                                           |
 | javascript |       ✓       |         ✓         |                                           |
 | python     |       ✓       |         ✓         |                                           |
-| ql         |       ✓       |                   |                                           |
 | ruby       |       ✓       |                   |                                           |
 
 ### Resource Types

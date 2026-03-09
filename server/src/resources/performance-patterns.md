@@ -14,8 +14,6 @@ The `profile_codeql_query_from_logs` tool is the primary means of evaluating the
 4. **Identify bottlenecks**: Review the profile output for predicates with high evaluation times or unexpectedly large result sets.
 5. **Refine**: Modify the query to address identified bottlenecks, then re-run and re-profile to verify improvements.
 
-Alternatively, use `profile_codeql_query` to profile a query by running it against a specific database and analyzing the resulting evaluator log in a single step.
-
 ### What the Profile Shows
 
 - **Predicate evaluation times** — which predicates are the most expensive
@@ -83,14 +81,13 @@ For monorepos with multiple independent applications separated by process/networ
 
 ## Related Tools and Prompts
 
-| Tool / Prompt                                    | Purpose                                                              |
-| ------------------------------------------------ | -------------------------------------------------------------------- |
-| `profile_codeql_query`                           | Profile a query run against a database (runs the query and profiles) |
-| `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (no re-run needed)              |
-| `codeql_generate_log-summary`                    | Generate a human-readable evaluator log summary                      |
-| `codeql_query_run`                               | Execute a query (set `evaluationOutput` to capture logs)             |
-| `explain_codeql_query` prompt                    | Understand query evaluation flow with Mermaid diagrams               |
-| `run_query_and_summarize_false_positives` prompt | Assess result quality (precision)                                    |
+| Tool / Prompt                                    | Purpose                                                  |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (no re-run needed)  |
+| `codeql_generate_log-summary`                    | Generate a human-readable evaluator log summary          |
+| `codeql_query_run`                               | Execute a query (set `evaluationOutput` to capture logs) |
+| `explain_codeql_query` prompt                    | Understand query evaluation flow with Mermaid diagrams   |
+| `run_query_and_summarize_false_positives` prompt | Assess result quality (precision)                        |
 
 ## Related Resources
 

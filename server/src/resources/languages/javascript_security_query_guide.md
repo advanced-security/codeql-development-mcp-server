@@ -179,8 +179,8 @@ module VulnerabilityName {
   private class RemoteFlowSourceAsSource extends Source instanceof RemoteFlowSource { }
 
   // Define specific sinks based on vulnerability type
-  private class SpecificSinkAssink extends Sink {
-    SpecificSinkAsink() {
+  private class SpecificSinkAsSink extends Sink {
+    SpecificSinkAsSink() {
       // Define sink patterns here
     }
   }
@@ -267,14 +267,12 @@ select sink.getNode(), source, sink, "[Alert message with $@ placeholder]",
 **SSRF Detection Pattern:**
 
 ```ql
-private class RequestForgeryConfiguration extends TaintTracking::Configuration {
-  RequestForgeryConfiguration() { this = "RequestForgeryConfiguration" }
-
-  override predicate isSource(DataFlow::Node source) {
+module RequestForgeryConfig implements DataFlow::ConfigSig {
+  predicate isSource(DataFlow::Node source) {
     source instanceof RemoteFlowSource
   }
 
-  override predicate isSink(DataFlow::Node sink) {
+  predicate isSink(DataFlow::Node sink) {
     // HTTP client requests where URL is controllable
     exists(DataFlow::CallNode call |
       call = DataFlow::moduleImport("axios").getAMemberCall(["get", "post", "put", "delete"]) and
@@ -290,19 +288,19 @@ private class RequestForgeryConfiguration extends TaintTracking::Configuration {
     )
   }
 }
+
+module RequestForgeryFlow = TaintTracking::Global<RequestForgeryConfig>;
 ```
 
 **XSS Detection Pattern:**
 
 ```ql
-private class ReflectedXssConfiguration extends TaintTracking::Configuration {
-  ReflectedXssConfiguration() { this = "ReflectedXssConfiguration" }
-
-  override predicate isSource(DataFlow::Node source) {
+module ReflectedXssConfig implements DataFlow::ConfigSig {
+  predicate isSource(DataFlow::Node source) {
     source instanceof RemoteFlowSource
   }
 
-  override predicate isSink(DataFlow::Node sink) {
+  predicate isSink(DataFlow::Node sink) {
     // DOM manipulation sinks
     exists(DataFlow::PropWrite pw |
       pw.getPropertyName() in ["innerHTML", "outerHTML"] and
@@ -315,6 +313,8 @@ private class ReflectedXssConfiguration extends TaintTracking::Configuration {
     )
   }
 }
+
+module ReflectedXssFlow = TaintTracking::Global<ReflectedXssConfig>;
 ```
 
 ## Testing Patterns

@@ -29,7 +29,7 @@ describe('Language Resources', () => {
     it('should register AST resources for all languages with AST content', () => {
       registerLanguageASTResources(mockServer);
 
-      expect(mockServer.resource).toHaveBeenCalledTimes(9);
+      expect(mockServer.resource).toHaveBeenCalledTimes(8);
 
       const resourceCalls = (mockServer.resource as ReturnType<typeof vi.fn>).mock.calls;
       const resourceNames = resourceCalls.map((call: unknown[]) => call[0]);
@@ -41,7 +41,6 @@ describe('Language Resources', () => {
       expect(resourceNames).toContain('JAVA AST Reference');
       expect(resourceNames).toContain('JAVASCRIPT AST Reference');
       expect(resourceNames).toContain('PYTHON AST Reference');
-      expect(resourceNames).toContain('QL AST Reference');
       expect(resourceNames).toContain('RUBY AST Reference');
     });
 
@@ -140,8 +139,8 @@ describe('Language Resources', () => {
     it('should register all language resources', () => {
       registerLanguageResources(mockServer);
 
-      // 9 AST + 5 security + 3 additional = 17
-      expect(mockServer.resource).toHaveBeenCalledTimes(17);
+      // 8 AST + 5 security + 3 additional = 16
+      expect(mockServer.resource).toHaveBeenCalledTimes(16);
     });
 
     it('every registered handler should return non-empty content', async () => {

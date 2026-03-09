@@ -379,7 +379,7 @@ extensions:
 Create a CodeQL model pack to group and distribute YAML files:
 
 ```yaml
-# qlpack.yml
+# codeql-pack.yml
 name: my-org/go-security-models
 version: 1.0.0
 dependencies:
@@ -391,7 +391,7 @@ dataExtensions: '*.yml'
 
 ```
 my-go-models/
-├── qlpack.yml
+├── codeql-pack.yml
 ├── http-frameworks.yml
 ├── database-orms.yml
 └── json-libraries.yml
@@ -406,7 +406,7 @@ codeql pack publish
 ### Consuming Model Packs
 
 ```yaml
-# In consumer's qlpack.yml
+# In consumer's codeql-pack.yml
 dependencies:
   my-org/go-security-models: '^1.0.0'
 ```
