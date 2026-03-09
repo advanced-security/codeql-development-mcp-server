@@ -33,7 +33,7 @@ function parsePathList(envValue: string | undefined): string[] {
  * Each directory is expected to contain one or more CodeQL database directories
  * (each with a `codeql-database.yml` file).
  *
- * Set via `CODEQL_DATABASES_BASE_DIRS` (colon-separated).
+ * Set via `CODEQL_DATABASES_BASE_DIRS` (platform-delimited).
  */
 export function getDatabaseBaseDirs(): string[] {
   return parsePathList(process.env.CODEQL_DATABASES_BASE_DIRS);
@@ -47,7 +47,7 @@ export function getDatabaseBaseDirs(): string[] {
  * subdirectories with `repo_task.json`, `results/results.sarif`, and
  * `results/results.bqrs`.
  *
- * Set via `CODEQL_MRVA_RUN_RESULTS_DIRS` (colon-separated).
+ * Set via `CODEQL_MRVA_RUN_RESULTS_DIRS` (platform-delimited).
  */
 export function getMrvaRunResultsDirs(): string[] {
   return parsePathList(process.env.CODEQL_MRVA_RUN_RESULTS_DIRS);
@@ -60,7 +60,7 @@ export function getMrvaRunResultsDirs(): string[] {
  * `<QueryName>.ql-<nanoid>/`, each holding artifacts such as
  * `evaluator-log.jsonl`, `results.bqrs`, and `results-interpreted.sarif`.
  *
- * Set via `CODEQL_QUERY_RUN_RESULTS_DIRS` (colon-separated).
+ * Set via `CODEQL_QUERY_RUN_RESULTS_DIRS` (platform-delimited).
  */
 export function getQueryRunResultsDirs(): string[] {
   return parsePathList(process.env.CODEQL_QUERY_RUN_RESULTS_DIRS);

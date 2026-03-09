@@ -104,8 +104,15 @@ export class EnvironmentBuilder extends DisposableObject {
     if (copyEnabled) {
       const managedDir = this.storagePaths.getManagedDatabaseStoragePath();
       const copier = this.copierFactory(managedDir, this.logger);
-      await copier.syncAll(sourceDirs);
-      dbDirs = [managedDir, ...userDbDirs];
+      try {
+        await copier.syncAll(sourceDirs);
+        dbDirs = [managedDir, ...userDbDirs];
+      } catch (err) {
+        this.logger.error(
+          `Database copy failed, falling back to source dirs: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        dbDirs = [...sourceDirs, ...userDbDirs];
+      }
     } else {
       dbDirs = [...sourceDirs, ...userDbDirs];
     }
