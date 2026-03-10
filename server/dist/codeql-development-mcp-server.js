@@ -61796,7 +61796,6 @@ function buildDetailFile(profile, topN) {
   const lines = [];
   const lineIndex = /* @__PURE__ */ new Map();
   lines.push("# CodeQL Evaluator Profile \u2014 Predicate Detail");
-  lines.push(`# Generated: ${(/* @__PURE__ */ new Date()).toISOString()}`);
   lines.push(`# Log format: ${profile.logFormat}`);
   if (profile.codeqlVersion) {
     lines.push(`# CodeQL version: ${profile.codeqlVersion}`);
@@ -63055,13 +63054,31 @@ async function searchQlCode(params) {
   const filesToSearch = collectFiles(paths, includeExtensions, fileCount);
   const allMatches = [];
   let totalMatches = 0;
+  let collectedEnough = false;
   for (const file of filesToSearch) {
+    if (collectedEnough) {
+      try {
+        const st = lstatSync(file);
+        if (!st.isFile()) continue;
+        const content = st.size <= MAX_FILE_SIZE_BYTES ? readFileSync9(file, "utf-8") : null;
+        if (content) {
+          for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+            if (regex.test(line)) totalMatches++;
+          }
+        }
+      } catch {
+      }
+      continue;
+    }
     const fileMatches = await searchFile(file, regex, contextLines);
     totalMatches += fileMatches.length;
     for (const m of fileMatches) {
       if (allMatches.length < maxResults) {
         allMatches.push(m);
       }
+    }
+    if (allMatches.length >= maxResults) {
+      collectedEnough = true;
     }
   }
   return {

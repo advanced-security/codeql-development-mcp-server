@@ -108,7 +108,6 @@ function buildDetailFile(
   const lineIndex = new Map<string, { start: number; end: number }>();
 
   lines.push('# CodeQL Evaluator Profile — Predicate Detail');
-  lines.push(`# Generated: ${new Date().toISOString()}`);
   lines.push(`# Log format: ${profile.logFormat}`);
   if (profile.codeqlVersion) {
     lines.push(`# CodeQL version: ${profile.codeqlVersion}`);

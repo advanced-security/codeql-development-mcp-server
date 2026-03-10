@@ -288,8 +288,29 @@ export async function searchQlCode(params: {
 
   const allMatches: SearchMatch[] = [];
   let totalMatches = 0;
+  let collectedEnough = false;
 
   for (const file of filesToSearch) {
+    if (collectedEnough) {
+      // Still need totalMatches count but skip storing results.
+      // For small files, just count line matches without allocating.
+      try {
+        const st = lstatSync(file);
+        if (!st.isFile()) continue;
+        const content = st.size <= MAX_FILE_SIZE_BYTES
+          ? readFileSync(file, 'utf-8')
+          : null;
+        if (content) {
+          for (const line of content.replace(/\r\n/g, '\n').split('\n')) {
+            if (regex.test(line)) totalMatches++;
+          }
+        }
+      } catch {
+        // skip
+      }
+      continue;
+    }
+
     const fileMatches = await searchFile(file, regex, contextLines);
     totalMatches += fileMatches.length;
 
@@ -297,6 +318,10 @@ export async function searchQlCode(params: {
       if (allMatches.length < maxResults) {
         allMatches.push(m);
       }
+    }
+
+    if (allMatches.length >= maxResults) {
+      collectedEnough = true;
     }
   }
 
