@@ -1,9 +1,0 @@
-{
-  "toolName": "codeql_resolve_files",
-  "parameters": {
-    "dir": "server/ql/javascript/examples/src",
-    "include-extension": [".ql"]
-  },
-  "success": true,
-  "description": "Successfully resolved .ql files in JavaScript examples directory"
-}

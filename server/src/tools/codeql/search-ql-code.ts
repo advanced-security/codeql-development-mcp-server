@@ -8,7 +8,7 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { lstatSync, readdirSync, readFileSync, realpathSync } from 'fs';
 import { extname, join, resolve } from 'path';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
@@ -49,7 +49,8 @@ export interface SearchResult {
 
 /**
  * Collect files recursively from the given paths, filtered by extension.
- * Respects the global file-count limit.
+ * Respects the global file-count limit. Uses lstatSync to avoid following
+ * symlinks and tracks visited real paths to prevent cycles.
  */
 function collectFiles(
   paths: string[],
@@ -57,17 +58,21 @@ function collectFiles(
   fileCount: { value: number }
 ): string[] {
   const files: string[] = [];
+  const visitedDirs = new Set<string>();
 
   function walk(p: string): void {
     if (fileCount.value >= MAX_FILES_TRAVERSED) return;
 
     let stat;
     try {
-      stat = statSync(p);
+      stat = lstatSync(p);
     } catch {
       // Skip inaccessible paths
       return;
     }
+
+    // Skip symlinks to avoid cycles and symlink-following issues
+    if (stat.isSymbolicLink()) return;
 
     if (stat.isFile()) {
       if (extensions.length === 0 || extensions.includes(extname(p))) {
@@ -75,6 +80,16 @@ function collectFiles(
       }
       fileCount.value++;
     } else if (stat.isDirectory()) {
+      // Track visited directories by real path to prevent cycles
+      let realPath: string;
+      try {
+        realPath = realpathSync(p);
+      } catch {
+        return;
+      }
+      if (visitedDirs.has(realPath)) return;
+      visitedDirs.add(realPath);
+
       let entries: string[];
       try {
         entries = readdirSync(p);
@@ -98,27 +113,22 @@ function collectFiles(
 
 /**
  * Search a single file for matches against the compiled regex.
+ * Reads the file directly to avoid TOCTOU race conditions.
  */
 function searchFile(
   filePath: string,
   regex: RegExp,
   contextLines: number
 ): SearchMatch[] {
-  let stat;
-  try {
-    stat = statSync(filePath);
-  } catch {
-    return [];
-  }
-
-  if (stat.size > MAX_FILE_SIZE_BYTES) {
-    return [];
-  }
-
   let content: string;
   try {
     content = readFileSync(filePath, 'utf-8');
   } catch {
+    return [];
+  }
+
+  // Check size after reading to avoid TOCTOU race between stat and read
+  if (Buffer.byteLength(content, 'utf-8') > MAX_FILE_SIZE_BYTES) {
     return [];
   }
 

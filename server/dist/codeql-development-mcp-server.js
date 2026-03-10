@@ -56702,7 +56702,7 @@ var StreamableHTTPServerTransport = class {
 var import_express = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_dotenv = __toESM(require_main(), 1);
-import { realpathSync } from "fs";
+import { realpathSync as realpathSync2 } from "fs";
 import { resolve as resolve13 } from "path";
 import { pathToFileURL as pathToFileURL5 } from "url";
 
@@ -61835,7 +61835,7 @@ function buildInlineResponse(profile, topN, detailLineIndex, files) {
 function registerProfileCodeQLQueryFromLogsTool(server) {
   server.tool(
     "profile_codeql_query_from_logs",
-    "Parse CodeQL evaluator logs into a structured performance profile. Returns compact JSON with per-query summaries and top-N slowest predicates (name, duration, result size, eval order, dependency count). Full RA operations, pipeline-stage tuple progressions, and dependency lists are written to a line-indexed detail file \u2014 each predicate includes {startLine, endLine} for targeted read_file access to its full analysis. Works with logs from codeql query run, codeql database analyze, or vscode-codeql.",
+    "Parse CodeQL evaluator logs into a structured performance profile. Returns compact JSON with per-query summaries and top-N slowest predicates (name, duration, result size, eval order, dependency count). Full RA operations, pipeline-stage tuple progressions, and dependency lists are written to a line-indexed detail file \u2014 each predicate includes detailLines: {start, end} for targeted read_file access to its full analysis. Works with logs from codeql query run, codeql database analyze, or vscode-codeql.",
     {
       evaluatorLog: external_exports.string().describe(
         "Path to evaluator-log.jsonl or evaluator-log.summary.jsonl"
@@ -62805,27 +62805,37 @@ var codeqlResolveTestsTool = {
 };
 
 // src/tools/codeql/search-ql-code.ts
-import { readdirSync as readdirSync8, readFileSync as readFileSync11, statSync as statSync8 } from "fs";
+import { lstatSync, readdirSync as readdirSync8, readFileSync as readFileSync11, realpathSync } from "fs";
 import { extname as extname2, join as join15, resolve as resolve9 } from "path";
 init_logger();
 var MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 var MAX_FILES_TRAVERSED = 1e4;
 function collectFiles(paths, extensions, fileCount) {
   const files = [];
+  const visitedDirs = /* @__PURE__ */ new Set();
   function walk(p) {
     if (fileCount.value >= MAX_FILES_TRAVERSED) return;
     let stat;
     try {
-      stat = statSync8(p);
+      stat = lstatSync(p);
     } catch {
       return;
     }
+    if (stat.isSymbolicLink()) return;
     if (stat.isFile()) {
       if (extensions.length === 0 || extensions.includes(extname2(p))) {
         files.push(p);
       }
       fileCount.value++;
     } else if (stat.isDirectory()) {
+      let realPath;
+      try {
+        realPath = realpathSync(p);
+      } catch {
+        return;
+      }
+      if (visitedDirs.has(realPath)) return;
+      visitedDirs.add(realPath);
       let entries;
       try {
         entries = readdirSync8(p);
@@ -62845,19 +62855,13 @@ function collectFiles(paths, extensions, fileCount) {
   return files;
 }
 function searchFile(filePath, regex, contextLines) {
-  let stat;
-  try {
-    stat = statSync8(filePath);
-  } catch {
-    return [];
-  }
-  if (stat.size > MAX_FILE_SIZE_BYTES) {
-    return [];
-  }
   let content;
   try {
     content = readFileSync11(filePath, "utf-8");
   } catch {
+    return [];
+  }
+  if (Buffer.byteLength(content, "utf-8") > MAX_FILE_SIZE_BYTES) {
     return [];
   }
   const lines = content.replace(/\r\n/g, "\n").split("\n");
@@ -66070,7 +66074,7 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? realpathSync(resolve13(process.argv[1])) : void 0;
+var scriptPath = process.argv[1] ? realpathSync2(resolve13(process.argv[1])) : void 0;
 if (scriptPath && import.meta.url === pathToFileURL5(scriptPath).href) {
   main();
 }

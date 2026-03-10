@@ -1,0 +1,7 @@
+{
+  "sessions": [],
+  "parameters": {
+    "dir": "server/ql/javascript/examples/src",
+    "include-extension": [".ql"]
+  }
+}

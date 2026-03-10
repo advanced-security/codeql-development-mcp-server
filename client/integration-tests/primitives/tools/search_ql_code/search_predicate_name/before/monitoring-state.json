@@ -1,10 +1,8 @@
 {
-  "toolName": "search_ql_code",
+  "sessions": [],
   "parameters": {
     "pattern": "isSource",
     "paths": ["server/ql/javascript/examples/src"],
     "contextLines": 1
-  },
-  "expectedSuccess": true,
-  "description": "Test search_ql_code for predicate name search in JavaScript examples"
+  }
 }

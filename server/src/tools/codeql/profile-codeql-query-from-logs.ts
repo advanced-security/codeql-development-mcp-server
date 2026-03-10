@@ -246,7 +246,7 @@ export function registerProfileCodeQLQueryFromLogsTool(
 ): void {
   server.tool(
     'profile_codeql_query_from_logs',
-    'Parse CodeQL evaluator logs into a structured performance profile. Returns compact JSON with per-query summaries and top-N slowest predicates (name, duration, result size, eval order, dependency count). Full RA operations, pipeline-stage tuple progressions, and dependency lists are written to a line-indexed detail file — each predicate includes {startLine, endLine} for targeted read_file access to its full analysis. Works with logs from codeql query run, codeql database analyze, or vscode-codeql.',
+    'Parse CodeQL evaluator logs into a structured performance profile. Returns compact JSON with per-query summaries and top-N slowest predicates (name, duration, result size, eval order, dependency count). Full RA operations, pipeline-stage tuple progressions, and dependency lists are written to a line-indexed detail file — each predicate includes detailLines: {start, end} for targeted read_file access to its full analysis. Works with logs from codeql query run, codeql database analyze, or vscode-codeql.',
     {
       evaluatorLog: z
         .string()
