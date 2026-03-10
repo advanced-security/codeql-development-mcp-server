@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { cp, mkdir, readdir, rm, stat, unlink } from 'fs/promises';
+import { cp, lstat, mkdir, readdir, rm, stat, unlink } from 'fs/promises';
 import { join } from 'path';
 import type { Logger } from '../common/logger';
 
@@ -34,10 +34,10 @@ export class DatabaseCopier {
     try {
       await mkdir(this.destinationBase, { recursive: true });
     } catch (err) {
-      this.logger.error(
-        `Failed to create managed database directory ${this.destinationBase}: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      return [];
+      const msg =
+        `Failed to create managed database directory ${this.destinationBase}: ${err instanceof Error ? err.message : String(err)}`;
+      this.logger.error(msg);
+      throw new Error(msg, { cause: err });
     }
 
     const copied: string[] = [];
@@ -137,8 +137,8 @@ async function isCodeQLDatabase(dirPath: string): Promise<boolean> {
 
 /**
  * Recursively remove all `.lock` files under the given directory.
- * These are empty sentinel files created by the CodeQL query server in
- * `<dataset>/default/cache/.lock`.
+ * Uses lstat to avoid following symlinks, keeping deletion scoped to
+ * the copied database tree.
  */
 async function removeLockFiles(dir: string): Promise<void> {
   let entries: string[];
@@ -151,7 +151,11 @@ async function removeLockFiles(dir: string): Promise<void> {
   for (const entry of entries) {
     const fullPath = join(dir, entry);
     try {
-      const st = await stat(fullPath);
+      const st = await lstat(fullPath);
+      // Skip symlinks to avoid traversing outside the database directory
+      if (st.isSymbolicLink()) {
+        continue;
+      }
       if (st.isDirectory()) {
         await removeLockFiles(fullPath);
       } else if (entry === '.lock') {

@@ -61458,49 +61458,75 @@ import { basename as basename4, dirname as dirname6, join as join11 } from "path
 
 // src/lib/evaluator-log-parser.ts
 init_logger();
-import { readFileSync as readFileSync8 } from "fs";
+import { createReadStream } from "fs";
+import { createInterface } from "readline";
 function detectLogFormat(firstEvent) {
   if (typeof firstEvent.type === "string") {
     return "raw";
   }
   return "summary";
 }
-function splitJsonObjects(content) {
-  const trimmed = content.replace(/\r\n/g, "\n").trim();
-  if (trimmed.length === 0) {
-    return [];
-  }
-  const parts = trimmed.split(/\n\}\s*\n\s*\{/);
-  if (parts.length === 1) {
-    return [trimmed];
-  }
-  return parts.map((part, idx) => {
-    if (idx === 0) {
-      return part + "\n}";
-    }
-    if (idx === parts.length - 1) {
-      return "{\n" + part;
-    }
-    return "{\n" + part + "\n}";
+async function* streamJsonObjects(logPath) {
+  const rl = createInterface({
+    input: createReadStream(logPath, { encoding: "utf-8" }),
+    crlfDelay: Infinity
   });
-}
-function parseJsonObjects(logPath) {
-  const content = readFileSync8(logPath, "utf-8");
-  const objectStrings = splitJsonObjects(content);
-  const results = [];
-  for (const objStr of objectStrings) {
-    try {
-      results.push(JSON.parse(objStr));
-    } catch {
-      logger.warn(
-        `Failed to parse evaluator log object: ${objStr.substring(0, 120)}...`
-      );
+  let depth = 0;
+  let inString = false;
+  let escape2 = false;
+  const lines = [];
+  for await (const line of rl) {
+    for (const ch of line) {
+      if (escape2) {
+        escape2 = false;
+        continue;
+      }
+      if (ch === "\\" && inString) {
+        escape2 = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch === "{") depth++;
+      if (ch === "}") depth--;
+    }
+    if (depth > 0 || depth === 0 && line.trim().length > 0 && lines.length > 0) {
+      lines.push(line);
+    } else if (depth === 0 && lines.length === 0 && line.trim().length > 0) {
+      lines.push(line);
+    }
+    if (depth === 0 && lines.length > 0) {
+      const objStr = lines.join("\n");
+      lines.length = 0;
+      inString = false;
+      escape2 = false;
+      if (objStr.trim().length === 0) continue;
+      try {
+        yield JSON.parse(objStr);
+      } catch {
+        logger.warn(
+          `Failed to parse evaluator log object: ${objStr.substring(0, 120)}...`
+        );
+      }
     }
   }
-  return results;
+  if (lines.length > 0) {
+    const objStr = lines.join("\n");
+    if (objStr.trim().length > 0) {
+      try {
+        yield JSON.parse(objStr);
+      } catch {
+        logger.warn(
+          `Failed to parse trailing evaluator log object: ${objStr.substring(0, 120)}...`
+        );
+      }
+    }
+  }
 }
-function parseRawEvaluatorLog(logPath) {
-  const events = parseJsonObjects(logPath);
+async function processRawEvents(events) {
   let codeqlVersion;
   const queryStartEvents = /* @__PURE__ */ new Map();
   const predicateStartEvents = /* @__PURE__ */ new Map();
@@ -61510,7 +61536,9 @@ function parseRawEvaluatorLog(logPath) {
   const queryEndNanoTimes = /* @__PURE__ */ new Map();
   const queryCacheHits = /* @__PURE__ */ new Map();
   let firstQueryEventId;
-  for (const event of events) {
+  let totalEvents = 0;
+  for await (const event of events) {
+    totalEvents++;
     const eventType = event.type;
     switch (eventType) {
       case "LOG_HEADER": {
@@ -61638,16 +61666,17 @@ function parseRawEvaluatorLog(logPath) {
     codeqlVersion,
     logFormat: "raw",
     queries,
-    totalEvents: events.length
+    totalEvents
   };
 }
-function parseSummaryLog(logPath) {
-  const events = parseJsonObjects(logPath);
+async function processSummaryEvents(events) {
   let codeqlVersion;
   const queryPredicatesMap = /* @__PURE__ */ new Map();
   const queryTotalMs = /* @__PURE__ */ new Map();
   const queryCacheHits = /* @__PURE__ */ new Map();
-  for (const event of events) {
+  let totalEvents = 0;
+  for await (const event of events) {
+    totalEvents++;
     if (event.summaryLogVersion !== void 0) {
       codeqlVersion = event.codeqlVersion;
       continue;
@@ -61710,23 +61739,34 @@ function parseSummaryLog(logPath) {
     codeqlVersion,
     logFormat: "summary",
     queries,
-    totalEvents: events.length
+    totalEvents
   };
 }
-function parseEvaluatorLog(logPath) {
-  const events = parseJsonObjects(logPath);
-  if (events.length === 0) {
+async function parseEvaluatorLog(logPath) {
+  const stream = streamJsonObjects(logPath);
+  const iterator = stream[Symbol.asyncIterator]();
+  const first = await iterator.next();
+  if (first.done) {
     return {
       logFormat: "raw",
       queries: [],
       totalEvents: 0
     };
   }
-  const format = detectLogFormat(events[0]);
-  if (format === "raw") {
-    return parseRawEvaluatorLog(logPath);
+  const firstEvent = first.value;
+  const format = detectLogFormat(firstEvent);
+  async function* prependFirst() {
+    yield firstEvent;
+    for (; ; ) {
+      const next = await iterator.next();
+      if (next.done) break;
+      yield next.value;
+    }
   }
-  return parseSummaryLog(logPath);
+  if (format === "raw") {
+    return processRawEvents(prependFirst());
+  }
+  return processSummaryEvents(prependFirst());
 }
 
 // src/tools/codeql/profile-codeql-query-from-logs.ts
@@ -61863,7 +61903,7 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
           };
         }
         logger.info(`Parsing evaluator log from: ${evaluatorLog}`);
-        const profile = parseEvaluatorLog(evaluatorLog);
+        const profile = await parseEvaluatorLog(evaluatorLog);
         const profileOutputDir = outputDir ?? dirname6(evaluatorLog);
         mkdirSync6(profileOutputDir, { recursive: true });
         const jsonPath = join11(profileOutputDir, "query-evaluation-profile.json");
@@ -61904,76 +61944,114 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
 // src/tools/codeql/profile-codeql-query.ts
 init_cli_executor();
 init_logger();
-import { writeFileSync as writeFileSync4, readFileSync as readFileSync9, existsSync as existsSync10 } from "fs";
+import { writeFileSync as writeFileSync4, existsSync as existsSync10 } from "fs";
+import { createReadStream as createReadStream2 } from "fs";
 import { join as join12, dirname as dirname7, basename as basename5 } from "path";
 import { mkdirSync as mkdirSync7 } from "fs";
-function parseEvaluatorLog2(logPath) {
-  const logContent = readFileSync9(logPath, "utf-8");
-  const jsonObjects = logContent.split("\n\n").filter((s) => s.trim());
-  const events = jsonObjects.map((obj) => {
-    try {
-      return JSON.parse(obj);
-    } catch (_error) {
-      logger.warn(`Failed to parse evaluator log object: ${obj.substring(0, 100)}...`);
-      return null;
-    }
-  }).filter((event) => event !== null);
+import { createInterface as createInterface2 } from "readline";
+async function parseEvaluatorLog2(logPath) {
   const pipelineMap = /* @__PURE__ */ new Map();
   const predicateNameToEventId = /* @__PURE__ */ new Map();
+  const predicateStartNanoTimes = /* @__PURE__ */ new Map();
   let queryName = "";
   let queryStartTime = 0;
   let queryEndTime = 0;
-  for (const event of events) {
-    switch (event.type) {
-      case "QUERY_STARTED":
-        queryName = event.queryName || "";
-        queryStartTime = event.nanoTime;
-        break;
-      case "QUERY_COMPLETED":
-        queryEndTime = event.nanoTime;
-        break;
-      case "PREDICATE_STARTED": {
-        const predicateName = event.predicateName;
-        const position = event.position;
-        const predicateType = event.predicateType;
-        const dependencies = event.dependencies;
-        predicateNameToEventId.set(predicateName, event.eventId);
-        const dependencyEventIds = [];
-        const dependencyNames = [];
-        if (dependencies) {
-          for (const depName of Object.keys(dependencies)) {
-            dependencyNames.push(depName);
-            const depEventId = predicateNameToEventId.get(depName);
-            if (depEventId !== void 0) {
-              dependencyEventIds.push(depEventId);
+  let totalEvents = 0;
+  const rl = createInterface2({
+    input: createReadStream2(logPath, { encoding: "utf-8" }),
+    crlfDelay: Infinity
+  });
+  let depth = 0;
+  let inString = false;
+  let escape2 = false;
+  const lines = [];
+  for await (const line of rl) {
+    for (const ch of line) {
+      if (escape2) {
+        escape2 = false;
+        continue;
+      }
+      if (ch === "\\" && inString) {
+        escape2 = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch === "{") depth++;
+      if (ch === "}") depth--;
+    }
+    if (depth > 0 || depth === 0 && line.trim().length > 0 && lines.length > 0) {
+      lines.push(line);
+    } else if (depth === 0 && lines.length === 0 && line.trim().length > 0) {
+      lines.push(line);
+    }
+    if (depth === 0 && lines.length > 0) {
+      const objStr = lines.join("\n");
+      lines.length = 0;
+      inString = false;
+      escape2 = false;
+      if (objStr.trim().length === 0) continue;
+      let event;
+      try {
+        event = JSON.parse(objStr);
+      } catch {
+        logger.warn(`Failed to parse evaluator log object: ${objStr.substring(0, 100)}...`);
+        continue;
+      }
+      totalEvents++;
+      switch (event.type) {
+        case "QUERY_STARTED":
+          queryName = event.queryName || "";
+          queryStartTime = event.nanoTime;
+          break;
+        case "QUERY_COMPLETED":
+          queryEndTime = event.nanoTime;
+          break;
+        case "PREDICATE_STARTED": {
+          const predicateName = event.predicateName;
+          const position = event.position;
+          const predicateType = event.predicateType;
+          const dependencies = event.dependencies;
+          predicateNameToEventId.set(predicateName, event.eventId);
+          predicateStartNanoTimes.set(event.eventId, event.nanoTime);
+          const dependencyEventIds = [];
+          const dependencyNames = [];
+          if (dependencies) {
+            for (const depName of Object.keys(dependencies)) {
+              dependencyNames.push(depName);
+              const depEventId = predicateNameToEventId.get(depName);
+              if (depEventId !== void 0) {
+                dependencyEventIds.push(depEventId);
+              }
             }
           }
+          pipelineMap.set(event.eventId, {
+            eventId: event.eventId,
+            name: predicateName,
+            position,
+            type: predicateType,
+            startTime: event.nanoTime,
+            dependencies: dependencyNames,
+            dependencyEventIds
+          });
+          break;
         }
-        pipelineMap.set(event.eventId, {
-          eventId: event.eventId,
-          name: predicateName,
-          position,
-          type: predicateType,
-          startTime: event.nanoTime,
-          dependencies: dependencyNames,
-          dependencyEventIds
-        });
-        break;
-      }
-      case "PREDICATE_COMPLETED": {
-        const startEventId = event.startEvent;
-        const pipelineInfo = pipelineMap.get(startEventId);
-        if (pipelineInfo) {
-          const startEvent = events.find((e) => e.eventId === startEventId);
-          if (startEvent) {
-            const duration3 = (event.nanoTime - startEvent.nanoTime) / 1e6;
+        case "PREDICATE_COMPLETED": {
+          const startEventId = event.startEvent;
+          const pipelineInfo = pipelineMap.get(startEventId);
+          const startNano = predicateStartNanoTimes.get(startEventId);
+          if (pipelineInfo && startNano !== void 0) {
+            const duration3 = (event.nanoTime - startNano) / 1e6;
             pipelineInfo.endTime = event.nanoTime;
             pipelineInfo.duration = duration3;
             pipelineInfo.resultSize = event.resultSize;
             pipelineInfo.tupleCount = event.tupleCount;
           }
+          break;
         }
-        break;
       }
     }
   }
@@ -61982,7 +62060,7 @@ function parseEvaluatorLog2(logPath) {
   return {
     queryName,
     totalDuration,
-    totalEvents: events.length,
+    totalEvents,
     pipelines
   };
 }
@@ -62096,7 +62174,7 @@ function registerProfileCodeQLQueryTool(server) {
           };
         }
         logger.info(`Parsing evaluator log from: ${logPath}`);
-        const profile = parseEvaluatorLog2(logPath);
+        const profile = await parseEvaluatorLog2(logPath);
         const profileOutputDir = outputDir || dirname7(logPath);
         mkdirSync7(profileOutputDir, { recursive: true });
         const jsonPath = join12(profileOutputDir, "query-evaluation-profile.json");
@@ -62313,7 +62391,7 @@ function registerQuickEvaluateTool(server) {
 
 // src/tools/codeql/read-database-source.ts
 var import_adm_zip = __toESM(require_adm_zip(), 1);
-import { existsSync as existsSync11, readdirSync as readdirSync7, readFileSync as readFileSync10, statSync as statSync7 } from "fs";
+import { existsSync as existsSync11, readdirSync as readdirSync7, readFileSync as readFileSync8, statSync as statSync7 } from "fs";
 import { join as join14, resolve as resolve7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 init_logger();
@@ -62475,7 +62553,7 @@ Directory contains ${availableEntries.length} entries. Use read_database_source 
       );
     }
     const fullPath = join14(srcDirPath, matchedRelative);
-    const rawContent = readFileSync10(fullPath, "utf-8");
+    const rawContent = readFileSync8(fullPath, "utf-8");
     const { content, effectiveEnd, effectiveStart, totalLines } = applyLineRange(
       rawContent,
       startLine,
@@ -62805,11 +62883,14 @@ var codeqlResolveTestsTool = {
 };
 
 // src/tools/codeql/search-ql-code.ts
-import { lstatSync, readdirSync as readdirSync8, readFileSync as readFileSync11, realpathSync } from "fs";
+import { createReadStream as createReadStream3, lstatSync, readdirSync as readdirSync8, readFileSync as readFileSync9, realpathSync } from "fs";
 import { extname as extname2, join as join15, resolve as resolve9 } from "path";
+import { createInterface as createInterface3 } from "readline";
 init_logger();
 var MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 var MAX_FILES_TRAVERSED = 1e4;
+var MAX_CONTEXT_LINES = 50;
+var MAX_MAX_RESULTS = 1e4;
 function collectFiles(paths, extensions, fileCount) {
   const files = [];
   const visitedDirs = /* @__PURE__ */ new Set();
@@ -62854,14 +62935,11 @@ function collectFiles(paths, extensions, fileCount) {
   }
   return files;
 }
-function searchFile(filePath, regex, contextLines) {
+function searchFileSmall(filePath, regex, contextLines) {
   let content;
   try {
-    content = readFileSync11(filePath, "utf-8");
+    content = readFileSync9(filePath, "utf-8");
   } catch {
-    return [];
-  }
-  if (Buffer.byteLength(content, "utf-8") > MAX_FILE_SIZE_BYTES) {
     return [];
   }
   const lines = content.replace(/\r\n/g, "\n").split("\n");
@@ -62884,15 +62962,73 @@ function searchFile(filePath, regex, contextLines) {
   }
   return matches;
 }
-function searchQlCode(params) {
+async function searchFileLarge(filePath, regex, contextLines) {
+  const matches = [];
+  const recentLines = [];
+  const pending = [];
+  let lineNumber = 0;
+  const rl = createInterface3({
+    input: createReadStream3(filePath, { encoding: "utf-8" }),
+    crlfDelay: Infinity
+  });
+  for await (const line of rl) {
+    lineNumber++;
+    for (const p of pending) {
+      if (p.afterNeeded > 0) {
+        p.match.contextAfter.push(line);
+        p.afterNeeded--;
+      }
+    }
+    while (pending.length > 0 && pending[0].afterNeeded === 0) {
+      pending.shift();
+    }
+    if (regex.test(line)) {
+      const match = {
+        filePath,
+        lineNumber,
+        lineContent: line
+      };
+      if (contextLines > 0) {
+        match.contextBefore = recentLines.slice(-contextLines);
+        match.contextAfter = [];
+        pending.push({ match, afterNeeded: contextLines });
+      }
+      matches.push(match);
+    }
+    if (contextLines > 0) {
+      recentLines.push(line);
+      if (recentLines.length > contextLines) {
+        recentLines.shift();
+      }
+    }
+  }
+  return matches;
+}
+function searchFile(filePath, regex, contextLines) {
+  try {
+    const st = lstatSync(filePath);
+    if (!st.isFile()) {
+      return [];
+    }
+    if (st.size > MAX_FILE_SIZE_BYTES) {
+      return searchFileLarge(filePath, regex, contextLines);
+    }
+  } catch {
+    return [];
+  }
+  return searchFileSmall(filePath, regex, contextLines);
+}
+async function searchQlCode(params) {
   const {
     pattern,
     paths,
     includeExtensions = [".ql", ".qll"],
     caseSensitive = true,
-    contextLines = 0,
-    maxResults = 100
+    contextLines: rawContextLines = 0,
+    maxResults: rawMaxResults = 100
   } = params;
+  const contextLines = Math.min(Math.max(0, Math.floor(rawContextLines)), MAX_CONTEXT_LINES);
+  const maxResults = Math.min(Math.max(1, Math.floor(rawMaxResults)), MAX_MAX_RESULTS);
   const flags = caseSensitive ? "" : "i";
   const regex = new RegExp(pattern, flags);
   const fileCount = { value: 0 };
@@ -62900,7 +63036,7 @@ function searchQlCode(params) {
   const allMatches = [];
   let totalMatches = 0;
   for (const file of filesToSearch) {
-    const fileMatches = searchFile(file, regex, contextLines);
+    const fileMatches = await searchFile(file, regex, contextLines);
     totalMatches += fileMatches.length;
     for (const m of fileMatches) {
       if (allMatches.length < maxResults) {
@@ -62925,8 +63061,8 @@ function registerSearchQlCodeTool(server) {
       paths: external_exports.array(external_exports.string()).min(1).describe("Directories or files to search in"),
       includeExtensions: external_exports.array(external_exports.string()).optional().default([".ql", ".qll"]).describe("File extensions to search (default: ['.ql', '.qll'])"),
       caseSensitive: external_exports.boolean().optional().default(true).describe("Whether search is case sensitive (default: true)"),
-      contextLines: external_exports.number().optional().default(0).describe("Lines of context before and after each match (default: 0)"),
-      maxResults: external_exports.number().optional().default(100).describe("Maximum number of matching lines to return (default: 100)")
+      contextLines: external_exports.number().int().min(0).max(MAX_CONTEXT_LINES).optional().default(0).describe("Lines of context before and after each match (default: 0, max: 50)"),
+      maxResults: external_exports.number().int().min(1).max(MAX_MAX_RESULTS).optional().default(100).describe("Maximum number of matching lines to return (default: 100, max: 10000)")
     },
     async ({ pattern, paths, includeExtensions, caseSensitive, contextLines, maxResults }) => {
       try {
@@ -64619,7 +64755,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync12, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
+import { readFileSync as readFileSync10, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -64632,7 +64768,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync12(this.#filename, "utf-8");
+      data = readFileSync10(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;

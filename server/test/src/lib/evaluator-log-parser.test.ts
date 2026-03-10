@@ -369,12 +369,12 @@ describe('Evaluator Log Parser', () => {
   // -----------------------------------------------------------------------
 
   describe('detectLogFormat', () => {
-    it('should detect raw format when event has a type field', () => {
+    it('should detect raw format when event has a type field', async () => {
       const event = { type: 'LOG_HEADER', eventId: 1, nanoTime: 100 };
       expect(detectLogFormat(event)).toBe('raw');
     });
 
-    it('should detect summary format when event has no type field', () => {
+    it('should detect summary format when event has no type field', async () => {
       const event = {
         summaryLogVersion: '0.4.0',
         codeqlVersion: '2.24.1',
@@ -382,7 +382,7 @@ describe('Evaluator Log Parser', () => {
       expect(detectLogFormat(event)).toBe('summary');
     });
 
-    it('should detect summary format for predicate summary events', () => {
+    it('should detect summary format for predicate summary events', async () => {
       const event = {
         completionTime: '2026-02-17T00:00:02Z',
         raHash: 'abc',
@@ -399,47 +399,47 @@ describe('Evaluator Log Parser', () => {
   // -----------------------------------------------------------------------
 
   describe('parseRawEvaluatorLog — single query', () => {
-    it('should parse codeqlVersion from LOG_HEADER', () => {
+    it('should parse codeqlVersion from LOG_HEADER', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.codeqlVersion).toBe('2.24.1');
     });
 
-    it('should set logFormat to raw', () => {
+    it('should set logFormat to raw', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.logFormat).toBe('raw');
     });
 
-    it('should produce exactly one QueryProfile', () => {
+    it('should produce exactly one QueryProfile', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.queries).toHaveLength(1);
       expect(result.queries[0].queryName).toBe('TestQuery.ql');
     });
 
-    it('should compute query total duration from QUERY_STARTED/COMPLETED nanoTimes', () => {
+    it('should compute query total duration from QUERY_STARTED/COMPLETED nanoTimes', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       // nanoTime: 200000000 → 400000000 = 200ms
       expect(result.queries[0].totalDurationMs).toBe(200);
     });
 
-    it('should collect all predicates for the query', () => {
+    it('should collect all predicates for the query', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.queries[0].predicateCount).toBe(2);
       expect(result.queries[0].predicates).toHaveLength(2);
     });
 
-    it('should compute predicate duration from nanoTime diffs', () => {
+    it('should compute predicate duration from nanoTime diffs', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       const pred1 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#1'
@@ -449,9 +449,9 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.durationMs).toBeCloseTo(50.1, 1);
     });
 
-    it('should capture resultSize for completed predicates', () => {
+    it('should capture resultSize for completed predicates', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       const pred1 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#1'
@@ -459,9 +459,9 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.resultSize).toBe(100);
     });
 
-    it('should capture pipeline count for predicates', () => {
+    it('should capture pipeline count for predicates', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       const pred1 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#1'
@@ -469,9 +469,9 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.pipelineCount).toBe(1);
     });
 
-    it('should capture RA steps from PREDICATE_STARTED ra field', () => {
+    it('should capture RA steps from PREDICATE_STARTED ra field', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       const pred1 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#1'
@@ -481,9 +481,9 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.raSteps![0]).toContain('SCAN');
     });
 
-    it('should capture pipeline stages with counts and timing', () => {
+    it('should capture pipeline stages with counts and timing', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       const pred1 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#1'
@@ -495,9 +495,9 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.pipelineStages![0].durationMs).toBeGreaterThan(0);
     });
 
-    it('should not have raSteps when predicate has no ra field', () => {
+    it('should not have raSteps when predicate has no ra field', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       const pred2 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#2'
@@ -506,9 +506,9 @@ describe('Evaluator Log Parser', () => {
       expect(pred2!.pipelineStages).toBeUndefined();
     });
 
-    it('should capture dependencies for predicates', () => {
+    it('should capture dependencies for predicates', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       const pred2 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#2'
@@ -516,9 +516,9 @@ describe('Evaluator Log Parser', () => {
       expect(pred2!.dependencies).toContain('TestPredicate#1');
     });
 
-    it('should report totalEvents', () => {
+    it('should report totalEvents', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.totalEvents).toBe(10);
     });
@@ -529,24 +529,24 @@ describe('Evaluator Log Parser', () => {
   // -----------------------------------------------------------------------
 
   describe('parseRawEvaluatorLog — multi query', () => {
-    it('should produce two QueryProfiles', () => {
+    it('should produce two QueryProfiles', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.queries).toHaveLength(2);
     });
 
-    it('should name queries correctly', () => {
+    it('should name queries correctly', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.queries[0].queryName).toBe('QueryA.ql');
       expect(result.queries[1].queryName).toBe('QueryB.ql');
     });
 
-    it('should group predicates by queryCausingWork', () => {
+    it('should group predicates by queryCausingWork', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       expect(result.queries[0].predicateCount).toBe(1);
       expect(result.queries[0].predicates[0].predicateName).toBe(
@@ -561,9 +561,9 @@ describe('Evaluator Log Parser', () => {
       expect(names).toContain('PredicateB#2');
     });
 
-    it('should compute per-query total durations', () => {
+    it('should compute per-query total durations', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       // QueryA: 200000000 → 350000000 = 150ms
       expect(result.queries[0].totalDurationMs).toBe(150);
@@ -571,9 +571,9 @@ describe('Evaluator Log Parser', () => {
       expect(result.queries[1].totalDurationMs).toBe(250);
     });
 
-    it('should capture RA steps and pipeline stages for multi-query logs', () => {
+    it('should capture RA steps and pipeline stages for multi-query logs', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       // QueryA predicate should have RA steps and pipeline stage
       const predA = result.queries[0].predicates[0];
@@ -586,9 +586,9 @@ describe('Evaluator Log Parser', () => {
       expect(predA.pipelineStages![0].resultSize).toBe(200);
     });
 
-    it('should track cache hits per query', () => {
+    it('should track cache hits per query', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
-      const result = parseRawEvaluatorLog(logPath);
+      const result = await parseRawEvaluatorLog(logPath);
 
       // No CACHE_LOOKUP events in synthetic multiQueryRawLog
       expect(result.queries[0].cacheHits).toBe(0);
@@ -601,35 +601,35 @@ describe('Evaluator Log Parser', () => {
   // -----------------------------------------------------------------------
 
   describe('parseRawEvaluatorLog — real multi-query fixture', () => {
-    it('should parse the real multi-query integration test fixture', () => {
+    it('should parse the real multi-query integration test fixture', async () => {
       const logPath = join(
         __dirname,
         '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       expect(result.logFormat).toBe('raw');
       expect(result.codeqlVersion).toBe('2.23.1');
       expect(result.queries).toHaveLength(2);
     });
 
-    it('should separate QueryA and QueryB from multi-query fixture', () => {
+    it('should separate QueryA and QueryB from multi-query fixture', async () => {
       const logPath = join(
         __dirname,
         '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       expect(result.queries[0].queryName).toBe('/workspace/QueryA.ql');
       expect(result.queries[1].queryName).toBe('/workspace/QueryB.ql');
     });
 
-    it('should group predicates correctly per query', () => {
+    it('should group predicates correctly per query', async () => {
       const logPath = join(
         __dirname,
         '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       // QueryA: 2 predicates (source, sink)
       expect(result.queries[0].predicateCount).toBe(2);
@@ -645,12 +645,12 @@ describe('Evaluator Log Parser', () => {
       expect(queryBNames).toContain('QueryB::result/3#pqr678');
     });
 
-    it('should capture pipeline stages from multi-query fixture', () => {
+    it('should capture pipeline stages from multi-query fixture', async () => {
       const logPath = join(
         __dirname,
         '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       // QueryA source predicate should have pipeline stage with counts=[5]
       const sourcePred = result.queries[0].predicates.find(
@@ -669,12 +669,12 @@ describe('Evaluator Log Parser', () => {
       expect(flowPred!.pipelineStages![0].counts).toEqual([12]);
     });
 
-    it('should track cache hits for QueryA', () => {
+    it('should track cache hits for QueryA', async () => {
       const logPath = join(
         __dirname,
         '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       // QueryA has 1 CACHE_LOOKUP event
       expect(result.queries[0].cacheHits).toBe(1);
@@ -682,12 +682,12 @@ describe('Evaluator Log Parser', () => {
       expect(result.queries[1].cacheHits).toBe(0);
     });
 
-    it('should compute per-query total durations from real fixture', () => {
+    it('should compute per-query total durations from real fixture', async () => {
       const logPath = join(
         __dirname,
         '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       // QueryA: 1000000000 → 1200000000 = 200ms
       expect(result.queries[0].totalDurationMs).toBe(200);
@@ -701,32 +701,32 @@ describe('Evaluator Log Parser', () => {
   // -----------------------------------------------------------------------
 
   describe('parseSummaryLog', () => {
-    it('should parse codeqlVersion from header', () => {
+    it('should parse codeqlVersion from header', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       expect(result.codeqlVersion).toBe('2.24.1');
     });
 
-    it('should set logFormat to summary', () => {
+    it('should set logFormat to summary', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       expect(result.logFormat).toBe('summary');
     });
 
-    it('should skip SENTINEL_EMPTY entries', () => {
+    it('should skip SENTINEL_EMPTY entries', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       const allNames = result.queries.flatMap((q) =>
         q.predicates.map((p) => p.predicateName)
@@ -734,23 +734,23 @@ describe('Evaluator Log Parser', () => {
       expect(allNames).not.toContain('SentinelPred');
     });
 
-    it('should produce one QueryProfile for single-query summary', () => {
+    it('should produce one QueryProfile for single-query summary', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       expect(result.queries).toHaveLength(1);
       expect(result.queries[0].queryName).toBe('TestQuery.ql');
     });
 
-    it('should use millis field directly for duration', () => {
+    it('should use millis field directly for duration', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       const pred1 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#1'
@@ -758,12 +758,12 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.durationMs).toBe(50);
     });
 
-    it('should capture pipelineRuns', () => {
+    it('should capture pipelineRuns', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       const pred2 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#2'
@@ -771,12 +771,12 @@ describe('Evaluator Log Parser', () => {
       expect(pred2!.pipelineCount).toBe(2);
     });
 
-    it('should capture RA steps from summary ra field', () => {
+    it('should capture RA steps from summary ra field', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       const pred1 = result.queries[0].predicates.find(
         (p) => p.predicateName === 'TestPredicate#1'
@@ -785,23 +785,23 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.raSteps).toEqual(['some RA text']);
     });
 
-    it('should sum millis for total query duration', () => {
+    it('should sum millis for total query duration', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       // 50 + 120 = 170ms
       expect(result.queries[0].totalDurationMs).toBe(170);
     });
 
-    it('should group predicates by queryCausingWork in multi-query summary', () => {
+    it('should group predicates by queryCausingWork in multi-query summary', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         multiQuerySummaryLog()
       );
-      const result = parseSummaryLog(logPath);
+      const result = await parseSummaryLog(logPath);
 
       expect(result.queries).toHaveLength(2);
 
@@ -825,50 +825,50 @@ describe('Evaluator Log Parser', () => {
   // -----------------------------------------------------------------------
 
   describe('parseEvaluatorLog — auto-detection', () => {
-    it('should auto-detect and parse raw log', () => {
+    it('should auto-detect and parse raw log', async () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       expect(result.logFormat).toBe('raw');
       expect(result.queries).toHaveLength(1);
     });
 
-    it('should auto-detect and parse summary log', () => {
+    it('should auto-detect and parse summary log', async () => {
       const logPath = writeTempLog(
         'evaluator-log.summary.jsonl',
         summaryLog()
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       expect(result.logFormat).toBe('summary');
       expect(result.queries).toHaveLength(1);
     });
 
-    it('should return empty profile for empty log file', () => {
+    it('should return empty profile for empty log file', async () => {
       const logPath = writeTempLog('empty.jsonl', '');
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       expect(result.queries).toHaveLength(0);
       expect(result.totalEvents).toBe(0);
     });
 
-    it('should handle malformed log content gracefully', () => {
+    it('should handle malformed log content gracefully', async () => {
       const logPath = writeTempLog(
         'bad.jsonl',
         'not valid json\n\nalso not json'
       );
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       // Should not throw; returns empty profile
       expect(result.queries).toHaveLength(0);
       expect(result.totalEvents).toBe(0);
     });
 
-    it('should handle Windows-style \\r\\n line endings', () => {
+    it('should handle Windows-style \\r\\n line endings', async () => {
       // Build the same singleQueryRawLog content but with \r\n line endings
       const content = singleQueryRawLog().replace(/\n/g, '\r\n');
       const logPath = writeTempLog('win-crlf.jsonl', content);
-      const result = parseEvaluatorLog(logPath);
+      const result = await parseEvaluatorLog(logPath);
 
       expect(result.logFormat).toBe('raw');
       expect(result.queries).toHaveLength(1);

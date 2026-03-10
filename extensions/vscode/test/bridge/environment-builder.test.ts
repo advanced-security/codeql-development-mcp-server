@@ -206,6 +206,15 @@ describe('EnvironmentBuilder', () => {
     vscode.workspace.getConfiguration = originalGetConfig;
   });
 
+  it('should fall back to source dirs when syncAll throws', async () => {
+    mockCopier.syncAll.mockRejectedValue(new Error('Failed to create managed database directory'));
+    builder.invalidate();
+    const env = await builder.build();
+    expect(env.CODEQL_DATABASES_BASE_DIRS).toBe(
+      ['/mock/global-storage/GitHub.vscode-codeql', '/mock/workspace-storage/ws-123/GitHub.vscode-codeql'].join(delimiter),
+    );
+  });
+
   it('should append user-configured dirs to CODEQL_QUERY_RUN_RESULTS_DIRS', async () => {
     const vscode = await import('vscode');
     const originalGetConfig = vscode.workspace.getConfiguration;
