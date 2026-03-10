@@ -15,8 +15,10 @@ vi.mock('../../../../src/tools/lsp/lsp-diagnostics', () => ({
 
 // Mock lsp-handlers
 vi.mock('../../../../src/tools/lsp/lsp-handlers', () => ({
+  extractNamesFromDocumentSymbols: vi.fn().mockReturnValue([]),
   lspCompletion: vi.fn().mockResolvedValue([]),
   lspDefinition: vi.fn().mockResolvedValue([]),
+  lspDocumentSymbols: vi.fn().mockResolvedValue([]),
   lspReferences: vi.fn().mockResolvedValue([]),
 }));
 
@@ -36,10 +38,10 @@ describe('registerLSPTools', () => {
     expect(registerLspDiagnosticsTool).toHaveBeenCalledWith(mockServer);
   });
 
-  it('should register 3 file-based LSP tools directly', () => {
+  it('should register 4 file-based LSP tools directly', () => {
     registerLSPTools(mockServer);
-    // 3 tools registered directly via server.tool (diagnostics is registered via delegate)
-    expect(mockServer.tool).toHaveBeenCalledTimes(3);
+    // 4 tools registered directly via server.tool (diagnostics is registered via delegate)
+    expect(mockServer.tool).toHaveBeenCalledTimes(4);
   });
 
   it('should register codeql_lsp_completion', () => {
