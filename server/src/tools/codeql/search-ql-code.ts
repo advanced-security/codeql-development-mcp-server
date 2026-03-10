@@ -8,8 +8,9 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { lstatSync, readdirSync, readFileSync, realpathSync } from 'fs';
-import { extname, join, resolve } from 'path';
+import { createReadStream, lstatSync, readdirSync, readFileSync, realpathSync } from 'fs';
+import { basename, extname, join, resolve } from 'path';
+import { createInterface } from 'readline';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 
@@ -22,6 +23,15 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 /** Maximum total files to traverse before stopping. */
 const MAX_FILES_TRAVERSED = 10_000;
+
+/** Maximum allowed value for `contextLines`. */
+const MAX_CONTEXT_LINES = 50;
+
+/** Maximum allowed value for `maxResults`. */
+const MAX_MAX_RESULTS = 10_000;
+
+/** Directory names to skip during traversal (compiled pack caches, deps). */
+const SKIP_DIRS = new Set(['.codeql', 'node_modules', '.git']);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,6 +90,9 @@ function collectFiles(
       }
       fileCount.value++;
     } else if (stat.isDirectory()) {
+      // Skip well-known directories that mirror source or contain deps
+      if (SKIP_DIRS.has(basename(p))) return;
+
       // Track visited directories by real path to prevent cycles
       let realPath: string;
       try {
@@ -112,10 +125,10 @@ function collectFiles(
 }
 
 /**
- * Search a single file for matches against the compiled regex.
- * Reads the file directly to avoid TOCTOU race conditions.
+ * Search a small file (≤ MAX_FILE_SIZE_BYTES) by reading it entirely into
+ * memory. This is the fast path for typical QL source files.
  */
-function searchFile(
+function searchFileSmall(
   filePath: string,
   regex: RegExp,
   contextLines: number
@@ -124,11 +137,6 @@ function searchFile(
   try {
     content = readFileSync(filePath, 'utf-8');
   } catch {
-    return [];
-  }
-
-  // Check size after reading to avoid TOCTOU race between stat and read
-  if (Buffer.byteLength(content, 'utf-8') > MAX_FILE_SIZE_BYTES) {
     return [];
   }
 
@@ -159,24 +167,117 @@ function searchFile(
 }
 
 /**
+ * Search a large file (> MAX_FILE_SIZE_BYTES) by streaming it line-by-line
+ * to avoid allocating huge buffers. Context lines are maintained via a
+ * fixed-size rolling window.
+ */
+async function searchFileLarge(
+  filePath: string,
+  regex: RegExp,
+  contextLines: number
+): Promise<SearchMatch[]> {
+  const matches: SearchMatch[] = [];
+  // Rolling window of recent lines for contextBefore
+  const recentLines: string[] = [];
+  // Pending matches that still need contextAfter lines
+  const pending: { match: SearchMatch; afterNeeded: number }[] = [];
+  let lineNumber = 0;
+
+  const rl = createInterface({
+    input: createReadStream(filePath, { encoding: 'utf-8' }),
+    crlfDelay: Infinity
+  });
+
+  for await (const line of rl) {
+    lineNumber++;
+
+    // Feed this line as contextAfter to any pending matches
+    for (const p of pending) {
+      if (p.afterNeeded > 0) {
+        p.match.contextAfter!.push(line);
+        p.afterNeeded--;
+      }
+    }
+    // Flush fully-resolved pending matches
+    while (pending.length > 0 && pending[0].afterNeeded === 0) {
+      pending.shift();
+    }
+
+    if (regex.test(line)) {
+      const match: SearchMatch = {
+        filePath,
+        lineNumber,
+        lineContent: line
+      };
+
+      if (contextLines > 0) {
+        match.contextBefore = recentLines.slice(-contextLines);
+        match.contextAfter = [];
+        pending.push({ match, afterNeeded: contextLines });
+      }
+
+      matches.push(match);
+    }
+
+    // Maintain rolling window
+    if (contextLines > 0) {
+      recentLines.push(line);
+      if (recentLines.length > contextLines) {
+        recentLines.shift();
+      }
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * Search a single file for matches against the compiled regex.
+ * Uses in-memory read for small files and streaming for large files.
+ */
+function searchFile(
+  filePath: string,
+  regex: RegExp,
+  contextLines: number
+): SearchMatch[] | Promise<SearchMatch[]> {
+  try {
+    const st = lstatSync(filePath);
+    if (!st.isFile()) {
+      return [];
+    }
+    if (st.size > MAX_FILE_SIZE_BYTES) {
+      return searchFileLarge(filePath, regex, contextLines);
+    }
+  } catch {
+    return [];
+  }
+
+  return searchFileSmall(filePath, regex, contextLines);
+}
+
+/**
  * Search QL source files for a text or regex pattern.
  */
-export function searchQlCode(params: {
+export async function searchQlCode(params: {
   pattern: string;
   paths: string[];
   includeExtensions?: string[];
   caseSensitive?: boolean;
   contextLines?: number;
   maxResults?: number;
-}): SearchResult {
+}): Promise<SearchResult> {
   const {
     pattern,
     paths,
     includeExtensions = ['.ql', '.qll'],
     caseSensitive = true,
-    contextLines = 0,
-    maxResults = 100
+    contextLines: rawContextLines = 0,
+    maxResults: rawMaxResults = 100
   } = params;
+
+  // Clamp to valid ranges
+  const contextLines = Math.min(Math.max(0, Math.floor(rawContextLines)), MAX_CONTEXT_LINES);
+  const maxResults = Math.min(Math.max(1, Math.floor(rawMaxResults)), MAX_MAX_RESULTS);
 
   // Compile regex — propagate errors to caller
   const flags = caseSensitive ? '' : 'i';
@@ -189,7 +290,7 @@ export function searchQlCode(params: {
   let totalMatches = 0;
 
   for (const file of filesToSearch) {
-    const fileMatches = searchFile(file, regex, contextLines);
+    const fileMatches = await searchFile(file, regex, contextLines);
     totalMatches += fileMatches.length;
 
     for (const m of fileMatches) {
@@ -226,14 +327,14 @@ export function registerSearchQlCodeTool(server: McpServer): void {
         .describe('File extensions to search (default: [\'.ql\', \'.qll\'])'),
       caseSensitive: z.boolean().optional().default(true)
         .describe('Whether search is case sensitive (default: true)'),
-      contextLines: z.number().optional().default(0)
-        .describe('Lines of context before and after each match (default: 0)'),
-      maxResults: z.number().optional().default(100)
-        .describe('Maximum number of matching lines to return (default: 100)')
+      contextLines: z.number().int().min(0).max(MAX_CONTEXT_LINES).optional().default(0)
+        .describe('Lines of context before and after each match (default: 0, max: 50)'),
+      maxResults: z.number().int().min(1).max(MAX_MAX_RESULTS).optional().default(100)
+        .describe('Maximum number of matching lines to return (default: 100, max: 10000)')
     },
     async ({ pattern, paths, includeExtensions, caseSensitive, contextLines, maxResults }) => {
       try {
-        const result = searchQlCode({
+        const result = await searchQlCode({
           pattern,
           paths,
           includeExtensions,

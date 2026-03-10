@@ -15,6 +15,37 @@ import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
 
+/**
+ * Resolve a database path that may point to a multi-language database root
+ * (i.e. a directory that does not contain `codeql-database.yml` itself but
+ * has a single language subfolder that does). This handles the common case
+ * where vscode-codeql stores databases in a parent directory with language
+ * subfolders like `javascript/`, `python/`, etc.
+ */
+function resolveDatabasePath(dbPath: string): string {
+  if (existsSync(join(dbPath, 'codeql-database.yml'))) {
+    return dbPath;
+  }
+  try {
+    const entries = readdirSync(dbPath);
+    for (const entry of entries) {
+      const candidate = join(dbPath, entry);
+      try {
+        if (statSync(candidate).isDirectory() &&
+            existsSync(join(candidate, 'codeql-database.yml'))) {
+          logger.info(`Resolved multi-language database directory: ${dbPath} -> ${candidate}`);
+          return candidate;
+        }
+      } catch {
+        // Skip inaccessible entries
+      }
+    }
+  } catch {
+    // Parent directory not readable — return original path
+  }
+  return dbPath;
+}
+
 export interface CLIToolDefinition {
   name: string;
   description: string;
@@ -176,32 +207,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Handle database parameter as positional argument for resolve database tool
         if (options.database && name === 'codeql_resolve_database') {
-          let dbPath = options.database as string;
-          // Probe: if the path doesn't contain codeql-database.yml, check
-          // immediate children for a database directory (e.g. when the user
-          // provides a vscode-codeql storage directory that contains a
-          // language-named subdirectory like "javascript/").
-          if (!existsSync(join(dbPath, 'codeql-database.yml'))) {
-            try {
-              const entries = readdirSync(dbPath);
-              for (const entry of entries) {
-                const candidate = join(dbPath, entry);
-                try {
-                  if (statSync(candidate).isDirectory() &&
-                      existsSync(join(candidate, 'codeql-database.yml'))) {
-                    logger.info(`Resolved database directory: ${dbPath} -> ${candidate}`);
-                    dbPath = candidate;
-                    break;
-                  }
-                } catch {
-                  // Skip inaccessible entries
-                }
-              }
-            } catch {
-              // Parent directory not readable — pass original path through
-            }
-          }
-          positionalArgs = [...positionalArgs, dbPath];
+          positionalArgs = [...positionalArgs, resolveDatabasePath(options.database as string)];
           delete options.database;
         }
 
@@ -214,7 +220,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Handle database and queries parameters as positional arguments for database analyze tool
         if (name === 'codeql_database_analyze') {
           if (options.database) {
-            positionalArgs = [...positionalArgs, options.database as string];
+            positionalArgs = [...positionalArgs, resolveDatabasePath(options.database as string)];
             delete options.database;
           }
           if (options.queries) {
@@ -256,6 +262,10 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             if (options.database && typeof options.database === 'string' && !isAbsolute(options.database)) {
               options.database = resolve(getUserWorkspaceDir(), options.database);
               logger.info(`Resolved database path to: ${options.database}`);
+            }
+            // Auto-resolve multi-language DB root to language subfolder
+            if (options.database && typeof options.database === 'string') {
+              options.database = resolveDatabasePath(options.database);
             }
             
             // Implement query resolution logic with enhanced results processing

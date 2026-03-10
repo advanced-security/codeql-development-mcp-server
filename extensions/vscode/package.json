@@ -108,6 +108,11 @@
           "default": "latest",
           "description": "The npm version of codeql-development-mcp-server to install. Use 'latest' for the most recent release."
         },
+        "codeql-mcp.scratchDir": {
+          "type": "string",
+          "default": ".codeql/ql-mcp",
+          "markdownDescription": "Workspace-relative path for the ql-mcp scratch directory used for temporary files (query logs, external predicates, etc). The `.codeql/` parent is shared with other CodeQL CLI commands like `codeql pack bundle`. Set to an absolute path to override workspace-relative resolution."
+        },
         "codeql-mcp.watchCodeqlExtension": {
           "type": "boolean",
           "default": true,

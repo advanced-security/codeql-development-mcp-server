@@ -284,7 +284,7 @@ export function registerProfileCodeQLQueryFromLogsTool(
         }
 
         logger.info(`Parsing evaluator log from: ${evaluatorLog}`);
-        const profile = parseEvaluatorLog(evaluatorLog);
+        const profile = await parseEvaluatorLog(evaluatorLog);
 
         const profileOutputDir = outputDir ?? dirname(evaluatorLog);
         mkdirSync(profileOutputDir, { recursive: true });

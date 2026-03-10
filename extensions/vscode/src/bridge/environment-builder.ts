@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { delimiter, join } from 'path';
+import { delimiter, isAbsolute, join } from 'path';
 import { DisposableObject } from '../common/disposable';
 import type { Logger } from '../common/logger';
 import type { CliResolver } from '../codeql/cli-resolver';
@@ -64,17 +64,34 @@ export class EnvironmentBuilder extends DisposableObject {
       env.CODEQL_PATH = cliPath;
     }
 
-    // Workspace root
+    // Workspace root and all workspace folders
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders && workspaceFolders.length > 0) {
       env.CODEQL_MCP_WORKSPACE = workspaceFolders[0].uri.fsPath;
+      env.CODEQL_MCP_WORKSPACE_FOLDERS = workspaceFolders
+        .map((f) => f.uri.fsPath)
+        .join(delimiter);
     }
 
-    // Temp directory for MCP server scratch files
-    env.CODEQL_MCP_TMP_DIR = join(
-      this.context.globalStorageUri.fsPath,
-      'tmp',
-    );
+    // Workspace-local scratch directory for tool output (query logs, etc.)
+    // Defaults to `.codeql/ql-mcp` within the first workspace folder.
+    // This is also used as CODEQL_MCP_TMP_DIR so that the server writes
+    // all temporary output (query logs, external predicate CSVs) inside
+    // the workspace, avoiding out-of-workspace file access prompts.
+    const scratchRelative = config.get<string>('scratchDir', '.codeql/ql-mcp');
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      const scratchDir = isAbsolute(scratchRelative)
+        ? scratchRelative
+        : join(workspaceFolders[0].uri.fsPath, scratchRelative);
+      env.CODEQL_MCP_SCRATCH_DIR = scratchDir;
+      env.CODEQL_MCP_TMP_DIR = scratchDir;
+    } else {
+      // No workspace — fall back to extension globalStorage
+      env.CODEQL_MCP_TMP_DIR = join(
+        this.context.globalStorageUri.fsPath,
+        'tmp',
+      );
+    }
 
     // Additional packs path — include vscode-codeql's database storage
     // so the MCP server can discover databases registered there
