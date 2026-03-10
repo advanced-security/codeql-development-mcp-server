@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { getUserWorkspaceDir, packageRootDir, resolveToolQueryPackPath } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, rmSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
 
@@ -84,7 +84,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Extract tool-specific parameters that should not be passed to CLI
         // Note: format is extracted for tools that use it internally but not on CLI
         // For codeql_bqrs_interpret, codeql_bqrs_decode, codeql_bqrs_info, codeql_generate_query-help, and codeql_database_analyze, format should be passed to CLI
-        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_bqrs_info' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze';
+        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_bqrs_info' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze' || name === 'codeql_resolve_files';
         
         const extractedParams = formatShouldBePassedToCLI
           ? {
@@ -176,7 +176,32 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Handle database parameter as positional argument for resolve database tool
         if (options.database && name === 'codeql_resolve_database') {
-          positionalArgs = [...positionalArgs, options.database as string];
+          let dbPath = options.database as string;
+          // Probe: if the path doesn't contain codeql-database.yml, check
+          // immediate children for a database directory (e.g. when the user
+          // provides a vscode-codeql storage directory that contains a
+          // language-named subdirectory like "javascript/").
+          if (!existsSync(join(dbPath, 'codeql-database.yml'))) {
+            try {
+              const entries = readdirSync(dbPath);
+              for (const entry of entries) {
+                const candidate = join(dbPath, entry);
+                try {
+                  if (statSync(candidate).isDirectory() &&
+                      existsSync(join(candidate, 'codeql-database.yml'))) {
+                    logger.info(`Resolved database directory: ${dbPath} -> ${candidate}`);
+                    dbPath = candidate;
+                    break;
+                  }
+                } catch {
+                  // Skip inaccessible entries
+                }
+              }
+            } catch {
+              // Parent directory not readable — pass original path through
+            }
+          }
+          positionalArgs = [...positionalArgs, dbPath];
           delete options.database;
         }
 
@@ -341,6 +366,13 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             // Handle directory parameter as positional argument
             if (directory) {
               positionalArgs = [...positionalArgs, directory as string];
+            }
+            break;
+
+          case 'codeql_resolve_files':
+            // Handle dir parameter as positional argument
+            if (dir) {
+              positionalArgs = [...positionalArgs, dir as string];
             }
             break;
             

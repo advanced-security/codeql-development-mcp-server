@@ -1,0 +1,23 @@
+{
+  "toolName": "search_ql_code",
+  "parameters": {
+    "pattern": "isSource",
+    "paths": ["server/ql/javascript/examples/src"],
+    "contextLines": 1
+  },
+  "success": true,
+  "description": "Successfully searched QL files for predicate name pattern",
+  "searchResult": {
+    "totalMatches": 1,
+    "returnedMatches": 1,
+    "truncated": false,
+    "filesSearched": 1,
+    "results": [
+      {
+        "filePath": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+        "lineNumber": 1,
+        "lineContent": "contains isSource match"
+      }
+    ]
+  }
+}

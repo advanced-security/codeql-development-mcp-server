@@ -82,7 +82,8 @@ quick_evaluate: {
 }
 
 // Or evaluate a specific class
-// NOTE: find_class_position finds `class` definitions only, not `module` definitions
+// NOTE: find_class_position finds `class` definitions only, not `module` definitions.
+// Use search_ql_code to find module definitions or other patterns across QL files.
 find_class_position: {
   file: "/path/to/Query.ql",
   name: "ThrowingMethodCall"
@@ -361,16 +362,7 @@ class ThrowingMethod extends Method {
    }
    ```
 
-2. **Generate log summary**:
-
-   ```typescript
-   codeql_generate_log_summary: {
-     inputLog: "/path/to/log.json",
-     format: "text"
-   }
-   ```
-
-3. **Profile from evaluator logs** (after step 1 produces a log file):
+2. **Profile from evaluator logs** (primary tool — returns compact JSON metrics plus a line-indexed detail file for targeted `read_file` access to RA operations and tuple progressions):
 
    ```typescript
    profile_codeql_query_from_logs: {
@@ -438,6 +430,8 @@ When your query produces correct results but differs from the `.expected` file:
 | #find_predicate_position        | Locate predicate for quickeval    | Before quick_evaluate           |
 | #find_class_position            | Locate class for quickeval        | Before quick_evaluate           |
 | #find_codeql_query_files        | Discover related files            | Planning, tracking changes      |
+| #search_ql_code                 | Search QL files for patterns      | Finding classes, predicates     |
+| #codeql_resolve_files           | Find QL files by name/extension   | Discovering library pack files  |
 | #codeql_test_accept             | Accept actual results as expected | After verifying correct output  |
 | #profile_codeql_query_from_logs | Performance analysis              | Optimization                    |
 

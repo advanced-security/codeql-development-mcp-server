@@ -2991,7 +2991,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve13.call(this, root, ref);
+      let _sch = resolve14.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -3018,7 +3018,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve13(root, ref) {
+    function resolve14(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3593,7 +3593,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve13(baseURI, relativeURI, options) {
+    function resolve14(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse4(baseURI, schemelessOptions), parse4(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -3820,7 +3820,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve13,
+      resolve: resolve14,
       resolveComponent,
       equal,
       serialize,
@@ -9611,7 +9611,7 @@ var require_compile2 = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve13.call(this, root, ref);
+      let _sch = resolve14.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -9638,7 +9638,7 @@ var require_compile2 = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve13(root, ref) {
+    function resolve14(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -17919,10 +17919,10 @@ var require_raw_body = __commonJS({
       if (done) {
         return readStream(stream, encoding, length, limit, wrap(done));
       }
-      return new Promise(function executor(resolve13, reject) {
+      return new Promise(function executor(resolve14, reject) {
         readStream(stream, encoding, length, limit, function onRead(err, buf) {
           if (err) return reject(err);
-          resolve13(buf);
+          resolve14(buf);
         });
       });
     }
@@ -27724,7 +27724,7 @@ var require_mime_types = __commonJS({
   "../node_modules/mime-types/index.js"(exports) {
     "use strict";
     var db = require_mime_db();
-    var extname2 = __require("path").extname;
+    var extname3 = __require("path").extname;
     var mimeScore = require_mimeScore();
     var EXTRACT_TYPE_REGEXP = /^\s*([^;\s]*)(?:;|\s|$)/;
     var TEXT_TYPE_REGEXP = /^text\//i;
@@ -27780,7 +27780,7 @@ var require_mime_types = __commonJS({
       if (!path4 || typeof path4 !== "string") {
         return false;
       }
-      var extension2 = extname2("x." + path4).toLowerCase().slice(1);
+      var extension2 = extname3("x." + path4).toLowerCase().slice(1);
       if (!extension2) {
         return false;
       }
@@ -31256,14 +31256,14 @@ var require_view = __commonJS({
     var fs3 = __require("node:fs");
     var dirname8 = path4.dirname;
     var basename7 = path4.basename;
-    var extname2 = path4.extname;
-    var join18 = path4.join;
-    var resolve13 = path4.resolve;
+    var extname3 = path4.extname;
+    var join19 = path4.join;
+    var resolve14 = path4.resolve;
     module.exports = View;
     function View(name, options) {
       var opts = options || {};
       this.defaultEngine = opts.defaultEngine;
-      this.ext = extname2(name);
+      this.ext = extname3(name);
       this.name = name;
       this.root = opts.root;
       if (!this.ext && !this.defaultEngine) {
@@ -31292,7 +31292,7 @@ var require_view = __commonJS({
       debug('lookup "%s"', name);
       for (var i = 0; i < roots.length && !path5; i++) {
         var root = roots[i];
-        var loc = resolve13(root, name);
+        var loc = resolve14(root, name);
         var dir = dirname8(loc);
         var file = basename7(loc);
         path5 = this.resolve(dir, file);
@@ -31317,14 +31317,14 @@ var require_view = __commonJS({
       });
       sync = false;
     };
-    View.prototype.resolve = function resolve14(dir, file) {
+    View.prototype.resolve = function resolve15(dir, file) {
       var ext = this.ext;
-      var path5 = join18(dir, file);
+      var path5 = join19(dir, file);
       var stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
       }
-      path5 = join18(dir, basename7(file, ext), "index" + ext);
+      path5 = join19(dir, basename7(file, ext), "index" + ext);
       stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
@@ -33458,7 +33458,7 @@ var require_application = __commonJS({
     var compileETag = require_utils4().compileETag;
     var compileQueryParser = require_utils4().compileQueryParser;
     var compileTrust = require_utils4().compileTrust;
-    var resolve13 = __require("node:path").resolve;
+    var resolve14 = __require("node:path").resolve;
     var once = require_once();
     var Router = require_router();
     var slice = Array.prototype.slice;
@@ -33512,7 +33512,7 @@ var require_application = __commonJS({
       this.mountpath = "/";
       this.locals.settings = this.settings;
       this.set("view", View);
-      this.set("views", resolve13("views"));
+      this.set("views", resolve14("views"));
       this.set("jsonp callback name", "callback");
       if (env === "production") {
         this.enable("view cache");
@@ -34968,10 +34968,10 @@ var require_send = __commonJS({
     var statuses = require_statuses();
     var Stream = __require("stream");
     var util2 = __require("util");
-    var extname2 = path4.extname;
-    var join18 = path4.join;
+    var extname3 = path4.extname;
+    var join19 = path4.join;
     var normalize = path4.normalize;
-    var resolve13 = path4.resolve;
+    var resolve14 = path4.resolve;
     var sep2 = path4.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
@@ -35000,7 +35000,7 @@ var require_send = __commonJS({
       this._maxage = opts.maxAge || opts.maxage;
       this._maxage = typeof this._maxage === "string" ? ms(this._maxage) : Number(this._maxage);
       this._maxage = !isNaN(this._maxage) ? Math.min(Math.max(0, this._maxage), MAX_MAXAGE) : 0;
-      this._root = opts.root ? resolve13(opts.root) : null;
+      this._root = opts.root ? resolve14(opts.root) : null;
     }
     util2.inherits(SendStream, Stream);
     SendStream.prototype.error = function error2(status, err) {
@@ -35141,7 +35141,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = path5.split(sep2);
-        path5 = normalize(join18(root, path5));
+        path5 = normalize(join19(root, path5));
       } else {
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
@@ -35149,7 +35149,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = normalize(path5).split(sep2);
-        path5 = resolve13(path5);
+        path5 = resolve14(path5);
       }
       if (containsDotFile(parts)) {
         debug('%s dotfile "%s"', this._dotfiles, path5);
@@ -35243,7 +35243,7 @@ var require_send = __commonJS({
       debug('stat "%s"', path5);
       fs3.stat(path5, function onstat(err, stat) {
         var pathEndsWithSep = path5[path5.length - 1] === sep2;
-        if (err && err.code === "ENOENT" && !extname2(path5) && !pathEndsWithSep) {
+        if (err && err.code === "ENOENT" && !extname3(path5) && !pathEndsWithSep) {
           return next(err);
         }
         if (err) return self.onStatError(err);
@@ -35274,7 +35274,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join18(path5, self._index[i]);
+        var p = join19(path5, self._index[i]);
         debug('stat "%s"', p);
         fs3.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -35306,7 +35306,7 @@ var require_send = __commonJS({
     SendStream.prototype.type = function type2(path5) {
       var res = this.res;
       if (res.getHeader("Content-Type")) return;
-      var ext = extname2(path5);
+      var ext = extname3(path5);
       var type3 = mime.contentType(ext) || "application/octet-stream";
       debug("content-type %s", type3);
       res.setHeader("Content-Type", type3);
@@ -35526,8 +35526,8 @@ var require_response = __commonJS({
     var setCharset = require_utils4().setCharset;
     var cookie = require_cookie();
     var send = require_send();
-    var extname2 = path4.extname;
-    var resolve13 = path4.resolve;
+    var extname3 = path4.extname;
+    var resolve14 = path4.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = __require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -35733,7 +35733,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve13(path5) : path5;
+      var fullPath = !opts.root ? resolve14(path5) : path5;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type2) {
@@ -35764,7 +35764,7 @@ var require_response = __commonJS({
     };
     res.attachment = function attachment(filename) {
       if (filename) {
-        this.type(extname2(filename));
+        this.type(extname3(filename));
       }
       this.set("Content-Disposition", contentDisposition(filename));
       return this;
@@ -35982,7 +35982,7 @@ var require_serve_static = __commonJS({
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
     var parseUrl = require_parseurl();
-    var resolve13 = __require("path").resolve;
+    var resolve14 = __require("path").resolve;
     var send = require_send();
     var url = __require("url");
     module.exports = serveStatic;
@@ -36001,7 +36001,7 @@ var require_serve_static = __commonJS({
         throw new TypeError("option setHeaders must be function");
       }
       opts.maxage = opts.maxage || opts.maxAge || 0;
-      opts.root = resolve13(root);
+      opts.root = resolve14(root);
       var onDirectory = redirect ? createRedirectDirectoryListener() : createNotFoundDirectoryListener();
       return function serveStatic2(req, res, next) {
         if (req.method !== "GET" && req.method !== "HEAD") {
@@ -36992,7 +36992,7 @@ var init_temp_dir = __esm({
 import { clearTimeout as clearTimeout2, setTimeout as setTimeout2 } from "timers";
 function waitForProcessReady(child, name, opts) {
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
-  return new Promise((resolve13, reject) => {
+  return new Promise((resolve14, reject) => {
     let settled = false;
     const cleanup = () => {
       settled = true;
@@ -37006,13 +37006,13 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.debug(`${name}: ready (stderr output detected)`);
       cleanup();
-      resolve13();
+      resolve14();
     };
     const onStdout = () => {
       if (settled) return;
       logger.debug(`${name}: ready (stdout output detected)`);
       cleanup();
-      resolve13();
+      resolve14();
     };
     const onError = (error2) => {
       if (settled) return;
@@ -37028,7 +37028,7 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.warn(`${name}: readiness timeout (${timeoutMs} ms) \u2014 proceeding anyway`);
       cleanup();
-      resolve13();
+      resolve14();
     }, timeoutMs);
     child.stderr?.on("data", onStderr);
     child.stdout?.on("data", onStdout);
@@ -37196,7 +37196,7 @@ var init_language_server = __esm({
           method,
           params
         };
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           const timer = setTimeout3(() => {
             if (this.pendingResponses.has(id)) {
               this.pendingResponses.delete(id);
@@ -37210,7 +37210,7 @@ var init_language_server = __esm({
             },
             resolve: (val) => {
               clearTimeout3(timer);
-              resolve13(val);
+              resolve14(val);
             }
           });
           this.sendMessage(message);
@@ -37299,7 +37299,7 @@ var init_language_server = __esm({
           throw new Error("Language server is not initialized");
         }
         const documentUri = uri || pathToFileURL(join2(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           let diagnosticsReceived = false;
           const timeout = setTimeout3(() => {
             if (!diagnosticsReceived) {
@@ -37315,7 +37315,7 @@ var init_language_server = __esm({
               this.sendNotification("textDocument/didClose", {
                 textDocument: { uri: documentUri }
               });
-              resolve13(params.diagnostics);
+              resolve14(params.diagnostics);
             }
           };
           this.on("diagnostics", diagnosticsHandler);
@@ -37430,22 +37430,22 @@ var init_language_server = __esm({
         } catch (error2) {
           logger.warn("Error during graceful shutdown:", error2);
         }
-        await new Promise((resolve13) => {
+        await new Promise((resolve14) => {
           const timer = setTimeout3(() => {
             if (this.server) {
               this.server.kill("SIGTERM");
             }
-            resolve13();
+            resolve14();
           }, 1e3);
           if (this.server) {
             this.server.once("exit", () => {
               clearTimeout3(timer);
               this.server = null;
-              resolve13();
+              resolve14();
             });
           } else {
             clearTimeout3(timer);
-            resolve13();
+            resolve14();
           }
         });
         this.isInitialized = false;
@@ -37535,8 +37535,8 @@ var init_query_server = __esm({
           method,
           params
         };
-        return new Promise((resolve13, reject) => {
-          this.pendingRequests.set(id, { reject, resolve: resolve13 });
+        return new Promise((resolve14, reject) => {
+          this.pendingRequests.set(id, { reject, resolve: resolve14 });
           try {
             this.sendRaw(message);
           } catch (error2) {
@@ -37550,7 +37550,7 @@ var init_query_server = __esm({
               reject(new Error(`Query server request timeout for method: ${method}`));
             }
           }, timeoutMs);
-          const originalResolve = resolve13;
+          const originalResolve = resolve14;
           const originalReject = reject;
           const wrapped = {
             reject: (err) => {
@@ -37578,23 +37578,23 @@ var init_query_server = __esm({
         } catch (error2) {
           logger.warn("Error during query server graceful shutdown:", error2);
         }
-        await new Promise((resolve13) => {
+        await new Promise((resolve14) => {
           const timer = setTimeout4(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve13();
+            resolve14();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout4(timer);
               this.process = null;
-              resolve13();
+              resolve14();
             });
           } else {
             clearTimeout4(timer);
-            resolve13();
+            resolve14();
           }
         });
       }
@@ -37755,9 +37755,9 @@ var init_cli_server = __esm({
        * @returns The stdout output from the command.
        */
       runCommand(args) {
-        return new Promise((resolve13, reject) => {
+        return new Promise((resolve14, reject) => {
           const execute = () => {
-            this.executeCommand({ args, reject, resolve: resolve13 });
+            this.executeCommand({ args, reject, resolve: resolve14 });
           };
           if (this.commandInProgress) {
             this.commandQueue.push(execute);
@@ -37780,23 +37780,23 @@ var init_cli_server = __esm({
         } catch (error2) {
           logger.warn("Error during CLI server shutdown request:", error2);
         }
-        await new Promise((resolve13) => {
+        await new Promise((resolve14) => {
           const timer = setTimeout5(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve13();
+            resolve14();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout5(timer);
               this.process = null;
-              resolve13();
+              resolve14();
             });
           } else {
             clearTimeout5(timer);
-            resolve13();
+            resolve14();
           }
         });
         this.commandInProgress = false;
@@ -38041,11 +38041,11 @@ var init_server_manager = __esm({
       async warmUpLanguageServer() {
         try {
           const { packageRootDir: packageRootDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-          const { resolve: resolve13 } = await import("path");
+          const { resolve: resolve14 } = await import("path");
           const config2 = {
             checkErrors: "ON_CHANGE",
             loglevel: "WARN",
-            searchPath: resolve13(packageRootDir2, "ql")
+            searchPath: resolve14(packageRootDir2, "ql")
           };
           logger.info("Warming up language server (background JVM start)...");
           await this.getLanguageServer(config2);
@@ -40527,8 +40527,8 @@ var require_adm_zip = __commonJS({
         return null;
       }
       function fixPath(zipPath) {
-        const { join: join18, normalize, sep: sep2 } = pth.posix;
-        return join18(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
+        const { join: join19, normalize, sep: sep2 } = pth.posix;
+        return join19(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
       }
       function filenameFilter(filterfn) {
         if (filterfn instanceof RegExp) {
@@ -40923,10 +40923,10 @@ var require_adm_zip = __commonJS({
          * @param {function|string} [props.namefix] - optional function to help fix filename
          */
         addLocalFolderPromise: function(localPath2, props) {
-          return new Promise((resolve13, reject) => {
+          return new Promise((resolve14, reject) => {
             this.addLocalFolderAsync2(Object.assign({ localPath: localPath2 }, props), (err, done) => {
               if (err) reject(err);
-              if (done) resolve13(this);
+              if (done) resolve14(this);
             });
           });
         },
@@ -41113,12 +41113,12 @@ var require_adm_zip = __commonJS({
           keepOriginalPermission = get_Bool(false, keepOriginalPermission);
           overwrite = get_Bool(false, overwrite);
           if (!callback) {
-            return new Promise((resolve13, reject) => {
+            return new Promise((resolve14, reject) => {
               this.extractAllToAsync(targetPath, overwrite, keepOriginalPermission, function(err) {
                 if (err) {
                   reject(err);
                 } else {
-                  resolve13(this);
+                  resolve14(this);
                 }
               });
             });
@@ -41216,11 +41216,11 @@ var require_adm_zip = __commonJS({
                  */
         writeZipPromise: function(targetFileName, props) {
           const { overwrite, perm } = Object.assign({ overwrite: true }, props);
-          return new Promise((resolve13, reject) => {
+          return new Promise((resolve14, reject) => {
             if (!targetFileName && opts.filename) targetFileName = opts.filename;
             if (!targetFileName) reject("ADM-ZIP: ZIP File Name Missing");
             this.toBufferPromise().then((zipData) => {
-              const ret = (done) => done ? resolve13(done) : reject("ADM-ZIP: Wasn't able to write zip file");
+              const ret = (done) => done ? resolve14(done) : reject("ADM-ZIP: Wasn't able to write zip file");
               filetools.writeFileToAsync(targetFileName, zipData, overwrite, perm, ret);
             }, reject);
           });
@@ -41229,8 +41229,8 @@ var require_adm_zip = __commonJS({
          * @returns {Promise<Buffer>} A promise to the Buffer.
          */
         toBufferPromise: function() {
-          return new Promise((resolve13, reject) => {
-            _zip.toAsyncBuffer(resolve13, reject);
+          return new Promise((resolve14, reject) => {
+            _zip.toAsyncBuffer(resolve14, reject);
           });
         },
         /**
@@ -53328,7 +53328,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve13) => setTimeout(resolve13, pollInterval));
+        await new Promise((resolve14) => setTimeout(resolve14, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -53345,7 +53345,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve13, reject) => {
+    return new Promise((resolve14, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -53423,7 +53423,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve13(parseResult.data);
+            resolve14(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -53684,12 +53684,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve13, reject) => {
+    return new Promise((resolve14, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve13, interval);
+      const timeoutId = setTimeout(resolve14, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -54789,7 +54789,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve13) => setTimeout(resolve13, pollInterval));
+      await new Promise((resolve14) => setTimeout(resolve14, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -55432,12 +55432,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve13) => {
+    return new Promise((resolve14) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve13();
+        resolve14();
       } else {
-        this._stdout.once("drain", resolve13);
+        this._stdout.once("drain", resolve14);
       }
     });
   }
@@ -55870,7 +55870,7 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
         });
         if (!chunk) {
           if (i === 1) {
-            await new Promise((resolve13) => setTimeout(resolve13));
+            await new Promise((resolve14) => setTimeout(resolve14));
             maxReadCount = 3;
             continue;
           }
@@ -56366,9 +56366,9 @@ data:
       const initRequest = messages.find((m) => isInitializeRequest(m));
       const clientProtocolVersion = initRequest ? initRequest.params.protocolVersion : req.headers.get("mcp-protocol-version") ?? DEFAULT_NEGOTIATED_PROTOCOL_VERSION;
       if (this._enableJsonResponse) {
-        return new Promise((resolve13) => {
+        return new Promise((resolve14) => {
           this._streamMapping.set(streamId, {
-            resolveJson: resolve13,
+            resolveJson: resolve14,
             cleanup: () => {
               this._streamMapping.delete(streamId);
             }
@@ -56703,7 +56703,7 @@ var import_express = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 import { realpathSync } from "fs";
-import { resolve as resolve12 } from "path";
+import { resolve as resolve13 } from "path";
 import { pathToFileURL as pathToFileURL5 } from "url";
 
 // src/lib/cli-tool-registry.ts
@@ -57005,7 +57005,7 @@ function getOrCreateLogDirectory(logDir) {
 // src/lib/cli-tool-registry.ts
 init_package_paths();
 init_temp_dir();
-import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync5 } from "fs";
+import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync5, readdirSync as readdirSync2, statSync as statSync2 } from "fs";
 import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join6, resolve as resolve4 } from "path";
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
@@ -57044,7 +57044,7 @@ function registerCLITool(server, definition) {
       const tempDirsToCleanup = [];
       try {
         logger.info(`Executing CLI tool: ${name}`, { command, subcommand, params });
-        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_bqrs_info" || name === "codeql_generate_query-help" || name === "codeql_database_analyze";
+        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_bqrs_info" || name === "codeql_generate_query-help" || name === "codeql_database_analyze" || name === "codeql_resolve_files";
         const extractedParams = formatShouldBePassedToCLI ? {
           _positional: params._positional || [],
           files: params.files,
@@ -57122,7 +57122,25 @@ function registerCLITool(server, definition) {
           positionalArgs = [...positionalArgs, qlref];
         }
         if (options.database && name === "codeql_resolve_database") {
-          positionalArgs = [...positionalArgs, options.database];
+          let dbPath = options.database;
+          if (!existsSync4(join6(dbPath, "codeql-database.yml"))) {
+            try {
+              const entries = readdirSync2(dbPath);
+              for (const entry of entries) {
+                const candidate = join6(dbPath, entry);
+                try {
+                  if (statSync2(candidate).isDirectory() && existsSync4(join6(candidate, "codeql-database.yml"))) {
+                    logger.info(`Resolved database directory: ${dbPath} -> ${candidate}`);
+                    dbPath = candidate;
+                    break;
+                  }
+                } catch {
+                }
+              }
+            } catch {
+            }
+          }
+          positionalArgs = [...positionalArgs, dbPath];
           delete options.database;
         }
         if (options.database && name === "codeql_database_create") {
@@ -57239,6 +57257,11 @@ function registerCLITool(server, definition) {
           case "codeql_resolve_queries":
             if (directory) {
               positionalArgs = [...positionalArgs, directory];
+            }
+            break;
+          case "codeql_resolve_files":
+            if (dir) {
+              positionalArgs = [...positionalArgs, dir];
             }
             break;
           default:
@@ -60837,7 +60860,7 @@ var codeqlGenerateQueryHelpTool = {
 };
 
 // src/tools/codeql/list-databases.ts
-import { existsSync as existsSync6, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync3 } from "fs";
+import { existsSync as existsSync6, readdirSync as readdirSync4, readFileSync as readFileSync5, statSync as statSync4 } from "fs";
 import { join as join8 } from "path";
 
 // src/lib/discovery-config.ts
@@ -60895,14 +60918,14 @@ async function discoverDatabases(baseDirs, language) {
     }
     let entries;
     try {
-      entries = readdirSync3(baseDir);
+      entries = readdirSync4(baseDir);
     } catch {
       continue;
     }
     for (const entry of entries) {
       const entryPath = join8(baseDir, entry);
       try {
-        if (!statSync3(entryPath).isDirectory()) {
+        if (!statSync4(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -60991,7 +61014,7 @@ function registerListDatabasesTool(server) {
 }
 
 // src/tools/codeql/list-mrva-run-results.ts
-import { existsSync as existsSync7, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync4 } from "fs";
+import { existsSync as existsSync7, readdirSync as readdirSync5, readFileSync as readFileSync6, statSync as statSync5 } from "fs";
 import { join as join9 } from "path";
 init_logger();
 var NUMERIC_DIR_PATTERN = /^\d+$/;
@@ -61004,14 +61027,14 @@ async function discoverMrvaRunResults(resultsDirs, runId) {
     }
     let entries;
     try {
-      entries = readdirSync4(dir);
+      entries = readdirSync5(dir);
     } catch {
       continue;
     }
     for (const entry of entries) {
       const entryPath = join9(dir, entry);
       try {
-        if (!statSync4(entryPath).isDirectory()) {
+        if (!statSync5(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -61046,7 +61069,7 @@ function discoverRepoResults(runPath) {
   const repos = [];
   let ownerEntries;
   try {
-    ownerEntries = readdirSync4(runPath);
+    ownerEntries = readdirSync5(runPath);
   } catch {
     return repos;
   }
@@ -61056,7 +61079,7 @@ function discoverRepoResults(runPath) {
     }
     const ownerPath = join9(runPath, ownerEntry);
     try {
-      if (!statSync4(ownerPath).isDirectory()) {
+      if (!statSync5(ownerPath).isDirectory()) {
         continue;
       }
     } catch {
@@ -61064,14 +61087,14 @@ function discoverRepoResults(runPath) {
     }
     let repoEntries;
     try {
-      repoEntries = readdirSync4(ownerPath);
+      repoEntries = readdirSync5(ownerPath);
     } catch {
       continue;
     }
     for (const repoEntry of repoEntries) {
       const repoPath = join9(ownerPath, repoEntry);
       try {
-        if (!statSync4(repoPath).isDirectory()) {
+        if (!statSync5(repoPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -61178,7 +61201,7 @@ function registerListMrvaRunResultsTool(server) {
 }
 
 // src/tools/codeql/list-query-run-results.ts
-import { existsSync as existsSync8, readdirSync as readdirSync5, readFileSync as readFileSync7, statSync as statSync5 } from "fs";
+import { existsSync as existsSync8, readdirSync as readdirSync6, readFileSync as readFileSync7, statSync as statSync6 } from "fs";
 import { join as join10 } from "path";
 init_logger();
 var QUERY_RUN_DIR_PATTERN = /^(.+\.ql)-(.+)$/;
@@ -61220,14 +61243,14 @@ async function discoverQueryRunResults(resultsDirs, filter) {
     }
     let entries;
     try {
-      entries = readdirSync5(dir);
+      entries = readdirSync6(dir);
     } catch {
       continue;
     }
     for (const entry of entries) {
       const entryPath = join10(dir, entry);
       try {
-        if (!statSync5(entryPath).isDirectory()) {
+        if (!statSync6(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -61443,7 +61466,7 @@ function detectLogFormat(firstEvent) {
   return "summary";
 }
 function splitJsonObjects(content) {
-  const trimmed = content.trim();
+  const trimmed = content.replace(/\r\n/g, "\n").trim();
   if (trimmed.length === 0) {
     return [];
   }
@@ -61481,6 +61504,8 @@ function parseRawEvaluatorLog(logPath) {
   let codeqlVersion;
   const queryStartEvents = /* @__PURE__ */ new Map();
   const predicateStartEvents = /* @__PURE__ */ new Map();
+  const pipelineStartNanoTimes = /* @__PURE__ */ new Map();
+  const pipelineToPredicateMap = /* @__PURE__ */ new Map();
   const queryPredicates = /* @__PURE__ */ new Map();
   const queryEndNanoTimes = /* @__PURE__ */ new Map();
   const queryCacheHits = /* @__PURE__ */ new Map();
@@ -61514,6 +61539,11 @@ function parseRawEvaluatorLog(logPath) {
       case "PREDICATE_STARTED": {
         const eid = event.eventId;
         const deps = event.dependencies;
+        const raObj = event.ra;
+        let raSteps;
+        if (raObj && Array.isArray(raObj.pipeline)) {
+          raSteps = raObj.pipeline.map((s) => s.trim());
+        }
         predicateStartEvents.set(eid, {
           predicateName: event.predicateName || "unknown",
           position: event.position,
@@ -61521,20 +61551,34 @@ function parseRawEvaluatorLog(logPath) {
           dependencies: deps ? Object.keys(deps) : [],
           queryCausingWork: event.queryCausingWork,
           nanoTime: event.nanoTime,
-          pipelineCount: 0
+          pipelineCount: 0,
+          raSteps,
+          pipelineStages: []
         });
+        break;
+      }
+      case "PIPELINE_STARTED": {
+        const eid = event.eventId;
+        pipelineStartNanoTimes.set(eid, event.nanoTime);
+        const predEid = event.predicateStartEvent;
+        pipelineToPredicateMap.set(eid, predEid);
         break;
       }
       case "PIPELINE_COMPLETED": {
         const pipelineStartEid = event.startEvent;
-        const pipelineStartEvt = events.find(
-          (e) => e.type === "PIPELINE_STARTED" && e.eventId === pipelineStartEid
-        );
-        if (pipelineStartEvt) {
-          const predEid = pipelineStartEvt.predicateStartEvent;
+        const predEid = pipelineToPredicateMap.get(pipelineStartEid);
+        const startNano = pipelineStartNanoTimes.get(pipelineStartEid);
+        if (predEid !== void 0) {
           const predStart = predicateStartEvents.get(predEid);
           if (predStart) {
             predStart.pipelineCount += 1;
+            const pipelineDurationMs = startNano !== void 0 ? (event.nanoTime - startNano) / 1e6 : 0;
+            predStart.pipelineStages.push({
+              durationMs: pipelineDurationMs,
+              resultSize: event.resultSize ?? 0,
+              counts: event.counts ?? [],
+              duplicationPercentages: event.duplicationPercentages
+            });
           }
         }
         break;
@@ -61552,7 +61596,9 @@ function parseRawEvaluatorLog(logPath) {
             resultSize: event.resultSize,
             pipelineCount: predStart.pipelineCount > 0 ? predStart.pipelineCount : void 0,
             evaluationStrategy: predStart.predicateType,
-            dependencies: predStart.dependencies
+            dependencies: predStart.dependencies,
+            raSteps: predStart.raSteps,
+            pipelineStages: predStart.pipelineStages.length > 0 ? predStart.pipelineStages : void 0
           };
           const qEid = predStart.queryCausingWork ?? firstQueryEventId;
           if (qEid !== void 0) {
@@ -61618,6 +61664,11 @@ function parseSummaryLog(logPath) {
     const queryName = event.queryCausingWork || "unknown";
     const deps = event.dependencies;
     const pipelineRuns = event.pipelineRuns;
+    const raObj = event.ra;
+    let raSteps;
+    if (typeof raObj === "string" && raObj.length > 0) {
+      raSteps = raObj.replace(/\r\n/g, "\n").split("\n").map((s) => s.trim()).filter((s) => s.length > 0);
+    }
     const profile = {
       predicateName,
       position: event.position,
@@ -61625,7 +61676,8 @@ function parseSummaryLog(logPath) {
       resultSize: event.resultSize,
       pipelineCount: pipelineRuns,
       evaluationStrategy: strategy,
-      dependencies: deps ? Object.keys(deps) : []
+      dependencies: deps ? Object.keys(deps) : [],
+      raSteps
     };
     if (event.isCached === true || strategy === "CACHEHIT") {
       queryCacheHits.set(
@@ -61679,122 +61731,111 @@ function parseEvaluatorLog(logPath) {
 
 // src/tools/codeql/profile-codeql-query-from-logs.ts
 init_logger();
-function formatAsJson(profile) {
-  return JSON.stringify(profile, null, 2);
-}
-function formatAsMermaid(profile, topN) {
-  const lines = [];
-  lines.push("```mermaid");
-  lines.push("graph TD");
-  lines.push("");
-  if (profile.queries.length <= 1) {
-    const query = profile.queries[0] ?? {
-      queryName: "unknown",
-      totalDurationMs: 0,
-      predicates: [],
-      predicateCount: 0,
-      cacheHits: 0
-    };
-    const qLabel = sanitizeMermaid(basename4(query.queryName));
-    lines.push(
-      `  QUERY["${qLabel}<br/>Total: ${query.totalDurationMs.toFixed(2)}ms<br/>Predicates: ${query.predicateCount}"]`
-    );
-    lines.push("");
-    const topPredicates = getTopPredicates(query.predicates, topN);
-    topPredicates.forEach((pred, idx) => {
-      const nodeId = `P${idx}`;
-      const name = sanitizeMermaid(pred.predicateName).substring(0, 50);
-      const dur = pred.durationMs.toFixed(2);
-      const size = pred.resultSize !== void 0 ? String(pred.resultSize) : "?";
-      lines.push(
-        `  ${nodeId}["${name}<br/>${dur}ms | ${size} results"]`
-      );
-    });
-    lines.push("");
-    topPredicates.forEach((_pred, idx) => {
-      lines.push(`  QUERY --> P${idx}`);
-    });
-  } else {
-    lines.push(
-      `  ROOT["Evaluation Log<br/>${profile.queries.length} queries"]`
-    );
-    lines.push("");
-    profile.queries.forEach((query, qIdx) => {
-      const qNodeId = `Q${qIdx}`;
-      const qLabel = sanitizeMermaid(basename4(query.queryName));
-      lines.push(
-        `  ${qNodeId}["${qLabel}<br/>${query.totalDurationMs.toFixed(2)}ms<br/>Predicates: ${query.predicateCount}"]`
-      );
-      lines.push(`  ROOT --> ${qNodeId}`);
-      const topPredicates = getTopPredicates(query.predicates, topN);
-      topPredicates.forEach((pred, pIdx) => {
-        const nodeId = `Q${qIdx}P${pIdx}`;
-        const name = sanitizeMermaid(pred.predicateName).substring(0, 50);
-        const dur = pred.durationMs.toFixed(2);
-        const size = pred.resultSize !== void 0 ? String(pred.resultSize) : "?";
-        lines.push(
-          `  ${nodeId}["${name}<br/>${dur}ms | ${size} results"]`
-        );
-        lines.push(`  ${qNodeId} --> ${nodeId}`);
-      });
-      lines.push("");
-    });
-  }
-  lines.push("");
-  lines.push(
-    "  classDef default fill:#e1f5ff,stroke:#333,stroke-width:2px"
-  );
-  lines.push(
-    "  classDef query fill:#ffe1e1,stroke:#333,stroke-width:3px"
-  );
-  lines.push("  class QUERY query");
-  lines.push("```");
-  return lines.join("\n");
-}
-function sanitizeMermaid(text) {
-  return text.replace(/[<>"]/g, "");
-}
 function getTopPredicates(predicates, topN) {
   return [...predicates].sort((a, b) => b.durationMs - a.durationMs).slice(0, topN);
 }
-function buildTextSummary(profile, topN, outputFiles) {
-  const sections = [];
-  sections.push("Query log profiling completed successfully!");
-  sections.push("");
-  sections.push("Output Files:");
-  for (const f of outputFiles) {
-    sections.push(`  - ${f}`);
-  }
-  sections.push("");
-  sections.push(`Log Format: ${profile.logFormat}`);
+function buildDetailFile(profile, topN) {
+  const lines = [];
+  const lineIndex = /* @__PURE__ */ new Map();
+  lines.push("# CodeQL Evaluator Profile \u2014 Predicate Detail");
+  lines.push(`# Generated: ${(/* @__PURE__ */ new Date()).toISOString()}`);
+  lines.push(`# Log format: ${profile.logFormat}`);
   if (profile.codeqlVersion) {
-    sections.push(`CodeQL Version: ${profile.codeqlVersion}`);
+    lines.push(`# CodeQL version: ${profile.codeqlVersion}`);
   }
-  sections.push(`Total Events: ${profile.totalEvents}`);
-  sections.push(`Queries: ${profile.queries.length}`);
-  for (const query of profile.queries) {
-    sections.push("");
-    sections.push(`--- ${basename4(query.queryName)} ---`);
-    sections.push(`  Total Duration: ${query.totalDurationMs.toFixed(2)} ms`);
-    sections.push(`  Predicates Evaluated: ${query.predicateCount}`);
-    sections.push(`  Cache Hits: ${query.cacheHits}`);
+  lines.push(`# Use read_file with line ranges from the JSON response to access individual predicates.`);
+  lines.push("");
+  for (let qIdx = 0; qIdx < profile.queries.length; qIdx++) {
+    const query = profile.queries[qIdx];
+    const qName = basename4(query.queryName);
+    lines.push(`== Query: ${qName} ==`);
+    lines.push(`   Total: ${query.totalDurationMs.toFixed(2)}ms | Predicates evaluated: ${query.predicateCount} | Cache hits: ${query.cacheHits}`);
+    lines.push("");
+    const evalOrderMap = /* @__PURE__ */ new Map();
+    query.predicates.forEach((pred, idx) => {
+      evalOrderMap.set(pred, idx + 1);
+    });
     const top = getTopPredicates(query.predicates, topN);
-    if (top.length > 0) {
-      sections.push(`  Top ${top.length} Most Expensive Predicates:`);
-      top.forEach((pred, idx) => {
-        const sizeStr = pred.resultSize !== void 0 ? `, ${pred.resultSize} results` : "";
-        sections.push(
-          `    ${idx + 1}. ${pred.predicateName} (${pred.durationMs.toFixed(2)} ms${sizeStr})`
-        );
-      });
+    for (const pred of top) {
+      const startLine = lines.length + 1;
+      lines.push(`--- ${pred.predicateName} ---`);
+      lines.push(`    Eval order: ${evalOrderMap.get(pred) ?? "?"} of ${query.predicateCount}`);
+      lines.push(`    Duration:   ${pred.durationMs.toFixed(2)} ms`);
+      lines.push(`    Result:     ${pred.resultSize ?? "?"} tuples`);
+      lines.push(`    Strategy:   ${pred.evaluationStrategy ?? "unknown"}`);
+      if (pred.position) {
+        lines.push(`    Position:   ${pred.position}`);
+      }
+      if (pred.dependencies.length > 0) {
+        lines.push(`    Dependencies (${pred.dependencies.length}):`);
+        for (const dep of pred.dependencies) {
+          lines.push(`      - ${dep}`);
+        }
+      }
+      if (pred.raSteps && pred.raSteps.length > 0) {
+        lines.push(`    RA operations (${pred.raSteps.length} steps):`);
+        for (const step of pred.raSteps) {
+          lines.push(`      ${step}`);
+        }
+      }
+      if (pred.pipelineStages && pred.pipelineStages.length > 0) {
+        lines.push(`    Pipeline stages (${pred.pipelineStages.length}):`);
+        for (let pIdx = 0; pIdx < pred.pipelineStages.length; pIdx++) {
+          const stage = pred.pipelineStages[pIdx];
+          const countsStr = stage.counts.length > 0 ? `counts=[${stage.counts.join(", ")}]` : "counts=[]";
+          lines.push(`      [${pIdx + 1}] ${stage.durationMs.toFixed(2)}ms -> ${stage.resultSize} tuples (${countsStr})`);
+        }
+      }
+      lines.push("");
+      const endLine = lines.length;
+      const key = `${qIdx}:${pred.predicateName}`;
+      lineIndex.set(key, { start: startLine, end: endLine });
     }
   }
-  return sections.join("\n");
+  return { content: lines.join("\n"), lineIndex };
+}
+function buildInlineResponse(profile, topN, detailLineIndex, files) {
+  const queries = profile.queries.map((query, qIdx) => {
+    const evalOrderMap = /* @__PURE__ */ new Map();
+    query.predicates.forEach((pred, idx) => {
+      evalOrderMap.set(pred, idx + 1);
+    });
+    const top = getTopPredicates(query.predicates, topN);
+    return {
+      queryName: query.queryName,
+      totalDurationMs: query.totalDurationMs,
+      predicateCount: query.predicateCount,
+      cacheHits: query.cacheHits,
+      slowestPredicates: top.map((pred) => {
+        const key = `${qIdx}:${pred.predicateName}`;
+        const detailLines = detailLineIndex.get(key) ?? { start: 0, end: 0 };
+        return {
+          evalOrder: evalOrderMap.get(pred) ?? 0,
+          name: pred.predicateName,
+          durationMs: pred.durationMs,
+          resultSize: pred.resultSize,
+          strategy: pred.evaluationStrategy,
+          dependencyCount: pred.dependencies.length,
+          pipelineCount: pred.pipelineCount,
+          detailLines
+        };
+      })
+    };
+  });
+  return {
+    logFormat: profile.logFormat,
+    codeqlVersion: profile.codeqlVersion,
+    totalEvents: profile.totalEvents,
+    queries,
+    detailFile: files.detailFile,
+    fullProfileJson: files.fullProfileJson,
+    evaluatorLog: files.evaluatorLog
+  };
 }
 function registerProfileCodeQLQueryFromLogsTool(server) {
   server.tool(
     "profile_codeql_query_from_logs",
-    "Parse CodeQL query evaluation logs into a performance profile without re-running the query. Works with logs from codeql query run, codeql database analyze, or vscode-codeql query history.",
+    "Parse CodeQL evaluator logs into a structured performance profile. Returns compact JSON with per-query summaries and top-N slowest predicates (name, duration, result size, eval order, dependency count). Full RA operations, pipeline-stage tuple progressions, and dependency lists are written to a line-indexed detail file \u2014 each predicate includes {startLine, endLine} for targeted read_file access to its full analysis. Works with logs from codeql query run, codeql database analyze, or vscode-codeql.",
     {
       evaluatorLog: external_exports.string().describe(
         "Path to evaluator-log.jsonl or evaluator-log.summary.jsonl"
@@ -61803,7 +61844,7 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
         "Directory to write profile output files (defaults to same directory as log)"
       ),
       topN: external_exports.number().optional().describe(
-        "Number of most expensive predicates to highlight (default: 20)"
+        "Number of slowest predicates to include per query (default: 20)"
       )
     },
     async (params) => {
@@ -61815,7 +61856,7 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
             content: [
               {
                 type: "text",
-                text: `Evaluator log not found at: ${evaluatorLog}`
+                text: JSON.stringify({ error: `Evaluator log not found at: ${evaluatorLog}` })
               }
             ],
             isError: true
@@ -61825,41 +61866,32 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
         const profile = parseEvaluatorLog(evaluatorLog);
         const profileOutputDir = outputDir ?? dirname6(evaluatorLog);
         mkdirSync6(profileOutputDir, { recursive: true });
-        const jsonPath = join11(
-          profileOutputDir,
-          "query-evaluation-profile.json"
-        );
-        writeFileSync3(jsonPath, formatAsJson(profile));
-        logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join11(
-          profileOutputDir,
-          "query-evaluation-profile.md"
-        );
-        writeFileSync3(mdPath, formatAsMermaid(profile, effectiveTopN));
-        logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
-        const outputFilesList = [
-          `Profile JSON: ${jsonPath}`,
-          `Profile Mermaid: ${mdPath}`,
-          `Evaluator Log: ${evaluatorLog}`
-        ];
-        const responseText = buildTextSummary(
-          profile,
-          effectiveTopN,
-          outputFilesList
-        );
+        const jsonPath = join11(profileOutputDir, "query-evaluation-profile.json");
+        writeFileSync3(jsonPath, JSON.stringify(profile, null, 2));
+        logger.info(`Full profile JSON written to: ${jsonPath}`);
+        const { content: detailContent, lineIndex } = buildDetailFile(profile, effectiveTopN);
+        const detailPath = join11(profileOutputDir, "query-evaluation-detail.txt");
+        writeFileSync3(detailPath, detailContent);
+        logger.info(`Detail file written to: ${detailPath}`);
+        const response = buildInlineResponse(profile, effectiveTopN, lineIndex, {
+          detailFile: detailPath,
+          fullProfileJson: jsonPath,
+          evaluatorLog
+        });
         return {
-          content: [{ type: "text", text: responseText }]
+          content: [
+            { type: "text", text: JSON.stringify(response) }
+          ]
         };
       } catch (error2) {
-        logger.error(
-          "Error profiling CodeQL query from logs:",
-          error2
-        );
+        logger.error("Error profiling CodeQL query from logs:", error2);
         return {
           content: [
             {
               type: "text",
-              text: `Failed to profile query from logs: ${error2 instanceof Error ? error2.message : String(error2)}`
+              text: JSON.stringify({
+                error: `Failed to profile query from logs: ${error2 instanceof Error ? error2.message : String(error2)}`
+              })
             }
           ],
           isError: true
@@ -61954,10 +61986,10 @@ function parseEvaluatorLog2(logPath) {
     pipelines
   };
 }
-function formatAsJson2(profile) {
+function formatAsJson(profile) {
   return JSON.stringify(profile, null, 2);
 }
-function formatAsMermaid2(profile) {
+function formatAsMermaid(profile) {
   const lines = [];
   lines.push("```mermaid");
   lines.push("graph TD");
@@ -62068,11 +62100,11 @@ function registerProfileCodeQLQueryTool(server) {
         const profileOutputDir = outputDir || dirname7(logPath);
         mkdirSync7(profileOutputDir, { recursive: true });
         const jsonPath = join12(profileOutputDir, "query-evaluation-profile.json");
-        const jsonContent = formatAsJson2(profile);
+        const jsonContent = formatAsJson(profile);
         writeFileSync4(jsonPath, jsonContent);
         logger.info(`Profile JSON written to: ${jsonPath}`);
         const mdPath = join12(profileOutputDir, "query-evaluation-profile.md");
-        const mdContent = formatAsMermaid2(profile);
+        const mdContent = formatAsMermaid(profile);
         writeFileSync4(mdPath, mdContent);
         logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
         const outputFiles = [
@@ -62281,7 +62313,7 @@ function registerQuickEvaluateTool(server) {
 
 // src/tools/codeql/read-database-source.ts
 var import_adm_zip = __toESM(require_adm_zip(), 1);
-import { existsSync as existsSync11, readdirSync as readdirSync6, readFileSync as readFileSync10, statSync as statSync6 } from "fs";
+import { existsSync as existsSync11, readdirSync as readdirSync7, readFileSync as readFileSync10, statSync as statSync7 } from "fs";
 import { join as join14, resolve as resolve7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 init_logger();
@@ -62298,9 +62330,9 @@ function toFilesystemPath(uri) {
   return uri;
 }
 function* walkDirectory(dir, base = dir) {
-  for (const entry of readdirSync6(dir)) {
+  for (const entry of readdirSync7(dir)) {
     const fullPath = join14(dir, entry);
-    if (statSync6(fullPath).isDirectory()) {
+    if (statSync7(fullPath).isDirectory()) {
       yield* walkDirectory(fullPath, base);
     } else {
       yield fullPath.slice(base.length).replace(/\\/g, "/").replace(/^\//, "");
@@ -62602,6 +62634,32 @@ var codeqlResolveDatabaseTool = {
   resultProcessor: defaultCLIResultProcessor
 };
 
+// src/tools/codeql/resolve-files.ts
+var codeqlResolveFilesTool = {
+  name: "codeql_resolve_files",
+  description: "Find files in a directory tree, filtered by extension and glob patterns. Useful for discovering QL library files, query files, and other CodeQL-related files within packs or workspaces.",
+  command: "codeql",
+  subcommand: "resolve files",
+  inputSchema: {
+    dir: external_exports.string().describe("The directory to search for files"),
+    "include-extension": external_exports.array(external_exports.string()).optional().describe("Include files with given extensions (e.g., ['.qll', '.ql'])"),
+    include: external_exports.array(external_exports.string()).optional().describe("Glob patterns to include (e.g., ['**/RemoteFlowSource*'])"),
+    exclude: external_exports.array(external_exports.string()).optional().describe("Glob patterns to exclude"),
+    prune: external_exports.array(external_exports.string()).optional().describe("Glob patterns for directories to prune from search"),
+    "also-match": external_exports.array(external_exports.string()).optional().describe("Additional glob filter all results must match"),
+    format: external_exports.enum(["text", "json"]).optional().describe("Output format (default: text)"),
+    "follow-symlinks": external_exports.boolean().optional().describe("Follow symlinks when searching"),
+    additionalArgs: createCodeQLSchemas.additionalArgs()
+  },
+  examples: [
+    "codeql resolve files --include-extension=.qll --format=json -- /path/to/pack",
+    "codeql resolve files --include=**/RemoteFlowSource* -- /path/to/pack",
+    "codeql resolve files --include-extension=.ql --include-extension=.qll -- /path/to/pack",
+    "codeql resolve files --include-extension=.qll --also-match=**/FlowSource* -- /path/to/pack"
+  ],
+  resultProcessor: defaultCLIResultProcessor
+};
+
 // src/tools/codeql/resolve-languages.ts
 var codeqlResolveLanguagesTool = {
   name: "codeql_resolve_languages",
@@ -62745,6 +62803,151 @@ var codeqlResolveTestsTool = {
   ],
   resultProcessor: defaultCLIResultProcessor
 };
+
+// src/tools/codeql/search-ql-code.ts
+import { readdirSync as readdirSync8, readFileSync as readFileSync11, statSync as statSync8 } from "fs";
+import { extname as extname2, join as join15, resolve as resolve9 } from "path";
+init_logger();
+var MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+var MAX_FILES_TRAVERSED = 1e4;
+function collectFiles(paths, extensions, fileCount) {
+  const files = [];
+  function walk(p) {
+    if (fileCount.value >= MAX_FILES_TRAVERSED) return;
+    let stat;
+    try {
+      stat = statSync8(p);
+    } catch {
+      return;
+    }
+    if (stat.isFile()) {
+      if (extensions.length === 0 || extensions.includes(extname2(p))) {
+        files.push(p);
+      }
+      fileCount.value++;
+    } else if (stat.isDirectory()) {
+      let entries;
+      try {
+        entries = readdirSync8(p);
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (fileCount.value >= MAX_FILES_TRAVERSED) return;
+        walk(join15(p, entry));
+      }
+    }
+  }
+  for (const p of paths) {
+    if (fileCount.value >= MAX_FILES_TRAVERSED) break;
+    walk(resolve9(p));
+  }
+  return files;
+}
+function searchFile(filePath, regex, contextLines) {
+  let stat;
+  try {
+    stat = statSync8(filePath);
+  } catch {
+    return [];
+  }
+  if (stat.size > MAX_FILE_SIZE_BYTES) {
+    return [];
+  }
+  let content;
+  try {
+    content = readFileSync11(filePath, "utf-8");
+  } catch {
+    return [];
+  }
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const matches = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (regex.test(lines[i])) {
+      const match = {
+        filePath,
+        lineNumber: i + 1,
+        lineContent: lines[i]
+      };
+      if (contextLines > 0) {
+        const beforeStart = Math.max(0, i - contextLines);
+        const afterEnd = Math.min(lines.length - 1, i + contextLines);
+        match.contextBefore = lines.slice(beforeStart, i);
+        match.contextAfter = lines.slice(i + 1, afterEnd + 1);
+      }
+      matches.push(match);
+    }
+  }
+  return matches;
+}
+function searchQlCode(params) {
+  const {
+    pattern,
+    paths,
+    includeExtensions = [".ql", ".qll"],
+    caseSensitive = true,
+    contextLines = 0,
+    maxResults = 100
+  } = params;
+  const flags = caseSensitive ? "" : "i";
+  const regex = new RegExp(pattern, flags);
+  const fileCount = { value: 0 };
+  const filesToSearch = collectFiles(paths, includeExtensions, fileCount);
+  const allMatches = [];
+  let totalMatches = 0;
+  for (const file of filesToSearch) {
+    const fileMatches = searchFile(file, regex, contextLines);
+    totalMatches += fileMatches.length;
+    for (const m of fileMatches) {
+      if (allMatches.length < maxResults) {
+        allMatches.push(m);
+      }
+    }
+  }
+  return {
+    results: allMatches,
+    totalMatches,
+    returnedMatches: allMatches.length,
+    truncated: totalMatches > maxResults,
+    filesSearched: filesToSearch.length
+  };
+}
+function registerSearchQlCodeTool(server) {
+  server.tool(
+    "search_ql_code",
+    "Search QL source files (.ql/.qll) for text or regex patterns. Returns structured results with file paths, line numbers, and optional context lines. Use this instead of grep for searching CodeQL source code.",
+    {
+      pattern: external_exports.string().describe("Text or regex pattern to search for (JavaScript regex syntax)"),
+      paths: external_exports.array(external_exports.string()).min(1).describe("Directories or files to search in"),
+      includeExtensions: external_exports.array(external_exports.string()).optional().default([".ql", ".qll"]).describe("File extensions to search (default: ['.ql', '.qll'])"),
+      caseSensitive: external_exports.boolean().optional().default(true).describe("Whether search is case sensitive (default: true)"),
+      contextLines: external_exports.number().optional().default(0).describe("Lines of context before and after each match (default: 0)"),
+      maxResults: external_exports.number().optional().default(100).describe("Maximum number of matching lines to return (default: 100)")
+    },
+    async ({ pattern, paths, includeExtensions, caseSensitive, contextLines, maxResults }) => {
+      try {
+        const result = searchQlCode({
+          pattern,
+          paths,
+          includeExtensions,
+          caseSensitive,
+          contextLines,
+          maxResults
+        });
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+        };
+      } catch (error2) {
+        logger.error("Error in search_ql_code:", error2);
+        const message = error2 instanceof SyntaxError || error2 instanceof Error && error2.message.includes("Invalid regular expression") ? `Invalid regex pattern: ${error2.message}` : `Error: ${error2 instanceof Error ? error2.message : String(error2)}`;
+        return {
+          content: [{ type: "text", text: message }],
+          isError: true
+        };
+      }
+    }
+  );
+}
 
 // src/tools/codeql/test-accept.ts
 var codeqlTestAcceptTool = {
@@ -63016,6 +63219,7 @@ function registerCodeQLTools(server) {
   registerCLITool(server, codeqlQueryFormatTool);
   registerCLITool(server, codeqlQueryRunTool);
   registerCLITool(server, codeqlResolveDatabaseTool);
+  registerCLITool(server, codeqlResolveFilesTool);
   registerCLITool(server, codeqlResolveLanguagesTool);
   registerCLITool(server, codeqlResolveLibraryPathTool);
   registerCLITool(server, codeqlResolveMetadataTool);
@@ -63036,6 +63240,7 @@ function registerCodeQLTools(server) {
   registerQuickEvaluateTool(server);
   registerReadDatabaseSourceTool(server);
   registerRegisterDatabaseTool(server);
+  registerSearchQlCodeTool(server);
 }
 
 // src/resources/dataflow-migration-v1-to-v2.md
@@ -63045,7 +63250,7 @@ var dataflow_migration_v1_to_v2_default = '# Dataflow API Migration: v1 to v2\n\
 var learning_query_basics_default = '# Writing CodeQL Queries\n\nThis resource is a practical reference for writing CodeQL queries using the MCP server\'s tools. It covers query structure, metadata annotations, common QL patterns, compilation, testing, and the file conventions used by the CodeQL test framework.\n\n## Query Structure\n\nEvery CodeQL query has three main clauses:\n\n```ql\n/**\n * @name Descriptive name of what the query finds\n * @description Longer explanation of the vulnerability or pattern\n * @kind problem\n * @problem.severity warning\n * @precision medium\n * @id lang/query-id\n * @tags security\n *       correctness\n */\n\nimport language\n\nfrom SourceType source, SinkType sink\nwhere <conditions linking source to sink>\nselect <result expression>, <message string>\n```\n\n### `from` Clause\n\nDeclares typed variables. Each variable ranges over all values of its type in the database:\n\n```ql\nfrom Function f, FunctionCall call\n```\n\n### `where` Clause\n\nFilters the cross-product of `from` variables using predicates:\n\n```ql\nwhere call.getTarget() = f\n  and f.getName() = "eval"\n```\n\n### `select` Clause\n\nDefines the output columns. The first expression is the "element" (the location in source code), followed by a message string:\n\n```ql\nselect call, "Call to dangerous function " + f.getName()\n```\n\n## Metadata Annotations\n\nMetadata goes in a QLDoc comment block (`/** ... */`) at the top of the query file:\n\n| Annotation           | Required                     | Description                                                  |\n| -------------------- | ---------------------------- | ------------------------------------------------------------ |\n| `@name`              | Yes                          | Short human-readable name                                    |\n| `@description`       | Yes                          | Explanation of the query\'s purpose                           |\n| `@kind`              | Yes                          | Output format: `problem`, `path-problem`, `table`, `graph`   |\n| `@id`                | Yes                          | Unique identifier (e.g., `js/sql-injection`)                 |\n| `@problem.severity`  | For `problem`/`path-problem` | `error`, `warning`, or `recommendation`                      |\n| `@security-severity` | For security queries         | CVSS score (e.g., `8.8`)                                     |\n| `@precision`         | Recommended                  | `very-high`, `high`, `medium`, or `low`                      |\n| `@tags`              | Recommended                  | Categories like `security`, `correctness`, `maintainability` |\n\nUse `codeql_resolve_metadata` to extract and validate a query\'s metadata.\n\n## Common `@kind` Values\n\n- **`problem`** \u2014 Reports a single location with a message. Use `select element, message`.\n- **`path-problem`** \u2014 Reports a source-to-sink data flow path. Requires a `PathGraph` import and `select sink, source, sink, message`.\n- **`table`** \u2014 Generic tabular output (no alert interpretation).\n- **`graph`** \u2014 Structural output (AST, CFG, call graphs). Used by `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo` tool queries.\n\n## Common QL Patterns\n\n### Predicate Definition\n\n```ql\npredicate isUserInput(DataFlow::Node node) {\n  exists(Parameter p | p = node.asParameter() |\n    p.getFunction().isPublic()\n  )\n}\n```\n\n### Class Definition\n\n```ql\nclass DangerousCall extends MethodCall {\n  DangerousCall() {\n    this.getMethodName() = ["exec", "eval", "system"]\n  }\n}\n```\n\n### Existential Quantifier (`exists`)\n\n```ql\nwhere exists(Assignment a | a.getLhs() = var and a.getRhs() instanceof NullLiteral)\n```\n\n### Aggregates\n\n```ql\nselect f, count(FunctionCall call | call.getTarget() = f) as callCount\n  order by callCount desc\n```\n\n## Taint Tracking / Data Flow Configuration (v2 API)\n\n```ql\nmodule MyFlowConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) {\n    // define sources\n  }\n\n  predicate isSink(DataFlow::Node sink) {\n    // define sinks\n  }\n\n  predicate isBarrier(DataFlow::Node node) {\n    // define sanitizers (optional)\n  }\n}\n\nmodule MyFlow = TaintTracking::Global<MyFlowConfig>;\n```\n\n## Query Compilation and Validation\n\nUse these tools to validate queries at different fidelity levels:\n\n| Tool                     | Speed   | Fidelity           | When to Use                                                       |\n| ------------------------ | ------- | ------------------ | ----------------------------------------------------------------- |\n| `validate_codeql_query`  | Instant | Heuristic only     | Quick structure check (no compilation)                            |\n| `codeql_query_compile`   | Fast    | Full compilation   | Syntax and type checking                                          |\n| `codeql_lsp_diagnostics` | Fast    | Full (single file) | Real-time validation during editing (cannot resolve pack imports) |\n\nTypical workflow:\n\n1. `validate_codeql_query` \u2014 quick structural check\n2. `codeql_query_compile` with `checkOnly: true` \u2014 full compilation\n3. `codeql_lsp_diagnostics` \u2014 interactive feedback during editing\n\n## Test File Conventions\n\nCodeQL query tests use this directory layout:\n\n```text\npack-root/\n\u251C\u2500\u2500 src/\n\u2502   \u251C\u2500\u2500 codeql-pack.yml          # Source pack\n\u2502   \u2514\u2500\u2500 MyQuery/\n\u2502       \u2514\u2500\u2500 MyQuery.ql           # The query\n\u2514\u2500\u2500 test/\n    \u251C\u2500\u2500 codeql-pack.yml          # Test pack\n    \u2514\u2500\u2500 MyQuery/\n        \u251C\u2500\u2500 MyQuery.qlref        # Points to ../../src/MyQuery/MyQuery.ql\n        \u251C\u2500\u2500 test.js              # Test source code (language-appropriate)\n        \u2514\u2500\u2500 MyQuery.expected     # Expected query output\n```\n\n- **`.qlref` file**: Contains the relative path from the test pack\'s `src/` directory to the query file.\n- **`.expected` file**: Contains the expected output of running the query against the test code. Use `codeql_test_accept` to generate or update this file.\n- **Test source code**: Write code with both positive cases (should trigger the query) and negative cases (should not trigger).\n\n### Running Tests\n\n1. `codeql_test_run` \u2014 run tests and compare against `.expected` files\n2. `codeql_test_accept` \u2014 update `.expected` files when results are verified correct\n3. `codeql_resolve_tests` \u2014 discover and validate test structure\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/queries` \u2014 Bundled tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo)\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://templates/security` \u2014 Security query templates\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for CodeQL queries\n';
 
 // src/resources/performance-patterns.md
-var performance_patterns_default = '# Performance Optimization Patterns\n\nThis resource describes how to evaluate and improve the performance of CodeQL queries using the MCP server\'s profiling tools. Rather than prescribing generic optimization rules, it focuses on using the `profile_codeql_query_from_logs` tool and the `explain_codeql_query` prompt to make evidence-based performance improvements.\n\n## Primary Performance Tool: `profile_codeql_query_from_logs`\n\nThe `profile_codeql_query_from_logs` tool is the primary means of evaluating the actual performance of a CodeQL query. It parses existing CodeQL evaluator logs into a structured performance profile without re-running the query.\n\n### Workflow\n\n1. **Run the query**: Use `codeql_query_run` with `evaluationOutput` set to a directory path. This generates evaluator log files.\n2. **Generate a log summary**: Use `codeql_generate_log-summary` to create a human-readable summary of the evaluator log.\n3. **Profile**: Use `profile_codeql_query_from_logs` to parse the evaluator log into a structured performance profile identifying expensive predicates, pipeline stages, and tuple counts.\n4. **Identify bottlenecks**: Review the profile output for predicates with high evaluation times or unexpectedly large result sets.\n5. **Refine**: Modify the query to address identified bottlenecks, then re-run and re-profile to verify improvements.\n\n### What the Profile Shows\n\n- **Predicate evaluation times** \u2014 which predicates are the most expensive\n- **Tuple counts** \u2014 how many intermediate results each predicate produces\n- **Pipeline stages** \u2014 the internal evaluation plan chosen by the CodeQL engine\n- **RA (relational algebra) operations** \u2014 join orders, aggregation steps, and recursive evaluations\n\n## Using `explain_codeql_query` for Performance Understanding\n\nThe `explain_codeql_query` prompt generates a detailed explanation of a query, including Mermaid evaluation diagrams that visualize the data flow and evaluation order. This is useful for understanding _why_ a query may be slow before profiling.\n\n## Key Performance Concepts\n\nThe following concepts are relevant when interpreting profiling output. Verify these against actual profiling data rather than applying them blindly.\n\n### Large Intermediate Result Sets\n\nWhen a predicate produces significantly more tuples than expected, it may indicate:\n\n- Missing or insufficiently restrictive filter conditions in the `where` clause\n- A cross-product between two large relations that should be joined more tightly\n\n**How to detect**: Look for predicates in the profile output with high tuple counts relative to their expected output size.\n\n### Recursive Predicate Costs\n\nRecursive predicates (e.g., transitive closures via `+` or `*`) can be expensive when the underlying relation is large. The profiler shows iteration counts and per-iteration tuple growth.\n\n**How to detect**: Look for recursive predicates with many iterations or high per-iteration costs in the profile output.\n\n### Join Order Sensitivity\n\nThe CodeQL evaluator chooses a join order for predicates in the `where` clause. In some cases, the chosen order may not be optimal.\n\n**How to detect**: Look for pipeline stages where a large intermediate result is produced before being filtered down. The profiler shows tuple counts at each stage.\n\n### Improving "Performance" \u2014 Two Dimensions\n\nThe word "performance" for CodeQL queries has two meanings:\n\n1. **Runtime efficiency** \u2014 how fast the query evaluates. Addressed by reducing tuple counts, improving join orders, and simplifying recursive predicates.\n2. **Result quality** \u2014 how accurate the query\'s output is (precision and recall). Addressed by refining source/sink/sanitizer definitions, adding or removing filter conditions, and testing against diverse codebases.\n\nThe `profile_codeql_query_from_logs` tool addresses runtime efficiency. For result quality, use the `run_query_and_summarize_false_positives` prompt and the `sarif_rank_false_positives` / `sarif_rank_true_positives` prompts.\n\n## Performance Review for GitHub Actions CodeQL Scans\n\nWhen reviewing CodeQL performance in the context of GitHub Actions CI/CD scans, key areas to examine include:\n\n### Code Exclusion\n\nExcluding non-essential files from analysis (vendored dependencies, generated code, test files) is one of the most impactful performance improvements. Any interpreted language or compiled language using `build-mode: none` can use a `paths-ignore` array in the CodeQL configuration file to exclude paths.\n\n### Hardware Sizing\n\nRecommended runner sizes based on lines of code:\n\n- Small (< 100K lines): 8 GB RAM, 2 cores\n- Medium (100K\u20131M lines): 16 GB RAM, 4\u20138 cores\n- Large (> 1M lines): 64 GB RAM, 8 cores\n\n### Monorepo Splitting\n\nFor monorepos with multiple independent applications separated by process/network boundaries, consider splitting CodeQL scans by application. This reduces database size and enables parallel scanning via Actions matrix strategies.\n\n## Related Tools and Prompts\n\n| Tool / Prompt                                    | Purpose                                                  |\n| ------------------------------------------------ | -------------------------------------------------------- |\n| `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (no re-run needed)  |\n| `codeql_generate_log-summary`                    | Generate a human-readable evaluator log summary          |\n| `codeql_query_run`                               | Execute a query (set `evaluationOutput` to capture logs) |\n| `explain_codeql_query` prompt                    | Understand query evaluation flow with Mermaid diagrams   |\n| `run_query_and_summarize_false_positives` prompt | Assess result quality (precision)                        |\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://learning/query-basics` \u2014 Query structure and compilation tools\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for iterative query improvement\n';
+var performance_patterns_default = '# Performance Optimization Patterns\n\nThis resource describes how to evaluate and improve the performance of CodeQL queries using the MCP server\'s profiling tools. Rather than prescribing generic optimization rules, it focuses on using the `profile_codeql_query_from_logs` tool and the `explain_codeql_query` prompt to make evidence-based performance improvements.\n\n## Primary Performance Tool: `profile_codeql_query_from_logs`\n\nThe `profile_codeql_query_from_logs` tool is the primary means of evaluating the actual performance of a CodeQL query. It parses existing CodeQL evaluator logs into a structured performance profile without re-running the query.\n\n### Workflow\n\n1. **Run the query**: Use `codeql_query_run` with `evaluationOutput` set to a directory path. This generates evaluator log files.\n2. **Profile**: Use `profile_codeql_query_from_logs` to parse the evaluator log. Returns compact JSON with the slowest predicates (by wall-clock time) and per-predicate metrics. Full RA operations and pipeline-stage tuple progressions are in a line-indexed detail file \u2014 use `read_file` with the `detailLines` ranges from the response to drill into any predicate.\n3. **Identify bottlenecks**: Review the profile JSON for predicates with high evaluation times, tuple count explosions in pipeline stages, or expensive RA operations (large JOINs, cross-products).\n4. **Refine**: Modify the query to address identified bottlenecks, then re-run and re-profile to verify improvements.\n\n### What the Profile Shows\n\n- **Predicate evaluation times** \u2014 which predicates are the most expensive\n- **Tuple counts** \u2014 how many intermediate results each predicate produces\n- **Pipeline stages** \u2014 the internal evaluation plan chosen by the CodeQL engine\n- **RA (relational algebra) operations** \u2014 join orders, aggregation steps, and recursive evaluations\n\n## Using `explain_codeql_query` for Performance Understanding\n\nThe `explain_codeql_query` prompt generates a detailed explanation of a query, including Mermaid evaluation diagrams that visualize the data flow and evaluation order. This is useful for understanding _why_ a query may be slow before profiling.\n\n## Key Performance Concepts\n\nThe following concepts are relevant when interpreting profiling output. Verify these against actual profiling data rather than applying them blindly.\n\n### Large Intermediate Result Sets\n\nWhen a predicate produces significantly more tuples than expected, it may indicate:\n\n- Missing or insufficiently restrictive filter conditions in the `where` clause\n- A cross-product between two large relations that should be joined more tightly\n\n**How to detect**: Look for predicates in the profile output with high tuple counts relative to their expected output size.\n\n### Recursive Predicate Costs\n\nRecursive predicates (e.g., transitive closures via `+` or `*`) can be expensive when the underlying relation is large. The profiler shows iteration counts and per-iteration tuple growth.\n\n**How to detect**: Look for recursive predicates with many iterations or high per-iteration costs in the profile output.\n\n### Join Order Sensitivity\n\nThe CodeQL evaluator chooses a join order for predicates in the `where` clause. In some cases, the chosen order may not be optimal.\n\n**How to detect**: Look for pipeline stages where a large intermediate result is produced before being filtered down. The profiler shows tuple counts at each stage.\n\n### Improving "Performance" \u2014 Two Dimensions\n\nThe word "performance" for CodeQL queries has two meanings:\n\n1. **Runtime efficiency** \u2014 how fast the query evaluates. Addressed by reducing tuple counts, improving join orders, and simplifying recursive predicates.\n2. **Result quality** \u2014 how accurate the query\'s output is (precision and recall). Addressed by refining source/sink/sanitizer definitions, adding or removing filter conditions, and testing against diverse codebases.\n\nThe `profile_codeql_query_from_logs` tool addresses runtime efficiency. For result quality, use the `run_query_and_summarize_false_positives` prompt and the `sarif_rank_false_positives` / `sarif_rank_true_positives` prompts.\n\n## Performance Review for GitHub Actions CodeQL Scans\n\nWhen reviewing CodeQL performance in the context of GitHub Actions CI/CD scans, key areas to examine include:\n\n### Code Exclusion\n\nExcluding non-essential files from analysis (vendored dependencies, generated code, test files) is one of the most impactful performance improvements. Any interpreted language or compiled language using `build-mode: none` can use a `paths-ignore` array in the CodeQL configuration file to exclude paths.\n\n### Hardware Sizing\n\nRecommended runner sizes based on lines of code:\n\n- Small (< 100K lines): 8 GB RAM, 2 cores\n- Medium (100K\u20131M lines): 16 GB RAM, 4\u20138 cores\n- Large (> 1M lines): 64 GB RAM, 8 cores\n\n### Monorepo Splitting\n\nFor monorepos with multiple independent applications separated by process/network boundaries, consider splitting CodeQL scans by application. This reduces database size and enables parallel scanning via Actions matrix strategies.\n\n## Related Tools and Prompts\n\n| Tool / Prompt                                    | Purpose                                                  |\n| ------------------------------------------------ | -------------------------------------------------------- |\n| `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (primary tool)      |\n| `codeql_generate_log-summary`                    | Optional: human-readable evaluator log summary           |\n| `codeql_query_run`                               | Execute a query (set `evaluationOutput` to capture logs) |\n| `explain_codeql_query` prompt                    | Understand query evaluation flow with Mermaid diagrams   |\n| `run_query_and_summarize_false_positives` prompt | Assess result quality (precision)                        |\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://learning/query-basics` \u2014 Query structure and compilation tools\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for iterative query improvement\n';
 
 // src/resources/ql-test-driven-development.md
 var ql_test_driven_development_default = "# Test-Driven Development for CodeQL Queries\n\nThis resource explains the theory and value of test-driven development (TDD) for CodeQL queries, and how the MCP server's tools and prompts support the TDD workflow. It is a conceptual overview \u2014 for step-by-step guided workflows, use the `test_driven_development`, `ql_tdd_basic`, or `ql_tdd_advanced` prompts.\n\n## Why TDD for CodeQL?\n\nCodeQL queries are programs that search for patterns in source code. Like any program, they can have bugs: false positives (flagging safe code), false negatives (missing vulnerable code), and runtime performance issues. TDD addresses all three by establishing a feedback loop between expected and actual behavior.\n\n### Why TDD Makes LLMs More Effective\n\nLLMs generating CodeQL queries face two challenges:\n\n1. **Syntactic correctness** \u2014 QL has unique syntax (classes, predicates, `exists`, aggregates) that differs from mainstream languages. Compilation via `codeql_query_compile` catches syntax errors early.\n2. **Semantic correctness** \u2014 A query that compiles may still produce wrong results. Test cases with `.expected` files provide ground truth that the LLM can compare against, enabling iterative refinement.\n\nTDD provides the LLM with a concrete, automated signal (tests pass / tests fail) at every iteration, replacing guesswork with evidence. This is especially valuable for data flow and taint tracking queries where the correctness of source/sink/sanitizer definitions can only be verified by running the query against representative code.\n\n## The TDD Cycle\n\n```text\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  1. Write Tests  \u2502 \u2190 Define expected behavior through test cases\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  2. Run (Red)    \u2502 \u2190 Verify tests fail (no query logic yet)\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  3. Implement    \u2502 \u2190 Write minimal query logic to pass tests\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  4. Run (Green)  \u2502 \u2190 Verify tests pass\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  5. Refactor     \u2502 \u2190 Improve query while keeping tests green\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  6. Repeat       \u2502 \u2190 Add more tests for additional scenarios\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n## The Value of AST Data in Test Code\n\nA critical step in the TDD workflow is running `PrintAST` on test source code before writing the query. The AST output reveals how the CodeQL database represents the test code \u2014 which QL classes correspond to which source constructs, and which predicates are available for matching.\n\nWithout AST data, the LLM must guess which classes and predicates to use, leading to trial-and-error. With AST data, the LLM can:\n\n- **Map source patterns to QL classes**: See exactly which QL class represents a `for` loop, a method call, or an assignment\n- **Discover available predicates**: Learn what methods are available on each AST node type\n- **Write precise `from`/`where` clauses**: Use the correct class names and predicate calls from the start\n\nUse `codeql_query_run` with `queryName=\"PrintAST\"` to generate AST data for test source files. The `ql_tdd_advanced` prompt guides this step in detail.\n\n## MCP Tools for TDD\n\n| Step         | Tool                                  | Purpose                                              |\n| ------------ | ------------------------------------- | ---------------------------------------------------- |\n| Scaffold     | `create_codeql_query`                 | Generate query, test, and `.qlref` files             |\n| Dependencies | `codeql_pack_install`                 | Install pack dependencies for src and test packs     |\n| Extract      | `codeql_test_extract`                 | Create a test database from test source files        |\n| AST Analysis | `codeql_query_run` (PrintAST)         | Understand test code structure via AST               |\n| CFG Analysis | `codeql_query_run` (PrintCFG)         | Understand control flow (advanced)                   |\n| Call Graph   | `codeql_query_run` (CallGraphFrom/To) | Trace call relationships (advanced)                  |\n| Compile      | `codeql_query_compile`                | Validate query syntax before testing                 |\n| Test         | `codeql_test_run`                     | Run tests and compare against `.expected`            |\n| Accept       | `codeql_test_accept`                  | Update `.expected` when results are verified correct |\n| Profile      | `profile_codeql_query_from_logs`      | Analyze query performance from evaluator logs        |\n| Format       | `codeql_query_format`                 | Auto-format query source code                        |\n| Metadata     | `codeql_resolve_metadata`             | Validate query metadata annotations                  |\n\n## MCP Prompts for TDD\n\n| Prompt                    | When to Use                                                |\n| ------------------------- | ---------------------------------------------------------- |\n| `test_driven_development` | End-to-end TDD workflow with required `language` parameter |\n| `ql_tdd_basic`            | Standalone TDD checklist (all parameters optional)         |\n| `ql_tdd_advanced`         | Extended TDD with AST/CFG/call graph analysis              |\n| `tools_query_workflow`    | Focused exploration of code structure via tool queries     |\n| `explain_codeql_query`    | Understand an existing query's logic before modifying it   |\n\n## Writing Effective Test Cases\n\n### Structure\n\nEach test directory contains:\n\n- **Test source code** (e.g., `test.js`) \u2014 code that the query will analyze\n- **`.qlref` file** \u2014 points to the query being tested\n- **`.expected` file** \u2014 the expected query output\n\n### Best Practices\n\n1. **Include both positive and negative cases**: Write code that should trigger the query (vulnerable patterns) and code that should not (safe patterns)\n2. **Start simple**: Begin with the most obvious positive and negative cases, then add edge cases\n3. **Use realistic code**: Test against code patterns that occur in real-world projects\n4. **One concept per test directory**: Each test should verify one specific behavior\n5. **Document intent**: Use comments in test code to explain why each case should or should not match\n\n### Example Test Structure\n\n```text\ntest/SqlInjection/\n\u251C\u2500\u2500 SqlInjection.qlref       # Points to src/SqlInjection/SqlInjection.ql\n\u251C\u2500\u2500 test.py                  # Test source code\n\u2514\u2500\u2500 SqlInjection.expected    # Expected results\n```\n\nThe `.expected` file contains one line per query result, matching the `select` clause output.\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation and quick-start guide\n- `codeql://learning/query-basics` \u2014 Query structure, metadata, and compilation reference\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://templates/security` \u2014 Security query templates with TDD workflow\n- `codeql://patterns/performance` \u2014 Performance profiling tools\n- `codeql://languages/{language}/ast` \u2014 Language-specific AST class reference\n- `codeql://languages/{language}/security` \u2014 Language-specific security patterns\n";
@@ -63066,7 +63271,7 @@ var server_prompts_default = "# MCP Server Prompts\n\nThis resource provides a c
 var server_queries_default = '# MCP Server Bundled Queries\n\nThis resource describes the tools queries bundled with the CodeQL Development MCP Server. These queries run via `codeql_query_run` and provide structural insight into how source code is represented in a CodeQL database. Use them to understand code structure before writing detection queries.\n\nFor general QL query writing guidance (syntax, metadata, `from`/`where`/`select`, testing conventions), see `codeql://learning/query-basics`.\n\n## Bundled Tools Queries\n\nThe server bundles four tools queries that operate on CodeQL databases:\n\n| Query           | Purpose                                           | Output Format             |\n| --------------- | ------------------------------------------------- | ------------------------- |\n| `PrintAST`      | Visualize the Abstract Syntax Tree of source code | `@kind graph` (graphtext) |\n| `PrintCFG`      | Visualize the Control Flow Graph of a function    | `@kind graph` (graphtext) |\n| `CallGraphFrom` | Show all functions called FROM a given function   | `@kind graph` (graphtext) |\n| `CallGraphTo`   | Show all call sites that call TO a given function | `@kind graph` (graphtext) |\n\nAll four queries use `@kind graph` metadata and produce output in graphtext format.\n\n## PrintAST\n\n**Purpose**: Outputs a hierarchical representation of the Abstract Syntax Tree showing parent-child relationships between declarations, statements, and expressions.\n\n**When to use**: Before writing any CodeQL query, run `PrintAST` on your test source code to understand which QL classes represent which source constructs and which predicates are available for matching.\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "PrintAST"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  sourceFiles: "<comma-separated-filenames>"   (optional \u2014 filter to specific files)\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: A tree showing each AST node with its QL class name, properties, and position in the hierarchy. This reveals exactly which QL classes and predicates to use in `from`/`where`/`select` clauses.\n\n## PrintCFG\n\n**Purpose**: Produces a Control Flow Graph representation showing the order in which statements and expressions execute, including branching paths.\n\n**When to use**: When writing queries that reason about execution order, reachability, or branching logic (e.g., "is this check always performed before this call?").\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "PrintCFG"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  sourceFunction: "<function-name>"   (optional \u2014 target a specific function)\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: Nodes representing CFG basic blocks and edges representing possible execution transitions (successor relationships).\n\n## CallGraphFrom\n\n**Purpose**: Shows all functions called FROM a specified source function \u2014 the outbound call dependencies.\n\n**When to use**: When analyzing what a function does by tracing the functions it invokes. Useful for understanding call chains and identifying potential data flow paths.\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "CallGraphFrom"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  sourceFunction: "<function-name>"\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: A graph showing each call site within the source function and the target function being called.\n\n## CallGraphTo\n\n**Purpose**: Shows all call sites that invoke a specified target function \u2014 the inbound callers.\n\n**When to use**: When performing impact analysis to understand where a function is used, or when identifying all locations that pass data to a particular sink function.\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "CallGraphTo"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  targetFunction: "<function-name>"\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: A graph showing each caller function and the specific call site where the target function is invoked.\n\n## Language Support\n\n| Language   | PrintAST | PrintCFG | CallGraphFrom | CallGraphTo |\n| ---------- | :------: | :------: | :-----------: | :---------: |\n| actions    |    \u2713     |    \u2713     |               |             |\n| cpp        |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| csharp     |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| go         |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| java       |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| javascript |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| python     |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| ruby       |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| swift      |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n\nNote: The `actions` language supports PrintAST and PrintCFG only (no call graph queries).\n\n## Recommended Workflow\n\nUse the `tools_query_workflow` prompt for a guided step-by-step workflow:\n\n1. **Identify or create a database**: Use `list_codeql_databases` or `codeql_database_create`\n2. **Run PrintAST**: Understand how the source code maps to QL classes\n3. **Run PrintCFG**: Understand control flow for the functions of interest\n4. **Run CallGraphFrom / CallGraphTo**: Trace call relationships to identify sources and sinks\n5. **Write detection queries**: Use the insights from steps 2\u20134 to select the right QL classes and predicates\n\n## Related Resources\n\n- `codeql://learning/query-basics` \u2014 QL query writing reference (syntax, metadata, patterns, testing)\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for CodeQL queries\n- `codeql://languages/{language}/ast` \u2014 Language-specific AST class reference\n';
 
 // src/resources/server-tools.md
-var server_tools_default = '# MCP Server Tools\n\nThis resource provides a complete reference of the default tools exposed by the CodeQL Development MCP Server. These tools wrap the CodeQL CLI and supporting utilities, enabling an LLM to develop, test, and analyze CodeQL queries programmatically.\n\n## CodeQL CLI Tools\n\n| Tool                          | Description                                                                                                                  |\n| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |\n| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats (text, csv, json). Supports `--result-set` and `--rows` for pagination    |\n| `codeql_bqrs_info`            | Get metadata about BQRS result files: result sets, column types, row counts                                                  |\n| `codeql_bqrs_interpret`       | Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats) |\n| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS, and SARIF output                        |\n| `codeql_database_create`      | Create a CodeQL database from source code                                                                                    |\n| `codeql_generate_log-summary` | Create a summary of a structured JSON evaluator event log file                                                               |\n| `codeql_generate_query-help`  | Generate query help documentation from QLDoc comments                                                                        |\n| `codeql_pack_install`         | Install CodeQL pack dependencies                                                                                             |\n| `codeql_pack_ls`              | List CodeQL packs under a local directory path                                                                               |\n| `codeql_query_compile`        | Compile and validate CodeQL queries                                                                                          |\n| `codeql_query_format`         | Automatically format CodeQL source code files                                                                                |\n| `codeql_query_run`            | Execute a CodeQL query against a database                                                                                    |\n| `codeql_resolve_database`     | Resolve database path and validate database structure                                                                        |\n| `codeql_resolve_languages`    | List installed CodeQL extractor packs                                                                                        |\n| `codeql_resolve_library-path` | Resolve library path for CodeQL queries and libraries                                                                        |\n| `codeql_resolve_metadata`     | Resolve and return key-value metadata pairs from a CodeQL query source file                                                  |\n| `codeql_resolve_qlref`        | Resolve `.qlref` files to their corresponding query files                                                                    |\n| `codeql_resolve_queries`      | List available CodeQL queries found on the local filesystem                                                                  |\n| `codeql_resolve_tests`        | Resolve the local filesystem paths of unit tests and/or queries under a base directory                                       |\n| `codeql_test_accept`          | Accept new test results as the expected baseline                                                                             |\n| `codeql_test_extract`         | Extract test databases for CodeQL query tests                                                                                |\n| `codeql_test_run`             | Run CodeQL query tests                                                                                                       |\n\n## Language Server Protocol (LSP) Tools\n\n| Tool                     | Description                                                                                                                                                                  |\n| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| `codeql_lsp_completion`  | Get code completions at a cursor position in a CodeQL file                                                                                                                   |\n| `codeql_lsp_definition`  | Go to the definition of a CodeQL symbol at a given position                                                                                                                  |\n| `codeql_lsp_diagnostics` | Syntax and semantic validation of CodeQL code via the Language Server. Note: inline `ql_code` cannot resolve pack imports; use `codeql_query_compile` for files with imports |\n| `codeql_lsp_references`  | Find all references to a CodeQL symbol at a given position                                                                                                                   |\n\n## Query Development Tools\n\n| Tool                             | Description                                                                                                  |\n| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |\n| `create_codeql_query`            | Create directory structure and files for a new CodeQL query with tests                                       |\n| `find_class_position`            | Find the start/end line and column of a class for quick evaluation                                           |\n| `find_codeql_query_files`        | Find and track all files and directories related to a CodeQL query, including resolved metadata              |\n| `find_predicate_position`        | Find the start/end line and column of a predicate for quick evaluation                                       |\n| `list_codeql_databases`          | List CodeQL databases discovered in configured base directories                                              |\n| `list_mrva_run_results`          | List MRVA (Multi-Repository Variant Analysis) run results with per-repo details                              |\n| `list_query_run_results`         | List query run result directories with artifact inventory. Filter by `queryName`, `language`, or `queryPath` |\n| `profile_codeql_query`           | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log     |\n| `profile_codeql_query_from_logs` | Parse existing CodeQL evaluator logs into a performance profile without re-running the query                 |\n| `quick_evaluate`                 | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                 |\n| `read_database_source`           | Read source file contents from a CodeQL database source archive. Omit `filePath` to list all files           |\n| `register_database`              | Register a CodeQL database given a local path to the database directory                                      |\n| `validate_codeql_query`          | Quick heuristic validation for CodeQL query structure (does not compile the query)                           |\n\n## Common Tool Workflows\n\n### Create and Test a Query\n\n1. `create_codeql_query` \u2014 scaffold files\n2. `codeql_pack_install` \u2014 install dependencies\n3. `codeql_query_compile` \u2014 validate syntax\n4. `codeql_test_run` \u2014 run tests\n5. `codeql_test_accept` \u2014 accept correct results\n\n### Understand Code Structure\n\n1. `codeql_query_run` with `queryName="PrintAST"` \u2014 visualize the AST\n2. `codeql_query_run` with `queryName="PrintCFG"` \u2014 visualize control flow\n3. `codeql_query_run` with `queryName="CallGraphFrom"` / `"CallGraphTo"` \u2014 trace call relationships\n\n### Profile Query Performance\n\n1. `codeql_query_run` with `evaluationOutput` \u2014 run query and capture evaluator logs\n2. `profile_codeql_query_from_logs` \u2014 analyze evaluator logs for bottlenecks\n3. `codeql_generate_log-summary` \u2014 generate a human-readable log summary\n\n### Interactive Development\n\n1. `codeql_lsp_completion` \u2014 get QL code completions\n2. `codeql_lsp_definition` \u2014 navigate to definitions\n3. `codeql_lsp_references` \u2014 find all references\n4. `codeql_lsp_diagnostics` \u2014 real-time validation\n\n## Tool Input Conventions\n\n- **LSP tools** use **0-based** line and column positions for input. Output uses 1-based `startLine`/`endLine`.\n- **`find_predicate_position`** and **`find_class_position`** return **1-based** positions.\n- **`workspace_uri`** for LSP tools must be a **plain directory path** to the pack root containing `codeql-pack.yml`, not a `file://` URI.\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/prompts` \u2014 Complete prompt reference\n- `codeql://learning/query-basics` \u2014 Query writing reference\n- `codeql://patterns/performance` \u2014 Performance profiling guide\n';
+var server_tools_default = '# MCP Server Tools\n\nThis resource provides a complete reference of the default tools exposed by the CodeQL Development MCP Server. These tools wrap the CodeQL CLI and supporting utilities, enabling an LLM to develop, test, and analyze CodeQL queries programmatically.\n\n## CodeQL CLI Tools\n\n| Tool                          | Description                                                                                                                  |\n| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |\n| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats (text, csv, json). Supports `--result-set` and `--rows` for pagination    |\n| `codeql_bqrs_info`            | Get metadata about BQRS result files: result sets, column types, row counts                                                  |\n| `codeql_bqrs_interpret`       | Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats) |\n| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS, and SARIF output                        |\n| `codeql_database_create`      | Create a CodeQL database from source code                                                                                    |\n| `codeql_generate_log-summary` | Create a summary of a structured JSON evaluator event log file                                                               |\n| `codeql_generate_query-help`  | Generate query help documentation from QLDoc comments                                                                        |\n| `codeql_pack_install`         | Install CodeQL pack dependencies                                                                                             |\n| `codeql_pack_ls`              | List CodeQL packs under a local directory path                                                                               |\n| `codeql_query_compile`        | Compile and validate CodeQL queries                                                                                          |\n| `codeql_query_format`         | Automatically format CodeQL source code files                                                                                |\n| `codeql_query_run`            | Execute a CodeQL query against a database                                                                                    |\n| `codeql_resolve_database`     | Resolve database path and validate database structure                                                                        |\n| `codeql_resolve_files`        | Find files in a directory tree, filtered by extension and glob patterns. Useful for discovering QL library files             |\n| `codeql_resolve_languages`    | List installed CodeQL extractor packs                                                                                        |\n| `codeql_resolve_library-path` | Resolve library path for CodeQL queries and libraries                                                                        |\n| `codeql_resolve_metadata`     | Resolve and return key-value metadata pairs from a CodeQL query source file                                                  |\n| `codeql_resolve_qlref`        | Resolve `.qlref` files to their corresponding query files                                                                    |\n| `codeql_resolve_queries`      | List available CodeQL queries found on the local filesystem                                                                  |\n| `codeql_resolve_tests`        | Resolve the local filesystem paths of unit tests and/or queries under a base directory                                       |\n| `codeql_test_accept`          | Accept new test results as the expected baseline                                                                             |\n| `codeql_test_extract`         | Extract test databases for CodeQL query tests                                                                                |\n| `codeql_test_run`             | Run CodeQL query tests                                                                                                       |\n\n## Language Server Protocol (LSP) Tools\n\n| Tool                     | Description                                                                                                                                                                  |\n| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| `codeql_lsp_completion`  | Get code completions at a cursor position in a CodeQL file                                                                                                                   |\n| `codeql_lsp_definition`  | Go to the definition of a CodeQL symbol at a given position                                                                                                                  |\n| `codeql_lsp_diagnostics` | Syntax and semantic validation of CodeQL code via the Language Server. Note: inline `ql_code` cannot resolve pack imports; use `codeql_query_compile` for files with imports |\n| `codeql_lsp_references`  | Find all references to a CodeQL symbol at a given position                                                                                                                   |\n\n## Query Development Tools\n\n| Tool                             | Description                                                                                                  |\n| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |\n| `create_codeql_query`            | Create directory structure and files for a new CodeQL query with tests                                       |\n| `find_class_position`            | Find the start/end line and column of a class for quick evaluation                                           |\n| `find_codeql_query_files`        | Find and track all files and directories related to a CodeQL query, including resolved metadata              |\n| `find_predicate_position`        | Find the start/end line and column of a predicate for quick evaluation                                       |\n| `list_codeql_databases`          | List CodeQL databases discovered in configured base directories                                              |\n| `list_mrva_run_results`          | List MRVA (Multi-Repository Variant Analysis) run results with per-repo details                              |\n| `list_query_run_results`         | List query run result directories with artifact inventory. Filter by `queryName`, `language`, or `queryPath` |\n| `profile_codeql_query`           | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log     |\n| `profile_codeql_query_from_logs` | Parse evaluator logs into a compact profile with line-indexed detail file for targeted read_file access      |\n| `quick_evaluate`                 | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                 |\n| `read_database_source`           | Read source file contents from a CodeQL database source archive. Omit `filePath` to list all files           |\n| `register_database`              | Register a CodeQL database given a local path to the database directory                                      |\n| `search_ql_code`                 | Search QL source files for text or regex patterns with structured results (replaces grep for QL code)        |\n| `validate_codeql_query`          | Quick heuristic validation for CodeQL query structure (does not compile the query)                           |\n\n## Common Tool Workflows\n\n### Create and Test a Query\n\n1. `create_codeql_query` \u2014 scaffold files\n2. `codeql_pack_install` \u2014 install dependencies\n3. `codeql_query_compile` \u2014 validate syntax\n4. `codeql_test_run` \u2014 run tests\n5. `codeql_test_accept` \u2014 accept correct results\n\n### Understand Code Structure\n\n1. `codeql_query_run` with `queryName="PrintAST"` \u2014 visualize the AST\n2. `codeql_query_run` with `queryName="PrintCFG"` \u2014 visualize control flow\n3. `codeql_query_run` with `queryName="CallGraphFrom"` / `"CallGraphTo"` \u2014 trace call relationships\n\n### Profile Query Performance\n\n1. `codeql_query_run` with `evaluationOutput` \u2014 run query and capture evaluator logs\n2. `profile_codeql_query_from_logs` \u2014 analyze evaluator logs: slowest predicates, RA operations, tuple count progressions, dependencies\n\n### Discover and Search QL Code\n\n1. `codeql_resolve_files` \u2014 find QL files by extension and glob patterns in library packs\n2. `search_ql_code` \u2014 search QL source files for classes, predicates, or patterns by text/regex\n3. `codeql_lsp_definition` \u2014 navigate to the definition of a discovered symbol\n4. `codeql_lsp_references` \u2014 find all usages of a symbol across a pack\n\n### Interactive Development\n\n1. `codeql_lsp_completion` \u2014 get QL code completions\n2. `codeql_lsp_definition` \u2014 navigate to definitions\n3. `codeql_lsp_references` \u2014 find all references\n4. `codeql_lsp_diagnostics` \u2014 real-time validation\n\n## Tool Input Conventions\n\n- **LSP tools** use **0-based** line and column positions for input. Output uses 1-based `startLine`/`endLine`.\n- **`find_predicate_position`** and **`find_class_position`** return **1-based** positions.\n- **`workspace_uri`** for LSP tools must be a **plain directory path** to the pack root containing `codeql-pack.yml`, not a `file://` URI.\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/prompts` \u2014 Complete prompt reference\n- `codeql://learning/query-basics` \u2014 Query writing reference\n- `codeql://patterns/performance` \u2014 Performance profiling guide\n';
 
 // src/lib/resources.ts
 function getLearningQueryBasics() {
@@ -63297,13 +63502,13 @@ function registerCodeQLResources(server) {
 // src/tools/lsp/lsp-diagnostics.ts
 init_logger();
 init_temp_dir();
-import { join as join16 } from "path";
+import { join as join17 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
 
 // src/tools/lsp/lsp-server-helper.ts
 init_server_manager();
 init_logger();
-import { isAbsolute as isAbsolute5, resolve as resolve10 } from "path";
+import { isAbsolute as isAbsolute5, resolve as resolve11 } from "path";
 import { pathToFileURL as pathToFileURL2 } from "url";
 async function getInitializedLanguageServer(opts = {}) {
   const { packageRootDir: pkgRoot, getUserWorkspaceDir: getUserWorkspaceDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
@@ -63311,7 +63516,7 @@ async function getInitializedLanguageServer(opts = {}) {
   const config2 = {
     checkErrors: "ON_CHANGE",
     loglevel: options.loglevel ?? "WARN",
-    searchPath: options.searchPath ?? resolve10(pkgRoot, "ql"),
+    searchPath: options.searchPath ?? resolve11(pkgRoot, "ql"),
     synchronous: options.synchronous,
     verbosity: options.verbosity
   };
@@ -63319,10 +63524,10 @@ async function getInitializedLanguageServer(opts = {}) {
   const server = await manager.getLanguageServer(config2);
   let effectiveUri = opts.workspaceUri;
   if (effectiveUri && !effectiveUri.startsWith("file://")) {
-    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve10(getUserWorkspaceDir2(), effectiveUri);
+    const absWorkspace = isAbsolute5(effectiveUri) ? effectiveUri : resolve11(getUserWorkspaceDir2(), effectiveUri);
     effectiveUri = pathToFileURL2(absWorkspace).href;
   }
-  effectiveUri = effectiveUri ?? pathToFileURL2(resolve10(pkgRoot, "ql")).href;
+  effectiveUri = effectiveUri ?? pathToFileURL2(resolve11(pkgRoot, "ql")).href;
   await server.initialize(effectiveUri);
   logger.debug(`Language server initialized with workspace: ${effectiveUri}`);
   return server;
@@ -63395,7 +63600,7 @@ async function lspDiagnostics({
       serverOptions,
       workspaceUri
     });
-    const evalUri = pathToFileURL3(join16(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
+    const evalUri = pathToFileURL3(join17(getProjectTmpDir("lsp-eval"), `eval_${Date.now()}.ql`)).href;
     const diagnostics = await languageServer.evaluateQL(qlCode, evalUri);
     const summary = {
       errorCount: diagnostics.filter((d) => d.severity === 1).length,
@@ -63484,7 +63689,7 @@ function registerLspDiagnosticsTool(server) {
 init_logger();
 init_package_paths();
 import { readFile as readFile3 } from "fs/promises";
-import { isAbsolute as isAbsolute6, resolve as resolve11 } from "path";
+import { isAbsolute as isAbsolute6, resolve as resolve12 } from "path";
 import { pathToFileURL as pathToFileURL4 } from "url";
 async function getInitializedServer(params) {
   return getInitializedLanguageServer({
@@ -63493,7 +63698,7 @@ async function getInitializedServer(params) {
   });
 }
 function prepareDocumentPosition(params) {
-  const absPath = isAbsolute6(params.filePath) ? params.filePath : resolve11(getUserWorkspaceDir(), params.filePath);
+  const absPath = isAbsolute6(params.filePath) ? params.filePath : resolve12(getUserWorkspaceDir(), params.filePath);
   const docUri = pathToFileURL4(absPath).href;
   return { absPath, docUri };
 }
@@ -63846,16 +64051,16 @@ import { basename as basename6 } from "path";
 var document_codeql_query_prompt_default = '---\nagent: agent\n---\n\n# Document a CodeQL Query\n\nThis prompt guides you through creating or updating documentation for a CodeQL query file. The documentation is stored as a sibling file to the query with a standardized markdown format.\n\n## Purpose\n\nThe `document_codeql_query` prompt creates/updates **query documentation files** for a specific version of a CodeQL query. Documentation files are stored alongside the query file and provide concise yet comprehensive information about what the query does.\n\nFor creating **workshop learning content** with detailed explanations and visual diagrams, use the `explain_codeql_query` prompt instead.\n\n## Required Inputs\n\n- **queryPath**: Path to the CodeQL query file (`.ql` or `.qlref`)\n- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, swift)\n\n## Documentation File Conventions\n\n### File Location and Naming\n\nFor a query file `QueryFileBaseName.ql`, the documentation file should be:\n\n- **Primary**: `QueryFileBaseName.md` (markdown format, preferred)\n- **Legacy**: `QueryFileBaseName.qhelp` (XML-based query help format)\n\nDocumentation files are **siblings** to the query file (same directory).\n\n### Handling Existing Documentation\n\n1. **No documentation exists**: Create new `QueryFileBaseName.md` file\n2. **`.md` file exists**: Update the existing markdown file\n3. **`.qhelp` file exists**: Use #codeql_generate_query-help tool to convert to markdown, then update\n\n## Workflow Checklist\n\nUse the following MCP server tools to gather context before creating documentation:\n\n### Phase 1: Query Discovery\n\n- [ ] **Step 1: Locate query files**\n  - Tool: #find_codeql_query_files\n  - Parameters: `queryPath` = provided query path\n  - Gather: Query source file path, existing documentation files, test files\n  - Check: Does `QueryFileBaseName.md` or `QueryFileBaseName.qhelp` exist?\n\n- [ ] **Step 2: Read query metadata**\n  - Tool: #codeql_resolve_metadata\n  - Parameters: `query` = query file path\n  - Gather: @name, @description, @kind, @id, @tags, @precision, @severity\n\n### Phase 2: Convert Existing qhelp (if needed)\n\n- [ ] **Step 3: Convert qhelp to markdown** (only if `.qhelp` exists)\n  - Tool: #codeql_generate_query-help\n  - Parameters: `query` = query file path, `format` = "markdown"\n  - Use output as starting point for updated documentation\n\n### Phase 3: Gather Query Context\n\n- [ ] **Step 4: Validate query structure**\n  - Tool: #validate_codeql_query\n  - Parameters: `query` = query source code\n  - Gather: Structural validation, suggestions\n  - Note: This is a heuristic check only \u2014 for full validation, use #codeql_query_compile\n\n- [ ] **Step 5: Explore query types** (if deeper understanding needed)\n  - Tool: #codeql_lsp_definition \u2014 navigate to class/predicate definitions\n  - Tool: #codeql_lsp_completion \u2014 explore member predicates on types used in the query\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri` (pack root)\n  - Run #codeql_pack_install first \u2014 LSP tools require resolved dependencies\n\n- [ ] **Step 6: Run tests** (if tests exist from Step 1)\n  - Tool: #codeql_test_run\n  - Parameters: `tests` = test directories\n  - Gather: Pass/fail status, confirms query behavior\n\n### Phase 4: Create/Update Documentation\n\nBased on gathered context, create or update the documentation file.\n\n## Documentation Format\n\nThe documentation file (`QueryFileBaseName.md`) should follow this standardized format with these sections:\n\n### Section 1: Title and Description\n\n- H1 heading with the query name from @name metadata\n- One paragraph description from @description, expanded if needed\n\n### Section 2: Metadata Table\n\nA table with these rows:\n\n- ID: The @id value in backticks\n- Kind: The @kind value (problem, path-problem, etc.)\n- Severity: The @severity value\n- Precision: The @precision value\n- Tags: The @tags values\n\n### Section 3: Overview\n\nConcise explanation of what vulnerability/issue this query detects and why it matters. 2-4 sentences.\n\n### Section 4: Recommendation\n\nBrief guidance on how developers should fix issues flagged by this query. Include code patterns to use or avoid.\n\n### Section 5: Example\n\nTwo subsections:\n\n- **Vulnerable Code**: A code block showing a pattern that would be flagged by this query\n- **Fixed Code**: A code block showing the corrected version of the code\n\nUse the appropriate language identifier for the code blocks (e.g., `javascript`, `python`, `java`).\n\n### Section 6: References\n\nA list of links to:\n\n- Relevant CWE if security query\n- Relevant documentation or standards\n- CodeQL documentation for related concepts\n\n## Output Actions\n\nAfter generating documentation content:\n\n1. **For new documentation**: Create the file at `[QueryDirectory]/QueryFileBaseName.md`\n2. **For existing `.md` file**: Update the file with new content, preserving any custom sections\n3. **For existing `.qhelp` file**: Create new `.md` file (keeping `.qhelp` for backward compatibility)\n\n## Important Notes\n\n- **Be concise**: Documentation should be brief but complete. This is reference documentation, not tutorial content.\n- **Keep it current**: Documentation should reflect the current behavior of the query.\n- **Use examples from tests**: If unit tests exist, use those code patterns as examples.\n- **Standard format**: Always use the format above for consistency across all query documentation.\n- **Metadata accuracy**: Ensure documented metadata matches actual query metadata.\n- **For workshops**: Use `explain_codeql_query` prompt when creating workshop content that requires deeper explanations and visual diagrams.\n';
 
 // src/prompts/explain-codeql-query.prompt.md
-var explain_codeql_query_prompt_default = '---\nagent: agent\n---\n\n# Explain a CodeQL Query (Workshop Learning Content)\n\nThis prompt guides you through gathering comprehensive context about a CodeQL query using MCP server tools, then generating detailed explanations suitable for CodeQL workshop learning content.\n\n## Purpose\n\nThe `explain_codeql_query` prompt is designed for creating **learning content** for CodeQL workshops and workshop improvements. It produces in-depth, educational explanations of how a query works, including visual diagrams.\n\nFor creating/updating **query documentation files** (`.md` or `.qhelp`), use the `document_codeql_query` prompt instead.\n\n## Required Inputs\n\n- **queryPath**: Path to the CodeQL query file (`.ql` or `.qlref`)\n- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, swift)\n- **databasePath** (optional): Path to a real CodeQL database for profiling\n\n## Agent AI Instructions\n\n**Critical**: The evaluator logs and profiler outputs from CodeQL can be very large files. Instead of reading them line by line, use grep-style CLI commands to investigate these files efficiently. Key patterns to search for:\n\n- Pipeline evaluation times: `grep -E "Pipeline|eval [0-9]+ms" <logfile>`\n- Predicate evaluation order: `grep -E "Evaluation done|evaluated" <logfile>`\n- Tuple counts: `grep -E "tuples|rows" <logfile>`\n- RA operations: `grep -E "SCAN|JOIN|AGGREGATE" <logfile>`\n\n## Choosing a Database\n\nSeveral steps below require a CodeQL database. Determine which database to use:\n\n1. **User-provided `databasePath`** \u2014 use this if provided and valid (check with #codeql_resolve_database).\n2. **Test database** \u2014 if Step 1 finds tests, run them in Step 3 to create a `.testproj` database.\n3. **No database available** \u2014 skip Steps 4-6, and base the explanation on source code analysis only.\n\nStore the chosen database path as `$DB` for use in Steps 4-6.\n\n## Workflow Checklist\n\nYou MUST use the following MCP server tools in sequence to gather context before generating your explanation:\n\n### Phase 1: Query Discovery and Validation\n\n- [ ] **Step 1: Locate query files**\n  - Tool: #find_codeql_query_files\n  - Parameters: `queryPath` = provided query path\n  - Gather: Query source file, test files, expected results, metadata location\n  - Note: If tests exist, record the test directory path for later steps\n\n- [ ] **Step 2: Validate query structure**\n  - Tool: #validate_codeql_query\n  - Parameters: `query` = contents of the query file\n  - Gather: Structural validation results, heuristic warnings/suggestions\n\n### Phase 2: Test Execution and Database Creation\n\n- [ ] **Step 3: Run existing tests** (if tests exist from Step 1)\n  - Tool: #codeql_test_run\n  - Parameters: `tests` = array of test directories from Step 1\n  - Purpose: Ensures test database is created and current with test code\n  - Gather: Test pass/fail status, test database path (`.testproj` directory)\n  - **If no tests exist**: Skip this step. Use user-provided `databasePath` as `$DB`.\n\n### Phase 3: Code Structure Analysis (requires `$DB`)\n\nSkip this phase entirely if no database is available.\n\n- [ ] **Step 4: Generate PrintAST output**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `queryName`: `"PrintAST"`\n    - `queryLanguage`: provided language\n    - `database`: `$DB`\n    - `sourceFiles`: test source file names (or representative source files from the database)\n    - `format`: `"graphtext"`\n  - Gather: AST hierarchy showing code structure representation\n\n- [ ] **Step 5: Generate PrintCFG output** (for key functions)\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `queryName`: `"PrintCFG"`\n    - `queryLanguage`: provided language\n    - `database`: `$DB`\n    - `sourceFunction`: key function name(s) from test code or query source\n    - `format`: `"graphtext"`\n  - Gather: Control flow graph showing execution paths\n\n### Phase 4: Query Profiling and Evaluation Order (requires `$DB`)\n\nSkip this phase entirely if no database is available.\n\n- [ ] **Step 6a: Run the query with evaluator logging**\n  - Tool: #codeql_query_run (or #codeql_database_analyze)\n  - Run the query against `$DB` with evaluator logging enabled\n  - The tool returns the path to the evaluator log file (`.jsonl`)\n\n- [ ] **Step 6b: Profile from evaluator logs**\n  - Tool: #profile_codeql_query_from_logs\n  - Parameters:\n    - `evaluatorLog`: path to the evaluator log file from Step 6a\n  - Gather: Pipeline execution order, predicate timing data, tuple counts\n  - **Critical**: This reveals the actual bottom-up evaluation order of predicates\n\n- [ ] **Step 7: Analyze evaluator log** (for large logs)\n  - Use CLI grep commands to extract key performance data from evaluator logs:\n  - Replace `<evaluator-log-file>` with the log file path from Step 6a\n\n  ```bash\n  # Find pipeline evaluation order and timing\n  grep -E "Pipeline.*evaluated|eval [0-9]+ms" <evaluator-log-file>\n\n  # Find predicate evaluation completion\n  grep "Evaluation done" <evaluator-log-file>\n\n  # Extract tuple counts for understanding data sizes\n  grep -E "tuples|resultSize" <evaluator-log-file>\n\n  # Find the most expensive operations\n  grep -E "eval [0-9]{4,}ms" <evaluator-log-file> | sort -t\'[\' -k2 -rn | head -20\n  ```\n\n- [ ] **Step 8: Quick evaluate specific predicates** (as needed)\n  - First, locate the predicate: Tool: #find_predicate_position with `file` and `name`\n  - Then evaluate: Tool: #quick_evaluate with `file`, `db`, and `symbol`\n  - Use when: You need more context on how a specific predicate or class behaves\n  - Note: #find_class_position finds `class` definitions only, not `module` definitions\n  - Note: #find_predicate_position returns 1-based positions; LSP tools use 0-based\n\n### Phase 5: Generate Explanation\n\nBased on all gathered context, generate your explanation with both **verbal** and **visual** components.\n\n## Key Aspects to Analyze in Profiler Output\n\nUnderstanding the query profiler output is critical for explaining how the query actually works. Look for:\n\n1. **Evaluation Order**: Which predicates are evaluated first (base predicates) vs last (dependent predicates)\n2. **Pipeline Timing**: Time taken for each pipeline stage - indicates complexity\n3. **Tuple Counts**: Number of results at each stage - shows data flow volume\n4. **RA Operations**: The relational algebra operations (SCAN, JOIN, AGGREGATE) reveal query execution strategy\n5. **Dependencies**: Which predicates depend on others (shown by evaluation order)\n\n## Output Format\n\n### Verbal Explanation Structure\n\nGenerate a single markdown document with these sections in order:\n\n1. **Query Overview** \u2014 2-3 sentence summary of what the query detects and why it matters.\n2. **Query Metadata** \u2014 Table with: Name, Description, Kind, ID, Tags, Precision, Severity (from `@` annotations).\n3. **What This Query Detects** \u2014 Security implications (CWE/OWASP if applicable), why the pattern is problematic, real-world attack scenarios.\n4. **How the Query Works** \u2014 Two subsections:\n   - **Bottom-Up Evaluation Order**: Evaluation timeline table (Order, Predicate/Pipeline, Time ms, Tuples) derived from profiler data. Explain that CodeQL evaluates bottom-up.\n   - **Key Components**: Imports, classes and characteristic predicates, helper predicates, data flow configuration (sources, sinks, sanitizers, additional flow steps), main query `from`/`where`/`select`.\n5. **Test Code Analysis** (if database was available) \u2014 AST structure insights from PrintAST, control flow insights from PrintCFG.\n6. **Example Patterns** \u2014 Positive test cases (should match) and negative test cases (should not match) with explanations.\n7. **Performance Characteristics** (if profiler data available) \u2014 Most expensive predicates, highest tuple counts, optimization opportunities.\n8. **Limitations and Edge Cases** \u2014 Patterns the query might miss, known false positive scenarios.\n\n### Visual Explanation: Mermaid Evaluation Diagram\n\nGenerate a `mermaid` `flowchart BU` (bottom-up) diagram showing the evaluation order derived from profiler data. Guidelines:\n\n- Use subgraphs to group predicates by evaluation phase (base, intermediate, flow analysis, final select)\n- Label nodes with actual predicate/class names from the query\n- Show dependency edges between predicates\n- Annotate expensive operations with timing (e.g., `[500ms]`)\n- Direction must be `BU` to reflect bottom-up evaluation\n\n## Important Notes\n\n- **Always use tools first**: Do not generate explanations based only on query source code. Use the MCP tools to gather actual runtime data.\n- **Use grep for large files**: Evaluator logs can be huge. Use CLI grep commands to extract relevant data efficiently.\n- **Evaluation order matters**: CodeQL evaluates bottom-up, not top-down. The profiler output reveals the true execution order.\n- **Focus on learning**: This is for workshop content, so include educational context and explanations suitable for CodeQL learners.\n- **Visual diagrams**: Always include a mermaid diagram showing evaluation order.\n- **Reference documentation**: For actual QL evaluation semantics, see [Evaluation of QL programs](https://codeql.github.com/docs/ql-language-reference/evaluation-of-ql-programs/)\n';
+var explain_codeql_query_prompt_default = '---\nagent: agent\n---\n\n# Explain a CodeQL Query (Workshop Learning Content)\n\nThis prompt guides you through gathering comprehensive context about a CodeQL query using MCP server tools, then generating detailed explanations suitable for CodeQL workshop learning content.\n\n## Purpose\n\nThe `explain_codeql_query` prompt is designed for creating **learning content** for CodeQL workshops and workshop improvements. It produces in-depth, educational explanations of how a query works, including visual diagrams.\n\nFor creating/updating **query documentation files** (`.md` or `.qhelp`), use the `document_codeql_query` prompt instead.\n\n## Required Inputs\n\n- **queryPath**: Path to the CodeQL query file (`.ql` or `.qlref`)\n- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, swift)\n- **databasePath** (optional): Path to a real CodeQL database for profiling\n\n## Agent AI Instructions\n\n**Critical**: The evaluator logs and profiler outputs from CodeQL can be very large files. Use the MCP server tools to analyze them efficiently:\n\n- Use #profile_codeql_query_from_logs to extract pipeline timing, predicate evaluation order, tuple count progressions, RA operations, and dependencies from evaluator logs \u2014 this single tool provides all evaluator log analysis\n- Use #search_ql_code to find predicates, classes, or patterns across QL library files\n\n## Choosing a Database\n\nSeveral steps below require a CodeQL database. Determine which database to use:\n\n1. **User-provided `databasePath`** \u2014 use this if provided and valid (check with #codeql_resolve_database).\n2. **Test database** \u2014 if Step 1 finds tests, run them in Step 3 to create a `.testproj` database.\n3. **No database available** \u2014 skip Steps 4-6, and base the explanation on source code analysis only.\n\nStore the chosen database path as `$DB` for use in Steps 4-6.\n\n## Workflow Checklist\n\nYou MUST use the following MCP server tools in sequence to gather context before generating your explanation:\n\n### Phase 1: Query Discovery and Validation\n\n- [ ] **Step 1: Locate query files**\n  - Tool: #find_codeql_query_files\n  - Parameters: `queryPath` = provided query path\n  - Gather: Query source file, test files, expected results, metadata location\n  - Note: If tests exist, record the test directory path for later steps\n\n- [ ] **Step 2: Validate query structure**\n  - Tool: #validate_codeql_query\n  - Parameters: `query` = contents of the query file\n  - Gather: Structural validation results, heuristic warnings/suggestions\n\n### Phase 2: Test Execution and Database Creation\n\n- [ ] **Step 3: Run existing tests** (if tests exist from Step 1)\n  - Tool: #codeql_test_run\n  - Parameters: `tests` = array of test directories from Step 1\n  - Purpose: Ensures test database is created and current with test code\n  - Gather: Test pass/fail status, test database path (`.testproj` directory)\n  - **If no tests exist**: Skip this step. Use user-provided `databasePath` as `$DB`.\n\n### Phase 3: Code Structure Analysis (requires `$DB`)\n\nSkip this phase entirely if no database is available.\n\n- [ ] **Step 4: Generate PrintAST output**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `queryName`: `"PrintAST"`\n    - `queryLanguage`: provided language\n    - `database`: `$DB`\n    - `sourceFiles`: test source file names (or representative source files from the database)\n    - `format`: `"graphtext"`\n  - Gather: AST hierarchy showing code structure representation\n\n- [ ] **Step 5: Generate PrintCFG output** (for key functions)\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `queryName`: `"PrintCFG"`\n    - `queryLanguage`: provided language\n    - `database`: `$DB`\n    - `sourceFunction`: key function name(s) from test code or query source\n    - `format`: `"graphtext"`\n  - Gather: Control flow graph showing execution paths\n\n### Phase 4: Query Profiling and Evaluation Order (requires `$DB`)\n\nSkip this phase entirely if no database is available.\n\n- [ ] **Step 6a: Run the query with evaluator logging**\n  - Tool: #codeql_query_run (or #codeql_database_analyze)\n  - Run the query against `$DB` with evaluator logging enabled\n  - The tool returns the path to the evaluator log file (`.jsonl`)\n\n- [ ] **Step 6b: Profile from evaluator logs**\n  - Tool: #profile_codeql_query_from_logs\n  - Parameters:\n    - `evaluatorLog`: path to the evaluator log file from Step 6a\n  - Gather: Pipeline execution order, predicate timing data, tuple counts\n  - **Critical**: This reveals the actual bottom-up evaluation order of predicates\n\n- [ ] **Step 7: Quick evaluate specific predicates** (as needed)\n  - First, locate the predicate: Tool: #find_predicate_position with `file` and `name`\n  - Then evaluate: Tool: #quick_evaluate with `file`, `db`, and `symbol`\n  - Use when: You need more context on how a specific predicate or class behaves\n  - Note: #find_class_position finds `class` definitions only, not `module` definitions\n  - Note: #find_predicate_position returns 1-based positions; LSP tools use 0-based\n\n### Phase 5: Generate Explanation\n\nBased on all gathered context, generate your explanation with both **verbal** and **visual** components.\n\n## Key Aspects to Analyze in Profiler Output\n\nUnderstanding the query profiler output is critical for explaining how the query actually works. Look for:\n\n1. **Evaluation Order**: Which predicates are evaluated first (base predicates) vs last (dependent predicates)\n2. **Pipeline Timing**: Time taken for each pipeline stage - indicates complexity\n3. **Tuple Counts**: Number of results at each stage - shows data flow volume\n4. **RA Operations**: The relational algebra operations (SCAN, JOIN, AGGREGATE) reveal query execution strategy\n5. **Dependencies**: Which predicates depend on others (shown by evaluation order)\n\n## Output Format\n\n### Verbal Explanation Structure\n\nGenerate a single markdown document with these sections in order:\n\n1. **Query Overview** \u2014 2-3 sentence summary of what the query detects and why it matters.\n2. **Query Metadata** \u2014 Table with: Name, Description, Kind, ID, Tags, Precision, Severity (from `@` annotations).\n3. **What This Query Detects** \u2014 Security implications (CWE/OWASP if applicable), why the pattern is problematic, real-world attack scenarios.\n4. **How the Query Works** \u2014 Two subsections:\n   - **Bottom-Up Evaluation Order**: Evaluation timeline table (Order, Predicate/Pipeline, Time ms, Tuples) derived from profiler data. Explain that CodeQL evaluates bottom-up.\n   - **Key Components**: Imports, classes and characteristic predicates, helper predicates, data flow configuration (sources, sinks, sanitizers, additional flow steps), main query `from`/`where`/`select`.\n5. **Test Code Analysis** (if database was available) \u2014 AST structure insights from PrintAST, control flow insights from PrintCFG.\n6. **Example Patterns** \u2014 Positive test cases (should match) and negative test cases (should not match) with explanations.\n7. **Performance Characteristics** (if profiler data available) \u2014 Most expensive predicates, highest tuple counts, optimization opportunities.\n8. **Limitations and Edge Cases** \u2014 Patterns the query might miss, known false positive scenarios.\n\n### Visual Explanation: Mermaid Evaluation Diagram\n\nGenerate a `mermaid` `flowchart BU` (bottom-up) diagram showing the evaluation order derived from profiler data. Guidelines:\n\n- Use subgraphs to group predicates by evaluation phase (base, intermediate, flow analysis, final select)\n- Label nodes with actual predicate/class names from the query\n- Show dependency edges between predicates\n- Annotate expensive operations with timing (e.g., `[500ms]`)\n- Direction must be `BU` to reflect bottom-up evaluation\n\n## Important Notes\n\n- **Always use tools first**: Do not generate explanations based only on query source code. Use the MCP tools to gather actual runtime data.\n- **Use the profiler tool for evaluator logs**: Evaluator logs can be huge. Use #profile_codeql_query_from_logs which returns compact JSON with per-predicate metrics and a line-indexed detail file. Use `read_file` with the `detailLines` ranges from the response to access full RA operations and tuple progressions for any predicate \u2014 do not use CLI grep or read log files directly.\n- **Evaluation order matters**: CodeQL evaluates bottom-up, not top-down. The profiler output reveals the true execution order.\n- **Focus on learning**: This is for workshop content, so include educational context and explanations suitable for CodeQL learners.\n- **Visual diagrams**: Always include a mermaid diagram showing evaluation order.\n- **Reference documentation**: For actual QL evaluation semantics, see [Evaluation of QL programs](https://codeql.github.com/docs/ql-language-reference/evaluation-of-ql-programs/)\n';
 
 // src/prompts/ql-lsp-iterative-development.prompt.md
-var ql_lsp_iterative_development_prompt_default = '---\nagent: agent\n---\n\n# Iterative CodeQL Development with LSP Tools\n\nUse the MCP server tools from this prompt to iteratively develop and refine CodeQL queries using the LSP-powered tools.\nThese "iterative" tools work entirely through file paths and numeric positions.\nEvery operation is expressible as a tool call with explicit `file_path`, `line`, and `character` parameters.\nThus, this prompt can be used in any environment where the query files are on disk, and it does not require any special editor integration.\n\n## Use This Prompt When\n\n- Exploring unfamiliar CodeQL libraries to discover available classes and predicates\n- Incrementally building a query clause-by-clause with real-time feedback\n- Navigating from a type usage to its definition to understand its API\n- Finding all usages of a predicate to learn patterns from existing queries\n- Validating query fragments before assembling a complete query\n- Debugging individual predicates by evaluating them in isolation against a database\n\n## Prerequisites\n\n1. A CodeQL pack with `codeql-pack.yml` on disk\n2. Dependencies installed via #codeql_pack_install (pointing at the pack directory)\n3. Query files saved to disk (LSP tools operate on files, not inline strings)\n\n## Key Concept: Positions Are File Path + Line + Character\n\nAll LSP tools identify locations using three values:\n\n- `file_path`: absolute path to a `.ql` or `.qll` file\n- `line`: **0-based** line number (line 1 in the file = `line: 0`)\n- `character`: **0-based** column offset within that line\n\nThe `workspace_uri` parameter must point to the **pack root directory** (the folder\ncontaining `codeql-pack.yml`) for import resolution to work. Without it, completions\nand definitions for imported libraries will be empty.\n\n> **Critical**: LSP line/character positions are 0-based, but `read_file`,\n> #find_predicate_position, and #find_class_position return 1-based positions.\n> Always subtract 1 when passing their output to LSP tools.\n\n## Step 1: Discover Available Types with Completions\n\nUse #codeql_lsp_completion to explore what types and predicates are available at any\nposition in a query file. This replaces manual documentation browsing.\n\n**Example**: To see what classes are available in a `from` clause after `import javascript`:\n\n```text\nTool: codeql_lsp_completion\nParameters:\n  file_path: /path/to/your/query.ql\n  line: 9          # 0-based line of the `from` clause\n  character: 5     # position after `from ` where you want completions\n  workspace_uri: /path/to/pack-root   # directory containing codeql-pack.yml\n```\n\nCompletions include class names with full documentation. For example, requesting\ncompletions in a JavaScript query\'s `from` clause returns 150+ types like\n`CallNode`, `PropWrite`, `RemoteFlowSource`, etc., each with docstrings.\n\n**Exploring member predicates**: To see what methods a variable offers, request\ncompletions after the dot. For example, if `pw` is typed as `DataFlow::PropWrite`,\nrequesting completions at the position after `pw.` returns all member predicates\nlike `getPropertyName()`, `getRhs()`, `getBase()`, `writes(base, prop, rhs)`,\neach with full signature and documentation.\n\n## Step 2: Navigate to Definitions\n\nUse #codeql_lsp_definition to find where a class, predicate, or module is defined.\nThis returns the file URI and line range of the definition \u2014 even into library pack\nfiles you haven\'t opened.\n\n```text\nTool: codeql_lsp_definition\nParameters:\n  file_path: /path/to/your/query.ql\n  line: 11         # 0-based line containing the symbol\n  character: 30    # 0-based column within the symbol name\n  workspace_uri: /path/to/pack-root\n```\n\n**Example**: Navigating to `RemoteFlowSource` at line 12, character 30 returns:\n\n```text\nuri: file:///.../.codeql/packages/codeql/javascript-all/2.6.19/\n     semmle/javascript/security/dataflow/RemoteFlowSources.qll\nstartLine: 14, startCharacter: 17\n```\n\nYou can then read that file to understand the class\'s API. This is how you discover\nwhat predicates a type offers without documentation \u2014 go to the definition and read\nthe source.\n\n## Step 3: Find All References\n\nUse #codeql_lsp_references to find how a symbol is used across the workspace.\n\n```text\nTool: codeql_lsp_references\nParameters:\n  file_path: /path/to/your/query.ql\n  line: 11         # 0-based line\n  character: 30    # 0-based column within the symbol\n  workspace_uri: /path/to/pack-root\n```\n\n> **Scope note**: References are scoped to the pack identified by `workspace_uri`.\n> To find usages in library code, point `workspace_uri` to the library pack root.\n> For usages within your own pack only, point it to your pack root.\n\nThis is invaluable for learning how experienced query authors use a predicate \u2014\nfind real usage examples instead of guessing from documentation.\n\n## Step 4: Locate Symbols with Position Finders\n\nUse #find_predicate_position and #find_class_position to locate where a specific\nsymbol is defined in a file. These return **1-based** line/column positions.\n\n```text\nTool: find_predicate_position\nParameters:\n  file: /path/to/your/query.ql\n  name: isSource\nReturns: { start_line: 12, start_col: 13, end_line: 12, end_col: 20 }\n```\n\n> **Note**: #find_class_position finds `class` definitions only \u2014 it does not find\n> `module` definitions. Use #find_predicate_position for predicates inside modules.\n\n**Combining with LSP tools**: To navigate to a predicate\'s definition in library code:\n\n1. Use #find_predicate_position to get its 1-based position\n2. Subtract 1 from line/col to convert to 0-based\n3. Pass to #codeql_lsp_definition to jump to the underlying type\n\n## Step 5: Quick-Evaluate Individual Predicates\n\nUse #quick_evaluate to evaluate a single predicate or class against a database\nwithout running the full query. This is the fastest way to debug whether a predicate\nmatches what you expect.\n\n```text\nTool: quick_evaluate\nParameters:\n  file: /path/to/your/query.ql\n  db: /path/to/test-database.testproj\n  symbol: isSink\n  output_path: /tmp/quickeval-results   # optional, for inspecting bqrs output\n```\n\nThe tool evaluates just that symbol (predicate or class) and returns the result path.\nUse #codeql_bqrs_decode on the output to inspect results in CSV or JSON format.\n\n## Step 6: Validate at Multiple Levels\n\nUse the right validation tool for each situation:\n\n| Tool                    | Use When                                | Input              | Resolves Imports?   |\n| ----------------------- | --------------------------------------- | ------------------ | ------------------- |\n| #validate_codeql_query  | Quick structural check                  | Inline QL string   | No (heuristic only) |\n| #codeql_lsp_diagnostics | Syntax/semantic validation of fragments | Inline QL string   | No                  |\n| #codeql_query_compile   | Full compilation check                  | On-disk `.ql` file | Yes                 |\n| #codeql_test_run        | End-to-end result validation            | Test directory     | Yes                 |\n\n**#codeql_lsp_diagnostics** validates QL syntax and semantics for inline code snippets,\nbut **cannot resolve `import` statements** (like `import javascript`). Use it for:\n\n- Checking predicate signatures and QL syntax\n- Verifying `from`/`where`/`select` clause structure\n- Catching type errors in import-free QL fragments\n\nFor queries with imports, always use #codeql_query_compile on the saved file.\n\n## Iterative Development Loop\n\n```text\n1. Write/modify a clause in the query file (save to disk)\n     \u2193\n2. codeql_lsp_completion \u2192 verify context is valid (non-empty = good)\n     \u2193\n3. codeql_query_compile \u2192 check for compilation errors\n     \u2193\n4. codeql_test_run \u2192 validate against expected results\n     \u2193\n5. If unexpected results: quick_evaluate on individual predicates\n     \u2193\n6. If predicate is wrong: codeql_lsp_completion to explore the API\n     \u2193\n7. If types are unclear: codeql_lsp_definition to read the source\n     \u2193\n8. If stuck: codeql_lsp_references to find usage examples\n     \u2193\n9. Repeat from step 1\n```\n\n## Worked Example: Building a Taint-Tracking Query\n\nThis example shows the tools in action for building a JavaScript XSS query.\n\n### 1. Create the query file and install dependencies\n\nWrite a `.ql` file with `import javascript` and a skeleton `from`/`where`/`select`.\nRun #codeql_pack_install on the pack directory.\n\n### 2. Explore sink types\n\nRequest completions in the `from` clause to discover `DataFlow::PropWrite`:\n\n```text\ncodeql_lsp_completion(file_path=..., line=9, character=5, workspace_uri=pack_root)\n\u2192 155 completions including PropWrite, CallNode, MethodCallNode, ...\n```\n\n### 3. Explore `PropWrite` member predicates\n\nAfter typing `pw.` in the `where` clause, request completions:\n\n```text\ncodeql_lsp_completion(file_path=..., line=12, character=9, workspace_uri=pack_root)\n\u2192 43 predicates: getPropertyName(), getRhs(), getBase(), writes(), ...\n```\n\n### 4. Navigate to `RemoteFlowSource` definition\n\n```text\ncodeql_lsp_definition(file_path=..., line=11, character=30, workspace_uri=pack_root)\n\u2192 RemoteFlowSources.qll line 14 in codeql/javascript-all\n```\n\n### 5. Compile and test incrementally\n\n```text\ncodeql_query_compile(query=file_path)  \u2192  check for errors\ncodeql_test_run(tests=[test_dir], learn=true)  \u2192  populate .expected files\n```\n\n### 6. Debug a predicate in isolation\n\n```text\nfind_predicate_position(file=..., name="isSink")  \u2192  line 16, col 13\nquick_evaluate(file=..., db=test.testproj, symbol="isSink")  \u2192  inspect results\n```\n\n## Important Notes\n\n- **All LSP tools use 0-based positions**. #find_class_position and\n  #find_predicate_position return 1-based positions. Convert before combining.\n- **`workspace_uri` must be the pack root** (the directory containing\n  `codeql-pack.yml`). Without it, completions and definitions will be empty.\n- **Run #codeql_pack_install first**. LSP tools require resolved dependencies.\n- **#codeql_lsp_diagnostics cannot resolve imports**. For `import javascript`\n  and similar, use #codeql_query_compile on the on-disk file instead.\n- **#find_class_position finds `class` only**, not `module` definitions.\n  Use grep or #find_predicate_position for predicates inside modules.\n- **#codeql_lsp_references scope** depends on `workspace_uri`. Point it at\n  a library pack root to find usages across library code.\n';
+var ql_lsp_iterative_development_prompt_default = '---\nagent: agent\n---\n\n# Iterative CodeQL Development with LSP Tools\n\nUse the MCP server tools from this prompt to iteratively develop and refine CodeQL queries using the LSP-powered tools.\nThese "iterative" tools work entirely through file paths and numeric positions.\nEvery operation is expressible as a tool call with explicit `file_path`, `line`, and `character` parameters.\nThus, this prompt can be used in any environment where the query files are on disk, and it does not require any special editor integration.\n\n## Use This Prompt When\n\n- Exploring unfamiliar CodeQL libraries to discover available classes and predicates\n- Incrementally building a query clause-by-clause with real-time feedback\n- Navigating from a type usage to its definition to understand its API\n- Finding all usages of a predicate to learn patterns from existing queries\n- Validating query fragments before assembling a complete query\n- Debugging individual predicates by evaluating them in isolation against a database\n\n## Prerequisites\n\n1. A CodeQL pack with `codeql-pack.yml` on disk\n2. Dependencies installed via #codeql_pack_install (pointing at the pack directory)\n3. Query files saved to disk (LSP tools operate on files, not inline strings)\n\n## Key Concept: Positions Are File Path + Line + Character\n\nAll LSP tools identify locations using three values:\n\n- `file_path`: absolute path to a `.ql` or `.qll` file\n- `line`: **0-based** line number (line 1 in the file = `line: 0`)\n- `character`: **0-based** column offset within that line\n\nThe `workspace_uri` parameter must point to the **pack root directory** (the folder\ncontaining `codeql-pack.yml`) for import resolution to work. Without it, completions\nand definitions for imported libraries will be empty.\n\n> **Critical**: LSP line/character positions are 0-based, but `read_file`,\n> #find_predicate_position, and #find_class_position return 1-based positions.\n> Always subtract 1 when passing their output to LSP tools.\n\n## Step 1: Discover Available Types with Completions\n\nUse #codeql_lsp_completion to explore what types and predicates are available at any\nposition in a query file. This replaces manual documentation browsing.\n\n**Example**: To see what classes are available in a `from` clause after `import javascript`:\n\n```text\nTool: codeql_lsp_completion\nParameters:\n  file_path: /path/to/your/query.ql\n  line: 9          # 0-based line of the `from` clause\n  character: 5     # position after `from ` where you want completions\n  workspace_uri: /path/to/pack-root   # directory containing codeql-pack.yml\n```\n\nCompletions include class names with full documentation. For example, requesting\ncompletions in a JavaScript query\'s `from` clause returns 150+ types like\n`CallNode`, `PropWrite`, `RemoteFlowSource`, etc., each with docstrings.\n\n**Exploring member predicates**: To see what methods a variable offers, request\ncompletions after the dot. For example, if `pw` is typed as `DataFlow::PropWrite`,\nrequesting completions at the position after `pw.` returns all member predicates\nlike `getPropertyName()`, `getRhs()`, `getBase()`, `writes(base, prop, rhs)`,\neach with full signature and documentation.\n\n## Step 2: Navigate to Definitions\n\nUse #codeql_lsp_definition to find where a class, predicate, or module is defined.\nThis returns the file URI and line range of the definition \u2014 even into library pack\nfiles you haven\'t opened.\n\n```text\nTool: codeql_lsp_definition\nParameters:\n  file_path: /path/to/your/query.ql\n  line: 11         # 0-based line containing the symbol\n  character: 30    # 0-based column within the symbol name\n  workspace_uri: /path/to/pack-root\n```\n\n**Example**: Navigating to `RemoteFlowSource` at line 12, character 30 returns:\n\n```text\nuri: file:///.../.codeql/packages/codeql/javascript-all/2.6.19/\n     semmle/javascript/security/dataflow/RemoteFlowSources.qll\nstartLine: 14, startCharacter: 17\n```\n\nYou can then read that file to understand the class\'s API. This is how you discover\nwhat predicates a type offers without documentation \u2014 go to the definition and read\nthe source.\n\n## Step 3: Find All References\n\nUse #codeql_lsp_references to find how a symbol is used across the workspace.\n\n```text\nTool: codeql_lsp_references\nParameters:\n  file_path: /path/to/your/query.ql\n  line: 11         # 0-based line\n  character: 30    # 0-based column within the symbol\n  workspace_uri: /path/to/pack-root\n```\n\n> **Scope note**: References are scoped to the pack identified by `workspace_uri`.\n> To find usages in library code, point `workspace_uri` to the library pack root.\n> For usages within your own pack only, point it to your pack root.\n\nThis is invaluable for learning how experienced query authors use a predicate \u2014\nfind real usage examples instead of guessing from documentation.\n\n## Step 4: Locate Symbols with Position Finders\n\nUse #find_predicate_position and #find_class_position to locate where a specific\nsymbol is defined in a file. These return **1-based** line/column positions.\n\n```text\nTool: find_predicate_position\nParameters:\n  file: /path/to/your/query.ql\n  name: isSource\nReturns: { start_line: 12, start_col: 13, end_line: 12, end_col: 20 }\n```\n\n> **Note**: #find_class_position finds `class` definitions only \u2014 it does not find\n> `module` definitions. Use #find_predicate_position for predicates inside modules,\n> or use #search_ql_code to search across QL files by text or regex pattern.\n\n**Combining with LSP tools**: To navigate to a predicate\'s definition in library code:\n\n1. Use #find_predicate_position to get its 1-based position\n2. Subtract 1 from line/col to convert to 0-based\n3. Pass to #codeql_lsp_definition to jump to the underlying type\n\n## Step 5: Quick-Evaluate Individual Predicates\n\nUse #quick_evaluate to evaluate a single predicate or class against a database\nwithout running the full query. This is the fastest way to debug whether a predicate\nmatches what you expect.\n\n```text\nTool: quick_evaluate\nParameters:\n  file: /path/to/your/query.ql\n  db: /path/to/test-database.testproj\n  symbol: isSink\n  output_path: /tmp/quickeval-results   # optional, for inspecting bqrs output\n```\n\nThe tool evaluates just that symbol (predicate or class) and returns the result path.\nUse #codeql_bqrs_decode on the output to inspect results in CSV or JSON format.\n\n## Step 6: Validate at Multiple Levels\n\nUse the right validation tool for each situation:\n\n| Tool                    | Use When                                | Input              | Resolves Imports?   |\n| ----------------------- | --------------------------------------- | ------------------ | ------------------- |\n| #validate_codeql_query  | Quick structural check                  | Inline QL string   | No (heuristic only) |\n| #codeql_lsp_diagnostics | Syntax/semantic validation of fragments | Inline QL string   | No                  |\n| #codeql_query_compile   | Full compilation check                  | On-disk `.ql` file | Yes                 |\n| #codeql_test_run        | End-to-end result validation            | Test directory     | Yes                 |\n\n**#codeql_lsp_diagnostics** validates QL syntax and semantics for inline code snippets,\nbut **cannot resolve `import` statements** (like `import javascript`). Use it for:\n\n- Checking predicate signatures and QL syntax\n- Verifying `from`/`where`/`select` clause structure\n- Catching type errors in import-free QL fragments\n\nFor queries with imports, always use #codeql_query_compile on the saved file.\n\n## Iterative Development Loop\n\n```text\n1. Write/modify a clause in the query file (save to disk)\n     \u2193\n2. codeql_lsp_completion \u2192 verify context is valid (non-empty = good)\n     \u2193\n3. codeql_query_compile \u2192 check for compilation errors\n     \u2193\n4. codeql_test_run \u2192 validate against expected results\n     \u2193\n5. If unexpected results: quick_evaluate on individual predicates\n     \u2193\n6. If predicate is wrong: codeql_lsp_completion to explore the API\n     \u2193\n7. If types are unclear: codeql_lsp_definition to read the source\n     \u2193\n8. If stuck: codeql_lsp_references to find usage examples\n     \u2193\n9. Repeat from step 1\n```\n\n## Worked Example: Building a Taint-Tracking Query\n\nThis example shows the tools in action for building a JavaScript XSS query.\n\n### 1. Create the query file and install dependencies\n\nWrite a `.ql` file with `import javascript` and a skeleton `from`/`where`/`select`.\nRun #codeql_pack_install on the pack directory.\n\n### 2. Explore sink types\n\nRequest completions in the `from` clause to discover `DataFlow::PropWrite`:\n\n```text\ncodeql_lsp_completion(file_path=..., line=9, character=5, workspace_uri=pack_root)\n\u2192 155 completions including PropWrite, CallNode, MethodCallNode, ...\n```\n\n### 3. Explore `PropWrite` member predicates\n\nAfter typing `pw.` in the `where` clause, request completions:\n\n```text\ncodeql_lsp_completion(file_path=..., line=12, character=9, workspace_uri=pack_root)\n\u2192 43 predicates: getPropertyName(), getRhs(), getBase(), writes(), ...\n```\n\n### 4. Navigate to `RemoteFlowSource` definition\n\n```text\ncodeql_lsp_definition(file_path=..., line=11, character=30, workspace_uri=pack_root)\n\u2192 RemoteFlowSources.qll line 14 in codeql/javascript-all\n```\n\n### 5. Compile and test incrementally\n\n```text\ncodeql_query_compile(query=file_path)  \u2192  check for errors\ncodeql_test_run(tests=[test_dir], learn=true)  \u2192  populate .expected files\n```\n\n### 6. Debug a predicate in isolation\n\n```text\nfind_predicate_position(file=..., name="isSink")  \u2192  line 16, col 13\nquick_evaluate(file=..., db=test.testproj, symbol="isSink")  \u2192  inspect results\n```\n\n## Important Notes\n\n- **All LSP tools use 0-based positions**. #find_class_position and\n  #find_predicate_position return 1-based positions. Convert before combining.\n- **`workspace_uri` must be the pack root** (the directory containing\n  `codeql-pack.yml`). Without it, completions and definitions will be empty.\n- **Run #codeql_pack_install first**. LSP tools require resolved dependencies.\n- **#codeql_lsp_diagnostics cannot resolve imports**. For `import javascript`\n  and similar, use #codeql_query_compile on the on-disk file instead.\n- **#find_class_position finds `class` only**, not `module` definitions.\n  Use #search_ql_code or #find_predicate_position for predicates inside modules.\n- **#codeql_lsp_references scope** depends on `workspace_uri`. Point it at\n  a library pack root to find usages across library code.\n';
 
 // src/prompts/ql-tdd-advanced.prompt.md
-var ql_tdd_advanced_prompt_default = '---\nagent: agent\n---\n\n# Advanced Test-Driven CodeQL Query Development\n\nThis advanced guide builds on the basic TDD methodology with powerful MCP server tools for deeper code analysis. Use this when developing complex queries that require understanding AST structure, control flow, and call relationships.\n\nFor basic TDD workflow, see: `codeql://prompts/ql-tdd-basic`\n\n## When to Use This Advanced Guide\n\n- **Complex AST patterns**: When you need to understand how CodeQL represents specific language constructs\n- **Control flow queries**: When analyzing program flow, branching, or loop structures\n- **Call graph analysis**: When tracing function calls or method invocations\n- **Iterative refinement**: When debugging queries that don\'t produce expected results\n- **Performance optimization**: When understanding query evaluation patterns\n\n## Core Advanced Tools\n\n### 1. AST/CFG Visualization with #codeql_query_run\n\nUse the bundled tools queries to visualize code structure:\n\n```typescript\n// Generate Abstract Syntax Tree for test code\ncodeql_query_run: {\n  queryName: "PrintAST",\n  queryLanguage: "java",  // or "javascript", "python", "cpp", etc.\n  database: "/path/to/test.testproj",\n  format: "graphtext",\n  interpretedOutput: "/path/to/ast-output.txt"\n}\n\n// Generate Control Flow Graph\ncodeql_query_run: {\n  queryName: "PrintCFG",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  format: "graphtext",\n  interpretedOutput: "/path/to/cfg-output.txt"\n}\n\n// Analyze outbound calls from a function\ncodeql_query_run: {\n  queryName: "CallGraphFrom",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  sourceFunction: "myFunction",\n  format: "sarif-latest"\n}\n\n// Analyze inbound calls to a function\ncodeql_query_run: {\n  queryName: "CallGraphTo",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  targetFunction: "targetMethod",\n  format: "sarif-latest"\n}\n```\n\n**Critical**: Always verify that tools queries return **non-empty output** with actual nodes/edges, not just headers.\n\n### 2. Quick Evaluation with #quick_evaluate\n\nUse #quick_evaluate for rapid iteration on specific predicates or classes:\n\n```typescript\n// First, find the position of a predicate\nfind_predicate_position: {\n  file: "/path/to/Query.ql",\n  name: "isVulnerableSink"\n}\n\n// Then evaluate just that predicate\nquick_evaluate: {\n  file: "/path/to/Query.ql",\n  db: "/path/to/test.testproj",\n  symbol: "isVulnerableSink",\n  output_path: "/tmp/quickeval.bqrs"\n}\n\n// Or evaluate a specific class\n// NOTE: find_class_position finds `class` definitions only, not `module` definitions\nfind_class_position: {\n  file: "/path/to/Query.ql",\n  name: "ThrowingMethodCall"\n}\n\nquick_evaluate: {\n  file: "/path/to/Query.ql",\n  db: "/path/to/test.testproj",\n  symbol: "ThrowingMethodCall"\n}\n```\n\n### 3. LSP-Powered Code Navigation\n\nUse the LSP tools for real-time code exploration during query development:\n\n```typescript\n// Discover available types after `import javascript`\ncodeql_lsp_completion: {\n  file_path: "/path/to/Query.ql",\n  line: 5,       // 0-based line with `from` clause\n  character: 5,   // 0-based column position\n  workspace_uri: "/path/to/pack-root"  // REQUIRED: directory containing codeql-pack.yml\n}\n\n// Navigate to a class definition to see its predicates\ncodeql_lsp_definition: {\n  file_path: "/path/to/Query.ql",\n  line: 5,       // 0-based line containing the class name\n  character: 10,  // 0-based column on the class name\n  workspace_uri: "/path/to/pack-root"\n}\n\n// Find all usages of a predicate across the pack\ncodeql_lsp_references: {\n  file_path: "/path/to/Query.ql",\n  line: 8,\n  character: 5,\n  workspace_uri: "/path/to/pack-root"\n}\n```\n\n**Important LSP tool notes**:\n\n- `workspace_uri` must be a **plain directory path** (not a `file://` URI) pointing to the pack root containing `codeql-pack.yml`\n- All LSP tools use **0-based** line/character positions\n- #find_predicate_position and #find_class_position return **1-based** positions \u2014 subtract 1 before passing to LSP tools\n- Run #codeql_pack_install before using LSP tools \u2014 they require resolved dependencies\n- Request completions **after a dot** (e.g., `pw.`) to see all member predicates with full documentation\n\n### 4. Query File Discovery with #find_codeql_query_files\n\nUse this tool frequently to understand query dependencies and test structure:\n\n```typescript\nfind_codeql_query_files: {\n  queryPath: \'/path/to/Query.ql\';\n}\n// Returns: query file, test directory, test files, metadata, dependencies\n```\n\n## Advanced TDD Workflow\n\n### Phase 0: Test Environment Setup (Critical for Java)\n\nFor Java tests that depend on external libraries (JUnit, etc.), create an `options` file in each test directory:\n\n```text\n//semmle-extractor-options: --javac-args -cp ${testdir}/../../stubs/junit-4.13:${testdir}/../../stubs/junit-jupiter-api-5.2.0\n```\n\n**Key points**:\n\n- `${testdir}` is relative to the test directory containing the `options` file\n- Use `:` (colon) to separate multiple classpath entries\n- Stub files must contain minimal class/interface definitions for compilation\n\n### Phase 1: Deep Code Analysis\n\nBefore writing any query logic:\n\n1. **Extract test database**:\n\n   ```typescript\n   codeql_test_extract: {\n     testPath: "/path/to/test/QueryTest",\n     searchPath: "/path/to/pack"\n   }\n   ```\n\n2. **Generate and study the AST**:\n\n   ```typescript\n   codeql_query_run: {\n     queryName: "PrintAST",\n     queryLanguage: "java",\n     database: "/path/to/test.testproj",\n     format: "graphtext",\n     interpretedOutput: "/path/to/ast.txt"\n   }\n   ```\n\n3. **Identify key AST classes and predicates** from the output:\n   - Note the class names (e.g., `MethodCall`, `TryStmt`, `LambdaExpr`)\n   - Note parent-child relationships\n   - Identify which nodes correspond to your test cases\n\n4. **Generate CFG if analyzing control flow**:\n\n   ```typescript\n   codeql_query_run: {\n     queryName: "PrintCFG",\n     queryLanguage: "java",\n     database: "/path/to/test.testproj",\n     format: "graphtext",\n     interpretedOutput: "/path/to/cfg.txt"\n   }\n   ```\n\n### Phase 2: Iterative Predicate Development\n\nInstead of writing the full query at once:\n\n1. **Start with a single class or predicate**:\n\n   ```ql\n   class MyPattern extends MethodCall {\n     MyPattern() {\n       this.getMethod().hasName("targetMethod")\n     }\n   }\n   ```\n\n2. **Use #quick_evaluate to test it**:\n\n   ```typescript\n   quick_evaluate: {\n     file: "/path/to/Query.ql",\n     db: "/path/to/test.testproj",\n     symbol: "MyPattern"\n   }\n   ```\n\n3. **Refine based on results**:\n   - Too many results? Add constraints\n   - Too few results? Relax constraints\n   - Wrong results? Study AST output again\n\n4. **Repeat for each component** before combining\n\n### Phase 3: Incremental Query Assembly\n\n1. **Combine validated predicates** into the main query\n2. **Run full tests** after each combination:\n\n   ```typescript\n   codeql_test_run: {\n     testPath: "/path/to/test/QueryTest",\n     searchPath: "/path/to/pack"\n   }\n   ```\n\n3. **Use #find_codeql_query_files** to track all related files:\n\n   ```typescript\n   find_codeql_query_files: {\n     queryPath: \'/path/to/Query.ql\';\n   }\n   ```\n\n## Common Advanced Patterns\n\n### Pattern: Understanding Nested Structures\n\nWhen your query involves nested constructs (e.g., lambdas inside method calls):\n\n```ql\n// First, find the outer construct\nclass OuterPattern extends MethodCall {\n  OuterPattern() {\n    this.getMethod().hasName("assertThrows")\n  }\n\n  // Navigate to inner construct\n  Expr getLambdaBody() {\n    exists(LambdaExpr le |\n      le = this.getAChildExpr() and\n      result = le.getExprBody()\n    )\n  }\n}\n```\n\nUse `PrintAST` to understand the parent-child relationships.\n\n### Pattern: Control Flow Dependencies\n\nWhen your query needs to understand execution order:\n\n```ql\n// Use CFG to understand which statements precede others\npredicate precedesInBlock(Stmt s1, Stmt s2) {\n  exists(BasicBlock bb |\n    s1.getBasicBlock() = bb and\n    s2.getBasicBlock() = bb and\n    s1.getLocation().getStartLine() < s2.getLocation().getStartLine()\n  )\n}\n```\n\nUse `PrintCFG` to verify the control flow structure.\n\n### Pattern: Call Chain Analysis\n\nWhen tracing calls through multiple functions:\n\n```typescript\n// First, understand the call graph from your entry point\ncodeql_query_run: {\n  queryName: "CallGraphFrom",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  sourceFunction: "entryPoint"\n}\n\n// Then trace back from your target\ncodeql_query_run: {\n  queryName: "CallGraphTo",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  targetFunction: "sensitiveOperation"\n}\n```\n\n## Debugging Tips\n\n### When Results Are Empty\n\n1. **Check AST first**: Run `PrintAST` to verify the code structure matches expectations\n2. **Simplify the query**: Remove constraints one by one using #quick_evaluate\n3. **Check enclosing callables**: Lambda bodies may have different `getEnclosingCallable()` than expected\n4. **Verify test database extraction**: Ensure the `.testproj` directory was created successfully\n\n### When Results Are Incorrect\n\n1. **Quick evaluate individual predicates**: Isolate which part is wrong\n2. **Compare with AST output**: Verify your understanding of the structure\n3. **Check for missing cases**: Your pattern may not cover all code variations\n\n### When Compilation Fails with "override" Error\n\nIf you see `annotation \'override\' missing on predicate`, you\'ve accidentally created a predicate with the same name as one in the parent class. **Rename your predicate** to avoid the conflict:\n\n```ql\n// BAD: Method already has getAThrownExceptionType()\nclass ThrowingMethod extends Method {\n  RefType getAThrownExceptionType() { ... }  // Error!\n}\n\n// GOOD: Use a distinct name\nclass ThrowingMethod extends Method {\n  RefType getDeclaredExceptionType() { ... }  // Works\n}\n```\n\n### When Query Is Slow\n\n1. **Enable evaluator logs**:\n\n   ```typescript\n   codeql_query_run: {\n     query: "/path/to/Query.ql",\n     database: "/path/to/db",\n     "evaluator-log": "/path/to/log.json",\n     "evaluator-log-level": 5\n   }\n   ```\n\n2. **Generate log summary**:\n\n   ```typescript\n   codeql_generate_log_summary: {\n     inputLog: "/path/to/log.json",\n     format: "text"\n   }\n   ```\n\n3. **Profile from evaluator logs** (after step 1 produces a log file):\n\n   ```typescript\n   profile_codeql_query_from_logs: {\n     evaluatorLog: \'/path/to/log.json\';\n   }\n   ```\n\n## Checklist for Complex Queries\n\n### Before Starting\n\n- [ ] Test database extracted successfully\n- [ ] `PrintAST` output reviewed and understood\n- [ ] Key AST classes identified\n- [ ] Test cases cover positive, negative, and edge cases\n\n### During Development\n\n- [ ] Each predicate/class tested with #quick_evaluate\n- [ ] #find_codeql_query_files used to track dependencies\n- [ ] CFG consulted for control flow patterns\n- [ ] Call graphs generated for cross-function analysis\n\n### After Each Change\n\n- [ ] Query compiles with #codeql_query_compile\n- [ ] Quick evaluation shows expected results\n- [ ] Full tests pass with #codeql_test_run\n- [ ] No duplicate or missing results\n\n### Final Validation\n\n- [ ] All test cases pass\n- [ ] No false positives in results\n- [ ] No false negatives (all expected cases caught)\n- [ ] Query formatted with #codeql_query_format\n- [ ] Performance acceptable (check with #profile_codeql_query_from_logs)\n\n## Test Acceptance Workflow\n\nWhen your query produces correct results but differs from the `.expected` file:\n\n1. **Review the `.actual` file** to verify results are correct\n2. **Accept the results** to update the expected baseline:\n\n   ```typescript\n   codeql_test_accept: {\n     tests: [\'/path/to/test/QueryTest\'];\n   }\n   ```\n\n3. **Re-run tests** to confirm they now pass\n\n**Warning**: Only accept results after careful review. Don\'t blindly accept to make tests pass.\n\n## Tool Reference\n\n| Tool                            | Purpose                           | When to Use                     |\n| ------------------------------- | --------------------------------- | ------------------------------- |\n| #codeql_query_run (PrintAST)    | Visualize AST structure           | Start of development, debugging |\n| #codeql_query_run (PrintCFG)    | Visualize control flow            | Control flow queries            |\n| #codeql_query_run (CallGraph\\*) | Analyze call relationships        | Cross-function queries          |\n| #codeql_bqrs_interpret          | Convert BQRS to readable format   | After running graph queries     |\n| #quick_evaluate                 | Test individual predicates        | Iterative development           |\n| #find_predicate_position        | Locate predicate for quickeval    | Before quick_evaluate           |\n| #find_class_position            | Locate class for quickeval        | Before quick_evaluate           |\n| #find_codeql_query_files        | Discover related files            | Planning, tracking changes      |\n| #codeql_test_accept             | Accept actual results as expected | After verifying correct output  |\n| #profile_codeql_query_from_logs | Performance analysis              | Optimization                    |\n\n## Interpreting Graph Query Results\n\nWhen running `PrintAST` or `PrintCFG`, the results are stored in BQRS format. To convert to readable text:\n\n```typescript\n// After codeql_query_run produces results.bqrs\ncodeql_bqrs_interpret: {\n  file: "/path/to/results.bqrs",\n  format: "graphtext",\n  output: "/path/to/output.txt",\n  t: ["kind=graph", "id=java/tools/print-ast"]\n}\n```\n\n**Note**: The output may create a directory structure (e.g., `output.txt/java/tools/print-ast.txt`) rather than a single file.\n\n## Example: Workshop Development\n\nWhen creating CodeQL workshops, this advanced methodology is essential:\n\n1. **Analyze production query** with #find_codeql_query_files\n2. **Generate AST/CFG** for workshop test code\n3. **Decompose query** into stages, validating each with #quick_evaluate\n4. **Create exercises** with scaffolding based on AST understanding\n5. **Validate solutions** ensure each stage produces correct results\n\n### Exercise Design Tips\n\nWhen creating exercise stubs from solutions:\n\n```ql\n// Use none() as placeholder in characteristic predicates\nclass MyPattern extends MethodCall {\n  MyPattern() {\n    // TODO: Implement - check for methods named "targetMethod"\n    // Hint: Use this.getMethod().hasName(...)\n    none()\n  }\n}\n```\n\n- **Include TODO comments** with specific hints\n- **Reference AST class names** students should look for\n- **Build incrementally** - each exercise should build on the previous\n- **Test both exercises and solutions** to ensure expected files are accurate\n\nSee the `create-codeql-query-development-workshop` skill for complete workshop creation guidance.\n\n## Related Resources\n\n- **Basic TDD**: `codeql://prompts/ql-tdd-basic`\n- **AST Reference**: `codeql://languages/{language}/ast`\n- **Security Patterns**: `codeql://languages/{language}/security`\n- **Performance Guide**: `codeql://patterns/performance`\n- **Workshop Skill**: `.github/skills/create-codeql-query-development-workshop/SKILL.md`\n- **Tools Validation**: `.github/skills/validate-ql-mcp-server-tools-queries/SKILL.md`\n';
+var ql_tdd_advanced_prompt_default = '---\nagent: agent\n---\n\n# Advanced Test-Driven CodeQL Query Development\n\nThis advanced guide builds on the basic TDD methodology with powerful MCP server tools for deeper code analysis. Use this when developing complex queries that require understanding AST structure, control flow, and call relationships.\n\nFor basic TDD workflow, see: `codeql://prompts/ql-tdd-basic`\n\n## When to Use This Advanced Guide\n\n- **Complex AST patterns**: When you need to understand how CodeQL represents specific language constructs\n- **Control flow queries**: When analyzing program flow, branching, or loop structures\n- **Call graph analysis**: When tracing function calls or method invocations\n- **Iterative refinement**: When debugging queries that don\'t produce expected results\n- **Performance optimization**: When understanding query evaluation patterns\n\n## Core Advanced Tools\n\n### 1. AST/CFG Visualization with #codeql_query_run\n\nUse the bundled tools queries to visualize code structure:\n\n```typescript\n// Generate Abstract Syntax Tree for test code\ncodeql_query_run: {\n  queryName: "PrintAST",\n  queryLanguage: "java",  // or "javascript", "python", "cpp", etc.\n  database: "/path/to/test.testproj",\n  format: "graphtext",\n  interpretedOutput: "/path/to/ast-output.txt"\n}\n\n// Generate Control Flow Graph\ncodeql_query_run: {\n  queryName: "PrintCFG",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  format: "graphtext",\n  interpretedOutput: "/path/to/cfg-output.txt"\n}\n\n// Analyze outbound calls from a function\ncodeql_query_run: {\n  queryName: "CallGraphFrom",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  sourceFunction: "myFunction",\n  format: "sarif-latest"\n}\n\n// Analyze inbound calls to a function\ncodeql_query_run: {\n  queryName: "CallGraphTo",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  targetFunction: "targetMethod",\n  format: "sarif-latest"\n}\n```\n\n**Critical**: Always verify that tools queries return **non-empty output** with actual nodes/edges, not just headers.\n\n### 2. Quick Evaluation with #quick_evaluate\n\nUse #quick_evaluate for rapid iteration on specific predicates or classes:\n\n```typescript\n// First, find the position of a predicate\nfind_predicate_position: {\n  file: "/path/to/Query.ql",\n  name: "isVulnerableSink"\n}\n\n// Then evaluate just that predicate\nquick_evaluate: {\n  file: "/path/to/Query.ql",\n  db: "/path/to/test.testproj",\n  symbol: "isVulnerableSink",\n  output_path: "/tmp/quickeval.bqrs"\n}\n\n// Or evaluate a specific class\n// NOTE: find_class_position finds `class` definitions only, not `module` definitions.\n// Use search_ql_code to find module definitions or other patterns across QL files.\nfind_class_position: {\n  file: "/path/to/Query.ql",\n  name: "ThrowingMethodCall"\n}\n\nquick_evaluate: {\n  file: "/path/to/Query.ql",\n  db: "/path/to/test.testproj",\n  symbol: "ThrowingMethodCall"\n}\n```\n\n### 3. LSP-Powered Code Navigation\n\nUse the LSP tools for real-time code exploration during query development:\n\n```typescript\n// Discover available types after `import javascript`\ncodeql_lsp_completion: {\n  file_path: "/path/to/Query.ql",\n  line: 5,       // 0-based line with `from` clause\n  character: 5,   // 0-based column position\n  workspace_uri: "/path/to/pack-root"  // REQUIRED: directory containing codeql-pack.yml\n}\n\n// Navigate to a class definition to see its predicates\ncodeql_lsp_definition: {\n  file_path: "/path/to/Query.ql",\n  line: 5,       // 0-based line containing the class name\n  character: 10,  // 0-based column on the class name\n  workspace_uri: "/path/to/pack-root"\n}\n\n// Find all usages of a predicate across the pack\ncodeql_lsp_references: {\n  file_path: "/path/to/Query.ql",\n  line: 8,\n  character: 5,\n  workspace_uri: "/path/to/pack-root"\n}\n```\n\n**Important LSP tool notes**:\n\n- `workspace_uri` must be a **plain directory path** (not a `file://` URI) pointing to the pack root containing `codeql-pack.yml`\n- All LSP tools use **0-based** line/character positions\n- #find_predicate_position and #find_class_position return **1-based** positions \u2014 subtract 1 before passing to LSP tools\n- Run #codeql_pack_install before using LSP tools \u2014 they require resolved dependencies\n- Request completions **after a dot** (e.g., `pw.`) to see all member predicates with full documentation\n\n### 4. Query File Discovery with #find_codeql_query_files\n\nUse this tool frequently to understand query dependencies and test structure:\n\n```typescript\nfind_codeql_query_files: {\n  queryPath: \'/path/to/Query.ql\';\n}\n// Returns: query file, test directory, test files, metadata, dependencies\n```\n\n## Advanced TDD Workflow\n\n### Phase 0: Test Environment Setup (Critical for Java)\n\nFor Java tests that depend on external libraries (JUnit, etc.), create an `options` file in each test directory:\n\n```text\n//semmle-extractor-options: --javac-args -cp ${testdir}/../../stubs/junit-4.13:${testdir}/../../stubs/junit-jupiter-api-5.2.0\n```\n\n**Key points**:\n\n- `${testdir}` is relative to the test directory containing the `options` file\n- Use `:` (colon) to separate multiple classpath entries\n- Stub files must contain minimal class/interface definitions for compilation\n\n### Phase 1: Deep Code Analysis\n\nBefore writing any query logic:\n\n1. **Extract test database**:\n\n   ```typescript\n   codeql_test_extract: {\n     testPath: "/path/to/test/QueryTest",\n     searchPath: "/path/to/pack"\n   }\n   ```\n\n2. **Generate and study the AST**:\n\n   ```typescript\n   codeql_query_run: {\n     queryName: "PrintAST",\n     queryLanguage: "java",\n     database: "/path/to/test.testproj",\n     format: "graphtext",\n     interpretedOutput: "/path/to/ast.txt"\n   }\n   ```\n\n3. **Identify key AST classes and predicates** from the output:\n   - Note the class names (e.g., `MethodCall`, `TryStmt`, `LambdaExpr`)\n   - Note parent-child relationships\n   - Identify which nodes correspond to your test cases\n\n4. **Generate CFG if analyzing control flow**:\n\n   ```typescript\n   codeql_query_run: {\n     queryName: "PrintCFG",\n     queryLanguage: "java",\n     database: "/path/to/test.testproj",\n     format: "graphtext",\n     interpretedOutput: "/path/to/cfg.txt"\n   }\n   ```\n\n### Phase 2: Iterative Predicate Development\n\nInstead of writing the full query at once:\n\n1. **Start with a single class or predicate**:\n\n   ```ql\n   class MyPattern extends MethodCall {\n     MyPattern() {\n       this.getMethod().hasName("targetMethod")\n     }\n   }\n   ```\n\n2. **Use #quick_evaluate to test it**:\n\n   ```typescript\n   quick_evaluate: {\n     file: "/path/to/Query.ql",\n     db: "/path/to/test.testproj",\n     symbol: "MyPattern"\n   }\n   ```\n\n3. **Refine based on results**:\n   - Too many results? Add constraints\n   - Too few results? Relax constraints\n   - Wrong results? Study AST output again\n\n4. **Repeat for each component** before combining\n\n### Phase 3: Incremental Query Assembly\n\n1. **Combine validated predicates** into the main query\n2. **Run full tests** after each combination:\n\n   ```typescript\n   codeql_test_run: {\n     testPath: "/path/to/test/QueryTest",\n     searchPath: "/path/to/pack"\n   }\n   ```\n\n3. **Use #find_codeql_query_files** to track all related files:\n\n   ```typescript\n   find_codeql_query_files: {\n     queryPath: \'/path/to/Query.ql\';\n   }\n   ```\n\n## Common Advanced Patterns\n\n### Pattern: Understanding Nested Structures\n\nWhen your query involves nested constructs (e.g., lambdas inside method calls):\n\n```ql\n// First, find the outer construct\nclass OuterPattern extends MethodCall {\n  OuterPattern() {\n    this.getMethod().hasName("assertThrows")\n  }\n\n  // Navigate to inner construct\n  Expr getLambdaBody() {\n    exists(LambdaExpr le |\n      le = this.getAChildExpr() and\n      result = le.getExprBody()\n    )\n  }\n}\n```\n\nUse `PrintAST` to understand the parent-child relationships.\n\n### Pattern: Control Flow Dependencies\n\nWhen your query needs to understand execution order:\n\n```ql\n// Use CFG to understand which statements precede others\npredicate precedesInBlock(Stmt s1, Stmt s2) {\n  exists(BasicBlock bb |\n    s1.getBasicBlock() = bb and\n    s2.getBasicBlock() = bb and\n    s1.getLocation().getStartLine() < s2.getLocation().getStartLine()\n  )\n}\n```\n\nUse `PrintCFG` to verify the control flow structure.\n\n### Pattern: Call Chain Analysis\n\nWhen tracing calls through multiple functions:\n\n```typescript\n// First, understand the call graph from your entry point\ncodeql_query_run: {\n  queryName: "CallGraphFrom",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  sourceFunction: "entryPoint"\n}\n\n// Then trace back from your target\ncodeql_query_run: {\n  queryName: "CallGraphTo",\n  queryLanguage: "java",\n  database: "/path/to/test.testproj",\n  targetFunction: "sensitiveOperation"\n}\n```\n\n## Debugging Tips\n\n### When Results Are Empty\n\n1. **Check AST first**: Run `PrintAST` to verify the code structure matches expectations\n2. **Simplify the query**: Remove constraints one by one using #quick_evaluate\n3. **Check enclosing callables**: Lambda bodies may have different `getEnclosingCallable()` than expected\n4. **Verify test database extraction**: Ensure the `.testproj` directory was created successfully\n\n### When Results Are Incorrect\n\n1. **Quick evaluate individual predicates**: Isolate which part is wrong\n2. **Compare with AST output**: Verify your understanding of the structure\n3. **Check for missing cases**: Your pattern may not cover all code variations\n\n### When Compilation Fails with "override" Error\n\nIf you see `annotation \'override\' missing on predicate`, you\'ve accidentally created a predicate with the same name as one in the parent class. **Rename your predicate** to avoid the conflict:\n\n```ql\n// BAD: Method already has getAThrownExceptionType()\nclass ThrowingMethod extends Method {\n  RefType getAThrownExceptionType() { ... }  // Error!\n}\n\n// GOOD: Use a distinct name\nclass ThrowingMethod extends Method {\n  RefType getDeclaredExceptionType() { ... }  // Works\n}\n```\n\n### When Query Is Slow\n\n1. **Enable evaluator logs**:\n\n   ```typescript\n   codeql_query_run: {\n     query: "/path/to/Query.ql",\n     database: "/path/to/db",\n     "evaluator-log": "/path/to/log.json",\n     "evaluator-log-level": 5\n   }\n   ```\n\n2. **Profile from evaluator logs** (primary tool \u2014 returns compact JSON metrics plus a line-indexed detail file for targeted `read_file` access to RA operations and tuple progressions):\n\n   ```typescript\n   profile_codeql_query_from_logs: {\n     evaluatorLog: \'/path/to/log.json\';\n   }\n   ```\n\n## Checklist for Complex Queries\n\n### Before Starting\n\n- [ ] Test database extracted successfully\n- [ ] `PrintAST` output reviewed and understood\n- [ ] Key AST classes identified\n- [ ] Test cases cover positive, negative, and edge cases\n\n### During Development\n\n- [ ] Each predicate/class tested with #quick_evaluate\n- [ ] #find_codeql_query_files used to track dependencies\n- [ ] CFG consulted for control flow patterns\n- [ ] Call graphs generated for cross-function analysis\n\n### After Each Change\n\n- [ ] Query compiles with #codeql_query_compile\n- [ ] Quick evaluation shows expected results\n- [ ] Full tests pass with #codeql_test_run\n- [ ] No duplicate or missing results\n\n### Final Validation\n\n- [ ] All test cases pass\n- [ ] No false positives in results\n- [ ] No false negatives (all expected cases caught)\n- [ ] Query formatted with #codeql_query_format\n- [ ] Performance acceptable (check with #profile_codeql_query_from_logs)\n\n## Test Acceptance Workflow\n\nWhen your query produces correct results but differs from the `.expected` file:\n\n1. **Review the `.actual` file** to verify results are correct\n2. **Accept the results** to update the expected baseline:\n\n   ```typescript\n   codeql_test_accept: {\n     tests: [\'/path/to/test/QueryTest\'];\n   }\n   ```\n\n3. **Re-run tests** to confirm they now pass\n\n**Warning**: Only accept results after careful review. Don\'t blindly accept to make tests pass.\n\n## Tool Reference\n\n| Tool                            | Purpose                           | When to Use                     |\n| ------------------------------- | --------------------------------- | ------------------------------- |\n| #codeql_query_run (PrintAST)    | Visualize AST structure           | Start of development, debugging |\n| #codeql_query_run (PrintCFG)    | Visualize control flow            | Control flow queries            |\n| #codeql_query_run (CallGraph\\*) | Analyze call relationships        | Cross-function queries          |\n| #codeql_bqrs_interpret          | Convert BQRS to readable format   | After running graph queries     |\n| #quick_evaluate                 | Test individual predicates        | Iterative development           |\n| #find_predicate_position        | Locate predicate for quickeval    | Before quick_evaluate           |\n| #find_class_position            | Locate class for quickeval        | Before quick_evaluate           |\n| #find_codeql_query_files        | Discover related files            | Planning, tracking changes      |\n| #search_ql_code                 | Search QL files for patterns      | Finding classes, predicates     |\n| #codeql_resolve_files           | Find QL files by name/extension   | Discovering library pack files  |\n| #codeql_test_accept             | Accept actual results as expected | After verifying correct output  |\n| #profile_codeql_query_from_logs | Performance analysis              | Optimization                    |\n\n## Interpreting Graph Query Results\n\nWhen running `PrintAST` or `PrintCFG`, the results are stored in BQRS format. To convert to readable text:\n\n```typescript\n// After codeql_query_run produces results.bqrs\ncodeql_bqrs_interpret: {\n  file: "/path/to/results.bqrs",\n  format: "graphtext",\n  output: "/path/to/output.txt",\n  t: ["kind=graph", "id=java/tools/print-ast"]\n}\n```\n\n**Note**: The output may create a directory structure (e.g., `output.txt/java/tools/print-ast.txt`) rather than a single file.\n\n## Example: Workshop Development\n\nWhen creating CodeQL workshops, this advanced methodology is essential:\n\n1. **Analyze production query** with #find_codeql_query_files\n2. **Generate AST/CFG** for workshop test code\n3. **Decompose query** into stages, validating each with #quick_evaluate\n4. **Create exercises** with scaffolding based on AST understanding\n5. **Validate solutions** ensure each stage produces correct results\n\n### Exercise Design Tips\n\nWhen creating exercise stubs from solutions:\n\n```ql\n// Use none() as placeholder in characteristic predicates\nclass MyPattern extends MethodCall {\n  MyPattern() {\n    // TODO: Implement - check for methods named "targetMethod"\n    // Hint: Use this.getMethod().hasName(...)\n    none()\n  }\n}\n```\n\n- **Include TODO comments** with specific hints\n- **Reference AST class names** students should look for\n- **Build incrementally** - each exercise should build on the previous\n- **Test both exercises and solutions** to ensure expected files are accurate\n\nSee the `create-codeql-query-development-workshop` skill for complete workshop creation guidance.\n\n## Related Resources\n\n- **Basic TDD**: `codeql://prompts/ql-tdd-basic`\n- **AST Reference**: `codeql://languages/{language}/ast`\n- **Security Patterns**: `codeql://languages/{language}/security`\n- **Performance Guide**: `codeql://patterns/performance`\n- **Workshop Skill**: `.github/skills/create-codeql-query-development-workshop/SKILL.md`\n- **Tools Validation**: `.github/skills/validate-ql-mcp-server-tools-queries/SKILL.md`\n';
 
 // src/prompts/ql-tdd-basic.prompt.md
-var ql_tdd_basic_prompt_default = '---\nagent: agent\n---\n\n# Test-Driven CodeQL Query Development Checklist\n\nUse this checklist to guide test-driven development of CodeQL queries. Follow the TDD cycle: write tests first, implement query logic, and iterate until tests pass.\n\nFor advanced techniques including AST/CFG visualization, see: `codeql://prompts/ql-tdd-advanced`\nFor detailed guidance, reference the MCP resource: `codeql://learning/test-driven-development`\n\n## TDD Workflow Checklist\n\n### Phase 1: Project Setup\n\n- [ ] **Create Query Structure**\n  - Tool: #create_codeql_query\n  - Specify: basePath, queryName, language, description (optional)\n  - Creates: src/QueryName/QueryName.ql, test/QueryName/QueryName.qlref, test/QueryName/test-code-file\n  - The .qlref file will contain the relative path: `QueryName/QueryName.ql`\n  - Verify: directory structure follows CodeQL conventions with intermediate directories\n\n- [ ] **Install Pack Dependencies**\n  - Tool: #codeql_pack_install\n  - Install src pack dependencies\n  - Install test pack dependencies\n  - Verify: imports resolve without errors\n\n### Phase 2: Test Design (Red Phase)\n\n- [ ] **Design Test Cases**\n  - Create positive test cases (should match)\n  - Create negative test cases (should not match)\n  - Create edge case tests\n  - Document expected behavior in comments\n\n- [ ] **Define Expected Results**\n  - Create .expected file with anticipated matches\n  - Specify exact match locations (file, line, column)\n  - Include expected alert messages\n\n- [ ] **Extract Test Database**\n  - Tool: #codeql_test_extract\n  - Extract database from test code\n  - Verify: .testproj directory created\n\n### Phase 3: Analysis and Understanding\n\n- [ ] **Analyze Test Code AST**\n  - Tool: #codeql_query_run with queryName: "PrintAST"\n  - Use format: "graphtext" for @kind graph queries\n  - Review AST structure and identify relevant classes\n\n- [ ] **Explore Available Classes and Predicates**\n  - Tool: #codeql_lsp_completion at the position in the `from` clause\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based)\n  - Set `workspace_uri` to the pack root directory (containing `codeql-pack.yml`)\n  - Request completions after a dot (e.g., `pw.`) to see member predicates with docs\n  - Tip: Run #codeql_pack_install first \u2014 LSP tools require resolved dependencies\n\n- [ ] **Navigate to Type Definitions**\n  - Tool: #codeql_lsp_definition on a class or predicate name\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri`\n  - Returns file URI and line range \u2014 even into library pack files\n  - Read the definition source to understand available member predicates\n  - Tool: #codeql_lsp_references to find usage examples across the pack\n\n  For the full iterative LSP workflow, see: `codeql://prompts/ql_lsp_iterative_development`\n\n- [ ] **Reference Language Documentation**\n  - Resource: `codeql://languages/{language}/ast`\n  - Resource: `codeql://languages/{language}/security` (if applicable)\n  - Identify AST classes and predicates needed\n\n### Phase 4: Implementation (Green Phase)\n\n- [ ] **Write Query Metadata**\n  - Add @name annotation\n  - Add @description annotation\n  - Add @kind annotation (problem, path-problem, graph, etc.)\n  - Add @id and other required metadata\n\n- [ ] **Implement Query Logic**\n  - Import required libraries\n  - Define necessary classes (if any)\n  - Define helper predicates\n  - Implement main query clause\n\n- [ ] **Compile Query**\n  - Tool: #codeql_query_compile\n  - Fix any compilation errors\n  - Verify: query compiles successfully\n\n- [ ] **Run Tests**\n  - Tool: #codeql_test_run\n  - Compare actual vs expected results\n  - If tests fail: adjust query logic and recompile\n  - If tests pass: proceed to validation\n\n### Phase 5: Validation and Acceptance\n\n- [ ] **Verify Test Results**\n  - Review all test matches\n  - Confirm no false positives\n  - Confirm no false negatives\n  - Check edge cases behave correctly\n\n- [ ] **Accept Test Results** (only when correct)\n  - Tool: #codeql_test_accept\n  - Update .expected files\n  - Commit accepted results\n\n### Phase 6: Refactoring and Enhancement\n\n- [ ] **Refactor Query**\n  - Improve code clarity\n  - Extract common logic to predicates\n  - Add code comments and documentation\n  - Tool: #codeql_query_format for consistent formatting\n\n- [ ] **Optimize Performance** (if needed)\n  - Run with evaluator-log enabled\n  - Tool: #codeql_generate_log_summary\n  - Resource: `codeql://patterns/performance`\n  - Optimize expensive operations\n\n- [ ] **Generate Documentation**\n  - Tool: #codeql_generate_query_help\n  - Review and enhance QLDoc comments\n  - Document query purpose and limitations\n\n### Phase 7: Additional Testing\n\n- [ ] **Add More Test Cases**\n  - Identify additional scenarios\n  - Add tests for new edge cases\n  - Extract new test databases\n  - Run expanded test suite\n\n- [ ] **Validate Against Real Code** (optional)\n  - Tool: #codeql_database_create for real codebase\n  - Tool: #codeql_query_run against real database\n  - Review results for false positives/negatives\n\n## Quick Command Reference\n\n### Essential Tools\n\n```typescript\n// Create query structure\ncreate_codeql_query: {\n  basePath: "/path/to/query/base",\n  queryName: "MySecurityQuery",\n  language: "javascript",\n  description: "Detects security vulnerability X"\n}\n\n// Install dependencies\ncodeql_pack_install: {\n  packPath: "/path/to/pack"\n}\n\n// Extract test database\ncodeql_test_extract: {\n  testPath: "/path/to/test/QueryName",\n  searchPath: "/path/to/base"\n}\n\n// Analyze AST (for @kind graph queries)\ncodeql_query_run: {\n  queryName: "PrintAST",\n  queryLanguage: "javascript",\n  database: "/path/to/test.testproj",\n  format: "graphtext",\n  interpretedOutput: "/path/to/ast-output/"\n}\n\n// Compile query\ncodeql_query_compile: {\n  query: "/path/to/Query.ql",\n  searchPath: "/path/to/base",\n  checkOnly: true\n}\n\n// Run tests\ncodeql_test_run: {\n  testPath: "/path/to/test/Query.qlref",\n  searchPath: "/path/to/base"\n}\n\n// Accept results\ncodeql_test_accept: {\n  testPath: "/path/to/test/Query",\n  searchPath: "/path/to/base"\n}\n```\n\n## TDD Principles to Remember\n\n1. **Red \u2192 Green \u2192 Refactor**: Always start with failing tests\n2. **Test First**: Write tests before implementation\n3. **Small Steps**: Make minimal changes to pass each test\n4. **Frequent Testing**: Run tests after each change\n5. **One Concept Per Test**: Each test should verify one behavior\n6. **Keep Tests Simple**: Test code should be easy to understand\n7. **Refactor Confidently**: Tests enable safe refactoring\n\n## Common Pitfalls to Avoid\n\n- \u274C Writing query before tests\n- \u274C Accepting test results without verification\n- \u274C Skipping compilation step\n- \u274C Not using PrintAST to understand test code\n- \u274C Not using #codeql_lsp_completion to discover available types\n- \u274C Not setting `workspace_uri` when using LSP tools (completions will be empty)\n- \u274C Creating tests that are too complex\n- \u274C Ignoring false positives in results\n- \u274C Not refactoring after tests pass\n\n## Success Criteria\n\nYour query development is complete when:\n\n- \u2705 All tests pass\n- \u2705 No false positives in test results\n- \u2705 No false negatives (all expected cases caught)\n- \u2705 Query compiles without errors or warnings\n- \u2705 Code is well-documented with QLDoc comments\n- \u2705 Performance is acceptable\n- \u2705 Edge cases are covered by tests\n- \u2705 Query follows CodeQL best practices\n\n## Next Steps After Completion\n\n1. **Integration Testing**: Test against real codebases\n2. **Peer Review**: Have another developer review the query\n3. **Documentation**: Update project documentation\n4. **Regression Testing**: Add to CI/CD pipeline\n5. **Monitor Performance**: Track query performance over time\n';
+var ql_tdd_basic_prompt_default = '---\nagent: agent\n---\n\n# Test-Driven CodeQL Query Development Checklist\n\nUse this checklist to guide test-driven development of CodeQL queries. Follow the TDD cycle: write tests first, implement query logic, and iterate until tests pass.\n\nFor advanced techniques including AST/CFG visualization, see: `codeql://prompts/ql-tdd-advanced`\nFor detailed guidance, reference the MCP resource: `codeql://learning/test-driven-development`\n\n## TDD Workflow Checklist\n\n### Phase 1: Project Setup\n\n- [ ] **Create Query Structure**\n  - Tool: #create_codeql_query\n  - Specify: basePath, queryName, language, description (optional)\n  - Creates: src/QueryName/QueryName.ql, test/QueryName/QueryName.qlref, test/QueryName/test-code-file\n  - The .qlref file will contain the relative path: `QueryName/QueryName.ql`\n  - Verify: directory structure follows CodeQL conventions with intermediate directories\n\n- [ ] **Install Pack Dependencies**\n  - Tool: #codeql_pack_install\n  - Install src pack dependencies\n  - Install test pack dependencies\n  - Verify: imports resolve without errors\n\n### Phase 2: Test Design (Red Phase)\n\n- [ ] **Design Test Cases**\n  - Create positive test cases (should match)\n  - Create negative test cases (should not match)\n  - Create edge case tests\n  - Document expected behavior in comments\n\n- [ ] **Define Expected Results**\n  - Create .expected file with anticipated matches\n  - Specify exact match locations (file, line, column)\n  - Include expected alert messages\n\n- [ ] **Extract Test Database**\n  - Tool: #codeql_test_extract\n  - Extract database from test code\n  - Verify: .testproj directory created\n\n### Phase 3: Analysis and Understanding\n\n- [ ] **Analyze Test Code AST**\n  - Tool: #codeql_query_run with queryName: "PrintAST"\n  - Use format: "graphtext" for @kind graph queries\n  - Review AST structure and identify relevant classes\n\n- [ ] **Explore Available Classes and Predicates**\n  - Tool: #codeql_lsp_completion at the position in the `from` clause\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based)\n  - Set `workspace_uri` to the pack root directory (containing `codeql-pack.yml`)\n  - Request completions after a dot (e.g., `pw.`) to see member predicates with docs\n  - Tip: Run #codeql_pack_install first \u2014 LSP tools require resolved dependencies\n\n- [ ] **Navigate to Type Definitions**\n  - Tool: #codeql_lsp_definition on a class or predicate name\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri`\n  - Returns file URI and line range \u2014 even into library pack files\n  - Read the definition source to understand available member predicates\n  - Tool: #codeql_lsp_references to find usage examples across the pack\n\n  For the full iterative LSP workflow, see: `codeql://prompts/ql_lsp_iterative_development`\n\n- [ ] **Reference Language Documentation**\n  - Resource: `codeql://languages/{language}/ast`\n  - Resource: `codeql://languages/{language}/security` (if applicable)\n  - Identify AST classes and predicates needed\n\n### Phase 4: Implementation (Green Phase)\n\n- [ ] **Write Query Metadata**\n  - Add @name annotation\n  - Add @description annotation\n  - Add @kind annotation (problem, path-problem, graph, etc.)\n  - Add @id and other required metadata\n\n- [ ] **Implement Query Logic**\n  - Import required libraries\n  - Define necessary classes (if any)\n  - Define helper predicates\n  - Implement main query clause\n\n- [ ] **Compile Query**\n  - Tool: #codeql_query_compile\n  - Fix any compilation errors\n  - Verify: query compiles successfully\n\n- [ ] **Run Tests**\n  - Tool: #codeql_test_run\n  - Compare actual vs expected results\n  - If tests fail: adjust query logic and recompile\n  - If tests pass: proceed to validation\n\n### Phase 5: Validation and Acceptance\n\n- [ ] **Verify Test Results**\n  - Review all test matches\n  - Confirm no false positives\n  - Confirm no false negatives\n  - Check edge cases behave correctly\n\n- [ ] **Accept Test Results** (only when correct)\n  - Tool: #codeql_test_accept\n  - Update .expected files\n  - Commit accepted results\n\n### Phase 6: Refactoring and Enhancement\n\n- [ ] **Refactor Query**\n  - Improve code clarity\n  - Extract common logic to predicates\n  - Add code comments and documentation\n  - Tool: #codeql_query_format for consistent formatting\n\n- [ ] **Optimize Performance** (if needed)\n  - Run with evaluator-log enabled\n  - Tool: #profile_codeql_query_from_logs\n  - Resource: `codeql://patterns/performance`\n  - Optimize expensive operations\n\n- [ ] **Generate Documentation**\n  - Tool: #codeql_generate_query_help\n  - Review and enhance QLDoc comments\n  - Document query purpose and limitations\n\n### Phase 7: Additional Testing\n\n- [ ] **Add More Test Cases**\n  - Identify additional scenarios\n  - Add tests for new edge cases\n  - Extract new test databases\n  - Run expanded test suite\n\n- [ ] **Validate Against Real Code** (optional)\n  - Tool: #codeql_database_create for real codebase\n  - Tool: #codeql_query_run against real database\n  - Review results for false positives/negatives\n\n## Quick Command Reference\n\n### Essential Tools\n\n```typescript\n// Create query structure\ncreate_codeql_query: {\n  basePath: "/path/to/query/base",\n  queryName: "MySecurityQuery",\n  language: "javascript",\n  description: "Detects security vulnerability X"\n}\n\n// Install dependencies\ncodeql_pack_install: {\n  packPath: "/path/to/pack"\n}\n\n// Extract test database\ncodeql_test_extract: {\n  testPath: "/path/to/test/QueryName",\n  searchPath: "/path/to/base"\n}\n\n// Analyze AST (for @kind graph queries)\ncodeql_query_run: {\n  queryName: "PrintAST",\n  queryLanguage: "javascript",\n  database: "/path/to/test.testproj",\n  format: "graphtext",\n  interpretedOutput: "/path/to/ast-output/"\n}\n\n// Compile query\ncodeql_query_compile: {\n  query: "/path/to/Query.ql",\n  searchPath: "/path/to/base",\n  checkOnly: true\n}\n\n// Run tests\ncodeql_test_run: {\n  testPath: "/path/to/test/Query.qlref",\n  searchPath: "/path/to/base"\n}\n\n// Accept results\ncodeql_test_accept: {\n  testPath: "/path/to/test/Query",\n  searchPath: "/path/to/base"\n}\n```\n\n## TDD Principles to Remember\n\n1. **Red \u2192 Green \u2192 Refactor**: Always start with failing tests\n2. **Test First**: Write tests before implementation\n3. **Small Steps**: Make minimal changes to pass each test\n4. **Frequent Testing**: Run tests after each change\n5. **One Concept Per Test**: Each test should verify one behavior\n6. **Keep Tests Simple**: Test code should be easy to understand\n7. **Refactor Confidently**: Tests enable safe refactoring\n\n## Common Pitfalls to Avoid\n\n- \u274C Writing query before tests\n- \u274C Accepting test results without verification\n- \u274C Skipping compilation step\n- \u274C Not using PrintAST to understand test code\n- \u274C Not using #codeql_lsp_completion to discover available types\n- \u274C Not setting `workspace_uri` when using LSP tools (completions will be empty)\n- \u274C Creating tests that are too complex\n- \u274C Ignoring false positives in results\n- \u274C Not refactoring after tests pass\n\n## Success Criteria\n\nYour query development is complete when:\n\n- \u2705 All tests pass\n- \u2705 No false positives in test results\n- \u2705 No false negatives (all expected cases caught)\n- \u2705 Query compiles without errors or warnings\n- \u2705 Code is well-documented with QLDoc comments\n- \u2705 Performance is acceptable\n- \u2705 Edge cases are covered by tests\n- \u2705 Query follows CodeQL best practices\n\n## Next Steps After Completion\n\n1. **Integration Testing**: Test against real codebases\n2. **Peer Review**: Have another developer review the query\n3. **Documentation**: Update project documentation\n4. **Regression Testing**: Add to CI/CD pipeline\n5. **Monitor Performance**: Track query performance over time\n';
 
 // src/prompts/run-query-and-summarize-false-positives.prompt.md
 var run_query_and_summarize_false_positives_prompt_default = '---\nagent: agent\n---\n\n# Run a query and describe its false positives\n\n## Task\n\nHelp a developer discover what kinds of false positives are produced by their current CodeQL query, and which of those false positive cases are most common.\n\n### Task steps:\n\n1. Read the provided CodeQL query to understand what patterns it is designed to detect.\n2. Discover the results of this query on a real database, by:\n   - Running the tool #list_query_run_results to find existing runs for this query\n   - If no existing runs are found, run the query on a relevant database using #codeql_query_run tool\n3. Analyze and group the results into what appear to be similar types of results. This may mean:\n   - Grouping results in the same file\n   - Grouping results that reference the same elements\n   - Grouping results with similar messages\n4. For each group, explore the actual code for a sample of alerts in that group, using the #read_database_source tool to triage the results and determine which groups appear to be false positives\n5. For each false positive case discovered in this exploration, group them into categories of similar root causes. For example, a query might not properly account for unreachable code, or there may be a commonly used library that violates the query\'s assumptions but is actually safe.\n6. Explain these results to the user in order of most common to least common, so they can understand where their query may need improvement to reduce false positives.\n\n## Input Context\n\nYou will be provided with:\n\n- **Query Path**: The path to the CodeQL query\n\n## Analysis Guidelines\n\n### Exploring code paths\n\nThe tool #read_database_source can be used to read the code of a particular finding. A good strategy to explore the code paths of a finding is:\n\n1. Read in the immediate context of the violation.\n   - Some queries may depend on later context (e.g., an "unused variable" may only be used after its declaration)\n   - Some queries may depend on earlier context (e.g., "mutex not initialized" requires observing code that ran before the violation)\n   - Some queries may rely on exploring other function calls.\n2. Read the interprocedural context of the violation.\n   - If understanding a violation requires checking other source locations, read the beginning of the file to find what it imports, and then read those imported files to find the relevant code.\n   - Selectively scan interprocedural paths. A false positive that requires tremendous code exploration to verify is less problematic than a false positive that only requires checking a small amount of code to verify.\n3. Stop early.\n   - Grouping the potential false positive cases is more important than exhaustively verifying every single finding.\n   - A common false positive likely introduces some false positives that are very hard to verify, so it is usually better to focus on simple cases first.\n   - Truly hard-to-verify false positive cases are often in code that users don\'t expect to be conducive to static analysis, and query authors often don\'t expect their queries to work well in those cases.\n   - Suggest a chainsaw approach rather than a scalpel - if a result may be a false positive, identify some simple heuristics to eliminate all such complex cases, even if such a heuristic could introduce false negatives.\n\n### What Makes a Result Likely to be a False Positive?\n\n1. **Pattern Mismatches**\n   - Query pattern doesn\'t accurately match the actual code behavior\n   - Missing context that would show the code is safe\n   - Overly broad query logic catching benign variations\n\n2. **Safe Code Patterns**\n   - Code includes proper validation before the flagged operation\n   - Results in test code, example code, or mock implementations\n   - Variable/function names suggesting test/example context (e.g., `testFunc`, `exampleVar`, `mockData`)\n   - Defensive programming patterns present but not recognized by query\n\n3. **Context Indicators**\n   - File paths suggesting test/example files (e.g., `test/`, `examples/`, `mock/`)\n   - Comments indicating intentional patterns or safe usage\n   - Framework-specific patterns that are safe in context\n\n4. **Technical Factors**\n   - Type mismatches that make the vulnerability impossible\n   - Control flow that prevents exploitation\n   - Data flow interrupted by sanitization not captured in query\n\n### Important Constraints\n\n- **Be objective**: Don\'t be influenced by variable/function naming suggesting importance (e.g., "prodOnly" vs "test")\n- **Require evidence**: Base conclusions on actual code patterns, not assumptions\n- **Mark uncertainty**: Use lower confidence scores when code snippets are missing\n- **Avoid false confidence**: If you cannot determine FP status, mark confidence as low\n\n## Output Format\n\nReturn a JSON array of false-positive _groups_, ordered by the estimated prevalence or importance of the false-positive pattern (highest first):\n\n```json\n[\n  {\n    "groupLabel": "Test and example code with safe validation",\n    "patternSummary": "Results where the flagged operation occurs in test/example files and is always preceded by input validation.",\n    "resultCount": 23,\n    "estimatedFpProportion": 0.9,\n    "confidence": 0.85,\n    "commonRootCause": "The query does not recognize common test/example locations or custom validation helpers as making the pattern safe.",\n    "sampleResults": [\n      {\n        "sourceFile": "results-1.sarif",\n        "resultIndex": 42,\n        "ruleId": "query-id",\n        "message": { "text": "original result message" },\n        "locations": []\n      }\n    ],\n    "reasoning": "Based on manual inspection of several alerts in this group: (1) results are consistently located under \'test/\' or \'examples/\' directories, (2) there is clear validation before the flagged operation, and (3) the query does not model the custom validation helpers used in these files."\n  }\n]\n```\n\n### Field Descriptions\n\n- **groupLabel**: Short human-readable name for the false-positive category.\n- **patternSummary**: One-sentence description of the common pattern shared by results in this group.\n- **resultCount**: Number of SARIF results that belong to this group.\n- **estimatedFpProportion**: Estimated proportion of results in this group that are false positives (0.0\u20131.0).\n- **confidence**: Confidence in the group-level assessment (see guidelines below).\n- **commonRootCause**: Why the query produces false positives for this pattern.\n- **sampleResults**: A small representative sample of results illustrating the pattern.\n- **reasoning**: Detailed explanation of how the FP determination was made.\n\n### Confidence Score Guidelines\n\n- **0.8-1.0**: Strong evidence of FP (e.g., test code with clear safety patterns)\n- **0.6-0.8**: Good evidence of FP (e.g., defensive patterns present)\n- **0.4-0.6**: Moderate evidence of FP (e.g., context suggests safety but not conclusive)\n- **0.2-0.4**: Weak evidence of FP (e.g., minor indicators, missing code snippets)\n- **0.0-0.2**: Minimal evidence (uncertain, need more information)\n\n## Examples\n\n### High-Confidence FP Group Example\n\n```json\n{\n  "groupLabel": "Sanitised inputs in test harnesses",\n  "patternSummary": "Results in test files where sanitizeInput() is called before the database query.",\n  "resultCount": 15,\n  "estimatedFpProportion": 0.95,\n  "confidence": 0.9,\n  "commonRootCause": "Query does not model sanitizeInput() as a sanitizer.",\n  "sampleResults": [\n    {\n      "sourceFile": "results-1.sarif",\n      "resultIndex": 7,\n      "ruleId": "js/sql-injection",\n      "message": { "text": "Potential SQL injection" },\n      "locations": []\n    }\n  ],\n  "reasoning": "False positive group: (1) File paths like \'test/unit/database-mock.test.js\' indicate test code, (2) Query doesn\'t recognize that \'sanitizeInput()\' is called before database query, (3) All 15 results share this pattern."\n}\n```\n\n### Low-Confidence FP Group Example\n\n```json\n{\n  "groupLabel": "File utility handlers with unclear validation",\n  "patternSummary": "Results in src/utils/ files where path validation may or may not be present.",\n  "resultCount": 4,\n  "estimatedFpProportion": 0.5,\n  "confidence": 0.3,\n  "commonRootCause": "Unclear whether custom path validation is sufficient.",\n  "sampleResults": [\n    {\n      "sourceFile": "results-1.sarif",\n      "resultIndex": 22,\n      "ruleId": "js/path-injection",\n      "message": { "text": "Potential path traversal" },\n      "locations": []\n    }\n  ],\n  "reasoning": "Possibly false positive: (1) No code snippets available in SARIF, (2) File path \'src/utils/fileHandler.js\' doesn\'t indicate test code, (3) Cannot verify if proper path validation exists. Low confidence due to missing context."\n}\n```\n\n## Processing Instructions\n\n1. **Review SARIF results** and group them by common patterns\n2. **Analyze available context** (code snippets, file paths, messages) for each group\n3. **Compare against query logic** to understand what pattern was detected\n4. **Identify FP indicators** based on guidelines above\n5. **Assign group-level confidence scores** reflecting evidence strength\n6. **Write clear reasoning** for each group explaining the assessment\n7. **Sort groups** by estimated prevalence / importance (descending)\n\n## Important Notes\n\n- A result should belong to at most one FP group\n- When in doubt, prefer lower confidence scores\n- Missing code snippets should always reduce confidence\n- Test/example code is more likely to be FP but not always\n- Focus on technical evidence, not code naming conventions\n';
@@ -63867,7 +64072,7 @@ var sarif_rank_false_positives_prompt_default = '---\nagent: agent\n---\n\n# Eva
 var sarif_rank_true_positives_prompt_default = '---\nagent: agent\n---\n\n# Evaluate SARIF Results for True Positives\n\n## Task\n\nAnalyze SARIF results from a CodeQL query and identify the most likely **True Positives (TPs)** - results that correctly identify real security vulnerabilities or code quality issues.\n\n## Input Context\n\nYou will be provided with:\n\n- **Query ID**: The CodeQL query/rule identifier\n- **Query Name**: Human-readable name of the query\n- **Query Content**: Full CodeQL query implementation\n- **SARIF Results**: Array of results to analyze\n- **Code Snippets**: When available, code snippets from SARIF physical locations\n\n## Analysis Guidelines\n\n### What Makes a Result Likely to be a True Positive?\n\n1. **Pattern Matches**\n   - Query pattern accurately identifies the problematic code behavior\n   - Result shows clear evidence of the vulnerability or issue\n   - Code matches the exact pattern the query was designed to detect\n\n2. **Vulnerable Code Patterns**\n   - User input flows to dangerous sink without proper sanitization\n   - Missing security checks or validation\n   - Incorrect use of security-sensitive APIs\n   - Clear violation of security best practices\n\n3. **Production Code Context**\n   - File paths suggesting production code (e.g., `src/`, `lib/`, `app/`)\n   - NOT in test/example directories\n   - Function/variable names suggesting real business logic\n   - Code appears to be part of actual application functionality\n\n4. **Technical Factors**\n   - Data flow from untrusted source to dangerous operation\n   - Missing or insufficient sanitization\n   - Exploitable control flow\n   - Real security or quality implications\n\n### Important Constraints\n\n- **Be objective**: Don\'t be influenced by variable/function naming suggesting importance\n- **Require evidence**: Base conclusions on actual vulnerability patterns, not assumptions\n- **Mark uncertainty**: Use lower confidence scores when code snippets are missing\n- **Avoid false confidence**: If you cannot determine TP status, mark confidence as low\n- **Consider false positives**: Be skeptical - real vulnerabilities often have subtle mitigations\n\n### When Code Snippets Are Missing\n\nIf SARIF results lack `physicalLocation.region.snippet` or `contextRegion`:\n\n- **Lower confidence scores** (typically 0.3-0.5 instead of 0.6-0.9)\n- **Note the limitation** in reasoning\n- **Rely more on**:\n  - Result message text\n  - File path analysis\n  - Query logic understanding\n\n## Output Format\n\nReturn a JSON array of ranked results, ordered by TP likelihood (highest first):\n\n```json\n[\n  {\n    "ruleId": "query-id",\n    "message": { "text": "original result message" },\n    "locations": [...],\n    "confidence": 0.85,\n    "reasoning": "This appears to be a true positive because: (1) the file path \'src/api/user-controller.js\' indicates production code, (2) user input from request parameter flows directly to SQL query without sanitization, (3) no validation or prepared statement usage detected.",\n    "sourceFile": "results-1.sarif",\n    "resultIndex": 15\n  }\n]\n```\n\n### Confidence Score Guidelines\n\n- **0.8-1.0**: Strong evidence of TP (e.g., clear vulnerability with exploit path)\n- **0.6-0.8**: Good evidence of TP (e.g., production code with problematic pattern)\n- **0.4-0.6**: Moderate evidence of TP (e.g., pattern matches but context unclear)\n- **0.2-0.4**: Weak evidence of TP (e.g., possible issue but missing context)\n- **0.0-0.2**: Minimal evidence (uncertain, need more information)\n\n## Examples\n\n### High-Confidence TP Example\n\n```json\n{\n  "ruleId": "js/sql-injection",\n  "message": { "text": "Unsanitized user input in SQL query" },\n  "confidence": 0.9,\n  "reasoning": "True positive: (1) File path \'src/controllers/UserController.js\' indicates production code, (2) User input from req.query.userId flows directly to SQL query string concatenation, (3) No prepared statements or sanitization visible in code snippet, (4) Classic SQL injection pattern. Confidence is 0.9 not 1.0 due to possibility of sanitization elsewhere in call chain."\n}\n```\n\n### Moderate-Confidence TP Example\n\n```json\n{\n  "ruleId": "js/path-injection",\n  "message": { "text": "Potential path traversal vulnerability" },\n  "confidence": 0.6,\n  "reasoning": "Likely true positive: (1) File path \'src/utils/fileHandler.js\' suggests production utility code, (2) User-controlled filename parameter used in fs.readFile(), (3) No visible path validation, but code snippet is limited. Moderate confidence due to incomplete context - may have validation in calling code."\n}\n```\n\n### Low-Confidence TP Example (Missing Snippets)\n\n```json\n{\n  "ruleId": "java/unsafe-deserialization",\n  "message": { "text": "Unsafe deserialization of user data" },\n  "confidence": 0.4,\n  "reasoning": "Possibly a true positive: (1) File path \'src/main/java/com/app/handlers/DataHandler.java\' indicates production code, (2) Message suggests unsafe deserialization pattern, (3) No code snippets available in SARIF to verify actual vulnerability or confirm absence of mitigations. Confidence is low due to missing context."\n}\n```\n\n## Processing Instructions\n\n1. **Review each SARIF result** in the provided array\n2. **Analyze available context** (code snippets, file paths, messages)\n3. **Compare against query logic** to understand what pattern was detected\n4. **Identify TP indicators** based on guidelines above\n5. **Look for counter-evidence** (mitigations, safe patterns) that would make it an FP\n6. **Assign confidence score** reflecting evidence strength\n7. **Write clear reasoning** explaining your assessment\n8. **Sort results** by confidence score (descending)\n9. **Return top N results** as requested (or all if N not specified)\n\n## Important Notes\n\n- A result should never appear in both FP and TP rankings\n- When in doubt, prefer lower confidence scores\n- Missing code snippets should always reduce confidence\n- Production code location increases TP likelihood but is not conclusive\n- Focus on technical vulnerability evidence, not code naming conventions\n- Consider that even production code can have intentional patterns that look vulnerable but are safe\n';
 
 // src/prompts/tools-query-workflow.prompt.md
-var tools_query_workflow_prompt_default = '---\nagent: agent\n---\n\n# Using CodeQL Development MCP Server Tools Queries\n\nThis guide helps you use the built-in "tools" queries (`PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`) that ship with the CodeQL Development MCP Server to understand code structure before writing detection queries.\n\n## Why Use Tools Queries?\n\nTools queries provide essential insights into how CodeQL represents your source code:\n\n| Query           | Purpose                                          | Use When                                        |\n| --------------- | ------------------------------------------------ | ----------------------------------------------- |\n| `PrintAST`      | Visualize the Abstract Syntax Tree               | Understanding code structure, finding AST nodes |\n| `PrintCFG`      | Visualize Control Flow Graphs                    | Understanding execution paths, loop/branch flow |\n| `CallGraphFrom` | Find all functions called by a specific function | Tracing data flow through call chains           |\n| `CallGraphTo`   | Find all functions that call a specific function | Understanding function usage patterns           |\n\n## Supported Languages\n\nTools queries are available for: `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `swift`\n\n## Prerequisites\n\nBefore using tools queries, you need:\n\n1. **A CodeQL database** - Either create one or use an existing database\n2. **Source files to analyze** - The tools queries filter output to specific files\n\n## Workflow Checklist\n\n### Step 1: Identify or Create Database\n\n- [ ] **Option A: Use existing database**\n  - Tool: #codeql_resolve_database\n  - Verify database is valid and note the language\n\n- [ ] **Option B: Create new database**\n  - Tool: #codeql_database_create\n  - Parameters: `database`, `language`, `source-root`\n\n### Step 2: Run PrintAST Query\n\nThe PrintAST query outputs a hierarchical tree of AST nodes with labels.\n\n- [ ] **Execute PrintAST**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"PrintAST"`\n    - `queryLanguage`: Your language (e.g., `"javascript"`, `"python"`, `"cpp"`)\n    - `sourceFiles`: Comma-separated file names to analyze (e.g., `"main.js,utils.js"`)\n    - `format`: `"graphtext"` (for human-readable output)\n\n- [ ] **Verify output contains AST nodes**\n  - Look for hierarchical structure with indentation\n  - Confirm nodes have `semmle.label` with class names\n  - Identify relevant AST classes for your query\n\n**Example AST output structure:**\n\n```text\nTopLevelFunction\n\u251C\u2500\u2500 FunctionDeclarationEntry\n\u251C\u2500\u2500 Block\n\u2502   \u251C\u2500\u2500 DeclStmt\n\u2502   \u2502   \u2514\u2500\u2500 LocalVariable\n\u2502   \u251C\u2500\u2500 ExprStmt\n\u2502   \u2502   \u2514\u2500\u2500 FunctionCall\n\u2502   \u2514\u2500\u2500 ReturnStmt\n```\n\n### Step 3: Run PrintCFG Query (if needed)\n\nThe PrintCFG query outputs control flow nodes and edges.\n\n- [ ] **Execute PrintCFG**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"PrintCFG"`\n    - `queryLanguage`: Your language\n    - `sourceFunction`: Function name to analyze (e.g., `"processData"`)\n    - `format`: `"graphtext"`\n\n- [ ] **Verify output contains nodes and edges**\n  - Look for `nodes` section with CFG nodes\n  - Look for `edges` section with `\u2192` arrows showing flow\n  - Identify control flow patterns (loops, branches)\n\n**Example CFG output structure:**\n\n```text\nnodes\n| node | semmle.label |\n| ... | entry: processData |\n| ... | if (...) |\n| ... | return |\n\nedges\n| from | to | semmle.label |\n| ... | ... | \u2192 |\n```\n\n### Step 4: Run CallGraph Queries (if needed)\n\nCall graph queries help trace function relationships.\n\n- [ ] **Execute CallGraphFrom** (to find what a function calls)\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"CallGraphFrom"`\n    - `queryLanguage`: Your language\n    - `sourceFunction`: Function name to trace from (e.g., `"main"`)\n    - `format`: `"sarif-latest"` or `"csv"`\n\n- [ ] **Execute CallGraphTo** (to find what calls a function)\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"CallGraphTo"`\n    - `queryLanguage`: Your language\n    - `targetFunction`: Function name to find callers of (e.g., `"validate"`)\n    - `format`: `"sarif-latest"` or `"csv"`\n\n- [ ] **Verify call relationships**\n  - Confirm results show caller \u2192 callee relationships\n  - Note function locations for further analysis\n\n### Step 5: Apply Insights to Query Development\n\nUse the gathered information to inform your query:\n\n- [ ] **From PrintAST**: Identify which AST classes to use in your `from` clause\n- [ ] **From PrintCFG**: Understand execution paths for control-flow-sensitive queries\n- [ ] **From CallGraph**: Map data flow paths through function boundaries\n\n## Common Patterns\n\n### Pattern 1: Finding All Function Calls\n\n```text\n1. Run PrintAST on your source file\n2. Look for FunctionCall, MethodAccess, or similar nodes\n3. Note the parent/child relationships\n4. Use those AST classes in your query\n```\n\n### Pattern 2: Tracing Data Through Functions\n\n```text\n1. Run CallGraphFrom on your entry point function\n2. Identify which functions are called\n3. Run CallGraphTo on sink functions\n4. Map the complete path from source to sink\n```\n\n### Pattern 3: Understanding Loop Structures\n\n```text\n1. Run PrintAST to find loop constructs (ForStmt, WhileStmt, etc.)\n2. Run PrintCFG on the containing function\n3. Identify back edges that represent loop iteration\n4. Use CFG analysis for loop-sensitive queries\n```\n\n## Troubleshooting\n\n| Issue                 | Likely Cause                          | Resolution                                             |\n| --------------------- | ------------------------------------- | ------------------------------------------------------ |\n| Empty AST output      | `sourceFiles` parameter not matching  | Use just filenames, not full paths (e.g., `"test.js"`) |\n| Empty CFG output      | `sourceFunction` not found            | Check exact function name spelling                     |\n| Empty CallGraph       | No calls exist or wrong function name | Verify function exists and has calls                   |\n| Query compilation err | Pack dependencies missing             | Run #codeql_pack_install on the tools pack             |\n\n## MCP Tools Reference\n\n| Tool                     | Purpose                                              |\n| ------------------------ | ---------------------------------------------------- |\n| #codeql_query_run        | Execute tools queries with parameters                |\n| #codeql_resolve_database | Validate database before querying                    |\n| #codeql_database_create  | Create database from source code                     |\n| #codeql_bqrs_interpret   | Convert results to different formats                 |\n| #codeql_pack_install     | Install pack dependencies if needed                  |\n| #codeql_lsp_completion   | Explore available types after seeing AST class names |\n| #codeql_lsp_definition   | Navigate to class definitions to see predicates      |\n| #codeql_lsp_references   | Find usage examples of a class or predicate          |\n\n### Using LSP Tools After AST Analysis\n\nAfter running PrintAST and identifying relevant AST class names, use the LSP tools\nto explore those classes in your query file:\n\n1. **Write the class name** in your query\'s `from` clause and save the file\n2. **Run #codeql_lsp_completion** after the dot to see member predicates:\n   - `file_path`: your query file, `line`/`character`: 0-based position after the dot\n   - `workspace_uri`: the pack root directory (containing `codeql-pack.yml`)\n3. **Run #codeql_lsp_definition** on an AST class name to see its full API\n4. **Run #codeql_lsp_references** to find usage examples in the pack\n\n> **Note**: LSP tools use 0-based line/character positions. Run #codeql_pack_install\n> before using them \u2014 they require resolved dependencies. Set `workspace_uri` to\n> a plain directory path (not a `file://` URI).\n\nFor the full iterative LSP development workflow, see: `codeql://prompts/ql_lsp_iterative_development`\n';
+var tools_query_workflow_prompt_default = '---\nagent: agent\n---\n\n# Using CodeQL Development MCP Server Tools Queries\n\nThis guide helps you use the built-in "tools" queries (`PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`) that ship with the CodeQL Development MCP Server to understand code structure before writing detection queries.\n\n## Why Use Tools Queries?\n\nTools queries provide essential insights into how CodeQL represents your source code:\n\n| Query           | Purpose                                          | Use When                                        |\n| --------------- | ------------------------------------------------ | ----------------------------------------------- |\n| `PrintAST`      | Visualize the Abstract Syntax Tree               | Understanding code structure, finding AST nodes |\n| `PrintCFG`      | Visualize Control Flow Graphs                    | Understanding execution paths, loop/branch flow |\n| `CallGraphFrom` | Find all functions called by a specific function | Tracing data flow through call chains           |\n| `CallGraphTo`   | Find all functions that call a specific function | Understanding function usage patterns           |\n\n## Supported Languages\n\nTools queries are available for: `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `swift`\n\n## Prerequisites\n\nBefore using tools queries, you need:\n\n1. **A CodeQL database** - Either create one or use an existing database\n2. **Source files to analyze** - The tools queries filter output to specific files\n\n## Workflow Checklist\n\n### Step 1: Identify or Create Database\n\n- [ ] **Option A: Use existing database**\n  - Tool: #codeql_resolve_database\n  - Verify database is valid and note the language\n\n- [ ] **Option B: Create new database**\n  - Tool: #codeql_database_create\n  - Parameters: `database`, `language`, `source-root`\n\n### Step 2: Run PrintAST Query\n\nThe PrintAST query outputs a hierarchical tree of AST nodes with labels.\n\n- [ ] **Execute PrintAST**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"PrintAST"`\n    - `queryLanguage`: Your language (e.g., `"javascript"`, `"python"`, `"cpp"`)\n    - `sourceFiles`: Comma-separated file names to analyze (e.g., `"main.js,utils.js"`)\n    - `format`: `"graphtext"` (for human-readable output)\n\n- [ ] **Verify output contains AST nodes**\n  - Look for hierarchical structure with indentation\n  - Confirm nodes have `semmle.label` with class names\n  - Identify relevant AST classes for your query\n\n**Example AST output structure:**\n\n```text\nTopLevelFunction\n\u251C\u2500\u2500 FunctionDeclarationEntry\n\u251C\u2500\u2500 Block\n\u2502   \u251C\u2500\u2500 DeclStmt\n\u2502   \u2502   \u2514\u2500\u2500 LocalVariable\n\u2502   \u251C\u2500\u2500 ExprStmt\n\u2502   \u2502   \u2514\u2500\u2500 FunctionCall\n\u2502   \u2514\u2500\u2500 ReturnStmt\n```\n\n### Step 3: Run PrintCFG Query (if needed)\n\nThe PrintCFG query outputs control flow nodes and edges.\n\n- [ ] **Execute PrintCFG**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"PrintCFG"`\n    - `queryLanguage`: Your language\n    - `sourceFunction`: Function name to analyze (e.g., `"processData"`)\n    - `format`: `"graphtext"`\n\n- [ ] **Verify output contains nodes and edges**\n  - Look for `nodes` section with CFG nodes\n  - Look for `edges` section with `\u2192` arrows showing flow\n  - Identify control flow patterns (loops, branches)\n\n**Example CFG output structure:**\n\n```text\nnodes\n| node | semmle.label |\n| ... | entry: processData |\n| ... | if (...) |\n| ... | return |\n\nedges\n| from | to | semmle.label |\n| ... | ... | \u2192 |\n```\n\n### Step 4: Run CallGraph Queries (if needed)\n\nCall graph queries help trace function relationships.\n\n- [ ] **Execute CallGraphFrom** (to find what a function calls)\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"CallGraphFrom"`\n    - `queryLanguage`: Your language\n    - `sourceFunction`: Function name to trace from (e.g., `"main"`)\n    - `format`: `"sarif-latest"` or `"csv"`\n\n- [ ] **Execute CallGraphTo** (to find what calls a function)\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `database`: Path to your CodeQL database\n    - `queryName`: `"CallGraphTo"`\n    - `queryLanguage`: Your language\n    - `targetFunction`: Function name to find callers of (e.g., `"validate"`)\n    - `format`: `"sarif-latest"` or `"csv"`\n\n- [ ] **Verify call relationships**\n  - Confirm results show caller \u2192 callee relationships\n  - Note function locations for further analysis\n\n### Step 5: Apply Insights to Query Development\n\nUse the gathered information to inform your query:\n\n- [ ] **From PrintAST**: Identify which AST classes to use in your `from` clause\n- [ ] **From PrintCFG**: Understand execution paths for control-flow-sensitive queries\n- [ ] **From CallGraph**: Map data flow paths through function boundaries\n\n## Common Patterns\n\n### Pattern 1: Finding All Function Calls\n\n```text\n1. Run PrintAST on your source file\n2. Look for FunctionCall, MethodAccess, or similar nodes\n3. Note the parent/child relationships\n4. Use those AST classes in your query\n```\n\n### Pattern 2: Tracing Data Through Functions\n\n```text\n1. Run CallGraphFrom on your entry point function\n2. Identify which functions are called\n3. Run CallGraphTo on sink functions\n4. Map the complete path from source to sink\n```\n\n### Pattern 3: Understanding Loop Structures\n\n```text\n1. Run PrintAST to find loop constructs (ForStmt, WhileStmt, etc.)\n2. Run PrintCFG on the containing function\n3. Identify back edges that represent loop iteration\n4. Use CFG analysis for loop-sensitive queries\n```\n\n## Troubleshooting\n\n| Issue                 | Likely Cause                          | Resolution                                             |\n| --------------------- | ------------------------------------- | ------------------------------------------------------ |\n| Empty AST output      | `sourceFiles` parameter not matching  | Use just filenames, not full paths (e.g., `"test.js"`) |\n| Empty CFG output      | `sourceFunction` not found            | Check exact function name spelling                     |\n| Empty CallGraph       | No calls exist or wrong function name | Verify function exists and has calls                   |\n| Query compilation err | Pack dependencies missing             | Run #codeql_pack_install on the tools pack             |\n\n## MCP Tools Reference\n\n| Tool                     | Purpose                                              |\n| ------------------------ | ---------------------------------------------------- |\n| #codeql_query_run        | Execute tools queries with parameters                |\n| #codeql_resolve_database | Validate database before querying                    |\n| #codeql_database_create  | Create database from source code                     |\n| #codeql_bqrs_interpret   | Convert results to different formats                 |\n| #codeql_pack_install     | Install pack dependencies if needed                  |\n| #codeql_lsp_completion   | Explore available types after seeing AST class names |\n| #codeql_lsp_definition   | Navigate to class definitions to see predicates      |\n| #codeql_lsp_references   | Find usage examples of a class or predicate          |\n| #search_ql_code          | Search QL source files for patterns (text or regex)  |\n| #codeql_resolve_files    | Find QL files by name, extension, or glob pattern    |\n\n### Using LSP Tools After AST Analysis\n\nAfter running PrintAST and identifying relevant AST class names, use the LSP tools\nto explore those classes in your query file:\n\n1. **Write the class name** in your query\'s `from` clause and save the file\n2. **Run #codeql_lsp_completion** after the dot to see member predicates:\n   - `file_path`: your query file, `line`/`character`: 0-based position after the dot\n   - `workspace_uri`: the pack root directory (containing `codeql-pack.yml`)\n3. **Run #codeql_lsp_definition** on an AST class name to see its full API\n4. **Run #codeql_lsp_references** to find usage examples in the pack\n\n> **Note**: LSP tools use 0-based line/character positions. Run #codeql_pack_install\n> before using them \u2014 they require resolved dependencies. Set `workspace_uri` to\n> a plain directory path (not a `file://` URI).\n\nFor the full iterative LSP development workflow, see: `codeql://prompts/ql_lsp_iterative_development`\n';
 
 // src/prompts/workshop-creation-workflow.prompt.md
 var workshop_creation_workflow_prompt_default = '---\nagent: agent\n---\n\n# Creating CodeQL Query Development Workshops\n\nThis guide helps you create educational CodeQL query development workshops from existing production-grade queries. Workshops teach developers how to build queries incrementally through exercises and solutions.\n\n## Workshop Purpose\n\nA CodeQL workshop transforms a complex, production-ready query into a series of incremental learning stages:\n\n- **Exercises**: Incomplete query stubs with scaffolding and hints\n- **Solutions**: Complete working queries for each stage\n- **Tests**: Unit tests validating each stage works correctly\n- **Documentation**: README with learning objectives and instructions\n\n## Prerequisites\n\nBefore creating a workshop, ensure you have:\n\n1. **A production-grade CodeQL query** - The "target" query to decompose\n2. **Working unit tests** - Tests that pass for the target query\n3. **A CodeQL database** - For running tools queries and validating results\n\n## Workshop Creation Checklist\n\n### Phase 1: Analyze the Target Query\n\n- [ ] **Locate query files**\n  - Tool: #find_codeql_query_files\n  - Parameters: `queryPath` (path to the `.ql` or `.qlref` file)\n  - Note: Returns query file, test files, expected results, and metadata\n\n- [ ] **Understand query logic for workshop content**\n  - Prompt: `explain_codeql_query`\n  - Parameters: `queryPath`, `language`, and optionally `databasePath`\n  - Identify: sources, sinks, sanitizers, flow configuration\n  - Generates: detailed explanation with mermaid evaluation diagram\n\n- [ ] **Verify existing tests pass**\n  - Tool: #codeql_test_run\n  - Parameters: `tests` (array of test directories)\n  - Confirm: 100% pass rate before proceeding\n\n### Phase 2: Generate AST/CFG Understanding\n\n> **\u26A0\uFE0F CRITICAL**: Run tools queries to understand the test code structure.\n\n- [ ] **Run PrintAST on test code**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `queryName`: `"PrintAST"`\n    - `queryLanguage`: Your language (e.g., `"cpp"`, `"javascript"`)\n    - `database`: Path to test database or extracted `.testproj`\n    - `sourceFiles`: Test source file names\n    - `format`: `"graphtext"`\n  - Verify: Output contains hierarchical AST nodes (not empty)\n\n- [ ] **Run PrintCFG on key functions**\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `queryName`: `"PrintCFG"`\n    - `queryLanguage`: Your language\n    - `database`: Path to database\n    - `sourceFunction`: Key function names from test code\n    - `format`: `"graphtext"`\n  - Verify: Output contains nodes and edges\n\n- [ ] **Run CallGraph queries** (if query involves data flow)\n  - Tool: #codeql_query_run\n  - Parameters:\n    - `queryName`: `"CallGraphFrom"` or `"CallGraphTo"`\n    - `database`: Path to database\n    - `sourceFunction` / `targetFunction`: Relevant function names\n  - Verify: Output shows call relationships\n\n### Phase 3: Plan Workshop Stages\n\nDecompose the query into 4-8 incremental stages using these strategies:\n\n#### Decomposition Strategies\n\n| Strategy             | Description                                              | Example Progression                   |\n| -------------------- | -------------------------------------------------------- | ------------------------------------- |\n| Syntactic \u2192 Semantic | Start with syntax, add type checking, then data flow     | AST \u2192 Types \u2192 Local flow \u2192 Global     |\n| Local \u2192 Global       | Start with local analysis, expand to cross-procedural    | Single function \u2192 Multiple functions  |\n| Simple \u2192 Filtered    | High recall first, then add precision filters            | All calls \u2192 Specific calls \u2192 Filtered |\n| Building Blocks      | Define helpers, combine into sources/sinks, connect flow | Predicates \u2192 Sources \u2192 Sinks \u2192 Config |\n\n- [ ] **Document stage progression**\n  - Stage 1: Basic syntactic pattern (highest recall)\n  - Stage 2-N: Add refinements (types, filters, flow)\n  - Final Stage: Complete production query\n\n### Phase 4: Create Workshop Structure\n\nStandard workshop directory layout:\n\n```text\nworkshop-name/\n\u251C\u2500\u2500 codeql-workspace.yml      # CodeQL workspace configuration\n\u251C\u2500\u2500 README.md                 # Workshop guide with instructions\n\u251C\u2500\u2500 build-databases.sh        # Script to create test databases\n\u251C\u2500\u2500 exercises/                # Student exercise queries\n\u2502   \u251C\u2500\u2500 codeql-pack.yml\n\u2502   \u251C\u2500\u2500 Exercise1.ql\n\u2502   \u251C\u2500\u2500 Exercise2.ql\n\u2502   \u2514\u2500\u2500 ...\n\u251C\u2500\u2500 exercises-tests/          # Tests for exercises\n\u2502   \u251C\u2500\u2500 codeql-pack.yml\n\u2502   \u251C\u2500\u2500 Exercise1/\n\u2502   \u2502   \u251C\u2500\u2500 Exercise1.qlref\n\u2502   \u2502   \u251C\u2500\u2500 Exercise1.expected\n\u2502   \u2502   \u2514\u2500\u2500 test.ext\n\u2502   \u2514\u2500\u2500 ...\n\u251C\u2500\u2500 solutions/                # Complete solution queries\n\u2502   \u251C\u2500\u2500 codeql-pack.yml\n\u2502   \u251C\u2500\u2500 Exercise1.ql\n\u2502   \u251C\u2500\u2500 Exercise2.ql\n\u2502   \u2514\u2500\u2500 ...\n\u251C\u2500\u2500 solutions-tests/          # Tests for solutions\n\u2502   \u251C\u2500\u2500 codeql-pack.yml\n\u2502   \u2514\u2500\u2500 ...\n\u251C\u2500\u2500 tests-common/             # Shared test code\n\u2502   \u2514\u2500\u2500 test.ext\n\u2514\u2500\u2500 graphs/                   # AST/CFG visualizations\n    \u2514\u2500\u2500 ast-overview.txt\n```\n\n- [ ] **Create codeql-workspace.yml**\n\n  ```yaml\n  provide:\n    - \'*/codeql-pack.yml\'\n  ```\n\n- [ ] **Create pack files for each directory**\n  - `exercises/codeql-pack.yml`: Query pack depending on language library\n  - `exercises-tests/codeql-pack.yml`: Test pack depending on exercises\n  - `solutions/codeql-pack.yml`: Query pack (same deps as exercises)\n  - `solutions-tests/codeql-pack.yml`: Test pack depending on solutions\n\n### Phase 5: Create Solution Queries\n\nFor each stage, create a complete solution query. Use the iterative LSP tools\nfor efficient development (see `codeql://prompts/ql_lsp_iterative_development`):\n\n- Use #codeql_lsp_completion to explore types and member predicates while writing queries\n- Use #codeql_lsp_definition to navigate to library class definitions\n- Use #find_predicate_position + #quick_evaluate to test predicates in isolation\n- Set `workspace_uri` to the solutions pack root for dependency resolution\n\n- [ ] **Stage 1 Solution**: Simplest working version\n  - Basic import statements\n  - Minimal from/where/select clause\n  - Should produce results (high recall, lower precision)\n\n- [ ] **Intermediate Stages**: Progressive refinements\n  - Add type constraints\n  - Add helper predicates\n  - Filter out false positives\n  - Add data flow (if applicable)\n\n- [ ] **Final Stage Solution**: Production-quality query\n  - Complete metadata (@name, @description, @kind, @id)\n  - Full data flow configuration (if applicable)\n  - Proper sanitizers and barriers\n  - Matches the original target query\n\n### Phase 6: Create Exercise Queries\n\nTransform solutions into exercises by removing implementation details:\n\n- [ ] **Add scaffolding structure**\n\n  ```ql\n  /**\n   * @name Exercise N - [Topic]\n   * @description TODO: Complete this exercise\n   * @kind problem\n   * @id workshop/exercise-n\n   */\n\n  import language\n\n  // TODO: Define predicate to find [something]\n  predicate findSomething(Type t) {\n    // Your implementation here\n    none()\n  }\n\n  from Type t\n  where findSomething(t)\n  select t, "Found something"\n  ```\n\n- [ ] **Include helpful comments**\n  - Hints about which AST classes to use\n  - References to documentation\n  - Expected behavior description\n\n- [ ] **Ensure exercises compile**\n  - Tool: #codeql_query_compile\n  - Exercises should compile (even if tests fail)\n\n### Phase 7: Create Tests\n\n- [ ] **Copy test code to test directories**\n  - Use same test code for exercises and solutions\n  - Consider `initialize-qltests.sh` script for shared test code\n\n- [ ] **Create .qlref files**\n  - Point to query location: `../exercises/ExerciseN.ql`\n\n- [ ] **Create .expected files**\n  - Run solution queries to generate expected output\n  - Tool: #codeql_test_run with `--learn` flag\n  - Or: #codeql_test_accept after running tests\n\n### Phase 8: Validate Workshop\n\n- [ ] **Run all solution tests**\n  - Tool: #codeql_test_run\n  - Parameters: `tests` pointing to `solutions-tests/`\n  - Verify: 100% pass rate\n\n- [ ] **Verify exercise stubs compile**\n  - Tool: #codeql_query_compile\n  - Parameters: Each exercise query\n  - Verify: No compilation errors\n\n- [ ] **Test pack dependencies**\n  - Tool: #codeql_pack_install\n  - Run in each pack directory\n  - Verify: Dependencies resolve correctly\n\n### Phase 9: Create Documentation\n\n- [ ] **Write README.md**\n  - Workshop overview and objectives\n  - Setup instructions\n  - Stage-by-stage learning guide\n  - AST/CFG examples from Phase 2\n\n- [ ] **Include AST/CFG visualizations**\n  - Save PrintAST output to `graphs/`\n  - Reference in README for learning context\n\n## External Workshop Considerations\n\nWhen creating workshops outside the MCP server repository:\n\n- [ ] **Install pack dependencies first**\n\n  ```bash\n  codeql pack install solutions\n  codeql pack install solutions-tests\n  ```\n\n- [ ] **Check for initialization scripts**\n  - Some workshops use `initialize-qltests.sh` to copy test files\n  - Run before executing tests\n\n- [ ] **Use absolute paths with MCP tools**\n  - External paths must be absolute\n\n## MCP Tools and Prompts Reference\n\n| Tool/Prompt                     | Type   | Purpose                                                                |\n| ------------------------------- | ------ | ---------------------------------------------------------------------- |\n| #find_codeql_query_files        | Tool   | Locate query and related files                                         |\n| `explain_codeql_query`          | Prompt | Generate detailed explanations for workshop learning content           |\n| `document_codeql_query`         | Prompt | Create/update query documentation files                                |\n| `ql_lsp_iterative_development`  | Prompt | Iterative query development with LSP tools                             |\n| #codeql_query_run               | Tool   | Run tools queries (PrintAST, PrintCFG, etc.)                           |\n| #codeql_test_run                | Tool   | Validate tests pass                                                    |\n| #codeql_test_accept             | Tool   | Accept test results as expected baseline                               |\n| #codeql_query_compile           | Tool   | Verify queries compile                                                 |\n| #codeql_pack_install            | Tool   | Install pack dependencies                                              |\n| #codeql_resolve_metadata        | Tool   | Extract query metadata                                                 |\n| #codeql_lsp_completion          | Tool   | Explore types and member predicates during query writing               |\n| #codeql_lsp_definition          | Tool   | Navigate to class/predicate definitions in library code                |\n| #find_predicate_position        | Tool   | Locate predicate positions for quick_evaluate                          |\n| #quick_evaluate                 | Tool   | Test individual predicates against a database                          |\n| #profile_codeql_query_from_logs | Tool   | Parse evaluator logs from a prior query run into a performance profile |\n| #create_codeql_query            | Tool   | Scaffold new query structure                                           |\n\n## Troubleshooting\n\n| Issue                    | Likely Cause                    | Resolution                                          |\n| ------------------------ | ------------------------------- | --------------------------------------------------- |\n| "Nothing to extract"     | Missing test source files       | Run `initialize-qltests.sh` or copy from shared dir |\n| Pack not found           | Older pack version not cached   | Run `codeql pack install` in pack directory         |\n| Empty AST/CFG output     | Wrong sourceFiles/Function      | Use just filenames, verify function name spelling   |\n| Tests fail unexpectedly  | Expected file outdated          | Re-run solution and accept with #codeql_test_accept |\n| Exercise doesn\'t compile | Missing imports or syntax error | Ensure valid QL syntax with `none()` placeholder    |\n';
@@ -64410,7 +64615,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync11, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
+import { readFileSync as readFileSync12, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -64423,7 +64628,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync11(this.#filename, "utf-8");
+      data = readFileSync12(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -64474,7 +64679,7 @@ var JSONFileSync = class extends DataFileSync {
 // src/lib/session-data-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync9, writeFileSync as writeFileSync7 } from "fs";
-import { join as join17 } from "path";
+import { join as join18 } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
 
 // src/types/monitoring.ts
@@ -64618,7 +64823,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join17(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join18(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -64650,9 +64855,9 @@ var SessionDataManager = class {
       mkdirSync9(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync9(join17(this.storageDir, subdir), { recursive: true });
+        mkdirSync9(join18(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join17(this.storageDir, "config.json");
+      const configPath = join18(this.storageDir, "config.json");
       try {
         writeFileSync7(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
@@ -64831,9 +65036,9 @@ var SessionDataManager = class {
       if (!session) return;
       const date3 = new Date(session.endTime || session.startTime);
       const monthDir = `${date3.getFullYear()}-${String(date3.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join17(this.storageDir, "sessions-archive", monthDir);
+      const archiveDir = join18(this.storageDir, "sessions-archive", monthDir);
       mkdirSync9(archiveDir, { recursive: true });
-      const archiveFile = join17(archiveDir, `${sessionId}.json`);
+      const archiveFile = join18(archiveDir, `${sessionId}.json`);
       writeFileSync7(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
@@ -64885,7 +65090,7 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join17(this.storageDir, "config.json");
+    const configPath = join18(this.storageDir, "config.json");
     writeFileSync7(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
@@ -64895,7 +65100,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join17(getProjectTmpBase(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join18(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
@@ -65769,7 +65974,7 @@ init_cli_executor();
 init_server_manager();
 init_package_paths();
 init_logger();
-import_dotenv.default.config({ path: resolve12(packageRootDir, ".env"), quiet: true });
+import_dotenv.default.config({ path: resolve13(packageRootDir, ".env"), quiet: true });
 var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.24.3";
 async function startServer(mode = "stdio") {
@@ -65825,10 +66030,10 @@ async function startServer(mode = "stdio") {
     });
     const host = process.env.HTTP_HOST || "localhost";
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
-    return new Promise((resolve13, reject) => {
+    return new Promise((resolve14, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve13();
+        resolve14();
       });
       httpServer.on("error", (error2) => {
         logger.error("HTTP server error:", error2);
@@ -65865,7 +66070,7 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? realpathSync(resolve12(process.argv[1])) : void 0;
+var scriptPath = process.argv[1] ? realpathSync(resolve13(process.argv[1])) : void 0;
 if (scriptPath && import.meta.url === pathToFileURL5(scriptPath).href) {
   main();
 }

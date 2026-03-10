@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import {
   createTestTempDir,
   cleanupTestTempDir,
@@ -202,14 +202,21 @@ describe('Profile CodeQL Query From Logs Tool', () => {
         existsSync(join(outputDir, 'query-evaluation-profile.json'))
       ).toBe(true);
       expect(
-        existsSync(join(outputDir, 'query-evaluation-profile.md'))
+        existsSync(join(outputDir, 'query-evaluation-detail.txt'))
       ).toBe(true);
 
-      // Text summary content
-      const text = result.content[0].text;
-      expect(text).toContain('Query log profiling completed successfully');
-      expect(text).toContain('TestQuery.ql');
-      expect(text).toContain('ExpensivePred');
+      // Response is compact structured JSON
+      const response = JSON.parse(result.content[0].text);
+      expect(response.logFormat).toBe('raw');
+      expect(response.queries).toHaveLength(1);
+      expect(response.queries[0].queryName).toBe('TestQuery.ql');
+      expect(response.queries[0].slowestPredicates).toHaveLength(1);
+      expect(response.queries[0].slowestPredicates[0].name).toBe('ExpensivePred');
+      expect(response.queries[0].slowestPredicates[0].evalOrder).toBe(1);
+      expect(response.queries[0].slowestPredicates[0].detailLines).toBeDefined();
+      expect(response.queries[0].slowestPredicates[0].detailLines.start).toBeGreaterThan(0);
+      expect(response.detailFile).toContain('query-evaluation-detail.txt');
+      expect(response.fullProfileJson).toContain('query-evaluation-profile.json');
     });
 
     it('should write valid JSON profile', async () => {
@@ -239,8 +246,8 @@ describe('Profile CodeQL Query From Logs Tool', () => {
       expect(profile.queries[0].queryName).toBe('TestQuery.ql');
     });
 
-    it('should write a Mermaid diagram file', async () => {
-      tempDir = createTestTempDir('profile-mermaid-');
+    it('should write detail file with predicate RA data', async () => {
+      tempDir = createTestTempDir('profile-detail-');
       mkdirSync(tempDir, { recursive: true });
 
       const logPath = join(tempDir, 'evaluator-log.jsonl');
@@ -253,15 +260,14 @@ describe('Profile CodeQL Query From Logs Tool', () => {
       } as unknown as McpServer;
       registerProfileCodeQLQueryFromLogsTool(mockServer);
       const handler = getRegisteredHandler(mockServer);
-      await handler({ evaluatorLog: logPath, outputDir });
+      const result = await handler({ evaluatorLog: logPath, outputDir });
 
-      const mdContent = readFileSync(
-        join(outputDir, 'query-evaluation-profile.md'),
-        'utf-8'
-      );
-      expect(mdContent).toContain('```mermaid');
-      expect(mdContent).toContain('graph TD');
-      expect(mdContent).toContain('TestQuery.ql');
+      // Detail file should exist and contain predicate info
+      const response = JSON.parse(result.content[0].text);
+      const detailContent = readFileSync(response.detailFile, 'utf-8');
+      expect(detailContent).toContain('ExpensivePred');
+      expect(detailContent).toContain('Eval order:');
+      expect(detailContent).toContain('Duration:');
     });
   });
 
@@ -327,6 +333,112 @@ describe('Profile CodeQL Query From Logs Tool', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Multi-query log (codeql database analyze pattern)
+  // -----------------------------------------------------------------------
+
+  describe('multi-query log processing (database analyze pattern)', () => {
+    it('should return per-query summaries in the JSON response', async () => {
+      const logPath = resolve(
+        __dirname,
+        '../../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      tempDir = createTestTempDir('profile-multi-query-');
+      mkdirSync(tempDir, { recursive: true });
+
+      const mockServer = {
+        tool: vi.fn(),
+      } as unknown as McpServer;
+      registerProfileCodeQLQueryFromLogsTool(mockServer);
+      const handler = getRegisteredHandler(mockServer);
+
+      const result = await handler({
+        evaluatorLog: logPath,
+        outputDir: tempDir,
+        topN: 10,
+      });
+
+      expect(result.isError).toBeUndefined();
+      const response = JSON.parse(result.content[0].text);
+
+      expect(response.logFormat).toBe('raw');
+      expect(response.queries).toHaveLength(2);
+      expect(response.queries[0].queryName).toContain('QueryA.ql');
+      expect(response.queries[1].queryName).toContain('QueryB.ql');
+    });
+
+    it('should include slowest predicates per query with pipeline data', async () => {
+      const logPath = resolve(
+        __dirname,
+        '../../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      tempDir = createTestTempDir('profile-multi-pipeline-');
+      mkdirSync(tempDir, { recursive: true });
+
+      const mockServer = {
+        tool: vi.fn(),
+      } as unknown as McpServer;
+      registerProfileCodeQLQueryFromLogsTool(mockServer);
+      const handler = getRegisteredHandler(mockServer);
+
+      const result = await handler({
+        evaluatorLog: logPath,
+        outputDir: tempDir,
+      });
+
+      const response = JSON.parse(result.content[0].text);
+
+      // QueryA should have 2 predicates
+      expect(response.queries[0].slowestPredicates.length).toBe(2);
+      expect(response.queries[0].predicateCount).toBe(2);
+
+      // QueryB should have 3 predicates
+      expect(response.queries[1].slowestPredicates.length).toBe(3);
+      expect(response.queries[1].predicateCount).toBe(3);
+
+      // Each predicate should have detailLines pointing into the detail file
+      const firstPred = response.queries[0].slowestPredicates[0];
+      expect(firstPred.detailLines).toBeDefined();
+      expect(firstPred.detailLines.start).toBeGreaterThan(0);
+      expect(firstPred.detailLines.end).toBeGreaterThan(firstPred.detailLines.start);
+
+      // Detail file should contain full RA and pipeline data
+      const detailContent = readFileSync(response.detailFile, 'utf-8');
+      expect(detailContent).toContain('Pipeline stages');
+    });
+
+    it('should include evalOrder reflecting chronological position', async () => {
+      const logPath = resolve(
+        __dirname,
+        '../../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      tempDir = createTestTempDir('profile-multi-order-');
+      mkdirSync(tempDir, { recursive: true });
+
+      const mockServer = {
+        tool: vi.fn(),
+      } as unknown as McpServer;
+      registerProfileCodeQLQueryFromLogsTool(mockServer);
+      const handler = getRegisteredHandler(mockServer);
+
+      const result = await handler({
+        evaluatorLog: logPath,
+        outputDir: tempDir,
+      });
+
+      const response = JSON.parse(result.content[0].text);
+
+      // QueryB has 3 predicates — the slowest should have chronological evalOrder
+      const qbPreds = response.queries[1].slowestPredicates;
+      const evalOrders = qbPreds.map((p: { evalOrder: number }) => p.evalOrder);
+      // Each evalOrder should be 1, 2, or 3 (1-based chronological)
+      for (const o of evalOrders) {
+        expect(o).toBeGreaterThanOrEqual(1);
+        expect(o).toBeLessThanOrEqual(3);
+      }
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Defaults
   // -----------------------------------------------------------------------
 
@@ -351,7 +463,7 @@ describe('Profile CodeQL Query From Logs Tool', () => {
         existsSync(join(tempDir, 'query-evaluation-profile.json'))
       ).toBe(true);
       expect(
-        existsSync(join(tempDir, 'query-evaluation-profile.md'))
+        existsSync(join(tempDir, 'query-evaluation-detail.txt'))
       ).toBe(true);
     });
 
@@ -372,9 +484,12 @@ describe('Profile CodeQL Query From Logs Tool', () => {
 
       // Should succeed without error (topN default applied internally)
       expect(result.isError).toBeUndefined();
-      expect(result.content[0].text).toContain(
-        'Query log profiling completed successfully'
-      );
+      const response = JSON.parse(result.content[0].text);
+      expect(response.queries).toHaveLength(1);
+      expect(response.queries[0].slowestPredicates).toBeDefined();
+      // Verify compact format: no raSteps or pipelineStages inline
+      expect(response.queries[0].slowestPredicates[0].raSteps).toBeUndefined();
+      expect(response.queries[0].slowestPredicates[0].detailLines).toBeDefined();
     });
   });
 });

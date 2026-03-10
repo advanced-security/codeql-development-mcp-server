@@ -18,6 +18,15 @@ import { logger } from '../utils/logger';
 // Public interfaces
 // ---------------------------------------------------------------------------
 
+/** Per-pipeline execution data showing tuple count progression. */
+export interface PipelineStage {
+  durationMs: number;
+  resultSize: number;
+  /** Tuple counts at each RA step within the pipeline. */
+  counts: number[];
+  duplicationPercentages?: number[];
+}
+
 /** Performance profile for a single evaluated predicate. */
 export interface PredicateProfile {
   predicateName: string;
@@ -27,6 +36,10 @@ export interface PredicateProfile {
   pipelineCount?: number;
   evaluationStrategy?: string;
   dependencies: string[];
+  /** RA operation text for each pipeline step (from the `ra` field). */
+  raSteps?: string[];
+  /** Per-pipeline execution data with tuple count progressions. */
+  pipelineStages?: PipelineStage[];
 }
 
 /** Performance profile for a single query within a log. */
@@ -76,8 +89,8 @@ export function detectLogFormat(firstEvent: Record<string, unknown>): 'raw' | 's
  * brace). We split on `\n}\n` boundaries and reconstruct valid objects.
  */
 function splitJsonObjects(content: string): string[] {
-  // Trim leading/trailing whitespace
-  const trimmed = content.trim();
+  // Normalize line endings for cross-platform compatibility (Windows \r\n → \n)
+  const trimmed = content.replace(/\r\n/g, '\n').trim();
   if (trimmed.length === 0) {
     return [];
   }
@@ -156,8 +169,15 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
       queryCausingWork?: number;
       nanoTime: number;
       pipelineCount: number;
+      raSteps?: string[];
+      pipelineStages: PipelineStage[];
     }
   >();
+
+  // Maps: pipeline eventId → pipeline start nanoTime
+  const pipelineStartNanoTimes = new Map<number, number>();
+  // Maps: pipeline eventId → parent predicate eventId
+  const pipelineToPredicateMap = new Map<number, number>();
 
   // Completed predicate profiles grouped by query eventId
   const queryPredicates = new Map<number, PredicateProfile[]>();
@@ -201,6 +221,12 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
       case 'PREDICATE_STARTED': {
         const eid = event.eventId as number;
         const deps = event.dependencies as Record<string, string> | undefined;
+        // Extract RA pipeline steps if present
+        const raObj = event.ra as Record<string, unknown> | undefined;
+        let raSteps: string[] | undefined;
+        if (raObj && Array.isArray(raObj.pipeline)) {
+          raSteps = (raObj.pipeline as string[]).map((s) => s.trim());
+        }
         predicateStartEvents.set(eid, {
           predicateName: (event.predicateName as string) || 'unknown',
           position: event.position as string | undefined,
@@ -209,24 +235,37 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
           queryCausingWork: event.queryCausingWork as number | undefined,
           nanoTime: event.nanoTime as number,
           pipelineCount: 0,
+          raSteps,
+          pipelineStages: [],
         });
         break;
       }
 
+      case 'PIPELINE_STARTED': {
+        const eid = event.eventId as number;
+        pipelineStartNanoTimes.set(eid, event.nanoTime as number);
+        const predEid = event.predicateStartEvent as number;
+        pipelineToPredicateMap.set(eid, predEid);
+        break;
+      }
+
       case 'PIPELINE_COMPLETED': {
-        // Count pipelines for the parent predicate
         const pipelineStartEid = event.startEvent as number;
-        // Find the pipeline_started event to get predicateStartEvent
-        const pipelineStartEvt = events.find(
-          (e) =>
-            (e.type as string) === 'PIPELINE_STARTED' &&
-            (e.eventId as number) === pipelineStartEid
-        );
-        if (pipelineStartEvt) {
-          const predEid = pipelineStartEvt.predicateStartEvent as number;
+        const predEid = pipelineToPredicateMap.get(pipelineStartEid);
+        const startNano = pipelineStartNanoTimes.get(pipelineStartEid);
+        if (predEid !== undefined) {
           const predStart = predicateStartEvents.get(predEid);
           if (predStart) {
             predStart.pipelineCount += 1;
+            const pipelineDurationMs = startNano !== undefined
+              ? ((event.nanoTime as number) - startNano) / 1_000_000
+              : 0;
+            predStart.pipelineStages.push({
+              durationMs: pipelineDurationMs,
+              resultSize: (event.resultSize as number) ?? 0,
+              counts: (event.counts as number[]) ?? [],
+              duplicationPercentages: event.duplicationPercentages as number[] | undefined,
+            });
           }
         }
         break;
@@ -251,6 +290,11 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
                 : undefined,
             evaluationStrategy: predStart.predicateType,
             dependencies: predStart.dependencies,
+            raSteps: predStart.raSteps,
+            pipelineStages:
+              predStart.pipelineStages.length > 0
+                ? predStart.pipelineStages
+                : undefined,
           };
 
           const qEid =
@@ -358,6 +402,13 @@ export function parseSummaryLog(logPath: string): ProfileData {
     const deps = event.dependencies as Record<string, string> | undefined;
     const pipelineRuns = event.pipelineRuns as number | undefined;
 
+    // Extract RA steps from summary events
+    const raObj = event.ra as string | undefined;
+    let raSteps: string[] | undefined;
+    if (typeof raObj === 'string' && raObj.length > 0) {
+      raSteps = raObj.replace(/\r\n/g, '\n').split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+    }
+
     const profile: PredicateProfile = {
       predicateName,
       position: event.position as string | undefined,
@@ -366,6 +417,7 @@ export function parseSummaryLog(logPath: string): ProfileData {
       pipelineCount: pipelineRuns,
       evaluationStrategy: strategy,
       dependencies: deps ? Object.keys(deps) : [],
+      raSteps,
     };
 
     // Check if this is a cached entry

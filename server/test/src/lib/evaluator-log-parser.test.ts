@@ -46,6 +46,12 @@ function singleQueryRawLog(): string {
       predicateName: 'TestPredicate#1',
       predicateType: 'COMPUTED',
       position: 'TestQuery.ql:5:1:10:1',
+      ra: {
+        pipeline: [
+          '    {100} r1 = SCAN `sometable` OUTPUT In.0, In.1',
+          '    return r1'
+        ]
+      },
       dependencies: {},
       queryCausingWork: 2,
     },
@@ -63,6 +69,8 @@ function singleQueryRawLog(): string {
       eventId: 5,
       nanoTime: 350000000,
       startEvent: 4,
+      counts: [100],
+      duplicationPercentages: [0],
       resultSize: 100,
     },
     {
@@ -137,8 +145,32 @@ function multiQueryRawLog(): string {
       raHash: 'aaa111',
       predicateName: 'PredicateA#1',
       predicateType: 'COMPUTED',
+      ra: {
+        pipeline: [
+          '    {200} r1 = SCAN `tableA` OUTPUT In.0, In.1',
+          '    return r1'
+        ]
+      },
       dependencies: {},
       queryCausingWork: 10,
+    },
+    {
+      time: '2026-02-17T00:00:02Z',
+      type: 'PIPELINE_STARTED',
+      eventId: 111,
+      nanoTime: 301000000,
+      predicateStartEvent: 11,
+      raReference: 'pipeline',
+    },
+    {
+      time: '2026-02-17T00:00:02Z',
+      type: 'PIPELINE_COMPLETED',
+      eventId: 112,
+      nanoTime: 309000000,
+      startEvent: 111,
+      counts: [200],
+      duplicationPercentages: [0],
+      resultSize: 200,
     },
     {
       time: '2026-02-17T00:00:02Z',
@@ -437,6 +469,43 @@ describe('Evaluator Log Parser', () => {
       expect(pred1!.pipelineCount).toBe(1);
     });
 
+    it('should capture RA steps from PREDICATE_STARTED ra field', () => {
+      const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
+      const result = parseRawEvaluatorLog(logPath);
+
+      const pred1 = result.queries[0].predicates.find(
+        (p) => p.predicateName === 'TestPredicate#1'
+      );
+      expect(pred1!.raSteps).toBeDefined();
+      expect(pred1!.raSteps).toHaveLength(2);
+      expect(pred1!.raSteps![0]).toContain('SCAN');
+    });
+
+    it('should capture pipeline stages with counts and timing', () => {
+      const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
+      const result = parseRawEvaluatorLog(logPath);
+
+      const pred1 = result.queries[0].predicates.find(
+        (p) => p.predicateName === 'TestPredicate#1'
+      );
+      expect(pred1!.pipelineStages).toBeDefined();
+      expect(pred1!.pipelineStages).toHaveLength(1);
+      expect(pred1!.pipelineStages![0].counts).toEqual([100]);
+      expect(pred1!.pipelineStages![0].resultSize).toBe(100);
+      expect(pred1!.pipelineStages![0].durationMs).toBeGreaterThan(0);
+    });
+
+    it('should not have raSteps when predicate has no ra field', () => {
+      const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
+      const result = parseRawEvaluatorLog(logPath);
+
+      const pred2 = result.queries[0].predicates.find(
+        (p) => p.predicateName === 'TestPredicate#2'
+      );
+      expect(pred2!.raSteps).toBeUndefined();
+      expect(pred2!.pipelineStages).toBeUndefined();
+    });
+
     it('should capture dependencies for predicates', () => {
       const logPath = writeTempLog('evaluator-log.jsonl', singleQueryRawLog());
       const result = parseRawEvaluatorLog(logPath);
@@ -500,6 +569,130 @@ describe('Evaluator Log Parser', () => {
       expect(result.queries[0].totalDurationMs).toBe(150);
       // QueryB: 400000000 → 650000000 = 250ms
       expect(result.queries[1].totalDurationMs).toBe(250);
+    });
+
+    it('should capture RA steps and pipeline stages for multi-query logs', () => {
+      const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
+      const result = parseRawEvaluatorLog(logPath);
+
+      // QueryA predicate should have RA steps and pipeline stage
+      const predA = result.queries[0].predicates[0];
+      expect(predA.raSteps).toBeDefined();
+      expect(predA.raSteps).toHaveLength(2);
+      expect(predA.raSteps![0]).toContain('SCAN');
+      expect(predA.pipelineStages).toBeDefined();
+      expect(predA.pipelineStages).toHaveLength(1);
+      expect(predA.pipelineStages![0].counts).toEqual([200]);
+      expect(predA.pipelineStages![0].resultSize).toBe(200);
+    });
+
+    it('should track cache hits per query', () => {
+      const logPath = writeTempLog('evaluator-log.jsonl', multiQueryRawLog());
+      const result = parseRawEvaluatorLog(logPath);
+
+      // No CACHE_LOOKUP events in synthetic multiQueryRawLog
+      expect(result.queries[0].cacheHits).toBe(0);
+      expect(result.queries[1].cacheHits).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // parseRawEvaluatorLog — real integration test fixture (multi-query)
+  // -----------------------------------------------------------------------
+
+  describe('parseRawEvaluatorLog — real multi-query fixture', () => {
+    it('should parse the real multi-query integration test fixture', () => {
+      const logPath = join(
+        __dirname,
+        '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      const result = parseEvaluatorLog(logPath);
+
+      expect(result.logFormat).toBe('raw');
+      expect(result.codeqlVersion).toBe('2.23.1');
+      expect(result.queries).toHaveLength(2);
+    });
+
+    it('should separate QueryA and QueryB from multi-query fixture', () => {
+      const logPath = join(
+        __dirname,
+        '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      const result = parseEvaluatorLog(logPath);
+
+      expect(result.queries[0].queryName).toBe('/workspace/QueryA.ql');
+      expect(result.queries[1].queryName).toBe('/workspace/QueryB.ql');
+    });
+
+    it('should group predicates correctly per query', () => {
+      const logPath = join(
+        __dirname,
+        '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      const result = parseEvaluatorLog(logPath);
+
+      // QueryA: 2 predicates (source, sink)
+      expect(result.queries[0].predicateCount).toBe(2);
+      const queryANames = result.queries[0].predicates.map(p => p.predicateName);
+      expect(queryANames).toContain('QueryA::source/0#abc123');
+      expect(queryANames).toContain('QueryA::sink/0#def456');
+
+      // QueryB: 3 predicates (entryPoint, flowStep, result)
+      expect(result.queries[1].predicateCount).toBe(3);
+      const queryBNames = result.queries[1].predicates.map(p => p.predicateName);
+      expect(queryBNames).toContain('QueryB::entryPoint/0#jkl012');
+      expect(queryBNames).toContain('QueryB::flowStep/2#mno345');
+      expect(queryBNames).toContain('QueryB::result/3#pqr678');
+    });
+
+    it('should capture pipeline stages from multi-query fixture', () => {
+      const logPath = join(
+        __dirname,
+        '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      const result = parseEvaluatorLog(logPath);
+
+      // QueryA source predicate should have pipeline stage with counts=[5]
+      const sourcePred = result.queries[0].predicates.find(
+        p => p.predicateName === 'QueryA::source/0#abc123'
+      );
+      expect(sourcePred!.pipelineStages).toBeDefined();
+      expect(sourcePred!.pipelineStages).toHaveLength(1);
+      expect(sourcePred!.pipelineStages![0].counts).toEqual([5]);
+      expect(sourcePred!.pipelineStages![0].resultSize).toBe(5);
+
+      // QueryB flowStep predicate should have pipeline stage with counts=[12]
+      const flowPred = result.queries[1].predicates.find(
+        p => p.predicateName === 'QueryB::flowStep/2#mno345'
+      );
+      expect(flowPred!.pipelineStages).toBeDefined();
+      expect(flowPred!.pipelineStages![0].counts).toEqual([12]);
+    });
+
+    it('should track cache hits for QueryA', () => {
+      const logPath = join(
+        __dirname,
+        '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      const result = parseEvaluatorLog(logPath);
+
+      // QueryA has 1 CACHE_LOOKUP event
+      expect(result.queries[0].cacheHits).toBe(1);
+      // QueryB has 0
+      expect(result.queries[1].cacheHits).toBe(0);
+    });
+
+    it('should compute per-query total durations from real fixture', () => {
+      const logPath = join(
+        __dirname,
+        '../../../../client/integration-tests/primitives/tools/profile_codeql_query_from_logs/multi_query_raw_log/before/evaluator-log.jsonl'
+      );
+      const result = parseEvaluatorLog(logPath);
+
+      // QueryA: 1000000000 → 1200000000 = 200ms
+      expect(result.queries[0].totalDurationMs).toBe(200);
+      // QueryB: 2000000000 → 2300000000 = 300ms
+      expect(result.queries[1].totalDurationMs).toBe(300);
     });
   });
 
@@ -576,6 +769,20 @@ describe('Evaluator Log Parser', () => {
         (p) => p.predicateName === 'TestPredicate#2'
       );
       expect(pred2!.pipelineCount).toBe(2);
+    });
+
+    it('should capture RA steps from summary ra field', () => {
+      const logPath = writeTempLog(
+        'evaluator-log.summary.jsonl',
+        summaryLog()
+      );
+      const result = parseSummaryLog(logPath);
+
+      const pred1 = result.queries[0].predicates.find(
+        (p) => p.predicateName === 'TestPredicate#1'
+      );
+      expect(pred1!.raSteps).toBeDefined();
+      expect(pred1!.raSteps).toEqual(['some RA text']);
     });
 
     it('should sum millis for total query duration', () => {
@@ -655,6 +862,18 @@ describe('Evaluator Log Parser', () => {
       // Should not throw; returns empty profile
       expect(result.queries).toHaveLength(0);
       expect(result.totalEvents).toBe(0);
+    });
+
+    it('should handle Windows-style \\r\\n line endings', () => {
+      // Build the same singleQueryRawLog content but with \r\n line endings
+      const content = singleQueryRawLog().replace(/\n/g, '\r\n');
+      const logPath = writeTempLog('win-crlf.jsonl', content);
+      const result = parseEvaluatorLog(logPath);
+
+      expect(result.logFormat).toBe('raw');
+      expect(result.queries).toHaveLength(1);
+      expect(result.queries[0].queryName).toBe('TestQuery.ql');
+      expect(result.queries[0].predicateCount).toBe(2);
     });
   });
 });

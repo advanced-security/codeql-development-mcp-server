@@ -187,6 +187,8 @@ Use the gathered information to inform your query:
 | #codeql_lsp_completion   | Explore available types after seeing AST class names |
 | #codeql_lsp_definition   | Navigate to class definitions to see predicates      |
 | #codeql_lsp_references   | Find usage examples of a class or predicate          |
+| #search_ql_code          | Search QL source files for patterns (text or regex)  |
+| #codeql_resolve_files    | Find QL files by name, extension, or glob pattern    |
 
 ### Using LSP Tools After AST Analysis
 
