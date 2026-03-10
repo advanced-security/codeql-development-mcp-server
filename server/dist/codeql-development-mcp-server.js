@@ -63058,13 +63058,9 @@ async function searchQlCode(params) {
   for (const file of filesToSearch) {
     if (collectedEnough) {
       try {
-        const st = lstatSync(file);
-        if (!st.isFile()) continue;
-        const content = st.size <= MAX_FILE_SIZE_BYTES ? readFileSync9(file, "utf-8") : null;
-        if (content) {
-          for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-            if (regex.test(line)) totalMatches++;
-          }
+        const content = readFileSync9(file, "utf-8");
+        for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+          if (regex.test(line)) totalMatches++;
         }
       } catch {
       }

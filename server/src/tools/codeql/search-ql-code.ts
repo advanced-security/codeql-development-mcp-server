@@ -293,20 +293,14 @@ export async function searchQlCode(params: {
   for (const file of filesToSearch) {
     if (collectedEnough) {
       // Still need totalMatches count but skip storing results.
-      // For small files, just count line matches without allocating.
+      // Read directly and catch errors to avoid TOCTOU race.
       try {
-        const st = lstatSync(file);
-        if (!st.isFile()) continue;
-        const content = st.size <= MAX_FILE_SIZE_BYTES
-          ? readFileSync(file, 'utf-8')
-          : null;
-        if (content) {
-          for (const line of content.replace(/\r\n/g, '\n').split('\n')) {
-            if (regex.test(line)) totalMatches++;
-          }
+        const content = readFileSync(file, 'utf-8');
+        for (const line of content.replace(/\r\n/g, '\n').split('\n')) {
+          if (regex.test(line)) totalMatches++;
         }
       } catch {
-        // skip
+        // skip unreadable files
       }
       continue;
     }
