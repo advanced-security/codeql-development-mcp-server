@@ -63,13 +63,35 @@ REPO_ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ## Explicitly set the cwd to the REPO_ROOT_DIR.
 cd "${REPO_ROOT_DIR}"
 
+## Define a helper to run a command with exponential-backoff retry.
+## Usage: run_with_retry <max_attempts> <initial_delay_seconds> <command> [args...]
+run_with_retry() {
+	local _max_attempts="$1"
+	local _delay="$2"
+	shift 2
+	local _attempt=1
+	while true; do
+		if "$@"; then
+			return 0
+		fi
+		if [ "${_attempt}" -ge "${_max_attempts}" ]; then
+			echo "ERROR: Command failed after ${_max_attempts} attempt(s): $*" >&2
+			return 1
+		fi
+		echo "WARNING: Command failed (attempt ${_attempt}/${_max_attempts}). Retrying in ${_delay}s..." >&2
+		sleep "${_delay}"
+		_attempt=$((_attempt + 1))
+		_delay=$((_delay * 2))
+	done
+}
+
 ## Define a function to install the src and test packs for a given parent directory.
 install_packs() {
 	local _parent_dir="$1"
 	echo "INFO: Running 'codeql pack install' for '${_parent_dir}/src' directory..."
-	codeql pack install --no-strict-mode --additional-packs="${_parent_dir}" -- "${_parent_dir}/src"
+	run_with_retry 3 10 codeql pack install --no-strict-mode --additional-packs="${_parent_dir}" -- "${_parent_dir}/src"
 	echo "INFO: Running 'codeql pack install' for '${_parent_dir}/test' directory..."
-	codeql pack install --no-strict-mode --additional-packs="${_parent_dir}" -- "${_parent_dir}/test"
+	run_with_retry 3 10 codeql pack install --no-strict-mode --additional-packs="${_parent_dir}" -- "${_parent_dir}/test"
 }
 
 ## Install codeql packs needed for integration tests.
