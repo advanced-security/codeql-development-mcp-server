@@ -186,8 +186,24 @@ jobs:
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            SEARCH_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}"
-            CODEQL_BINARY=$(find "$SEARCH_DIR" -path "*gh-codeql*release*" -name "codeql.exe" 2>/dev/null | head -1)
+            # The gh-codeql extension stores CodeQL distributions under
+            # %LOCALAPPDATA%\GitHub\gh-codeql on Windows (its own data dir),
+            # separate from the GitHub CLI extensions directory.  Search there
+            # first, then fall back to the extensions dir and all LOCALAPPDATA.
+            LOCALAPPDATA_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}"
+            CODEQL_BINARY=""
+            for search_dir in \
+                "${LOCALAPPDATA_DIR}/GitHub/gh-codeql" \
+                "${LOCALAPPDATA_DIR}/GitHub CLI/extensions/gh-codeql" \
+                "${LOCALAPPDATA_DIR}"; do
+              if [[ -d "$search_dir" ]]; then
+                CODEQL_BINARY=$(find "$search_dir" -maxdepth 10 \
+                  -name "codeql.exe" -type f 2>/dev/null | head -1)
+                if [[ -n "$CODEQL_BINARY" ]]; then
+                  break
+                fi
+              fi
+            done
             # Convert MSYS path to Windows mixed-mode path for Node.js
             if [[ -n "$CODEQL_BINARY" ]]; then
               CODEQL_BINARY=$(cygpath -m "$CODEQL_BINARY")

@@ -31254,10 +31254,10 @@ var require_view = __commonJS({
     var debug = require_src()("express:view");
     var path4 = __require("node:path");
     var fs3 = __require("node:fs");
-    var dirname9 = path4.dirname;
+    var dirname8 = path4.dirname;
     var basename7 = path4.basename;
     var extname2 = path4.extname;
-    var join19 = path4.join;
+    var join18 = path4.join;
     var resolve13 = path4.resolve;
     module.exports = View;
     function View(name, options) {
@@ -31293,7 +31293,7 @@ var require_view = __commonJS({
       for (var i = 0; i < roots.length && !path5; i++) {
         var root = roots[i];
         var loc = resolve13(root, name);
-        var dir = dirname9(loc);
+        var dir = dirname8(loc);
         var file = basename7(loc);
         path5 = this.resolve(dir, file);
       }
@@ -31319,12 +31319,12 @@ var require_view = __commonJS({
     };
     View.prototype.resolve = function resolve14(dir, file) {
       var ext = this.ext;
-      var path5 = join19(dir, file);
+      var path5 = join18(dir, file);
       var stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
       }
-      path5 = join19(dir, basename7(file, ext), "index" + ext);
+      path5 = join18(dir, basename7(file, ext), "index" + ext);
       stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
@@ -34969,7 +34969,7 @@ var require_send = __commonJS({
     var Stream = __require("stream");
     var util2 = __require("util");
     var extname2 = path4.extname;
-    var join19 = path4.join;
+    var join18 = path4.join;
     var normalize = path4.normalize;
     var resolve13 = path4.resolve;
     var sep2 = path4.sep;
@@ -35141,7 +35141,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = path5.split(sep2);
-        path5 = normalize(join19(root, path5));
+        path5 = normalize(join18(root, path5));
       } else {
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
@@ -35274,7 +35274,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join19(path5, self._index[i]);
+        var p = join18(path5, self._index[i]);
         debug('stat "%s"', p);
         fs3.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -38181,12 +38181,14 @@ __export(cli_executor_exports, {
   buildCodeQLArgs: () => buildCodeQLArgs,
   buildQLTArgs: () => buildQLTArgs,
   disableTestCommands: () => disableTestCommands,
+  discoverVsCodeCodeQLDistribution: () => discoverVsCodeCodeQLDistribution,
   enableTestCommands: () => enableTestCommands,
   executeCLICommand: () => executeCLICommand,
   executeCodeQLCommand: () => executeCodeQLCommand,
   executeQLTCommand: () => executeQLTCommand,
   getCommandHelp: () => getCommandHelp,
   getResolvedCodeQLDir: () => getResolvedCodeQLDir,
+  getVsCodeGlobalStorageCandidates: () => getVsCodeGlobalStorageCandidates,
   resetResolvedCodeQLBinary: () => resetResolvedCodeQLBinary,
   resolveCodeQLBinary: () => resolveCodeQLBinary,
   sanitizeCLIArgument: () => sanitizeCLIArgument,
@@ -38195,8 +38197,9 @@ __export(cli_executor_exports, {
   validateCommandExists: () => validateCommandExists
 });
 import { execFile } from "child_process";
-import { existsSync as existsSync2 } from "fs";
-import { basename, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute2 } from "path";
+import { accessSync, constants as fsConstants, existsSync as existsSync2, readdirSync, readFileSync as readFileSync2, statSync } from "fs";
+import { basename, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute2, join as join4 } from "path";
+import { homedir } from "os";
 import { promisify } from "util";
 function enableTestCommands() {
   testCommands = /* @__PURE__ */ new Set([
@@ -38213,12 +38216,103 @@ function disableTestCommands() {
 function isCommandAllowed(command) {
   return ALLOWED_COMMANDS.has(command) || testCommands !== null && testCommands.has(command);
 }
-function resolveCodeQLBinary() {
+function getVsCodeGlobalStorageCandidates() {
+  const home = homedir();
+  const candidates = [];
+  for (const appName of VSCODE_APP_NAMES) {
+    if (process.platform === "darwin") {
+      candidates.push(join4(home, "Library", "Application Support", appName, "User", "globalStorage"));
+    } else if (process.platform === "win32") {
+      const appData = process.env.APPDATA ?? join4(home, "AppData", "Roaming");
+      candidates.push(join4(appData, appName, "User", "globalStorage"));
+    } else {
+      candidates.push(join4(home, ".config", appName, "User", "globalStorage"));
+    }
+  }
+  return candidates;
+}
+function discoverVsCodeCodeQLDistribution(candidateStorageRoots) {
+  const globalStorageCandidates = candidateStorageRoots ?? getVsCodeGlobalStorageCandidates();
+  for (const gsRoot of globalStorageCandidates) {
+    for (const dirName of VSCODE_CODEQL_STORAGE_DIR_NAMES) {
+      const codeqlStorage = join4(gsRoot, dirName);
+      if (!existsSync2(codeqlStorage)) continue;
+      const hintResult = discoverFromDistributionJson(codeqlStorage);
+      if (hintResult) return hintResult;
+      const scanResult = discoverFromDistributionScan(codeqlStorage);
+      if (scanResult) return scanResult;
+    }
+  }
+  return void 0;
+}
+function discoverFromDistributionJson(codeqlStorage) {
+  try {
+    const jsonPath = join4(codeqlStorage, "distribution.json");
+    if (!existsSync2(jsonPath)) return void 0;
+    const content = readFileSync2(jsonPath, "utf-8");
+    const data = JSON.parse(content);
+    if (typeof data.folderIndex !== "number") return void 0;
+    const binaryPath = join4(
+      codeqlStorage,
+      `distribution${data.folderIndex}`,
+      "codeql",
+      CODEQL_BINARY_NAME
+    );
+    if (isExecutableBinary(binaryPath)) {
+      logger.debug(`Discovered CLI via distribution.json (folderIndex=${data.folderIndex})`);
+      return binaryPath;
+    }
+    logger.debug(`distribution.json hint (folderIndex=${data.folderIndex}) exists but is not a usable executable; falling through to scan`);
+  } catch {
+  }
+  return void 0;
+}
+function discoverFromDistributionScan(codeqlStorage) {
+  try {
+    const entries = readdirSync(codeqlStorage, { withFileTypes: true });
+    const distDirs = entries.filter((e) => e.isDirectory() && /^distribution\d+$/.test(e.name)).map((e) => ({
+      name: e.name,
+      num: parseInt(e.name.replace("distribution", ""), 10)
+    })).sort((a, b) => b.num - a.num);
+    for (const dir of distDirs) {
+      const binaryPath = join4(
+        codeqlStorage,
+        dir.name,
+        "codeql",
+        CODEQL_BINARY_NAME
+      );
+      if (isExecutableBinary(binaryPath)) {
+        logger.debug(`Discovered CLI via distribution scan: ${dir.name}`);
+        return binaryPath;
+      }
+    }
+  } catch {
+  }
+  return void 0;
+}
+function isExecutableBinary(binaryPath) {
+  try {
+    const stat = statSync(binaryPath);
+    if (!stat.isFile()) return false;
+    accessSync(binaryPath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function resolveCodeQLBinary(candidateStorageRoots) {
   if (resolvedBinaryResult !== void 0) {
     return resolvedBinaryResult;
   }
   const envPath = process.env.CODEQL_PATH;
   if (!envPath) {
+    const discovered = discoverVsCodeCodeQLDistribution(candidateStorageRoots);
+    if (discovered) {
+      resolvedCodeQLDir = dirname2(discovered);
+      resolvedBinaryResult = "codeql";
+      logger.info(`CodeQL CLI auto-discovered via vscode-codeql distribution: ${discovered} (dir: ${resolvedCodeQLDir})`);
+      return resolvedBinaryResult;
+    }
     resolvedCodeQLDir = null;
     resolvedBinaryResult = "codeql";
     return resolvedBinaryResult;
@@ -38465,7 +38559,7 @@ async function validateCommandExists(command) {
     return false;
   }
 }
-var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult, FRESH_PROCESS_SUBCOMMANDS;
+var execFileAsync, ALLOWED_COMMANDS, testCommands, SAFE_ENV_VARS, SAFE_ENV_PREFIXES, DANGEROUS_CONTROL_CHARS, resolvedCodeQLDir, resolvedBinaryResult, CODEQL_BINARY_NAME, VSCODE_APP_NAMES, VSCODE_CODEQL_STORAGE_DIR_NAMES, FRESH_PROCESS_SUBCOMMANDS;
 var init_cli_executor = __esm({
   "src/lib/cli-executor.ts"() {
     "use strict";
@@ -38514,6 +38608,9 @@ var init_cli_executor = __esm({
     ];
     DANGEROUS_CONTROL_CHARS = /[\x01-\x08\x0B\x0C\x0E-\x1F]/;
     resolvedCodeQLDir = null;
+    CODEQL_BINARY_NAME = process.platform === "win32" ? "codeql.exe" : "codeql";
+    VSCODE_APP_NAMES = ["Code", "Code - Insiders", "VSCodium"];
+    VSCODE_CODEQL_STORAGE_DIR_NAMES = ["github.vscode-codeql", "GitHub.vscode-codeql"];
     FRESH_PROCESS_SUBCOMMANDS = /* @__PURE__ */ new Set([
       "database analyze",
       "database create",
@@ -40452,8 +40549,8 @@ var require_adm_zip = __commonJS({
         return null;
       }
       function fixPath(zipPath) {
-        const { join: join19, normalize, sep: sep2 } = pth.posix;
-        return join19(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
+        const { join: join18, normalize, sep: sep2 } = pth.posix;
+        return join18(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
       }
       function filenameFilter(filterfn) {
         if (filterfn instanceof RegExp) {
@@ -55583,15 +55680,17 @@ var Response2 = class _Response {
       this.#init = init;
     }
     if (typeof body === "string" || typeof body?.getReader !== "undefined" || body instanceof Blob || body instanceof Uint8Array) {
-      headers ||= init?.headers || { "content-type": "text/plain; charset=UTF-8" };
-      this[cacheKey] = [init?.status || 200, body, headers];
+      ;
+      this[cacheKey] = [init?.status || 200, body, headers || init?.headers];
     }
   }
   get headers() {
     const cache = this[cacheKey];
     if (cache) {
       if (!(cache[2] instanceof Headers)) {
-        cache[2] = new Headers(cache[2]);
+        cache[2] = new Headers(
+          cache[2] || { "content-type": "text/plain; charset=UTF-8" }
+        );
       }
       return cache[2];
     }
@@ -55716,15 +55815,32 @@ var flushHeaders = (outgoing) => {
 };
 var responseViaCache = async (res, outgoing) => {
   let [status, body, header] = res[cacheKey];
-  if (header instanceof Headers) {
+  let hasContentLength = false;
+  if (!header) {
+    header = { "content-type": "text/plain; charset=UTF-8" };
+  } else if (header instanceof Headers) {
+    hasContentLength = header.has("content-length");
     header = buildOutgoingHttpHeaders(header);
+  } else if (Array.isArray(header)) {
+    const headerObj = new Headers(header);
+    hasContentLength = headerObj.has("content-length");
+    header = buildOutgoingHttpHeaders(headerObj);
+  } else {
+    for (const key in header) {
+      if (key.length === 14 && key.toLowerCase() === "content-length") {
+        hasContentLength = true;
+        break;
+      }
+    }
   }
-  if (typeof body === "string") {
-    header["Content-Length"] = Buffer.byteLength(body);
-  } else if (body instanceof Uint8Array) {
-    header["Content-Length"] = body.byteLength;
-  } else if (body instanceof Blob) {
-    header["Content-Length"] = body.size;
+  if (!hasContentLength) {
+    if (typeof body === "string") {
+      header["Content-Length"] = Buffer.byteLength(body);
+    } else if (body instanceof Uint8Array) {
+      header["Content-Length"] = body.byteLength;
+    } else if (body instanceof Blob) {
+      header["Content-Length"] = body.size;
+    }
   }
   outgoing.writeHead(status, header);
   if (typeof body === "string" || body instanceof Uint8Array) {
@@ -56619,7 +56735,7 @@ init_logger();
 // src/lib/query-results-evaluator.ts
 init_cli_executor();
 init_logger();
-import { writeFileSync, readFileSync as readFileSync2 } from "fs";
+import { writeFileSync, readFileSync as readFileSync3 } from "fs";
 import { dirname as dirname3, isAbsolute as isAbsolute3 } from "path";
 import { mkdirSync as mkdirSync3 } from "fs";
 var BUILT_IN_EVALUATORS = {
@@ -56629,7 +56745,7 @@ var BUILT_IN_EVALUATORS = {
 };
 async function extractQueryMetadata(queryPath) {
   try {
-    const queryContent = readFileSync2(queryPath, "utf-8");
+    const queryContent = readFileSync3(queryPath, "utf-8");
     const metadata = {};
     const kindMatch = queryContent.match(/@kind\s+([^\s]+)/);
     if (kindMatch) metadata.kind = kindMatch[1];
@@ -56879,7 +56995,7 @@ async function evaluateWithCustomScript(_bqrsPath, _queryPath, _scriptPath, _out
 // src/lib/log-directory-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync4, existsSync as existsSync3 } from "fs";
-import { join as join4, resolve as resolve3 } from "path";
+import { join as join5, resolve as resolve3 } from "path";
 import { randomBytes } from "crypto";
 function ensurePathWithinBase(baseDir, targetPath) {
   const absBase = resolve3(baseDir);
@@ -56903,7 +57019,7 @@ function getOrCreateLogDirectory(logDir) {
   }
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
   const uniqueId = randomBytes(4).toString("hex");
-  const uniqueLogDir = join4(baseLogDir, `query-run-${timestamp2}-${uniqueId}`);
+  const uniqueLogDir = join5(baseLogDir, `query-run-${timestamp2}-${uniqueId}`);
   mkdirSync4(uniqueLogDir, { recursive: true });
   return uniqueLogDir;
 }
@@ -56912,7 +57028,7 @@ function getOrCreateLogDirectory(logDir) {
 init_package_paths();
 init_temp_dir();
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync5 } from "fs";
-import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join5, resolve as resolve4 } from "path";
+import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join6, resolve as resolve4 } from "path";
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -57081,7 +57197,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join5(tempDir, "selectedSourceFiles.csv");
+                csvPath = join6(tempDir, "selectedSourceFiles.csv");
                 const csvContent = filePaths.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -57101,7 +57217,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join5(tempDir, "sourceFunction.csv");
+                csvPath = join6(tempDir, "sourceFunction.csv");
                 const csvContent = functionNames.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -57121,7 +57237,7 @@ function registerCLITool(server, definition) {
               try {
                 tempDir = createProjectTempDir("codeql-external-");
                 tempDirsToCleanup.push(tempDir);
-                csvPath = join5(tempDir, "targetFunction.csv");
+                csvPath = join6(tempDir, "targetFunction.csv");
                 const csvContent = functionNames.join("\n") + "\n";
                 writeFileSync2(csvPath, csvContent, "utf8");
               } catch (err) {
@@ -57159,21 +57275,21 @@ function registerCLITool(server, definition) {
         if (name === "codeql_query_run" || name === "codeql_test_run" || name === "codeql_database_analyze") {
           queryLogDir = getOrCreateLogDirectory(customLogDir);
           logger.info(`Using log directory for ${name}: ${queryLogDir}`);
-          const timestampPath = join5(queryLogDir, "timestamp");
+          const timestampPath = join6(queryLogDir, "timestamp");
           writeFileSync2(timestampPath, Date.now().toString(), "utf8");
           options.logdir = queryLogDir;
           if (!options.verbosity) {
             options.verbosity = "progress+";
           }
           if (!options["evaluator-log"]) {
-            options["evaluator-log"] = join5(queryLogDir, "evaluator-log.jsonl");
+            options["evaluator-log"] = join6(queryLogDir, "evaluator-log.jsonl");
           }
           if (options["tuple-counting"] === void 0) {
             options["tuple-counting"] = true;
           }
           if (name === "codeql_query_run") {
             if (!options.output) {
-              options.output = join5(queryLogDir, "results.bqrs");
+              options.output = join6(queryLogDir, "results.bqrs");
             }
           }
           if (options.output && typeof options.output === "string") {
@@ -57204,7 +57320,7 @@ function registerCLITool(server, definition) {
         }
         if (name === "codeql_query_run" && result.success && queryLogDir) {
           const bqrsPath = options.output;
-          const sarifPath = join5(queryLogDir, "results-interpreted.sarif");
+          const sarifPath = join6(queryLogDir, "results-interpreted.sarif");
           const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : void 0;
           if (existsSync4(bqrsPath) && queryFilePath) {
             try {
@@ -60748,8 +60864,8 @@ var codeqlGenerateQueryHelpTool = {
 };
 
 // src/tools/codeql/list-databases.ts
-import { existsSync as existsSync6, readdirSync as readdirSync2, readFileSync as readFileSync4, statSync as statSync2 } from "fs";
-import { join as join7 } from "path";
+import { existsSync as existsSync6, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync3 } from "fs";
+import { join as join8 } from "path";
 
 // src/lib/discovery-config.ts
 function parsePathList(envValue) {
@@ -60772,7 +60888,7 @@ function getQueryRunResultsDirs() {
 init_logger();
 function parseDatabaseYml(ymlPath) {
   try {
-    const content = readFileSync4(ymlPath, "utf-8");
+    const content = readFileSync5(ymlPath, "utf-8");
     const info = {};
     for (const line of content.split("\n")) {
       const trimmed = line.trim();
@@ -60805,20 +60921,20 @@ async function discoverDatabases(baseDirs, language) {
     }
     let entries;
     try {
-      entries = readdirSync2(baseDir);
+      entries = readdirSync3(baseDir);
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const entryPath = join7(baseDir, entry);
+      const entryPath = join8(baseDir, entry);
       try {
-        if (!statSync2(entryPath).isDirectory()) {
+        if (!statSync3(entryPath).isDirectory()) {
           continue;
         }
       } catch {
         continue;
       }
-      const ymlPath = join7(entryPath, "codeql-database.yml");
+      const ymlPath = join8(entryPath, "codeql-database.yml");
       if (!existsSync6(ymlPath)) {
         continue;
       }
@@ -60901,8 +61017,8 @@ function registerListDatabasesTool(server) {
 }
 
 // src/tools/codeql/list-mrva-run-results.ts
-import { existsSync as existsSync7, readdirSync as readdirSync3, readFileSync as readFileSync5, statSync as statSync3 } from "fs";
-import { join as join8 } from "path";
+import { existsSync as existsSync7, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync4 } from "fs";
+import { join as join9 } from "path";
 init_logger();
 var NUMERIC_DIR_PATTERN = /^\d+$/;
 var SKIP_DIRS = /* @__PURE__ */ new Set([".DS_Store", "exported-results"]);
@@ -60914,14 +61030,14 @@ async function discoverMrvaRunResults(resultsDirs, runId) {
     }
     let entries;
     try {
-      entries = readdirSync3(dir);
+      entries = readdirSync4(dir);
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const entryPath = join8(dir, entry);
+      const entryPath = join9(dir, entry);
       try {
-        if (!statSync3(entryPath).isDirectory()) {
+        if (!statSync4(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -60934,10 +61050,10 @@ async function discoverMrvaRunResults(resultsDirs, runId) {
         continue;
       }
       let timestamp2;
-      const timestampPath = join8(entryPath, "timestamp");
+      const timestampPath = join9(entryPath, "timestamp");
       if (existsSync7(timestampPath)) {
         try {
-          timestamp2 = readFileSync5(timestampPath, "utf-8").trim();
+          timestamp2 = readFileSync6(timestampPath, "utf-8").trim();
         } catch {
         }
       }
@@ -60956,7 +61072,7 @@ function discoverRepoResults(runPath) {
   const repos = [];
   let ownerEntries;
   try {
-    ownerEntries = readdirSync3(runPath);
+    ownerEntries = readdirSync4(runPath);
   } catch {
     return repos;
   }
@@ -60964,9 +61080,9 @@ function discoverRepoResults(runPath) {
     if (SKIP_DIRS.has(ownerEntry)) {
       continue;
     }
-    const ownerPath = join8(runPath, ownerEntry);
+    const ownerPath = join9(runPath, ownerEntry);
     try {
-      if (!statSync3(ownerPath).isDirectory()) {
+      if (!statSync4(ownerPath).isDirectory()) {
         continue;
       }
     } catch {
@@ -60974,14 +61090,14 @@ function discoverRepoResults(runPath) {
     }
     let repoEntries;
     try {
-      repoEntries = readdirSync3(ownerPath);
+      repoEntries = readdirSync4(ownerPath);
     } catch {
       continue;
     }
     for (const repoEntry of repoEntries) {
-      const repoPath = join8(ownerPath, repoEntry);
+      const repoPath = join9(ownerPath, repoEntry);
       try {
-        if (!statSync3(repoPath).isDirectory()) {
+        if (!statSync4(repoPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -60990,10 +61106,10 @@ function discoverRepoResults(runPath) {
       const fullName = `${ownerEntry}/${repoEntry}`;
       let analysisStatus;
       let resultCount;
-      const repoTaskPath = join8(repoPath, "repo_task.json");
+      const repoTaskPath = join9(repoPath, "repo_task.json");
       if (existsSync7(repoTaskPath)) {
         try {
-          const raw = readFileSync5(repoTaskPath, "utf-8");
+          const raw = readFileSync6(repoTaskPath, "utf-8");
           const task = JSON.parse(raw);
           if (typeof task.analysisStatus === "string") {
             analysisStatus = task.analysisStatus;
@@ -61004,8 +61120,8 @@ function discoverRepoResults(runPath) {
         } catch {
         }
       }
-      const hasSarif = existsSync7(join8(repoPath, "results", "results.sarif"));
-      const hasBqrs = existsSync7(join8(repoPath, "results", "results.bqrs"));
+      const hasSarif = existsSync7(join9(repoPath, "results", "results.sarif"));
+      const hasBqrs = existsSync7(join9(repoPath, "results", "results.bqrs"));
       repos.push({
         analysisStatus,
         fullName,
@@ -61088,8 +61204,8 @@ function registerListMrvaRunResultsTool(server) {
 }
 
 // src/tools/codeql/list-query-run-results.ts
-import { existsSync as existsSync8, readdirSync as readdirSync4, readFileSync as readFileSync6, statSync as statSync4 } from "fs";
-import { join as join9 } from "path";
+import { existsSync as existsSync8, readdirSync as readdirSync5, readFileSync as readFileSync7, statSync as statSync5 } from "fs";
+import { join as join10 } from "path";
 init_logger();
 var QUERY_RUN_DIR_PATTERN = /^(.+\.ql)-(.+)$/;
 var RUN_QUERY_PATTERN = /runQuery called with\s+(\S+)/;
@@ -61130,14 +61246,14 @@ async function discoverQueryRunResults(resultsDirs, filter) {
     }
     let entries;
     try {
-      entries = readdirSync4(dir);
+      entries = readdirSync5(dir);
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const entryPath = join9(dir, entry);
+      const entryPath = join10(dir, entry);
       try {
-        if (!statSync4(entryPath).isDirectory()) {
+        if (!statSync5(entryPath).isDirectory()) {
           continue;
         }
       } catch {
@@ -61151,23 +61267,23 @@ async function discoverQueryRunResults(resultsDirs, filter) {
       if (normalizedFilter?.queryName && name !== normalizedFilter.queryName) {
         continue;
       }
-      const hasEvaluatorLog = existsSync8(join9(entryPath, "evaluator-log.jsonl"));
-      const hasBqrs = existsSync8(join9(entryPath, "results.bqrs"));
-      const hasSarif = existsSync8(join9(entryPath, "results-interpreted.sarif"));
-      const hasQueryLog = existsSync8(join9(entryPath, "query.log"));
-      const hasSummaryLog = existsSync8(join9(entryPath, "evaluator-log.summary.jsonl"));
+      const hasEvaluatorLog = existsSync8(join10(entryPath, "evaluator-log.jsonl"));
+      const hasBqrs = existsSync8(join10(entryPath, "results.bqrs"));
+      const hasSarif = existsSync8(join10(entryPath, "results-interpreted.sarif"));
+      const hasQueryLog = existsSync8(join10(entryPath, "query.log"));
+      const hasSummaryLog = existsSync8(join10(entryPath, "evaluator-log.summary.jsonl"));
       let timestamp2;
-      const timestampPath = join9(entryPath, "timestamp");
+      const timestampPath = join10(entryPath, "timestamp");
       if (existsSync8(timestampPath)) {
         try {
-          timestamp2 = readFileSync6(timestampPath, "utf-8").trim();
+          timestamp2 = readFileSync7(timestampPath, "utf-8").trim();
         } catch {
         }
       }
       let metadata = {};
       if (hasQueryLog) {
         try {
-          const logContent = readFileSync6(join9(entryPath, "query.log"), "utf-8");
+          const logContent = readFileSync7(join10(entryPath, "query.log"), "utf-8");
           metadata = parseQueryLogMetadata(logContent);
         } catch {
         }
@@ -61275,7 +61391,7 @@ function registerListQueryRunResultsTool(server) {
             if (run.queryPath) parts.push(`    Query: ${run.queryPath}`);
             if (run.databasePath) parts.push(`    Database: ${run.databasePath}`);
             parts.push(`    Artifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "none"}`);
-            if (run.hasBqrs) parts.push(`    BQRS: ${join9(run.path, "results.bqrs")}`);
+            if (run.hasBqrs) parts.push(`    BQRS: ${join10(run.path, "results.bqrs")}`);
             return parts.join("\n");
           })
         ];
@@ -61341,11 +61457,11 @@ var codeqlPackLsTool = {
 
 // src/tools/codeql/profile-codeql-query-from-logs.ts
 import { existsSync as existsSync9, mkdirSync as mkdirSync6, writeFileSync as writeFileSync3 } from "fs";
-import { basename as basename4, dirname as dirname6, join as join10 } from "path";
+import { basename as basename4, dirname as dirname6, join as join11 } from "path";
 
 // src/lib/evaluator-log-parser.ts
 init_logger();
-import { readFileSync as readFileSync7 } from "fs";
+import { readFileSync as readFileSync8 } from "fs";
 function detectLogFormat(firstEvent) {
   if (typeof firstEvent.type === "string") {
     return "raw";
@@ -61372,7 +61488,7 @@ function splitJsonObjects(content) {
   });
 }
 function parseJsonObjects(logPath) {
-  const content = readFileSync7(logPath, "utf-8");
+  const content = readFileSync8(logPath, "utf-8");
   const objectStrings = splitJsonObjects(content);
   const results = [];
   for (const objStr of objectStrings) {
@@ -61735,13 +61851,13 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
         const profile = parseEvaluatorLog(evaluatorLog);
         const profileOutputDir = outputDir ?? dirname6(evaluatorLog);
         mkdirSync6(profileOutputDir, { recursive: true });
-        const jsonPath = join10(
+        const jsonPath = join11(
           profileOutputDir,
           "query-evaluation-profile.json"
         );
         writeFileSync3(jsonPath, formatAsJson(profile));
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join10(
+        const mdPath = join11(
           profileOutputDir,
           "query-evaluation-profile.md"
         );
@@ -61782,11 +61898,11 @@ function registerProfileCodeQLQueryFromLogsTool(server) {
 // src/tools/codeql/profile-codeql-query.ts
 init_cli_executor();
 init_logger();
-import { writeFileSync as writeFileSync4, readFileSync as readFileSync8, existsSync as existsSync10 } from "fs";
-import { join as join11, dirname as dirname7, basename as basename5 } from "path";
+import { writeFileSync as writeFileSync4, readFileSync as readFileSync9, existsSync as existsSync10 } from "fs";
+import { join as join12, dirname as dirname7, basename as basename5 } from "path";
 import { mkdirSync as mkdirSync7 } from "fs";
 function parseEvaluatorLog2(logPath) {
-  const logContent = readFileSync8(logPath, "utf-8");
+  const logContent = readFileSync9(logPath, "utf-8");
   const jsonObjects = logContent.split("\n\n").filter((s) => s.trim());
   const events = jsonObjects.map((obj) => {
     try {
@@ -61920,11 +62036,11 @@ function registerProfileCodeQLQueryTool(server) {
         let sarifPath;
         if (!logPath) {
           logger.info("No evaluator log provided, running query to generate one");
-          const defaultOutputDir = outputDir || join11(dirname7(query), "profile-output");
+          const defaultOutputDir = outputDir || join12(dirname7(query), "profile-output");
           mkdirSync7(defaultOutputDir, { recursive: true });
-          logPath = join11(defaultOutputDir, "evaluator-log.jsonl");
-          bqrsPath = join11(defaultOutputDir, "query-results.bqrs");
-          sarifPath = join11(defaultOutputDir, "query-results.sarif");
+          logPath = join12(defaultOutputDir, "evaluator-log.jsonl");
+          bqrsPath = join12(defaultOutputDir, "query-results.bqrs");
+          sarifPath = join12(defaultOutputDir, "query-results.sarif");
           const queryResult = await executeCodeQLCommand(
             "query run",
             {
@@ -61977,11 +62093,11 @@ function registerProfileCodeQLQueryTool(server) {
         const profile = parseEvaluatorLog2(logPath);
         const profileOutputDir = outputDir || dirname7(logPath);
         mkdirSync7(profileOutputDir, { recursive: true });
-        const jsonPath = join11(profileOutputDir, "query-evaluation-profile.json");
+        const jsonPath = join12(profileOutputDir, "query-evaluation-profile.json");
         const jsonContent = formatAsJson2(profile);
         writeFileSync4(jsonPath, jsonContent);
         logger.info(`Profile JSON written to: ${jsonPath}`);
-        const mdPath = join11(profileOutputDir, "query-evaluation-profile.md");
+        const mdPath = join12(profileOutputDir, "query-evaluation-profile.md");
         const mdContent = formatAsMermaid2(profile);
         writeFileSync4(mdPath, mdContent);
         logger.info(`Profile Mermaid diagram written to: ${mdPath}`);
@@ -62132,7 +62248,7 @@ var codeqlQueryRunTool = {
 };
 
 // src/tools/codeql/quick-evaluate.ts
-import { join as join12, resolve as resolve6 } from "path";
+import { join as join13, resolve as resolve6 } from "path";
 init_logger();
 init_temp_dir();
 async function quickEvaluate({
@@ -62151,7 +62267,7 @@ async function quickEvaluate({
         throw new Error(`Symbol '${symbol}' not found as class or predicate in file: ${file}`);
       }
     }
-    const resolvedOutput = resolve6(output_path || join12(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
+    const resolvedOutput = resolve6(output_path || join13(getProjectTmpDir("quickeval"), "quickeval.bqrs"));
     return resolvedOutput;
   } catch (error2) {
     throw new Error(`CodeQL evaluation failed: ${error2 instanceof Error ? error2.message : "Unknown error"}`, { cause: error2 });
@@ -62191,8 +62307,8 @@ function registerQuickEvaluateTool(server) {
 
 // src/tools/codeql/read-database-source.ts
 var import_adm_zip = __toESM(require_adm_zip(), 1);
-import { existsSync as existsSync11, readdirSync as readdirSync5, readFileSync as readFileSync9, statSync as statSync5 } from "fs";
-import { join as join13, resolve as resolve7 } from "path";
+import { existsSync as existsSync11, readdirSync as readdirSync6, readFileSync as readFileSync10, statSync as statSync6 } from "fs";
+import { join as join14, resolve as resolve7 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 init_logger();
 var DEFAULT_MAX_LISTING_ENTRIES = 1e3;
@@ -62208,9 +62324,9 @@ function toFilesystemPath(uri) {
   return uri;
 }
 function* walkDirectory(dir, base = dir) {
-  for (const entry of readdirSync5(dir)) {
-    const fullPath = join13(dir, entry);
-    if (statSync5(fullPath).isDirectory()) {
+  for (const entry of readdirSync6(dir)) {
+    const fullPath = join14(dir, entry);
+    if (statSync6(fullPath).isDirectory()) {
       yield* walkDirectory(fullPath, base);
     } else {
       yield fullPath.slice(base.length).replace(/\\/g, "/").replace(/^\//, "");
@@ -62276,8 +62392,8 @@ async function readDatabaseSource(params) {
   if (!existsSync11(resolvedDbPath)) {
     throw new Error(`Database path does not exist: ${databasePath}`);
   }
-  const srcZipPath = join13(resolvedDbPath, "src.zip");
-  const srcDirPath = join13(resolvedDbPath, "src");
+  const srcZipPath = join14(resolvedDbPath, "src.zip");
+  const srcDirPath = join14(resolvedDbPath, "src");
   const hasSrcZip = existsSync11(srcZipPath);
   const hasSrcDir = existsSync11(srcDirPath);
   if (!hasSrcZip && !hasSrcDir) {
@@ -62352,8 +62468,8 @@ Archive contains ${availableEntries.length} entries. Use read_database_source wi
 Directory contains ${availableEntries.length} entries. Use read_database_source without filePath to list available entries.`
       );
     }
-    const fullPath = join13(srcDirPath, matchedRelative);
-    const rawContent = readFileSync9(fullPath, "utf-8");
+    const fullPath = join14(srcDirPath, matchedRelative);
+    const rawContent = readFileSync10(fullPath, "utf-8");
     const { content, effectiveEnd, effectiveStart, totalLines } = applyLineRange(
       rawContent,
       startLine,
@@ -62967,67 +63083,75 @@ function registerCodeQLTools(server) {
   registerRegisterDatabaseTool(server);
 }
 
+// src/resources/dataflow-migration-v1-to-v2.md
+var dataflow_migration_v1_to_v2_default = '# Dataflow API Migration: v1 to v2\n\nGuide for migrating CodeQL queries from the legacy v1 (class-based) dataflow API to the modern v2 (module-based) shared dataflow API. This applies to all supported languages.\n\n## Why Migrate\n\nThe v1 `DataFlow::Configuration` class-based API is deprecated. The v2 `DataFlow::ConfigSig` module-based API is the current standard across all languages. Queries using v1 will eventually stop compiling as the legacy API is removed.\n\n## API Changes Summary\n\n| v1 (Legacy)                                      | v2 (Modern)                                      | Notes                                   |\n| ------------------------------------------------ | ------------------------------------------------ | --------------------------------------- |\n| `class MyConfig extends DataFlow::Configuration` | `module MyConfig implements DataFlow::ConfigSig` | Module-based, not class-based           |\n| `MyConfig() { this = "MyConfig" }`               | _(removed)_                                      | No constructor needed                   |\n| `override predicate isSanitizer(...)`            | `predicate isBarrier(...)`                       | Renamed                                 |\n| `override predicate isAdditionalTaintStep(...)`  | `predicate isAdditionalFlowStep(...)`            | Renamed                                 |\n| `config.hasFlowPath(source, sink)`               | `MyFlow::flowPath(source, sink)`                 | Module-level predicate                  |\n| `DataFlow::PathNode`                             | `MyFlow::PathNode`                               | Path nodes scoped to flow module        |\n| `isSanitizerGuard`                               | _(removed \u2014 use `isBarrier` with guard logic)_   | Fold guard into barrier                 |\n| `FlowLabel` (JS)                                 | `FlowState`                                      | Renamed; use `DataFlow::StateConfigSig` |\n\n## v1 Pattern\n\n```ql\nclass MyConfig extends DataFlow::Configuration {\n  MyConfig() { this = "MyConfig" }\n  override predicate isSource(DataFlow::Node source) { ... }\n  override predicate isSink(DataFlow::Node sink) { ... }\n  override predicate isSanitizer(DataFlow::Node node) { ... }\n  override predicate isAdditionalTaintStep(DataFlow::Node n1, DataFlow::Node n2) { ... }\n}\n\nfrom MyConfig config, DataFlow::PathNode source, DataFlow::PathNode sink\nwhere config.hasFlowPath(source, sink)\nselect sink, source, sink, "Message"\n```\n\n## v2 Pattern\n\n```ql\nmodule MyConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) { ... }\n  predicate isSink(DataFlow::Node sink) { ... }\n  predicate isBarrier(DataFlow::Node node) { ... }\n  predicate isAdditionalFlowStep(DataFlow::Node n1, DataFlow::Node n2) { ... }\n}\n\nmodule MyFlow = TaintTracking::Global<MyConfig>;\nimport MyFlow::PathGraph\n\nfrom MyFlow::PathNode source, MyFlow::PathNode sink\nwhere MyFlow::flowPath(source, sink)\nselect sink.getNode(), source, sink, "Message"\n```\n\n## Migration Workflow\n\n1. **Capture baseline**: Run `codeql_test_run` on existing tests and save current `.expected` files\n2. **Rewrite config**: Replace the `class extends Configuration` with `module implements ConfigSig`, rename predicates per the table above\n3. **Instantiate module**: Add `module MyFlow = TaintTracking::Global<MyConfig>;` (or `DataFlow::Global<MyConfig>` for pure data flow)\n4. **Update select clause**: Replace `config.hasFlowPath(source, sink)` with `MyFlow::flowPath(source, sink)` and `DataFlow::PathNode` with `MyFlow::PathNode`\n5. **Handle flow state**: If the query uses `FlowLabel` (JS) or state-sensitive predicates, switch to `DataFlow::StateConfigSig` and `TaintTracking::GlobalWithState<MyConfig>`\n6. **Compile**: Run `codeql_query_compile` to catch syntax errors\n7. **Test**: Run `codeql_test_run` and verify results match the v1 baseline exactly\n8. **Accept**: Once equivalent, run `codeql_test_accept` to finalize\n\n## Language-Specific Notes\n\n### C/C++\n\n- Import paths stay the same (`semmle.code.cpp.dataflow.TaintTracking`); only the API usage changes.\n- Pointer indirection: use `asIndirectExpr()` in `isAdditionalFlowStep` to track through dereferences.\n- Track `std::move` operations as additional flow steps when relevant.\n- `IndirectParameterNode` usage is unchanged between v1 and v2.\n\n### C\\#\n\n- Use `semmle.code.csharp.dataflow.TaintTracking` (same import for v1 and v2).\n- `LibraryTypeDataFlow` extensions for custom library flow are unchanged.\n- Test LINQ, async/await, and property accessor patterns \u2014 these can surface subtle differences.\n- ASP.NET `[FromBody]`/`[FromQuery]` parameter annotations work identically.\n\n### Go\n\n- Node types (`ExprNode`, `ParameterNode`, `InstructionNode`) and AST/IR conversions (`asExpr()`, `asInstruction()`) are unchanged.\n- `RemoteFlowSource` and `UntrustedFlowSource` work identically in v2.\n- Channel send/receive and goroutine flow require `isAdditionalFlowStep`; these patterns are unchanged.\n- Error-handling tuples: use `ResultNode` with `hasResultIndex(0)` for the value element.\n- Interface type assertions (`TypeAssertExpr`) need explicit flow steps.\n\n### Java / Kotlin\n\n- `InstanceParameterNode` (implicit `this`) is unchanged.\n- Spring `@RequestParam`/`@PathVariable`/`@RequestBody` annotations work identically.\n- Stream/lambda/method-reference flows and boxing/unboxing steps carry over directly.\n- Kotlin `when` expressions and extension function receiver flow require explicit `isAdditionalFlowStep`.\n\n### JavaScript / TypeScript\n\n- **Flow labels \u2192 Flow states**: If the v1 query uses `FlowLabel`, switch to `DataFlow::StateConfigSig` with `class FlowState = string;` and `TaintTracking::GlobalWithState<MyConfig>`.\n- **Sanitizer guards \u2192 Barrier guards**: `isSanitizerGuard` becomes `isBarrierGuard` with `DataFlow::BarrierGuard`.\n- **Behavioral changes**: v2 taint steps propagate all flow states (not just `taint`). Jump steps across function boundaries (callbacks, Promises) may behave differently \u2014 watch for new or missing results.\n- Promise `.then()` and async/await flow, prototype pollution via `Object.assign`/spread, and module import/export flow are unchanged.\n\n### Python\n\n- Python has multiple dataflow nodes per expression due to CFG splitting. This behavior is identical in v2.\n- `CfgNode` / `CallCfgNode` / `getCfgNode()` conversions are unchanged.\n- API graph navigation (`API::moduleImport("pkg").getMember(...)`) is unchanged.\n- Django ORM, Flask routing, and FastAPI dependency injection patterns carry over directly.\n\n### Ruby\n\n- `asExpr()` returns `CfgNodes::ExprCfgNode` (CFG node, not AST). Use `.getExpr()` to get the AST node. This is unchanged between v1 and v2.\n- Rails `params`, ActiveRecord queries, and metaprogramming (`send`, `define_method`, `eval`) patterns carry over directly.\n- String interpolation and block/lambda flows are unchanged.\n\n### Swift\n\n- Import paths differ from other languages: `codeql.swift.dataflow.DataFlow`, `codeql.swift.dataflow.TaintTracking`, `codeql.swift.dataflow.FlowSources`.\n- Unique node types: `PatternNode`, `CaptureNode`, `InoutReturnNode`, `SsaDefinitionNode`.\n- `RemoteFlowSource` and `LocalFlowSource` from `codeql.swift.dataflow.FlowSources` work identically.\n- Requires macOS with Xcode for test extraction. Supports Swift 5.4\u20136.2.\n\n## Critical: Result Equivalence\n\nMigrated queries **must** produce identical results to the v1 version. Differences indicate a semantic change in the migration. Common causes:\n\n- **Barrier scope**: v2 barriers block all flow states; v1 sanitizers may have been state-specific\n- **Additional flow steps**: v2 uses `isAdditionalFlowStep` for both data flow and taint; v1 had separate `isAdditionalTaintStep`\n- **Jump steps** (JS): Taint propagation across function boundaries may differ\n';
+
+// src/resources/learning-query-basics.md
+var learning_query_basics_default = '# Writing CodeQL Queries\n\nThis resource is a practical reference for writing CodeQL queries using the MCP server\'s tools. It covers query structure, metadata annotations, common QL patterns, compilation, testing, and the file conventions used by the CodeQL test framework.\n\n## Query Structure\n\nEvery CodeQL query has three main clauses:\n\n```ql\n/**\n * @name Descriptive name of what the query finds\n * @description Longer explanation of the vulnerability or pattern\n * @kind problem\n * @problem.severity warning\n * @precision medium\n * @id lang/query-id\n * @tags security\n *       correctness\n */\n\nimport language\n\nfrom SourceType source, SinkType sink\nwhere <conditions linking source to sink>\nselect <result expression>, <message string>\n```\n\n### `from` Clause\n\nDeclares typed variables. Each variable ranges over all values of its type in the database:\n\n```ql\nfrom Function f, FunctionCall call\n```\n\n### `where` Clause\n\nFilters the cross-product of `from` variables using predicates:\n\n```ql\nwhere call.getTarget() = f\n  and f.getName() = "eval"\n```\n\n### `select` Clause\n\nDefines the output columns. The first expression is the "element" (the location in source code), followed by a message string:\n\n```ql\nselect call, "Call to dangerous function " + f.getName()\n```\n\n## Metadata Annotations\n\nMetadata goes in a QLDoc comment block (`/** ... */`) at the top of the query file:\n\n| Annotation           | Required                     | Description                                                  |\n| -------------------- | ---------------------------- | ------------------------------------------------------------ |\n| `@name`              | Yes                          | Short human-readable name                                    |\n| `@description`       | Yes                          | Explanation of the query\'s purpose                           |\n| `@kind`              | Yes                          | Output format: `problem`, `path-problem`, `table`, `graph`   |\n| `@id`                | Yes                          | Unique identifier (e.g., `js/sql-injection`)                 |\n| `@problem.severity`  | For `problem`/`path-problem` | `error`, `warning`, or `recommendation`                      |\n| `@security-severity` | For security queries         | CVSS score (e.g., `8.8`)                                     |\n| `@precision`         | Recommended                  | `very-high`, `high`, `medium`, or `low`                      |\n| `@tags`              | Recommended                  | Categories like `security`, `correctness`, `maintainability` |\n\nUse `codeql_resolve_metadata` to extract and validate a query\'s metadata.\n\n## Common `@kind` Values\n\n- **`problem`** \u2014 Reports a single location with a message. Use `select element, message`.\n- **`path-problem`** \u2014 Reports a source-to-sink data flow path. Requires a `PathGraph` import and `select sink, source, sink, message`.\n- **`table`** \u2014 Generic tabular output (no alert interpretation).\n- **`graph`** \u2014 Structural output (AST, CFG, call graphs). Used by `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo` tool queries.\n\n## Common QL Patterns\n\n### Predicate Definition\n\n```ql\npredicate isUserInput(DataFlow::Node node) {\n  exists(Parameter p | p = node.asParameter() |\n    p.getFunction().isPublic()\n  )\n}\n```\n\n### Class Definition\n\n```ql\nclass DangerousCall extends MethodCall {\n  DangerousCall() {\n    this.getMethodName() = ["exec", "eval", "system"]\n  }\n}\n```\n\n### Existential Quantifier (`exists`)\n\n```ql\nwhere exists(Assignment a | a.getLhs() = var and a.getRhs() instanceof NullLiteral)\n```\n\n### Aggregates\n\n```ql\nselect f, count(FunctionCall call | call.getTarget() = f) as callCount\n  order by callCount desc\n```\n\n## Taint Tracking / Data Flow Configuration (v2 API)\n\n```ql\nmodule MyFlowConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) {\n    // define sources\n  }\n\n  predicate isSink(DataFlow::Node sink) {\n    // define sinks\n  }\n\n  predicate isBarrier(DataFlow::Node node) {\n    // define sanitizers (optional)\n  }\n}\n\nmodule MyFlow = TaintTracking::Global<MyFlowConfig>;\n```\n\n## Query Compilation and Validation\n\nUse these tools to validate queries at different fidelity levels:\n\n| Tool                     | Speed   | Fidelity           | When to Use                                                       |\n| ------------------------ | ------- | ------------------ | ----------------------------------------------------------------- |\n| `validate_codeql_query`  | Instant | Heuristic only     | Quick structure check (no compilation)                            |\n| `codeql_query_compile`   | Fast    | Full compilation   | Syntax and type checking                                          |\n| `codeql_lsp_diagnostics` | Fast    | Full (single file) | Real-time validation during editing (cannot resolve pack imports) |\n\nTypical workflow:\n\n1. `validate_codeql_query` \u2014 quick structural check\n2. `codeql_query_compile` with `checkOnly: true` \u2014 full compilation\n3. `codeql_lsp_diagnostics` \u2014 interactive feedback during editing\n\n## Test File Conventions\n\nCodeQL query tests use this directory layout:\n\n```text\npack-root/\n\u251C\u2500\u2500 src/\n\u2502   \u251C\u2500\u2500 codeql-pack.yml          # Source pack\n\u2502   \u2514\u2500\u2500 MyQuery/\n\u2502       \u2514\u2500\u2500 MyQuery.ql           # The query\n\u2514\u2500\u2500 test/\n    \u251C\u2500\u2500 codeql-pack.yml          # Test pack\n    \u2514\u2500\u2500 MyQuery/\n        \u251C\u2500\u2500 MyQuery.qlref        # Points to ../../src/MyQuery/MyQuery.ql\n        \u251C\u2500\u2500 test.js              # Test source code (language-appropriate)\n        \u2514\u2500\u2500 MyQuery.expected     # Expected query output\n```\n\n- **`.qlref` file**: Contains the relative path from the test pack\'s `src/` directory to the query file.\n- **`.expected` file**: Contains the expected output of running the query against the test code. Use `codeql_test_accept` to generate or update this file.\n- **Test source code**: Write code with both positive cases (should trigger the query) and negative cases (should not trigger).\n\n### Running Tests\n\n1. `codeql_test_run` \u2014 run tests and compare against `.expected` files\n2. `codeql_test_accept` \u2014 update `.expected` files when results are verified correct\n3. `codeql_resolve_tests` \u2014 discover and validate test structure\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/queries` \u2014 Bundled tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo)\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://templates/security` \u2014 Security query templates\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for CodeQL queries\n';
+
+// src/resources/performance-patterns.md
+var performance_patterns_default = '# Performance Optimization Patterns\n\nThis resource describes how to evaluate and improve the performance of CodeQL queries using the MCP server\'s profiling tools. Rather than prescribing generic optimization rules, it focuses on using the `profile_codeql_query_from_logs` tool and the `explain_codeql_query` prompt to make evidence-based performance improvements.\n\n## Primary Performance Tool: `profile_codeql_query_from_logs`\n\nThe `profile_codeql_query_from_logs` tool is the primary means of evaluating the actual performance of a CodeQL query. It parses existing CodeQL evaluator logs into a structured performance profile without re-running the query.\n\n### Workflow\n\n1. **Run the query**: Use `codeql_query_run` with `evaluationOutput` set to a directory path. This generates evaluator log files.\n2. **Generate a log summary**: Use `codeql_generate_log-summary` to create a human-readable summary of the evaluator log.\n3. **Profile**: Use `profile_codeql_query_from_logs` to parse the evaluator log into a structured performance profile identifying expensive predicates, pipeline stages, and tuple counts.\n4. **Identify bottlenecks**: Review the profile output for predicates with high evaluation times or unexpectedly large result sets.\n5. **Refine**: Modify the query to address identified bottlenecks, then re-run and re-profile to verify improvements.\n\n### What the Profile Shows\n\n- **Predicate evaluation times** \u2014 which predicates are the most expensive\n- **Tuple counts** \u2014 how many intermediate results each predicate produces\n- **Pipeline stages** \u2014 the internal evaluation plan chosen by the CodeQL engine\n- **RA (relational algebra) operations** \u2014 join orders, aggregation steps, and recursive evaluations\n\n## Using `explain_codeql_query` for Performance Understanding\n\nThe `explain_codeql_query` prompt generates a detailed explanation of a query, including Mermaid evaluation diagrams that visualize the data flow and evaluation order. This is useful for understanding _why_ a query may be slow before profiling.\n\n## Key Performance Concepts\n\nThe following concepts are relevant when interpreting profiling output. Verify these against actual profiling data rather than applying them blindly.\n\n### Large Intermediate Result Sets\n\nWhen a predicate produces significantly more tuples than expected, it may indicate:\n\n- Missing or insufficiently restrictive filter conditions in the `where` clause\n- A cross-product between two large relations that should be joined more tightly\n\n**How to detect**: Look for predicates in the profile output with high tuple counts relative to their expected output size.\n\n### Recursive Predicate Costs\n\nRecursive predicates (e.g., transitive closures via `+` or `*`) can be expensive when the underlying relation is large. The profiler shows iteration counts and per-iteration tuple growth.\n\n**How to detect**: Look for recursive predicates with many iterations or high per-iteration costs in the profile output.\n\n### Join Order Sensitivity\n\nThe CodeQL evaluator chooses a join order for predicates in the `where` clause. In some cases, the chosen order may not be optimal.\n\n**How to detect**: Look for pipeline stages where a large intermediate result is produced before being filtered down. The profiler shows tuple counts at each stage.\n\n### Improving "Performance" \u2014 Two Dimensions\n\nThe word "performance" for CodeQL queries has two meanings:\n\n1. **Runtime efficiency** \u2014 how fast the query evaluates. Addressed by reducing tuple counts, improving join orders, and simplifying recursive predicates.\n2. **Result quality** \u2014 how accurate the query\'s output is (precision and recall). Addressed by refining source/sink/sanitizer definitions, adding or removing filter conditions, and testing against diverse codebases.\n\nThe `profile_codeql_query_from_logs` tool addresses runtime efficiency. For result quality, use the `run_query_and_summarize_false_positives` prompt and the `sarif_rank_false_positives` / `sarif_rank_true_positives` prompts.\n\n## Performance Review for GitHub Actions CodeQL Scans\n\nWhen reviewing CodeQL performance in the context of GitHub Actions CI/CD scans, key areas to examine include:\n\n### Code Exclusion\n\nExcluding non-essential files from analysis (vendored dependencies, generated code, test files) is one of the most impactful performance improvements. Any interpreted language or compiled language using `build-mode: none` can use a `paths-ignore` array in the CodeQL configuration file to exclude paths.\n\n### Hardware Sizing\n\nRecommended runner sizes based on lines of code:\n\n- Small (< 100K lines): 8 GB RAM, 2 cores\n- Medium (100K\u20131M lines): 16 GB RAM, 4\u20138 cores\n- Large (> 1M lines): 64 GB RAM, 8 cores\n\n### Monorepo Splitting\n\nFor monorepos with multiple independent applications separated by process/network boundaries, consider splitting CodeQL scans by application. This reduces database size and enables parallel scanning via Actions matrix strategies.\n\n## Related Tools and Prompts\n\n| Tool / Prompt                                    | Purpose                                                  |\n| ------------------------------------------------ | -------------------------------------------------------- |\n| `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (no re-run needed)  |\n| `codeql_generate_log-summary`                    | Generate a human-readable evaluator log summary          |\n| `codeql_query_run`                               | Execute a query (set `evaluationOutput` to capture logs) |\n| `explain_codeql_query` prompt                    | Understand query evaluation flow with Mermaid diagrams   |\n| `run_query_and_summarize_false_positives` prompt | Assess result quality (precision)                        |\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://learning/query-basics` \u2014 Query structure and compilation tools\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for iterative query improvement\n';
+
+// src/resources/ql-test-driven-development.md
+var ql_test_driven_development_default = "# Test-Driven Development for CodeQL Queries\n\nThis resource explains the theory and value of test-driven development (TDD) for CodeQL queries, and how the MCP server's tools and prompts support the TDD workflow. It is a conceptual overview \u2014 for step-by-step guided workflows, use the `test_driven_development`, `ql_tdd_basic`, or `ql_tdd_advanced` prompts.\n\n## Why TDD for CodeQL?\n\nCodeQL queries are programs that search for patterns in source code. Like any program, they can have bugs: false positives (flagging safe code), false negatives (missing vulnerable code), and runtime performance issues. TDD addresses all three by establishing a feedback loop between expected and actual behavior.\n\n### Why TDD Makes LLMs More Effective\n\nLLMs generating CodeQL queries face two challenges:\n\n1. **Syntactic correctness** \u2014 QL has unique syntax (classes, predicates, `exists`, aggregates) that differs from mainstream languages. Compilation via `codeql_query_compile` catches syntax errors early.\n2. **Semantic correctness** \u2014 A query that compiles may still produce wrong results. Test cases with `.expected` files provide ground truth that the LLM can compare against, enabling iterative refinement.\n\nTDD provides the LLM with a concrete, automated signal (tests pass / tests fail) at every iteration, replacing guesswork with evidence. This is especially valuable for data flow and taint tracking queries where the correctness of source/sink/sanitizer definitions can only be verified by running the query against representative code.\n\n## The TDD Cycle\n\n```text\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  1. Write Tests  \u2502 \u2190 Define expected behavior through test cases\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  2. Run (Red)    \u2502 \u2190 Verify tests fail (no query logic yet)\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  3. Implement    \u2502 \u2190 Write minimal query logic to pass tests\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  4. Run (Green)  \u2502 \u2190 Verify tests pass\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  5. Refactor     \u2502 \u2190 Improve query while keeping tests green\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n         \u25BC\n\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  6. Repeat       \u2502 \u2190 Add more tests for additional scenarios\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n## The Value of AST Data in Test Code\n\nA critical step in the TDD workflow is running `PrintAST` on test source code before writing the query. The AST output reveals how the CodeQL database represents the test code \u2014 which QL classes correspond to which source constructs, and which predicates are available for matching.\n\nWithout AST data, the LLM must guess which classes and predicates to use, leading to trial-and-error. With AST data, the LLM can:\n\n- **Map source patterns to QL classes**: See exactly which QL class represents a `for` loop, a method call, or an assignment\n- **Discover available predicates**: Learn what methods are available on each AST node type\n- **Write precise `from`/`where` clauses**: Use the correct class names and predicate calls from the start\n\nUse `codeql_query_run` with `queryName=\"PrintAST\"` to generate AST data for test source files. The `ql_tdd_advanced` prompt guides this step in detail.\n\n## MCP Tools for TDD\n\n| Step         | Tool                                  | Purpose                                              |\n| ------------ | ------------------------------------- | ---------------------------------------------------- |\n| Scaffold     | `create_codeql_query`                 | Generate query, test, and `.qlref` files             |\n| Dependencies | `codeql_pack_install`                 | Install pack dependencies for src and test packs     |\n| Extract      | `codeql_test_extract`                 | Create a test database from test source files        |\n| AST Analysis | `codeql_query_run` (PrintAST)         | Understand test code structure via AST               |\n| CFG Analysis | `codeql_query_run` (PrintCFG)         | Understand control flow (advanced)                   |\n| Call Graph   | `codeql_query_run` (CallGraphFrom/To) | Trace call relationships (advanced)                  |\n| Compile      | `codeql_query_compile`                | Validate query syntax before testing                 |\n| Test         | `codeql_test_run`                     | Run tests and compare against `.expected`            |\n| Accept       | `codeql_test_accept`                  | Update `.expected` when results are verified correct |\n| Profile      | `profile_codeql_query_from_logs`      | Analyze query performance from evaluator logs        |\n| Format       | `codeql_query_format`                 | Auto-format query source code                        |\n| Metadata     | `codeql_resolve_metadata`             | Validate query metadata annotations                  |\n\n## MCP Prompts for TDD\n\n| Prompt                    | When to Use                                                |\n| ------------------------- | ---------------------------------------------------------- |\n| `test_driven_development` | End-to-end TDD workflow with required `language` parameter |\n| `ql_tdd_basic`            | Standalone TDD checklist (all parameters optional)         |\n| `ql_tdd_advanced`         | Extended TDD with AST/CFG/call graph analysis              |\n| `tools_query_workflow`    | Focused exploration of code structure via tool queries     |\n| `explain_codeql_query`    | Understand an existing query's logic before modifying it   |\n\n## Writing Effective Test Cases\n\n### Structure\n\nEach test directory contains:\n\n- **Test source code** (e.g., `test.js`) \u2014 code that the query will analyze\n- **`.qlref` file** \u2014 points to the query being tested\n- **`.expected` file** \u2014 the expected query output\n\n### Best Practices\n\n1. **Include both positive and negative cases**: Write code that should trigger the query (vulnerable patterns) and code that should not (safe patterns)\n2. **Start simple**: Begin with the most obvious positive and negative cases, then add edge cases\n3. **Use realistic code**: Test against code patterns that occur in real-world projects\n4. **One concept per test directory**: Each test should verify one specific behavior\n5. **Document intent**: Use comments in test code to explain why each case should or should not match\n\n### Example Test Structure\n\n```text\ntest/SqlInjection/\n\u251C\u2500\u2500 SqlInjection.qlref       # Points to src/SqlInjection/SqlInjection.ql\n\u251C\u2500\u2500 test.py                  # Test source code\n\u2514\u2500\u2500 SqlInjection.expected    # Expected results\n```\n\nThe `.expected` file contains one line per query result, matching the `select` clause output.\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation and quick-start guide\n- `codeql://learning/query-basics` \u2014 Query structure, metadata, and compilation reference\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://templates/security` \u2014 Security query templates with TDD workflow\n- `codeql://patterns/performance` \u2014 Performance profiling tools\n- `codeql://languages/{language}/ast` \u2014 Language-specific AST class reference\n- `codeql://languages/{language}/security` \u2014 Language-specific security patterns\n";
+
+// src/resources/codeql-query-unit-testing.md
+var codeql_query_unit_testing_default = '# CodeQL Query Unit Testing\n\nGuide for creating and running unit tests for CodeQL queries. For the broader TDD workflow (write tests, implement, iterate), see the `test_driven_development` resource and `ql_tdd_basic` / `ql_tdd_advanced` prompts.\n\n## Test Directory Layout\n\nThere is no one single way to arrange CodeQL unit tests, though there are some commonalities.\n\nFor a recommended setup that uses separate "qlpacks" for CodeQL queries versus tests, a given CodeQL query and associated unit test may be laid out on the filesystem like:\n\n```text\n<query-pack-root>/<optional-queries-subdir>/{QueryName}/\n\u251C\u2500\u2500 {QueryName}.{md,qhelp}  # Recommended query documentation file\n\u251C\u2500\u2500 {QueryName}.ql          # Required query implementation file\n\u2514\u2500\u2500 {QueryName}.qll         # Optional query-specific library file\n<test-pack-root>/<optional-tests-subdir>/{QueryOrTestName}/\n\u251C\u2500\u2500 {QueryName}.qlref       # qlref file contents point to the path of the query, relative to <query-pack-root>\n\u251C\u2500\u2500 Example1.{ext}          # Test source code (positive + negative cases)\n\u251C\u2500\u2500 {QueryName}.actual      # Actual test results; created dynamically via `codeql_test_run` tool\n\u251C\u2500\u2500 {QueryName}.expected    # Expected query results; defined prior to calling `codeql_test_run` tool\n\u2514\u2500\u2500 {QueryName}.testproj/   # Test database; auto-created by `codeql_test_extract` or `codeql_test_run` tools\n```\n\n## File Extensions by Language\n\n| Language   | Test source extension(s) | Notes                                    |\n| ---------- | ------------------------ | ---------------------------------------- |\n| C/C++      | `.cpp`, `.c`, `.h`       | Use header files for shared declarations |\n| C#         | `.cs`                    |                                          |\n| Go         | `.go`                    | Must include `package` declaration       |\n| Java       | `.java`                  | Must include `class` matching filename   |\n| JavaScript | `.js`                    | Use `.ts` for TypeScript                 |\n| Python     | `.py`                    |                                          |\n| Ruby       | `.rb`                    |                                          |\n| Swift      | `.swift`                 |                                          |\n\n## Creating a Test\n\n### 1. Query Reference File (`{QueryName}.qlref`)\n\nSingle line with the path to the query, relative to the query pack root:\n\n```sh\nsrc/{QueryName}/{QueryName}.ql\n```\n\n### 2. Test Source Code\n\nWrite test source files containing:\n\n- **Positive cases**: Code patterns the query **should** detect\n- **Negative cases**: Safe code the query **should not** flag\n- **Edge cases**: Boundary conditions and unusual but valid patterns\n\nAdd comments to describe what each section tests.\n\n### 3. Expected Results (`{QueryName}.expected`)\n\nTabular format matching the query\'s `select` clause columns:\n\n```text\n| file        | line | col | endLine | endCol | message          |\n| Example1.js | 5    | 1   | 7       | 2      | Function: myFunc |\n```\n\nLeave the file empty or create it with a placeholder initially \u2014 run the query to generate actual results, then baseline with `codeql_test_accept`.\n\n## Language-Specific Notes\n\n### C/C++\n\n- Use an `options` file in the test directory to set the C++ standard (e.g., `--std=c++17`).\n- Include header files with include guards when testing patterns that span headers.\n- Test pointer/reference, smart pointer, template instantiation, and STL container patterns as relevant.\n- Key AST nodes: `Function`, `MemberFunction`, `Constructor`, `Class`, `Struct`, `PointerDereferenceExpr`, `FunctionCall`, `NewExpr`, `DeleteExpr`, `TemplateClass`, `TemplateFunction`.\n\n### C\\#\n\n- Always include required `using` statements so test code compiles.\n- Test .NET-specific patterns: LINQ, async/await, properties, pattern matching, ASP.NET controllers, Entity Framework.\n- Key AST nodes: `Class`, `Method`, `Property`, `MethodCall`, `QueryExpr`, `AwaitExpr`, `Annotation`.\n\n### Go\n\n- Every test file must have a `package` declaration (typically `package main`).\n- Test goroutine, channel, interface assertion, and error-handling patterns as relevant.\n- Key AST nodes: `Function`, `CallExpr`, `SelectorExpr`, `GoStmt`, `SendStmt`, `TypeAssertExpr`.\n\n### Java\n\n- Each `.java` test file must contain a `public class` matching the filename.\n- Test annotations, generics, lambda expressions, streams, and try-with-resources as relevant.\n- Supports Spring, Servlet, and Jakarta EE framework patterns.\n- Key AST nodes: `Method`, `Constructor`, `Class`, `MethodCall`, `LambdaExpr`, `MethodReference`, `Annotation`, `TypeVariable`.\n\n### JavaScript / TypeScript\n\n- Both CommonJS (`require`) and ES modules (`import`) are supported.\n- Use `.ts` for TypeScript; JSX is supported in `.jsx`/`.tsx` files.\n- Test browser APIs (DOM, `document.write`), Node.js APIs (`child_process`, `fs`), and framework patterns (Express, React) as relevant.\n- Test async/await, Promises, and callback patterns.\n- Key AST nodes: `Function`, `ArrowFunctionExpr`, `CallExpr`, `MethodCallExpr`, `PropAccess`, `AwaitExpr`, `TemplateLiteral`.\n\n### Python\n\n- Supports both Python 2 and Python 3 syntax.\n- Test decorators, async/await, type hints, and dynamic code execution (`eval`, `exec`) as relevant.\n- Test framework patterns: Django (ORM, templates), Flask (request, routing), FastAPI (dependency injection).\n- Key AST nodes: `FunctionDef`, `ClassDef`, `Call`, `Attribute`, `Name`, `Lambda`, `Await`.\n\n### Ruby\n\n- Test metaprogramming (`send`, `define_method`, `eval`), blocks/lambdas, and string interpolation as relevant.\n- Test Rails patterns (params, ActiveRecord, ActionView) and gem-specific APIs (Sinatra, Grape).\n- Note: `asExpr()` in Ruby returns `CfgNodes::ExprCfgNode` (CFG node), not an AST node; use `.getExpr()` to get the AST node.\n- Key AST nodes: `MethodCall`, `Block`, `StringInterpolation`, `ConstantReadAccess`.\n\n### Swift\n\n- Requires macOS with Xcode installed for test extraction.\n- Supports Swift 5.4 through 6.2.\n- Test iOS/macOS framework patterns: Foundation, UIKit, Security, CryptoKit, WKWebView.\n- Test actors, property wrappers, async/await, and result builders as relevant.\n- Key AST nodes: `ClassDecl`, `StructDecl`, `FuncDecl`, `CallExpr`, `MemberRefExpr`, `ClosureExpr`, `GuardStmt`.\n\n## MCP Tool Workflow\n\n| Step                  | Tool                          | Purpose                                   |\n| --------------------- | ----------------------------- | ----------------------------------------- |\n| Create test files     | `create_codeql_query`         | Scaffold query + test + `.qlref`          |\n| Install dependencies  | `codeql_pack_install`         | Install pack dependencies                 |\n| Extract test database | `codeql_test_extract`         | Build test DB from source files           |\n| Inspect AST           | `codeql_query_run` (PrintAST) | Understand how test code is represented   |\n| Run tests             | `codeql_test_run`             | Compare actual vs. expected results       |\n| Accept results        | `codeql_test_accept`          | Baseline correct results into `.expected` |\n';
+
+// src/resources/security-templates.md
+var security_templates_default = '# Security Query Templates\n\nThis resource provides actionable security query templates for multiple languages and vulnerability classes. Each template shows the recommended query structure, explains how to adapt it, and references the MCP tools and TDD workflow to use during development.\n\n## General Workflow for Security Queries\n\n1. **Scaffold**: Use `create_codeql_query` to generate the query, test, and `.qlref` files\n2. **Write tests**: Create test source code with vulnerable (positive) and safe (negative) examples\n3. **Analyze AST**: Use `codeql_query_run` with `queryName="PrintAST"` to understand code representation\n4. **Implement**: Write the query using the taint tracking / data flow template below\n5. **Compile**: Use `codeql_query_compile` to validate syntax\n6. **Test**: Use `codeql_test_run` to run tests; iterate until all pass\n7. **Accept**: Use `codeql_test_accept` to baseline correct results\n\nSee the `test_driven_development` or `ql_tdd_basic` prompts for guided step-by-step workflows.\n\n## Taint Tracking Template (v2 API)\n\nMost security queries use taint tracking to find data flowing from untrusted sources to dangerous sinks. The standard template structure for all languages is:\n\n```ql\n/**\n * @name <Vulnerability Name>\n * @description <Description of the vulnerability>\n * @kind path-problem\n * @problem.severity error\n * @security-severity <CVSS score>\n * @precision high\n * @id <lang>/<vulnerability-id>\n * @tags security\n *       external/cwe/cwe-<NNN>\n */\n\nimport <language>\n\nmodule MyFlowConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) {\n    // Define untrusted input sources\n  }\n\n  predicate isSink(DataFlow::Node sink) {\n    // Define dangerous sinks\n  }\n\n  predicate isBarrier(DataFlow::Node node) {\n    // Define sanitizers that make data safe (optional)\n  }\n}\n\nmodule MyFlow = TaintTracking::Global<MyFlowConfig>;\n\nimport MyFlow::PathGraph\n\nfrom MyFlow::PathNode source, MyFlow::PathNode sink\nwhere MyFlow::flowPath(source, sink)\nselect sink.getNode(), source, sink, "Tainted data from $@ reaches this sink.",\n  source.getNode(), "user-provided value"\n```\n\n### Adapting the Template\n\n1. **Choose sources**: Identify where untrusted data enters (HTTP parameters, file reads, environment variables)\n2. **Choose sinks**: Identify where data becomes dangerous (SQL queries, command execution, HTML output)\n3. **Add sanitizers**: Identify validation or encoding functions that neutralize the threat\n4. **Adjust metadata**: Set appropriate `@security-severity`, `@id`, and CWE tags\n\n## Source, Sink, and Sanitizer Patterns\n\n### Defining Sources\n\nSources represent entry points for untrusted data. The most common pattern uses `RemoteFlowSource`:\n\n```ql\npredicate isSource(DataFlow::Node source) {\n  source instanceof RemoteFlowSource\n}\n```\n\n### Defining Sinks\n\nSinks are locations where untrusted data causes harm. Identify the dangerous API call and pin the taint to the relevant argument position:\n\n```ql\npredicate isSink(DataFlow::Node sink) {\n  exists(CallExpr dangerousCall |\n    dangerousCall.getTarget().hasName("vulnerableFunction") and\n    sink.asExpr() = dangerousCall.getArgument(0)\n  )\n}\n```\n\n### Defining Sanitizers (Barriers)\n\nSanitizers stop taint propagation when data is validated or encoded. Return `true` for nodes where the taint is neutralized:\n\n```ql\npredicate isBarrier(DataFlow::Node node) {\n  exists(CallExpr validationCall |\n    validationCall.getTarget().hasName("sanitize") and\n    node.asExpr() = validationCall\n  )\n}\n```\n\n## Language-Specific Guidance\n\nEach language has pre-built security libraries in the CodeQL standard library. Import these instead of writing source/sink definitions from scratch when possible.\n\n### Go\n\n- **SQL Injection**: Import `semmle.go.security.SqlInjection` \u2014 provides `SqlInjection::Flow` module with pre-defined sources and sinks. Tag with CWE-089, severity 8.8.\n- **Command Injection**: Import `semmle.go.security.CommandInjection`.\n- See `codeql://languages/go/security` for Go-specific framework modeling.\n\n### JavaScript / TypeScript\n\n- **DOM-based XSS**: Import `semmle.javascript.security.dataflow.DomBasedXss` \u2014 provides `DomBasedXss::Flow` module. Tag with CWE-079, severity 6.1.\n- **SQL Injection**: Import `semmle.javascript.security.dataflow.SqlInjection`.\n- See `codeql://languages/javascript/security` for JavaScript-specific patterns.\n\n### Python\n\n- **Command Injection**: Import `semmle.python.security.dataflow.CommandInjection`. Tag with CWE-078, severity 9.8.\n- **SQL Injection**: Import `semmle.python.security.dataflow.SqlInjection`.\n- See `codeql://languages/python/security` for Python-specific patterns.\n\n### Java / Kotlin\n\n- **SQL Injection**: Import `semmle.java.security.SqlInjectionQuery` \u2014 provides `SqlInjectionFlow` module. Tag with CWE-089, severity 8.8.\n- **SSRF**: Import `semmle.java.security.RequestForgery`.\n\n### C# (.NET)\n\n- **Path Traversal**: Import `semmle.csharp.security.dataflow.PathInjection`. Tag with CWE-022, severity 7.5.\n- **SQL Injection**: Import `semmle.csharp.security.dataflow.SqlInjection`.\n- See `codeql://languages/csharp/security` for C#-specific patterns.\n\n### C / C++\n\n- **Buffer Overflow**: Import `semmle.code.cpp.security.BufferAccess`. Tag with CWE-120, severity 9.8.\n- See `codeql://languages/cpp/security` for C/C++-specific patterns.\n\n## Vulnerability Classes Reference\n\n| Vulnerability     | CWE     | Typical Sources                    | Typical Sinks                 |\n| ----------------- | ------- | ---------------------------------- | ----------------------------- |\n| SQL Injection     | CWE-089 | HTTP parameters, form data         | Database query functions      |\n| XSS               | CWE-079 | HTTP parameters, URL data          | HTML output, DOM writes       |\n| Command Injection | CWE-078 | HTTP parameters, config files      | `exec`, `system`, `popen`     |\n| Path Traversal    | CWE-022 | HTTP parameters, file names        | File system access functions  |\n| SSRF              | CWE-918 | HTTP parameters, user URLs         | HTTP client request functions |\n| Code Injection    | CWE-094 | HTTP parameters, deserialized data | `eval`, template engines      |\n| LDAP Injection    | CWE-090 | HTTP parameters                    | LDAP query functions          |\n| XML Injection     | CWE-091 | HTTP parameters                    | XML parsers, XPath queries    |\n\n## Related Resources\n\n- `codeql://learning/query-basics` \u2014 Query structure and metadata reference\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for developing queries\n- `codeql://patterns/performance` \u2014 Performance optimization guidance\n- `codeql://languages/{language}/security` \u2014 Language-specific security patterns and framework modeling\n';
+
+// src/resources/server-overview.md
+var server_overview_default = '# CodeQL Development MCP Server \u2014 Getting Started\n\nThis resource is the primary onboarding guide for LLM clients connecting to the CodeQL Development MCP Server. It explains what the server provides, which tools and prompts are available, and how to orchestrate common workflows.\n\n## What This Server Does\n\nThe CodeQL Development MCP Server wraps the CodeQL CLI and supporting utilities behind the Model Context Protocol (MCP). It exposes **tools** (executable actions), **prompts** (reusable workflow templates), and **resources** (reference material) that enable an LLM to develop, test, and analyze CodeQL queries without direct shell access.\n\n## Available Resources\n\nRead these resources via `resources/read` to deepen your understanding:\n\n| URI                                           | Purpose                                             |\n| --------------------------------------------- | --------------------------------------------------- |\n| `codeql://server/overview`                    | This guide \u2014 MCP server orientation                 |\n| `codeql://server/queries`                     | Bundled tools queries (PrintAST, PrintCFG, etc.)    |\n| `codeql://server/tools`                       | Complete default tool reference                     |\n| `codeql://server/prompts`                     | Complete prompt reference                           |\n| `codeql://learning/query-basics`              | QL query writing reference (syntax, metadata, etc.) |\n| `codeql://learning/test-driven-development`   | TDD theory and workflow for CodeQL                  |\n| `codeql://templates/security`                 | Security query templates (multi-language)           |\n| `codeql://patterns/performance`               | Performance profiling and optimization              |\n| `codeql://guides/query-unit-testing`          | Guide for creating and running CodeQL query tests   |\n| `codeql://guides/dataflow-migration-v1-to-v2` | Migrating from v1 to v2 dataflow API                |\n| `codeql://languages/{language}/ast`           | Language-specific AST class reference               |\n| `codeql://languages/{language}/security`      | Language-specific security patterns                 |\n\n## Quick-Start Workflows\n\n### 1. Create a New Query (TDD Approach)\n\nUse the `test_driven_development` prompt (or `ql_tdd_basic` / `ql_tdd_advanced`):\n\n1. `create_codeql_query` \u2014 scaffold query, test files, and `.qlref`\n2. `codeql_pack_install` \u2014 install pack dependencies\n3. Write test code with positive and negative cases\n4. `codeql_test_run` \u2014 run tests (expect failure initially)\n5. Implement query logic\n6. `codeql_query_compile` \u2014 validate syntax\n7. `codeql_test_run` \u2014 iterate until tests pass\n8. `codeql_test_accept` \u2014 accept correct results as baseline\n\n### 2. Understand Code Structure\n\nUse the `tools_query_workflow` prompt:\n\n1. `codeql_query_run` with `queryName="PrintAST"` \u2014 visualize the AST\n2. `codeql_query_run` with `queryName="PrintCFG"` \u2014 visualize control flow\n3. `codeql_query_run` with `queryName="CallGraphFrom"` / `"CallGraphTo"` \u2014 trace call relationships\n\n### 3. Analyze Query Quality\n\n1. `codeql_database_analyze` \u2014 run queries against a database\n2. `profile_codeql_query` or `profile_codeql_query_from_logs` \u2014 analyze performance\n3. `run_query_and_summarize_false_positives` prompt \u2014 assess precision\n4. `sarif_rank_false_positives` / `sarif_rank_true_positives` prompts \u2014 rank results\n\n### 4. Iterative Development with LSP\n\nUse the `ql_lsp_iterative_development` prompt:\n\n1. `codeql_lsp_completion` \u2014 get code completions while writing QL\n2. `codeql_lsp_definition` \u2014 navigate to symbol definitions\n3. `codeql_lsp_references` \u2014 find all references to a symbol\n4. `codeql_lsp_diagnostics` \u2014 real-time syntax and semantic validation\n\n## Tool Categories\n\nThe server provides default tools across these categories (see `codeql://server/tools` for the full reference):\n\n- **CodeQL CLI tools** \u2014 Database creation, query compilation, execution, result decoding, pack management\n- **LSP tools** \u2014 Code completion, go-to-definition, find references, diagnostics\n- **Query development tools** \u2014 Scaffolding, validation, profiling, quick evaluation, database registration\n\n## Prompt Categories\n\nThe server provides **11 prompts** (see `codeql://server/prompts` for the full reference):\n\n- **Test-driven development** \u2014 `test_driven_development`, `ql_tdd_basic`, `ql_tdd_advanced`\n- **Code understanding** \u2014 `tools_query_workflow`, `explain_codeql_query`\n- **Iterative development** \u2014 `ql_lsp_iterative_development`\n- **Documentation and quality** \u2014 `document_codeql_query`, `run_query_and_summarize_false_positives`, `sarif_rank_false_positives`, `sarif_rank_true_positives`\n- **Workshop creation** \u2014 `workshop_creation_workflow`\n\n## Key Concepts\n\n- **CodeQL database**: A relational representation of source code created by `codeql_database_create`. All queries execute against a database.\n- **QL pack**: A directory containing `codeql-pack.yml` with query or library code. Use `codeql_pack_install` to resolve dependencies.\n- **`.qlref` file**: A test reference that points from a test directory to the query being tested.\n- **`.expected` file**: The expected output of a query test. Use `codeql_test_accept` to update it when results are correct.\n- **BQRS**: Binary Query Result Sets \u2014 the native output format of `codeql_query_run`. Decode with `codeql_bqrs_decode` or interpret with `codeql_bqrs_interpret`.\n- **SARIF**: Static Analysis Results Interchange Format \u2014 the standard output format for `codeql_database_analyze`.\n\n## Supported Languages\n\nThe server supports CodeQL queries for: `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `swift`.\n';
+
+// src/resources/server-prompts.md
+var server_prompts_default = "# MCP Server Prompts\n\nThis resource provides a complete reference of the prompts exposed by the CodeQL Development MCP Server. Prompts are reusable workflow templates that guide the LLM through common CodeQL development tasks. Invoke a prompt via the MCP `prompts/get` protocol.\n\n## Prompt Reference\n\n| Prompt                                    | Description                                                                                                   |\n| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |\n| `document_codeql_query`                   | Create or update standardized markdown documentation for a CodeQL query                                       |\n| `explain_codeql_query`                    | Generate a detailed explanation of a CodeQL query with Mermaid evaluation diagrams                            |\n| `ql_lsp_iterative_development`            | Iterative CodeQL query development using LSP tools for completion, navigation, and validation                 |\n| `ql_tdd_advanced`                         | Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis         |\n| `ql_tdd_basic`                            | Test-driven CodeQL query development checklist \u2014 write tests first, implement query, iterate until tests pass |\n| `run_query_and_summarize_false_positives` | Run a CodeQL query and summarize its false positives by root cause                                            |\n| `sarif_rank_false_positives`              | Analyze SARIF results to identify and rank likely false positives                                             |\n| `sarif_rank_true_positives`               | Analyze SARIF results to identify and rank likely true positives                                              |\n| `test_driven_development`                 | End-to-end test-driven development workflow for CodeQL queries using MCP tools                                |\n| `tools_query_workflow`                    | Guide for using PrintAST, PrintCFG, CallGraphFrom, and CallGraphTo tool queries to understand code structure  |\n| `workshop_creation_workflow`              | Guide for creating multi-exercise CodeQL query development workshops from production-grade queries            |\n\n## Prompt Categories\n\n### Test-Driven Development\n\n- **`test_driven_development`** \u2014 The primary TDD prompt. Requires a `language` parameter and optionally accepts `queryName`. Loads the `ql-tdd-basic.prompt.md` template and walks through the complete TDD cycle: scaffold \u2192 write tests \u2192 implement \u2192 compile \u2192 test \u2192 iterate.\n- **`ql_tdd_basic`** \u2014 A standalone TDD checklist. All parameters are optional. Covers the core loop: write test cases, implement the query, run tests, iterate.\n- **`ql_tdd_advanced`** \u2014 Extends basic TDD with AST visualization (`PrintAST`), control flow graph analysis (`PrintCFG`), and call graph exploration (`CallGraphFrom`, `CallGraphTo`). Optionally accepts a `database` path for immediate analysis.\n\n### Code Understanding\n\n- **`tools_query_workflow`** \u2014 Orchestrates the four built-in tool queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to explore how source code is represented in a CodeQL database. Requires `language` and `database` parameters.\n- **`explain_codeql_query`** \u2014 Produces a verbal explanation of a query's logic and generates Mermaid diagrams showing the evaluation flow. Requires `queryPath` and `language`.\n\n### Iterative Development\n\n- **`ql_lsp_iterative_development`** \u2014 Combines LSP-based code completions (`codeql_lsp_completion`), go-to-definition (`codeql_lsp_definition`), find-references (`codeql_lsp_references`), and diagnostics (`codeql_lsp_diagnostics`) for an interactive development loop.\n\n### Documentation and Quality\n\n- **`document_codeql_query`** \u2014 Generates standardized markdown documentation as a sibling `.md` file to a query. Requires `queryPath` and `language`.\n- **`run_query_and_summarize_false_positives`** \u2014 Runs a CodeQL query on a database and groups results into false-positive categories by root cause.\n- **`sarif_rank_false_positives`** / **`sarif_rank_true_positives`** \u2014 Analyze SARIF output to assess query precision by ranking results as likely true or false positives.\n\n### Workshop Creation\n\n- **`workshop_creation_workflow`** \u2014 Guides the creation of multi-exercise workshops that teach CodeQL query development. Requires `queryPath` and `language`, optionally accepts `workshopName` and `numStages`.\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://learning/test-driven-development` \u2014 TDD theory and workflow overview\n";
+
+// src/resources/server-queries.md
+var server_queries_default = '# MCP Server Bundled Queries\n\nThis resource describes the tools queries bundled with the CodeQL Development MCP Server. These queries run via `codeql_query_run` and provide structural insight into how source code is represented in a CodeQL database. Use them to understand code structure before writing detection queries.\n\nFor general QL query writing guidance (syntax, metadata, `from`/`where`/`select`, testing conventions), see `codeql://learning/query-basics`.\n\n## Bundled Tools Queries\n\nThe server bundles four tools queries that operate on CodeQL databases:\n\n| Query           | Purpose                                           | Output Format             |\n| --------------- | ------------------------------------------------- | ------------------------- |\n| `PrintAST`      | Visualize the Abstract Syntax Tree of source code | `@kind graph` (graphtext) |\n| `PrintCFG`      | Visualize the Control Flow Graph of a function    | `@kind graph` (graphtext) |\n| `CallGraphFrom` | Show all functions called FROM a given function   | `@kind graph` (graphtext) |\n| `CallGraphTo`   | Show all call sites that call TO a given function | `@kind graph` (graphtext) |\n\nAll four queries use `@kind graph` metadata and produce output in graphtext format.\n\n## PrintAST\n\n**Purpose**: Outputs a hierarchical representation of the Abstract Syntax Tree showing parent-child relationships between declarations, statements, and expressions.\n\n**When to use**: Before writing any CodeQL query, run `PrintAST` on your test source code to understand which QL classes represent which source constructs and which predicates are available for matching.\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "PrintAST"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  sourceFiles: "<comma-separated-filenames>"   (optional \u2014 filter to specific files)\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: A tree showing each AST node with its QL class name, properties, and position in the hierarchy. This reveals exactly which QL classes and predicates to use in `from`/`where`/`select` clauses.\n\n## PrintCFG\n\n**Purpose**: Produces a Control Flow Graph representation showing the order in which statements and expressions execute, including branching paths.\n\n**When to use**: When writing queries that reason about execution order, reachability, or branching logic (e.g., "is this check always performed before this call?").\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "PrintCFG"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  sourceFunction: "<function-name>"   (optional \u2014 target a specific function)\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: Nodes representing CFG basic blocks and edges representing possible execution transitions (successor relationships).\n\n## CallGraphFrom\n\n**Purpose**: Shows all functions called FROM a specified source function \u2014 the outbound call dependencies.\n\n**When to use**: When analyzing what a function does by tracing the functions it invokes. Useful for understanding call chains and identifying potential data flow paths.\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "CallGraphFrom"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  sourceFunction: "<function-name>"\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: A graph showing each call site within the source function and the target function being called.\n\n## CallGraphTo\n\n**Purpose**: Shows all call sites that invoke a specified target function \u2014 the inbound callers.\n\n**When to use**: When performing impact analysis to understand where a function is used, or when identifying all locations that pass data to a particular sink function.\n\n**How to run**:\n\n```text\nTool: codeql_query_run\nParameters:\n  queryName: "CallGraphTo"\n  queryLanguage: "<language>"\n  database: "<path-to-database>"\n  targetFunction: "<function-name>"\n  format: "graphtext"\n  interpretedOutput: "<output-directory>"\n```\n\n**Output**: A graph showing each caller function and the specific call site where the target function is invoked.\n\n## Language Support\n\n| Language   | PrintAST | PrintCFG | CallGraphFrom | CallGraphTo |\n| ---------- | :------: | :------: | :-----------: | :---------: |\n| actions    |    \u2713     |    \u2713     |               |             |\n| cpp        |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| csharp     |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| go         |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| java       |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| javascript |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| python     |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| ruby       |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n| swift      |    \u2713     |    \u2713     |       \u2713       |      \u2713      |\n\nNote: The `actions` language supports PrintAST and PrintCFG only (no call graph queries).\n\n## Recommended Workflow\n\nUse the `tools_query_workflow` prompt for a guided step-by-step workflow:\n\n1. **Identify or create a database**: Use `list_codeql_databases` or `codeql_database_create`\n2. **Run PrintAST**: Understand how the source code maps to QL classes\n3. **Run PrintCFG**: Understand control flow for the functions of interest\n4. **Run CallGraphFrom / CallGraphTo**: Trace call relationships to identify sources and sinks\n5. **Write detection queries**: Use the insights from steps 2\u20134 to select the right QL classes and predicates\n\n## Related Resources\n\n- `codeql://learning/query-basics` \u2014 QL query writing reference (syntax, metadata, patterns, testing)\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/tools` \u2014 Complete tool reference\n- `codeql://learning/test-driven-development` \u2014 TDD workflow for CodeQL queries\n- `codeql://languages/{language}/ast` \u2014 Language-specific AST class reference\n';
+
+// src/resources/server-tools.md
+var server_tools_default = '# MCP Server Tools\n\nThis resource provides a complete reference of the default tools exposed by the CodeQL Development MCP Server. These tools wrap the CodeQL CLI and supporting utilities, enabling an LLM to develop, test, and analyze CodeQL queries programmatically.\n\n## CodeQL CLI Tools\n\n| Tool                          | Description                                                                                                                  |\n| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |\n| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats (text, csv, json). Supports `--result-set` and `--rows` for pagination    |\n| `codeql_bqrs_info`            | Get metadata about BQRS result files: result sets, column types, row counts                                                  |\n| `codeql_bqrs_interpret`       | Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats) |\n| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS, and SARIF output                        |\n| `codeql_database_create`      | Create a CodeQL database from source code                                                                                    |\n| `codeql_generate_log-summary` | Create a summary of a structured JSON evaluator event log file                                                               |\n| `codeql_generate_query-help`  | Generate query help documentation from QLDoc comments                                                                        |\n| `codeql_pack_install`         | Install CodeQL pack dependencies                                                                                             |\n| `codeql_pack_ls`              | List CodeQL packs under a local directory path                                                                               |\n| `codeql_query_compile`        | Compile and validate CodeQL queries                                                                                          |\n| `codeql_query_format`         | Automatically format CodeQL source code files                                                                                |\n| `codeql_query_run`            | Execute a CodeQL query against a database                                                                                    |\n| `codeql_resolve_database`     | Resolve database path and validate database structure                                                                        |\n| `codeql_resolve_languages`    | List installed CodeQL extractor packs                                                                                        |\n| `codeql_resolve_library-path` | Resolve library path for CodeQL queries and libraries                                                                        |\n| `codeql_resolve_metadata`     | Resolve and return key-value metadata pairs from a CodeQL query source file                                                  |\n| `codeql_resolve_qlref`        | Resolve `.qlref` files to their corresponding query files                                                                    |\n| `codeql_resolve_queries`      | List available CodeQL queries found on the local filesystem                                                                  |\n| `codeql_resolve_tests`        | Resolve the local filesystem paths of unit tests and/or queries under a base directory                                       |\n| `codeql_test_accept`          | Accept new test results as the expected baseline                                                                             |\n| `codeql_test_extract`         | Extract test databases for CodeQL query tests                                                                                |\n| `codeql_test_run`             | Run CodeQL query tests                                                                                                       |\n\n## Language Server Protocol (LSP) Tools\n\n| Tool                     | Description                                                                                                                                                                  |\n| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| `codeql_lsp_completion`  | Get code completions at a cursor position in a CodeQL file                                                                                                                   |\n| `codeql_lsp_definition`  | Go to the definition of a CodeQL symbol at a given position                                                                                                                  |\n| `codeql_lsp_diagnostics` | Syntax and semantic validation of CodeQL code via the Language Server. Note: inline `ql_code` cannot resolve pack imports; use `codeql_query_compile` for files with imports |\n| `codeql_lsp_references`  | Find all references to a CodeQL symbol at a given position                                                                                                                   |\n\n## Query Development Tools\n\n| Tool                             | Description                                                                                                  |\n| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |\n| `create_codeql_query`            | Create directory structure and files for a new CodeQL query with tests                                       |\n| `find_class_position`            | Find the start/end line and column of a class for quick evaluation                                           |\n| `find_codeql_query_files`        | Find and track all files and directories related to a CodeQL query, including resolved metadata              |\n| `find_predicate_position`        | Find the start/end line and column of a predicate for quick evaluation                                       |\n| `list_codeql_databases`          | List CodeQL databases discovered in configured base directories                                              |\n| `list_mrva_run_results`          | List MRVA (Multi-Repository Variant Analysis) run results with per-repo details                              |\n| `list_query_run_results`         | List query run result directories with artifact inventory. Filter by `queryName`, `language`, or `queryPath` |\n| `profile_codeql_query`           | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log     |\n| `profile_codeql_query_from_logs` | Parse existing CodeQL evaluator logs into a performance profile without re-running the query                 |\n| `quick_evaluate`                 | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                 |\n| `read_database_source`           | Read source file contents from a CodeQL database source archive. Omit `filePath` to list all files           |\n| `register_database`              | Register a CodeQL database given a local path to the database directory                                      |\n| `validate_codeql_query`          | Quick heuristic validation for CodeQL query structure (does not compile the query)                           |\n\n## Common Tool Workflows\n\n### Create and Test a Query\n\n1. `create_codeql_query` \u2014 scaffold files\n2. `codeql_pack_install` \u2014 install dependencies\n3. `codeql_query_compile` \u2014 validate syntax\n4. `codeql_test_run` \u2014 run tests\n5. `codeql_test_accept` \u2014 accept correct results\n\n### Understand Code Structure\n\n1. `codeql_query_run` with `queryName="PrintAST"` \u2014 visualize the AST\n2. `codeql_query_run` with `queryName="PrintCFG"` \u2014 visualize control flow\n3. `codeql_query_run` with `queryName="CallGraphFrom"` / `"CallGraphTo"` \u2014 trace call relationships\n\n### Profile Query Performance\n\n1. `codeql_query_run` with `evaluationOutput` \u2014 run query and capture evaluator logs\n2. `profile_codeql_query_from_logs` \u2014 analyze evaluator logs for bottlenecks\n3. `codeql_generate_log-summary` \u2014 generate a human-readable log summary\n\n### Interactive Development\n\n1. `codeql_lsp_completion` \u2014 get QL code completions\n2. `codeql_lsp_definition` \u2014 navigate to definitions\n3. `codeql_lsp_references` \u2014 find all references\n4. `codeql_lsp_diagnostics` \u2014 real-time validation\n\n## Tool Input Conventions\n\n- **LSP tools** use **0-based** line and column positions for input. Output uses 1-based `startLine`/`endLine`.\n- **`find_predicate_position`** and **`find_class_position`** return **1-based** positions.\n- **`workspace_uri`** for LSP tools must be a **plain directory path** to the pack root containing `codeql-pack.yml`, not a `file://` URI.\n\n## Related Resources\n\n- `codeql://server/overview` \u2014 MCP server orientation guide\n- `codeql://server/prompts` \u2014 Complete prompt reference\n- `codeql://learning/query-basics` \u2014 Query writing reference\n- `codeql://patterns/performance` \u2014 Performance profiling guide\n';
+
 // src/lib/resources.ts
-import { readFileSync as readFileSync10 } from "fs";
-import { join as join15, dirname as dirname8 } from "path";
-import { fileURLToPath as fileURLToPath3 } from "url";
-var __filename2 = fileURLToPath3(import.meta.url);
-var __dirname2 = dirname8(__filename2);
-function getGettingStartedGuide() {
-  try {
-    return readFileSync10(join15(__dirname2, "../resources/getting-started.md"), "utf-8");
-  } catch {
-    return "Getting started guide not available";
-  }
-}
-function getQueryBasicsGuide() {
-  try {
-    return readFileSync10(join15(__dirname2, "../resources/query-basics.md"), "utf-8");
-  } catch {
-    return "Query basics guide not available";
-  }
-}
-function getSecurityTemplates() {
-  try {
-    return readFileSync10(join15(__dirname2, "../resources/security-templates.md"), "utf-8");
-  } catch {
-    return "Security templates not available";
-  }
+function getLearningQueryBasics() {
+  return learning_query_basics_default;
 }
 function getPerformancePatterns() {
-  try {
-    return readFileSync10(join15(__dirname2, "../resources/performance-patterns.md"), "utf-8");
-  } catch {
-    return "Performance patterns not available";
-  }
+  return performance_patterns_default;
+}
+function getSecurityTemplates() {
+  return security_templates_default;
+}
+function getServerOverview() {
+  return server_overview_default;
+}
+function getServerPrompts() {
+  return server_prompts_default;
+}
+function getServerQueries() {
+  return server_queries_default;
+}
+function getServerTools() {
+  return server_tools_default;
+}
+function getTestDrivenDevelopment() {
+  return ql_test_driven_development_default;
+}
+function getQueryUnitTesting() {
+  return codeql_query_unit_testing_default;
+}
+function getDataflowMigration() {
+  return dataflow_migration_v1_to_v2_default;
 }
 
 // src/tools/codeql-resources.ts
 function registerCodeQLResources(server) {
   server.resource(
-    "CodeQL Getting Started",
-    "codeql://learning/getting-started",
-    {
-      description: "Comprehensive introduction to CodeQL for beginners",
-      mimeType: "text/markdown"
-    },
-    async () => {
-      return {
-        contents: [
-          {
-            uri: "codeql://learning/getting-started",
-            mimeType: "text/markdown",
-            text: getGettingStartedGuide()
-          }
-        ]
-      };
-    }
-  );
-  server.resource(
     "CodeQL Query Basics",
     "codeql://learning/query-basics",
     {
-      description: "Learn the fundamentals of writing CodeQL queries",
+      description: "QL query writing reference: syntax, metadata, from/where/select, common patterns, testing conventions",
       mimeType: "text/markdown"
     },
     async () => {
@@ -63036,7 +63160,121 @@ function registerCodeQLResources(server) {
           {
             uri: "codeql://learning/query-basics",
             mimeType: "text/markdown",
-            text: getQueryBasicsGuide()
+            text: getLearningQueryBasics()
+          }
+        ]
+      };
+    }
+  );
+  server.resource(
+    "CodeQL Test-Driven Development",
+    "codeql://learning/test-driven-development",
+    {
+      description: "TDD theory and workflow for developing CodeQL queries with MCP tools",
+      mimeType: "text/markdown"
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: "codeql://learning/test-driven-development",
+            mimeType: "text/markdown",
+            text: getTestDrivenDevelopment()
+          }
+        ]
+      };
+    }
+  );
+  server.resource(
+    "CodeQL Performance Patterns",
+    "codeql://patterns/performance",
+    {
+      description: "Performance profiling and optimization for CodeQL queries",
+      mimeType: "text/markdown"
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: "codeql://patterns/performance",
+            mimeType: "text/markdown",
+            text: getPerformancePatterns()
+          }
+        ]
+      };
+    }
+  );
+  server.resource(
+    "CodeQL Server Overview",
+    "codeql://server/overview",
+    {
+      description: "MCP server orientation guide: available tools, prompts, resources, and workflows",
+      mimeType: "text/markdown"
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: "codeql://server/overview",
+            mimeType: "text/markdown",
+            text: getServerOverview()
+          }
+        ]
+      };
+    }
+  );
+  server.resource(
+    "CodeQL Server Prompts",
+    "codeql://server/prompts",
+    {
+      description: "Complete reference of MCP prompts for CodeQL development workflows",
+      mimeType: "text/markdown"
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: "codeql://server/prompts",
+            mimeType: "text/markdown",
+            text: getServerPrompts()
+          }
+        ]
+      };
+    }
+  );
+  server.resource(
+    "CodeQL Server Queries",
+    "codeql://server/queries",
+    {
+      description: "Overview of bundled tools queries: PrintAST, PrintCFG, CallGraphFrom, CallGraphTo",
+      mimeType: "text/markdown"
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: "codeql://server/queries",
+            mimeType: "text/markdown",
+            text: getServerQueries()
+          }
+        ]
+      };
+    }
+  );
+  server.resource(
+    "CodeQL Server Tools",
+    "codeql://server/tools",
+    {
+      description: "Complete reference of default MCP tools for CodeQL development",
+      mimeType: "text/markdown"
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: "codeql://server/tools",
+            mimeType: "text/markdown",
+            text: getServerTools()
           }
         ]
       };
@@ -63046,7 +63284,7 @@ function registerCodeQLResources(server) {
     "CodeQL Security Templates",
     "codeql://templates/security",
     {
-      description: "Ready-to-use security query templates",
+      description: "Security query templates for multiple languages and vulnerability classes",
       mimeType: "text/markdown"
     },
     async () => {
@@ -63062,19 +63300,38 @@ function registerCodeQLResources(server) {
     }
   );
   server.resource(
-    "CodeQL Performance Patterns",
-    "codeql://patterns/performance",
+    "CodeQL Query Unit Testing",
+    "codeql://guides/query-unit-testing",
     {
-      description: "Best practices for writing efficient CodeQL queries",
+      description: "Guide for creating and running CodeQL query unit tests across all supported languages",
       mimeType: "text/markdown"
     },
     async () => {
       return {
         contents: [
           {
-            uri: "codeql://patterns/performance",
+            uri: "codeql://guides/query-unit-testing",
             mimeType: "text/markdown",
-            text: getPerformancePatterns()
+            text: getQueryUnitTesting()
+          }
+        ]
+      };
+    }
+  );
+  server.resource(
+    "CodeQL Dataflow Migration v1 to v2",
+    "codeql://guides/dataflow-migration-v1-to-v2",
+    {
+      description: "Guide for migrating CodeQL queries from legacy v1 dataflow API to modern v2 module-based API",
+      mimeType: "text/markdown"
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: "codeql://guides/dataflow-migration-v1-to-v2",
+            mimeType: "text/markdown",
+            text: getDataflowMigration()
           }
         ]
       };
@@ -63531,83 +63788,107 @@ function registerLSPTools(server) {
   );
 }
 
-// src/resources/language-resources.ts
-import { readFileSync as readFileSync11, existsSync as existsSync12 } from "fs";
-import { join as join17 } from "path";
+// src/resources/languages/actions_ast.md
+var actions_ast_default = '# CodeQL AST nodes for `actions` language\n\n## CodeQL\'s core AST classes for `actions` language\n\nBased on analysis of CodeQL\'s Actions AST test results from local test files, here are the core AST classes for GitHub Actions analysis:\n\n### Top-Level Action and Workflow Structures\n\n**Action Files (action.yml):**\n\n- `CompositeActionImpl` - Root composite action declaration (e.g., `name: "Hello World"`)\n- Action metadata including name, description, and runtime configuration\n\n**Workflow Files (.github/workflows/\\*.yml):**\n\n- `WorkflowImpl` - Root workflow declaration (e.g., `name: Reusable workflow example`)\n- Complete workflow structure with events, jobs, and steps\n\n### Event Handling\n\n**Event Triggers:**\n\n- `OnImpl` - Event trigger definitions (e.g., `workflow_call:`)\n- `EventImpl` - Specific event types (e.g., `workflow_call`)\n- Event configuration with inputs, outputs, and secrets\n\n### Input and Output Management\n\n**Input Structures:**\n\n- `InputsImpl` - Input containers for actions and workflows\n- `InputImpl` - Individual input definitions (e.g., `who-to-greet`, `config-path`)\n- Input properties: description, required, type, default values\n\n**Output Structures:**\n\n- `OutputsImpl` - Output containers for workflows and jobs\n- Output value expressions and job output references\n\n### Job Management\n\n**Job Structure:**\n\n- `JobImpl` - Job definitions (e.g., `Job: job1`)\n- Job configuration including runner, outputs, and steps\n- Job-level environment and dependency management\n\n**Job Execution Environment:**\n\n- Runner specifications (e.g., `ubuntu-latest`)\n- Job outputs and step output references\n\n### Step Execution\n\n**Step Types:**\n\n- `StepImpl` - Generic step containers\n- `Run Step` - Steps with shell commands and scripts\n- `Uses Step` - Steps using external actions\n\n**Step Components:**\n\n- Step identification and naming\n- Shell command execution\n- External action usage (e.g., `tj-actions/changed-files@v40`)\n\n### Environment and Variable Management\n\n**Environment Variables:**\n\n- `EnvImpl` - Environment variable definitions\n- Environment variable scoping (step-level, job-level)\n- Variable interpolation and expression evaluation\n\n### Expression System\n\n**Expression Handling:**\n\n- `ExpressionImpl` - GitHub Actions expressions (e.g., `inputs.who-to-greet`, `jobs.job1.outputs.job-output1`)\n- Expression contexts: inputs, steps, jobs, github, env\n- Complex expression evaluation and context access\n\n**Expression Contexts:**\n\n- Input references: `inputs.config-path`, `inputs.who-to-greet`\n- Step output references: `steps.step1.outputs.step-output`, `steps.step2.outputs.all_changed_files`\n- Job output references: `jobs.job1.outputs.job-output1`\n\n### Value and Data Types\n\n**Scalar Values:**\n\n- `ScalarValueImpl` - String literals, booleans, and scalar data\n- Configuration values (e.g., `"Hello World"`, `"composite"`, `true`)\n- Command strings and action references\n\n**Value Types:**\n\n- String values for names, descriptions, commands\n- Boolean values for required flags and conditions\n- Action references and version specifications\n\n### Action Runtime Configuration\n\n**Composite Actions:**\n\n- `using: "composite"` runtime specification\n- Step sequence execution within composite actions\n- Input parameter passing and environment setup\n\n**Action Metadata:**\n\n- Action names and descriptions\n- Input/output specifications\n- Runtime environment configuration\n\n### Shell and Command Execution\n\n**Command Execution:**\n\n- Shell command strings (e.g., `echo "Hello $INPUT_WHO_TO_GREET."`)\n- Shell specification (e.g., `bash`)\n- Multi-line command support\n\n**Environment Integration:**\n\n- Environment variable usage in commands\n- Variable substitution and expansion\n- Input-to-environment variable mapping\n\n### External Action Integration\n\n**Action Usage:**\n\n- External action references (e.g., `tj-actions/changed-files@v40`)\n- Version pinning and action marketplace integration\n- Action parameter passing and configuration\n\n### Workflow Reusability\n\n**Reusable Workflows:**\n\n- Workflow call triggers and parameters\n- Input/output parameter definitions\n- Secret management and passing\n\n**Workflow Composition:**\n\n- Job dependencies and sequencing\n- Output propagation between jobs\n- Workflow-level input and output management\n\n### Security and Secrets\n\n**Secret Management:**\n\n- Secret declarations and requirements\n- Secret passing in reusable workflows\n- Secure environment variable handling\n\n### Example AST Hierarchy\n\nBased on CodeQL\'s GitHub Actions analysis capabilities:\n\n```\nWorkflowImpl (root workflow)\n\u251C\u2500\u2500 OnImpl (event triggers)\n\u2502   \u2514\u2500\u2500 EventImpl (specific events like workflow_call)\n\u251C\u2500\u2500 InputsImpl (workflow inputs)\n\u2502   \u2514\u2500\u2500 InputImpl (individual inputs)\n\u251C\u2500\u2500 OutputsImpl (workflow outputs)\n\u251C\u2500\u2500 JobImpl (job definitions)\n\u2502   \u251C\u2500\u2500 OutputsImpl (job outputs)\n\u2502   \u2514\u2500\u2500 StepImpl (job steps)\n\u2502       \u251C\u2500\u2500 EnvImpl (step environment)\n\u2502       \u2514\u2500\u2500 ScalarValueImpl (step commands/actions)\n\u2514\u2500\u2500 ScalarValueImpl (scalar values throughout)\n\nCompositeActionImpl (root action)\n\u251C\u2500\u2500 InputsImpl (action inputs)\n\u251C\u2500\u2500 RunsImpl (execution configuration)\n\u2514\u2500\u2500 StepImpl (action steps)\n    \u251C\u2500\u2500 EnvImpl (step environment)\n    \u2514\u2500\u2500 ScalarValueImpl (commands and values)\n\nExpressionImpl (expressions like ${{ inputs.name }})\n\u2514\u2500\u2500 Context access (inputs, steps, jobs, github, env)\n```\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `actions` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="actions"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n';
+
+// src/resources/languages/cpp_ast.md
+var cpp_ast_default = '# CodeQL AST nodes for `cpp` language\n\n## CodeQL\'s core AST classes for `cpp` language\n\nBased on comprehensive analysis of CodeQL\'s C++ AST test results from both local and GitHub test files, here are the core AST classes for C/C++ analysis:\n\n### Function and Method Declarations\n\n**Function Types:**\n\n- `TopLevelFunction` - Global functions (e.g., `void fun3(someClass*)`, `int main()`)\n- `MemberFunction` - Class member functions (e.g., `void someClass::f()`, `int someClass::g(int, int)`)\n- `VirtualFunction` - Virtual functions with dynamic dispatch (e.g., `virtual void Base::v()`)\n- `ConstMemberFunction` - Const member functions (e.g., `char const* std::type_info::name() const`)\n- `FormattingFunction` - Functions with format string checking (e.g., `int printf(char const*)`)\n- `TemplateFunction` - Template function declarations\n\n**Constructors and Destructors:**\n\n- `Constructor` - Class constructors (e.g., `void C::C(int)`)\n- `CopyConstructor` - Copy constructors (e.g., `void C::C(C const&)`)\n- `CopyAssignmentOperator` - Copy assignment operators (e.g., `C& C::operator=(C const&)`)\n- `MoveAssignmentOperator` - Move assignment operators (e.g., `C& C::operator=(C&&)`)\n- `Destructor` - Destructor declarations\n- `DestructorCall` - Explicit and implicit destructor calls (e.g., `call to ~C`)\n\n**Operator Functions:**\n\n- `Operator` - Operator overloads (e.g., `void operator delete(void*)`, `void* operator new(unsigned long)`)\n\n### Statements\n\n**Control Flow Statements:**\n\n- `BlockStmt` - Block statements containing multiple statements (e.g., `{ ... }`)\n- `IfStmt` - Conditional statements with condition and branches\n- `ForStmt` - For loops with initialization, condition, and increment\n- `ReturnStmt` - Return statements with optional expressions\n- `GotoStmt` - Goto statements for jumping to labels\n- `LabelStmt` - Label statements for goto targets\n\n**Declaration Statements:**\n\n- `DeclStmt` - Declaration statements containing variable and type declarations\n- `VariableDeclarationEntry` - Individual variable declarations (e.g., `definition of i`)\n- `TypeDeclarationEntry` - Type declarations (e.g., `definition of u`)\n\n**Expression Statements:**\n\n- `ExprStmt` - Statement wrappers for expressions\n\n**Variable Length Array Support:**\n\n- `VlaDimensionStmt` - VLA dimension size statements\n- `VlaDeclStmt` - VLA declaration statements\n\n### Expressions\n\n**Primary Expressions:**\n\n- `Literal` - Literal values (e.g., `1`, `2`, `42`, `"hello"`)\n- `StringLiteral` - String literals (e.g., `"int"`, `"string"`)\n- `VariableAccess` - Variable references (e.g., `sc`, `i`, `args`)\n- `ThisExpr` - The `this` keyword in member functions\n\n**Function Calls:**\n\n- `FunctionCall` - Function calls (e.g., `call to f`, `call to printf`)\n- `FormattingFunctionCall` - Calls to format string functions with type checking\n- `MethodCall` - Method calls on objects\n- `ConstructorCall` - Constructor calls (e.g., `call to C`)\n\n**Operators and Assignments:**\n\n- `AssignExpr` - Assignment expressions (e.g., `... = ...`)\n- `AddExpr` - Addition expressions (e.g., `... + ...`)\n- `MulExpr` - Multiplication expressions (e.g., `... * ...`)\n- `SubExpr` - Subtraction expressions\n\n**Object Creation and Destruction:**\n\n- `ClassInstanceExpr` - Object instantiation expressions\n- `NewExpr` - Dynamic memory allocation with `new`\n- `DeleteExpr` - Dynamic memory deallocation with `delete`\n- `VacuousDestructorCall` - Vacuous destructor calls for trivial types\n\n**Array and Pointer Operations:**\n\n- `ArrayExpr` - Array access expressions (e.g., `access to array`)\n- `PointerDereferenceExpr` - Pointer dereference (e.g., `* ...`)\n- `AddressOfExpr` - Address-of operator (e.g., `& ...`)\n- `ArrayToPointerConversion` - Implicit array to pointer conversions\n\n**Field Access:**\n\n- `ValueFieldAccess` - Value-based field access (e.g., `obj.field`)\n- `PointerFieldAccess` - Pointer-based field access (e.g., `ptr->field`)\n\n**Type Casting:**\n\n- `CStyleCast` - C-style casts (e.g., `(int)...`, `(char)...`)\n- `StaticCast` - Static casts for safe conversions\n- `DynamicCast` - Dynamic casts for runtime type checking (e.g., `dynamic_cast<Derived *>...`)\n- `ConstCast` - Const casts (e.g., `const_cast<T *>...`)\n- `ReinterpretCast` - Reinterpret casts (e.g., `reinterpret_cast<S *>...`)\n\n**Reference Operations:**\n\n- `ReferenceToExpr` - Reference creation (e.g., `(reference to)`)\n- `ReferenceDereferenceExpr` - Reference dereference (e.g., `(reference dereference)`)\n\n**Type Information:**\n\n- `TypeidOperator` - Runtime type information (e.g., `typeid ...`)\n\n**Modern C++ Features:**\n\n- `ParenthesizedExpr` - Parenthesized expressions for grouping\n\n### Type System\n\n**Basic Types:**\n\n- `IntType` - Integer types (e.g., `int`)\n- `VoidType` - Void type\n- `FloatType` - Floating-point types\n- `LongType` - Long integer types (e.g., `unsigned long`)\n- `PlainCharType` - Plain char type\n- `CharType` - Character types\n\n**Pointer Types:**\n\n- `PointerType` - Pointer types (e.g., `someClass *`, `Base *`)\n- `IntPointerType` - Integer pointer types (e.g., `int *`)\n- `CharPointerType` - Character pointer types (e.g., `char *`)\n- `VoidPointerType` - Void pointer types (e.g., `void *`)\n- `FunctionPointerType` - Function pointer types\n\n**Reference Types:**\n\n- `LValueReferenceType` - L-value references (e.g., `const someClass &`)\n- `RValueReferenceType` - R-value references (e.g., `someClass &&`)\n\n**Array Types:**\n\n- `ArrayType` - Array types (e.g., `char[]`, `char[4]`)\n\n**Class and Struct Types:**\n\n- `Class` - Class types (e.g., `Base`, `Derived`)\n- `Struct` - Struct types\n- `NestedClass` - Nested class types\n- `LocalUnion` - Local union types\n\n**Template Types:**\n\n- `TypeTemplateParameter` - Template type parameters (e.g., `T`)\n\n**Advanced Types:**\n\n- `SpecifiedType` - Type qualifiers (e.g., `const type_info`)\n- `CTypedefType` - C typedef types (e.g., `va_list`, `MYINT`)\n\n### C11 Generic Support\n\n**Generic Expressions:**\n\n- `C11GenericExpr` - C11 \\_Generic expressions for type-based selection\n- `ReuseExpr` - Expression reuse in generic contexts\n- `TypeName` - Type names in generic associations\n\n### Parameters and Initializers\n\n**Parameter Handling:**\n\n- `Parameter` - Function parameters with types (e.g., `i`, `j`, `sc`)\n- Support for unnamed parameters and default arguments\n\n**Initialization:**\n\n- `Initializer` - Variable initializers (e.g., `initializer for i`)\n- Constructor initialization lists\n- Field initialization\n\n### Built-in Functions\n\n**Variable Arguments:**\n\n- `BuiltInVarArgsStart` - `__builtin_va_start` for variadic functions\n- `BuiltInVarArgsEnd` - `__builtin_va_end` for cleanup\n\n### Type Conversions\n\n**Implicit Conversions:**\n\n- `IntegralConversion` - Integer type conversions\n- `PointerConversion` - Pointer type conversions\n- `BaseClassConversion` - Base class conversions for inheritance\n- `GlvalueConversion` - Glvalue conversions\n\n**Explicit Conversions:**\n\n- Support for all cast types with conversion tracking\n- Value category preservation through conversions\n\n### Value Categories and Properties\n\n**Value Categories:**\n\n- `prvalue` - Pure r-values (temporary values)\n- `lvalue` - L-values (addressable values)\n- `prvalue(load)` - Loaded values from memory\n\n**Type Properties:**\n\n- Type information preservation through all expressions\n- Conversion tracking for type safety analysis\n\n### Example AST Hierarchy\n\nBased on CodeQL\'s comprehensive C++ analysis capabilities:\n\n```\nTopLevelFunction (global functions)\n\u251C\u2500\u2500 Parameter (function parameters)\n\u251C\u2500\u2500 BlockStmt (function body)\n\u2502   \u251C\u2500\u2500 DeclStmt (declarations)\n\u2502   \u2502   \u2514\u2500\u2500 VariableDeclarationEntry (variable definitions)\n\u2502   \u251C\u2500\u2500 ExprStmt (expression statements)\n\u2502   \u2502   \u251C\u2500\u2500 FunctionCall (function calls)\n\u2502   \u2502   \u251C\u2500\u2500 AssignExpr (assignments)\n\u2502   \u2502   \u2514\u2500\u2500 VariableAccess (variable references)\n\u2502   \u2514\u2500\u2500 ReturnStmt (return statements)\n\u2514\u2500\u2500 Type information (IntType, PointerType, etc.)\n\nClass (class declarations)\n\u251C\u2500\u2500 Constructor/Destructor (special members)\n\u251C\u2500\u2500 MemberFunction (methods)\n\u251C\u2500\u2500 CopyAssignmentOperator (copy operations)\n\u2514\u2500\u2500 MoveAssignmentOperator (move operations)\n\nExpression hierarchy with full type and conversion tracking\n\u251C\u2500\u2500 Primary expressions (literals, variables)\n\u251C\u2500\u2500 Operators (arithmetic, logical, comparison)\n\u251C\u2500\u2500 Casts (static, dynamic, const, reinterpret)\n\u251C\u2500\u2500 Object operations (new, delete, field access)\n\u2514\u2500\u2500 Type operations (sizeof, typeid, alignof)\n```\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `cpp` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="cpp"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n\n## Expected test results for open-source `PrintAst.ql` query\n\nThe following links can be fetched to get the expected results for different unit tests of the open-source `PrintAst.ql` query for the `cpp` language:\n\n- [library-tests/destructors/PrintAST.expected](https://github.com/github/codeql/blob/main/cpp/ql/test/library-tests/destructors/PrintAST.expected)\n- [library-tests/c11_generic/PrintAST.expected](https://github.com/github/codeql/blob/main/cpp/ql/test/library-tests/c11_generic/PrintAST.expected)\n- [library-tests/ir/ir/PrintAST.expected](https://github.com/github/codeql/blob/main/cpp/ql/test/library-tests/ir/ir/PrintAST.expected)\n- [library-tests/ir/no-function-calls/PrintAST.expected](https://github.com/github/codeql/blob/main/cpp/ql/test/library-tests/ir/no-function-calls/PrintAST.expected)\n- [examples/expressions/PrintAST.expected](https://github.com/github/codeql/blob/main/cpp/ql/test/examples/expressions/PrintAST.expected)\n';
+
+// src/resources/languages/cpp_security_query_guide.md
+var cpp_security_query_guide_default = "# C++ Security Query Guide\n\nLanguage-specific notes for writing C++ security queries in CodeQL. For the general taint-tracking template and workflow, see the `security_templates` resource.\n\n## Imports\n\n```ql\nimport cpp\nimport semmle.code.cpp.dataflow.new.DataFlow\nimport semmle.code.cpp.dataflow.new.TaintTracking\n```\n\nFor path-problem queries add `import MyFlow::PathGraph` after defining your flow module.\n\n## Sources and Sinks\n\n- **Sources**: Use the `RemoteFlowSource` class from `semmle.code.cpp.security.FlowSources`, or model custom sources as `DataFlow::Node` subclasses.\n- **Sinks**: Model as `DataFlow::Node` subclasses matching the dangerous API (e.g., buffer writes, system calls, SQL execution).\n- **Barriers**: Use `semmle.code.cpp.controlflow.Guards` to model guard conditions that sanitize tainted data.\n\n## Key Library Modules\n\n| Module                                       | Purpose                               |\n| -------------------------------------------- | ------------------------------------- |\n| `semmle.code.cpp.dataflow.new.DataFlow`      | Data flow nodes and global analysis   |\n| `semmle.code.cpp.dataflow.new.TaintTracking` | Taint tracking analysis               |\n| `semmle.code.cpp.controlflow.Guards`         | Guard-condition analysis for barriers |\n| `semmle.code.cpp.security.BufferWrite`       | Buffer-write sink modeling            |\n| `semmle.code.cpp.security.FlowSources`       | Remote and local flow sources         |\n";
+
+// src/resources/languages/csharp_ast.md
+var csharp_ast_default = '# CodeQL AST nodes for `csharp` language\n\n## CodeQL\'s core AST classes for `csharp` language\n\nBased on the C# PrintAst.expected test results, here are the core CodeQL AST classes for the C# language:\n\n### Declarations and Members\n\n- **`Class`** - Class declaration\n- **`NamespaceDeclaration`** - Namespace declaration\n- **`Method`** - Method declaration\n- **`Property`** - Property declaration\n- **`Field`** - Field declaration\n- **`Parameter`** - Method parameter\n- **`DelegateType`** - Delegate type declaration\n- **`InstanceConstructor`** - Instance constructor\n- **`StaticConstructor`** - Static constructor\n- **`Destructor`** - Destructor/finalizer\n\n### Type System\n\n- **`TypeMention`** - Reference to a type\n- **`TypeParameter`** - Generic type parameter\n- **`TypeAccess`** - Access to a type\n- **`TypeAccessPatternExpr`** - Type access in pattern expressions\n\n### Statements\n\n- **`BlockStmt`** - Block statement `{...}`\n- **`ExprStmt`** - Expression statement\n- **`LocalVariableDeclStmt`** - Local variable declaration statement\n- **`ReturnStmt`** - Return statement\n- **`IfStmt`** - If statement\n- **`TryStmt`** - Try statement\n- **`ThrowStmt`** - Throw statement\n- **`UsingBlockStmt`** - Using statement with block\n- **`FixedStmt`** - Fixed statement (for unsafe code)\n- **`LabelStmt`** - Label statement\n- **`EmptyStmt`** - Empty statement `;`\n\n### Expressions\n\n- **`LocalVariableDeclAndInitExpr`** - Local variable declaration and initialization\n- **`LocalVariableAccess`** - Access to local variable\n- **`ParameterAccess`** - Access to parameter\n- **`FieldAccess`** - Access to field\n- **`PropertyCall`** - Property access/call\n- **`MethodCall`** - Method call\n- **`MethodAccess`** - Method access\n- **`ObjectCreation`** - Object creation expression `new T()`\n- **`AnonymousObjectCreation`** - Anonymous object creation\n- **`ArrayCreation`** - Array creation expression\n- **`ArrayAccess`** - Array element access\n- **`AssignExpr`** - Assignment expression `=`\n- **`AssignAddExpr`** - Addition assignment `+=`\n- **`AssignSubExpr`** - Subtraction assignment `-=`\n- **`ThisAccess`** - `this` access\n- **`CastExpr`** - Type cast expression\n- **`IsExpr`** - Type check expression `is`\n- **`DefaultValueExpr`** - Default value expression `default(...)`\n\n### Arithmetic and Logical Expressions\n\n- **`AddExpr`** - Addition expression `+`\n- **`SubExpr`** - Subtraction expression `-`\n- **`DivExpr`** - Division expression `/`\n- **`BitwiseAndExpr`** - Bitwise AND expression `&`\n- **`LogicalOrExpr`** - Logical OR expression `||`\n- **`LTExpr`** - Less than expression `<`\n- **`GEExpr`** - Greater than or equal expression `>=`\n- **`PostIncrExpr`** - Post-increment expression `++`\n- **`OperatorCall`** - Operator call\n\n### Literals\n\n- **`IntLiteral`** - Integer literal\n- **`StringLiteralUtf16`** - String literal\n- **`BoolLiteral`** - Boolean literal (`true`/`false`)\n- **`DoubleLiteral`** - Double literal\n- **`CharLiteral`** - Character literal\n- **`NullLiteral`** - Null literal\n\n### Object and Collection Initialization\n\n- **`ObjectInitializer`** - Object initializer `{ ... }`\n- **`MemberInitializer`** - Member initializer in object initializer\n- **`CollectionInitializer`** - Collection initializer `{ ..., ... }`\n- **`ElementInitializer`** - Element initializer in collection\n- **`ArrayInitializer`** - Array initializer `{ ..., ... }`\n\n### Delegates and Events\n\n- **`DelegateCall`** - Delegate call\n- **`ImplicitDelegateCreation`** - Implicit delegate creation\n- **`ExplicitDelegateCreation`** - Explicit delegate creation\n- **`EventAccess`** - Event access\n- **`EventCall`** - Event call\n- **`AddEventExpr`** - Event subscription `+=`\n- **`RemoveEventExpr`** - Event unsubscription `-=`\n\n### Properties and Accessors\n\n- **`Getter`** - Property getter\n- **`Setter`** - Property setter\n\n### Special Members and Access\n\n- **`MemberConstantAccess`** - Access to member constant\n- **`LocalFunctionAccess`** - Access to local function\n- **`AddressOfExpr`** - Address-of expression `&` (unsafe code)\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `csharp` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="csharp"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n\n## Expected test results for open-source `PrintAst.ql` query\n\nThe following links can be fetched to get the expected results for different unit tests of the open-source `PrintAst.ql` query for the `csharp` language:\n\n- [library-tests/arguments/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/arguments/PrintAst.expected)\n- [library-tests/assignments/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/assignments/PrintAst.expected)\n- [library-tests/attributes/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/attributes/PrintAst.expected)\n- [library-tests/comments/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/comments/PrintAst.expected)\n- [library-tests/constructors/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/constructors/PrintAst.expected)\n- [library-tests/conversion/operator/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/conversion/operator/PrintAst.expected)\n- [library-tests/csharp6/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp6/PrintAst.expected)\n- [library-tests/csharp7/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp7/PrintAst.expected)\n- [library-tests/csharp7.1/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp7.1/PrintAst.expected)\n- [library-tests/csharp7.2/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp7.2/PrintAst.expected)\n- [library-tests/csharp7.3/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp7.3/PrintAst.expected)\n- [library-tests/csharp8/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp8/PrintAst.expected)\n- [library-tests/csharp9/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp9/PrintAst.expected)\n- [library-tests/csharp11/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/csharp11/PrintAst.expected)\n- [library-tests/dataflow/implicittostring/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/dataflow/implicittostring/PrintAst.expected)\n- [library-tests/dataflow/tuples/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/dataflow/tuples/PrintAst.expected)\n- [library-tests/definitions/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/definitions/PrintAst.expected)\n- [library-tests/delegates/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/delegates/PrintAst.expected)\n- [library-tests/dynamic/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/dynamic/PrintAst.expected)\n- [library-tests/enums/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/enums/PrintAst.expected)\n- [library-tests/exceptions/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/exceptions/PrintAst.expected)\n- [library-tests/expressions/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/expressions/PrintAst.expected)\n- [library-tests/events/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/events/PrintAst.expected)\n- [library-tests/fields/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/fields/PrintAst.expected)\n- [library-tests/generics/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/generics/PrintAst.expected)\n- [library-tests/goto/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/goto/PrintAst.expected)\n- [library-tests/indexers/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/indexers/PrintAst.expected)\n- [library-tests/initializers/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/initializers/PrintAst.expected)\n- [library-tests/linq/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/linq/PrintAst.expected)\n- [library-tests/members/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/members/PrintAst.expected)\n- [library-tests/methods/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/methods/PrintAst.expected)\n- [library-tests/namespaces/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/namespaces/PrintAst.expected)\n- [library-tests/nestedtypes/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/nestedtypes/PrintAst.expected)\n- [library-tests/operators/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/operators/PrintAst.expected)\n- [library-tests/partial/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/partial/PrintAst.expected)\n- [library-tests/properties/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/properties/PrintAst.expected)\n- [library-tests/statements/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/statements/PrintAst.expected)\n- [library-tests/stringinterpolation/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/stringinterpolation/PrintAst.expected)\n- [library-tests/types/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/types/PrintAst.expected)\n- [library-tests/unsafe/PrintAst.expected](https://github.com/github/codeql/blob/main/csharp/ql/test/library-tests/unsafe/PrintAst.expected)\n';
+
+// src/resources/languages/csharp_security_query_guide.md
+var csharp_security_query_guide_default = "# C# Security Query Guide\n\nLanguage-specific notes for writing C# security queries in CodeQL. For the general taint-tracking template and workflow, see the `security_templates` resource.\n\n## Imports\n\n```ql\nimport csharp\nimport semmle.code.csharp.dataflow.DataFlow\nimport semmle.code.csharp.dataflow.TaintTracking\n```\n\nFor path-problem queries add `import MyFlow::PathGraph` after defining your flow module.\n\n## Sources and Sinks\n\n- **Sources**: Use `RemoteFlowSource` from `semmle.code.csharp.security.dataflow.flowsources.Remote`, or model custom sources as `DataFlow::Node` subclasses.\n- **Sinks**: Use or extend existing sink libraries under `semmle.code.csharp.security.dataflow` (e.g., `SqlInjectionQuery`, `flowsinks.Html`, `UrlRedirectQuery`), or model custom sinks as `DataFlow::Node` subclasses.\n- **Sanitizers**: Use `semmle.code.csharp.security.Sanitizers` for common encoding and validation barriers.\n\n## Key Library Modules\n\n| Module                                      | Purpose                                  |\n| ------------------------------------------- | ---------------------------------------- |\n| `semmle.code.csharp.dataflow.DataFlow`      | Data flow nodes and global analysis      |\n| `semmle.code.csharp.dataflow.TaintTracking` | Taint tracking analysis                  |\n| `semmle.code.csharp.security.Sanitizers`    | Common sanitizer predicates              |\n| `semmle.code.csharp.security.dataflow.*`    | Pre-built vulnerability-specific configs |\n| `semmle.code.csharp.frameworks.system.*`    | .NET framework API models                |\n";
+
+// src/resources/languages/go_ast.md
+var go_ast_default = '# CodeQL AST Classes for Go Programs\n\n## Purpose\n\nWrite CodeQL queries over Go by navigating the Go AST classes. Model: Syntax \u2192 CodeQL class hierarchy; use predicates to access parts (condition, body, operands). Pattern: `get<Part>()`, `getA<Part>()`, `get<Left/Right>Operand>()`, `getAnArgument()`, `getCallee()`.\n\n## Core Namespaces\n\n- **Statements**: subclasses of `Stmt`\n- **Expressions**: subclasses of `Expr` (literals, unary, binary, calls, selectors, etc.)\n- **Declarations**: `FuncDecl`, `GenDecl` (+ `ImportSpec`, `TypeSpec`, `ValueSpec`)\n- **Types**: `TypeExpr` nodes (`ArrayTypeExpr`, `StructTypeExpr`, `FuncTypeExpr`, `InterfaceTypeExpr`, `MapTypeExpr`, `ChanTypeExpr` variants)\n- **Names/Selectors**: `SimpleName`, `SelectorExpr`; Name hierarchy: `PackageName`, `TypeName`, `ValueName`, `LabelName`\n\n## Statements (Stmt)\n\n### Basic Statements\n\n- **`EmptyStmt`** - Empty statement ";"\n- **`ExprStmt`** - Expression used as statement\n- **`BlockStmt`** - Block statement "{\u2026}"\n- **`DeclStmt`** - Declaration statement\n\n### Control Flow Statements\n\n- **`IfStmt`** - if condition then [else]; supports init; Then/Else are blocks or statements\n  - `getCondition()`, `getThen()`, `getElse()`, `getInit()`\n- **`ForStmt`** - Classic init/cond/post; `LoopStmt` superclass\n  - `getInit()`, `getCondition()`, `getPost()`, `getBody()`\n- **`RangeStmt`** - "for k,v := range expr { \u2026 }"\n  - `getKey()`, `getValue()`, `getDomain()`, `getBody()`\n\n### Switch and Select Statements\n\n- **`SwitchStmt`/`ExpressionSwitchStmt`** - Expression-based switch\n- **`TypeSwitchStmt`** - Type-based switch\n- **`CaseClause`** - Case clause inside switch statements\n  - `getExpr(i)`, `getStmt(i)`\n- **`SelectStmt`** - Select statement for channel operations\n- **`CommClause`** - Communication clause in select statement\n\n### Channel and Concurrency Statements\n\n- **`SendStmt`** - Channel send "ch <- x"\n- **`RecvStmt`** - Channel receive "x = <-ch"\n- **`GoStmt`** - Goroutine launch "go f()"\n- **`DeferStmt`** - Deferred function call "defer f()"\n\n### Assignment and Increment Statements\n\n- **`SimpleAssignStmt`** - Simple assignment "="\n- **`DefineStmt`** - Short variable declaration ":="\n- **`CompoundAssignStmt`** - Compound assignment (+=, -=, \\*=, /=, %=, &=, |=, ^=, <<=, >>=, &^=)\n- **`IncStmt`** - Increment "x++"\n- **`DecStmt`** - Decrement "x--"\n\n### Jump Statements\n\n- **`LabeledStmt`** - Labeled statement\n- **`BreakStmt`** - Break statement\n- **`ContinueStmt`** - Continue statement\n- **`GotoStmt`** - Goto statement\n- **`FallthroughStmt`** - Fallthrough statement\n- **`ReturnStmt`** - Return statement\n  - `getResult(i)` to access return values\n\n## Expressions (Expr)\n\n### Literals\n\n- **`BasicLit`** subclasses:\n  - **`IntLit`** - Integer literal\n  - **`FloatLit`** - Floating point literal\n  - **`ImagLit`** - Imaginary literal\n  - **`CharLit`/`RuneLit`** - Character/rune literal\n  - **`StringLit`** - String literal\n- **`CompositeLit`** - Composite literals:\n  - **`StructLit`** - Struct literal "T{\u2026}"\n  - **`MapLit`** - Map literal "map[K]V{\u2026}"\n- **`FuncLit`** - Function literal (anonymous function)\n\n### Unary Expressions\n\n- **`PlusExpr`** - Unary plus "+x"\n- **`MinusExpr`** - Unary minus "-x"\n- **`NotExpr`** - Logical not "!x"\n- **`ComplementExpr`** - Bitwise complement "^x"\n- **`AddressExpr`** - Address-of "&x"\n- **`RecvExpr`** - Channel receive "<-x"\n\n### Binary Expressions\n\n- **Arithmetic**: `MulExpr`, `QuoExpr`, `RemExpr`, `AddExpr`, `SubExpr`\n- **Shift**: `ShlExpr` "<<", `ShrExpr` ">>"\n- **Logical**: `LandExpr` "&&", `LorExpr` "||"\n- **Relational**: `LssExpr` "<", `GtrExpr` ">", `LeqExpr` "<=", `GeqExpr` ">="\n- **Equality**: `EqlExpr` "==", `NeqExpr` "!="\n- **Bitwise**: `AndExpr` "&", `OrExpr` "|", `XorExpr` "^", `AndNotExpr` "&^"\n\n### Access and Call Expressions\n\n- **`SelectorExpr`** - Field/method access "X.Y"\n  - `getBase()`, `getSelector()`\n- **`CallExpr`** - Function/method call\n  - `getCallee()`, `getAnArgument()`, `getArgument(i)`\n- **`IndexExpr`** - Array/slice/map index "a[i]"\n- **`SliceExpr`** - Slice expression "a[i:j:k]"\n- **`KeyValueExpr`** - Key-value pair in composite literals\n\n### Type-related Expressions\n\n- **`ParenExpr`** - Parenthesized expression\n- **`StarExpr`** - Pointer dereference/type\n- **`TypeAssertExpr`** - Type assertion "x.(T)"\n- **`Conversion`** - Type conversion "T(x)"\n\n## Type Expressions (no common superclass)\n\n- **`ArrayTypeExpr`** - Array type "[N]T" or slice type "[]T"\n- **`StructTypeExpr`** - Struct type "struct{\u2026}"\n- **`FuncTypeExpr`** - Function type "func(\u2026) \u2026"\n- **`InterfaceTypeExpr`** - Interface type\n- **`MapTypeExpr`** - Map type\n- **`ChanTypeExpr`** variants:\n  - **`SendChanTypeExpr`** - Send-only channel\n  - **`RecvChanTypeExpr`** - Receive-only channel\n  - **`SendRecvChanTypeExpr`** - Bidirectional channel\n\n## Names and Identifiers\n\n### Name Hierarchy\n\n- **`Name`** subclasses:\n  - **`SimpleName`** - Simple identifier\n  - **`QualifiedName`** - Package-qualified name\n- **`ValueName`** subclasses:\n  - **`ConstantName`** - Constant identifier\n  - **`VariableName`** - Variable identifier\n  - **`FunctionName`** - Function identifier\n\n### Specialized Names\n\n- **`PackageName`** - Package name identifier\n- **`TypeName`** - Type name identifier\n- **`LabelName`** - Label identifier\n\n## Declarations\n\n### Function Declarations\n\n- **`FuncDecl`/`FuncLit`** via **`FuncDef`**:\n  - `getBody()`, `getName()`, `getParameter(i)`, `getResultVar(i)`, `getACall()`\n\n### General Declarations\n\n- **`GenDecl`** with:\n  - **`ImportSpec`** - Import specification\n  - **`TypeSpec`** - Type specification\n  - **`ValueSpec`** - Variable/constant specification\n- **`Field`/`FieldList`** - For parameters, results, struct/interface fields\n\n## Navigation Idioms and Patterns\n\n### Control Flow Navigation\n\n- **If statements**: `getCondition()`, `getThen()`, `getElse()`\n- **For/Range loops**: inspect `getInit()`/`getCondition()`/`getPost()` or range expression\n- **Switch statements**: use `CaseClause`, `getExpr(i)`/`getStmt(i)`\n- **Select statements**: use `CommClause`\n\n### Function and Method Calls\n\n```ql\n// Method calls by name\nfrom CallExpr call, SelectorExpr sel\nwhere call.getCallee() = sel and sel.getMemberName() = "Close"\nselect call\n\n// Method vs function calls\n// SelectorExpr callee = method call\n// SimpleName callee = function call\n```\n\n### Assignment Operations\n\n- **Assignment**: match `AssignStmt` subclasses\n- **Short variable declaration**: `DefineStmt` for ":="\n- **Compound assignment**: `CompoundAssignStmt` for "+=", etc.\n\n### Binary and Unary Operations\n\n- Use specific subclasses or operator accessors\n- Access operands via `getLeftOperand()`, `getRightOperand()`\n\n### Literals and Composite Expressions\n\n- **Basic literals**: filter `BasicLit` subclasses\n- **Composite literals**: `CompositeLit` elements via keys/values\n- **Struct literals**: `StructLit` with type information\n\n## Common Query Patterns\n\n### Finding Specific Constructs\n\n```ql\n// Range over map/slice\nfrom RangeStmt r select r\n\n// Defer calls\nfrom DeferStmt d, CallExpr c\nwhere d.getExpr() = c\nselect d, c\n\n// Struct literal of specific type\nfrom StructLit lit\nwhere lit.getType().getName() = "Point"\nselect lit\n\n// Channel operations\nfrom SendStmt s select s  // ch <- x\nfrom RecvStmt r select r  // x = <-ch\n```\n\n### Method Resolution\n\n```ql\n// Find method calls on specific receiver types\nfrom CallExpr call, SelectorExpr sel\nwhere call.getCallee() = sel and\n      sel.getBase().getType().toString() = "MyType"\nselect call\n```\n\n## File and Module Navigation\n\n- **`GoFile`** - Represents a Go source file\n- **`GoModFile`** - Represents a go.mod file\n- **`GoModModuleLine`** - Module declaration in go.mod\n- **`GoModGoLine`** - Go version declaration in go.mod\n\n## Comments and Documentation\n\n- **`CommentGroup`** - Group of related comments\n- **`DocComment`** - Documentation comment group (typically for functions/types)\n- **`SlashSlashComment`** - Single-line comment (//) within comment groups\n\n## Advanced Features\n\n### Generics Support\n\n- **`TypeParamDecl`** - Type parameter declaration with constraints\n- Generic type parameters and constraints for Go generics\n- Support for type inference and constraint satisfaction\n\n### Concurrency Constructs\n\n- **Goroutines**: `GoStmt` for "go f()" patterns\n- **Channels**: `SendStmt`, `RecvStmt`, `RecvExpr` for channel operations\n- **Select**: `SelectStmt` with `CommClause` for channel multiplexing\n- **Defer**: `DeferStmt` for cleanup patterns\n\n## Tips and Best Practices\n\n### Preferred Patterns\n\n- **Class tests over string parsing**: Use specific AST classes rather than string matching\n- **Type conversion disambiguation**: `CallExpr` callee is a `TypeExpr` for type conversions\n- **Statement vs expression**: Inc/Dec are statements, not expressions\n- **Assignment variants**: Handle ":=" vs "=" separately with `DefineStmt` vs `SimpleAssignStmt`\n- **Error handling**: Exclude `BadStmt`/`BadExpr` from analysis\n\n### Syntax to Class Mapping Cheatsheet\n\n- **Control Flow**: If\u2192`IfStmt`, For\u2192`ForStmt`, Range\u2192`RangeStmt`, Switch\u2192`SwitchStmt`/`ExpressionSwitchStmt`, Type switch\u2192`TypeSwitchStmt`, Select\u2192`SelectStmt`\n- **Cases**: Case\u2192`CaseClause`, Select case\u2192`CommClause`\n- **Assignment**: `=`\u2192`SimpleAssignStmt`, `:=`\u2192`DefineStmt`, `+=` etc.\u2192`CompoundAssignStmt`\n- **Increment**: `++`\u2192`IncStmt`, `--`\u2192`DecStmt`\n- **Access**: Call\u2192`CallExpr`, Selector\u2192`SelectorExpr`, Index\u2192`IndexExpr`, Slice\u2192`SliceExpr`\n- **Type operations**: Type assert\u2192`TypeAssertExpr`, Conversion\u2192`Conversion`\n- **Unary/Binary**: Specific subclasses of `UnaryExpr`/`BinaryExpr`\n- **Literals**: `IntLit`, `FloatLit`, `StringLit`, `StructLit`, `MapLit`, `FuncLit`\n- **Types**: `ArrayTypeExpr`, `StructTypeExpr`, `FuncTypeExpr`, `InterfaceTypeExpr`, `MapTypeExpr`, `ChanTypeExpr`\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `go` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="go"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n\n## Expected test results for open-source `PrintAst.ql` query\n\nThe following links can be fetched to get the expected results for different unit tests of the open-source `PrintAst.ql` query for the `go` language:\n\n- [library-tests/semmle/go/PrintAst/PrintAst.expected](https://github.com/github/codeql/blob/main/go/ql/test/library-tests/semmle/go/PrintAst/PrintAst.expected)\n- [library-tests/semmle/go/PrintAst/PrintAstExcludeComments.expected](https://github.com/github/codeql/blob/main/go/ql/test/library-tests/semmle/go/PrintAst/PrintAstExcludeComments.expected)\n- [library-tests/semmle/go/PrintAst/PrintAstNestedFunction.expected](https://github.com/github/codeql/blob/main/go/ql/test/library-tests/semmle/go/PrintAst/PrintAstNestedFunction.expected)\n- [library-tests/semmle/go/PrintAst/PrintAstRestrictFile.expected](https://github.com/github/codeql/blob/main/go/ql/test/library-tests/semmle/go/PrintAst/PrintAstRestrictFile.expected)\n- [library-tests/semmle/go/PrintAst/PrintAstRestrictFunction.expected](https://github.com/github/codeql/blob/main/go/ql/test/library-tests/semmle/go/PrintAst/PrintAstRestrictFunction.expected)\n';
+
+// src/resources/languages/go_basic_queries.md
+var go_basic_queries_default = '# Basic CodeQL Query Examples for Go\n\n## Purpose\n\nMinimal Go query examples in VS Code; variables, constraints, and results for concrete bug patterns. Demonstrates query structure and common Go programming pattern detection.\n\n## Basic Query Structure\n\n### Query Components (SQL-like analogy)\n\n- **`import`**: Include standard Go library (`import go`)\n- **`from`**: Declare typed variables to range over (`Method`, `Variable`, `Write`, `Field`)\n- **`where`**: Constrain relationships among variables with predicates\n- **`select`**: Emit results; message can concatenate strings and AST entities\n\n### Template Structure\n\n```ql\nimport go\n\nfrom <Type1> var1, <Type2> var2, ...\nwhere <conditions and relationships>\nselect <results>, "<message with " + var1 + " references>"\n```\n\n## Example 1: Value Receiver Method Modifications\n\n### Target Pattern\n\nMethods defined on value receivers that write to a field have no effect (receiver is copied). Should use pointer receiver instead.\n\n### Query\n\n```ql\nimport go\n\nfrom Method m, Variable recv, Write w, Field f\nwhere recv = m.getReceiver() and\n      w.writesField(recv.getARead(), f, _) and\n      not recv.getType() instanceof PointerType\nselect w, "This update to " + f + " has no effect, because " + recv + " is not a pointer."\n```\n\n### Key Predicates\n\n- **`Method.getReceiver()`**: Receiver variable of a method\n- **`Write.writesField(baseRead, field, idx)`**: Write whose LHS writes field of base expression\n- **`Variable.getARead()`**: Read expression of the variable\n- **`PointerType`**: Type test to exclude pointer receivers\n\n## Example 2: Missing Error Handling\n\n### Target Pattern\n\nFunction calls that return errors but the error is ignored.\n\n### Query\n\n```ql\nimport go\n\nfrom CallExpr call, AssignStmt assign\nwhere call.getType().toString().matches("%error%") and\n      assign.getRhs() = call and\n      assign.getLhs().(Ident).getName() = "_"\nselect call, "Error from " + call.getTarget().getName() + " is ignored"\n```\n\n## Example 3: Nil Pointer Dereference Risk\n\n### Target Pattern\n\nPointer dereference without nil check.\n\n### Query\n\n```ql\nimport go\n\nfrom StarExpr deref, Variable ptr\nwhere deref.getExpr() = ptr.getARead() and\n      not exists(IfStmt guard, NeqExpr check |\n        check.getLeftOperand() = ptr.getARead() and\n        check.getRightOperand().(Ident).getName() = "nil" and\n        guard.getCondition() = check and\n        deref.getParent*() = guard.getThen()\n      )\nselect deref, "Potential nil pointer dereference of " + ptr\n```\n\n## Example 4: Goroutine Without Context\n\n### Target Pattern\n\nGoroutines launched without context cancellation mechanism.\n\n### Query\n\n```ql\nimport go\n\nfrom GoStmt goStmt, FuncLit funcLit\nwhere goStmt.getExpr() = funcLit and\n      not exists(Parameter ctx |\n        ctx = funcLit.getParameter(0) and\n        ctx.getType().toString().matches("%context.Context%")\n      )\nselect goStmt, "Goroutine launched without context parameter"\n```\n\n## Example 5: Unsafe Type Assertion\n\n### Target Pattern\n\nType assertions without the "ok" idiom to check success.\n\n### Query\n\n```ql\nimport go\n\nfrom TypeAssertExpr assert\nwhere not exists(TupleExpr tuple, VariableName ok |\n        tuple = assert.getParent() and\n        tuple.getElement(1) = ok.getARead() and\n        ok.getName() = "ok"\n      )\nselect assert, "Type assertion without ok check: " + assert.toString()\n```\n\n## Example 6: Resource Leak - Missing Close\n\n### Target Pattern\n\nFiles opened without corresponding defer close.\n\n### Query\n\n```ql\nimport go\n\nfrom CallExpr open, VariableName file\nwhere open.getTarget().hasQualifiedName("os", "Open") and\n      open.getARead() = file.getARead() and\n      not exists(DeferStmt defer, CallExpr close |\n        close.getTarget().getName() = "Close" and\n        close.getReceiver() = file.getARead() and\n        defer.getExpr() = close\n      )\nselect open, "File opened without defer close: " + file\n```\n\n## Example 7: SQL Injection Risk\n\n### Target Pattern\n\nString concatenation used to build SQL queries.\n\n### Query\n\n```ql\nimport go\n\nfrom CallExpr dbCall, AddExpr concat, StringLit sqlPart\nwhere dbCall.getTarget().hasQualifiedName("database/sql", ["Query", "Exec"]) and\n      dbCall.getArgument(0) = concat and\n      concat.getAnOperand() = sqlPart and\n      sqlPart.getValue().matches("%SELECT%")\nselect concat, "SQL query built by concatenation, potential injection risk"\n```\n\n## Example 8: Command Injection Risk\n\n### Target Pattern\n\nUser input used directly in command execution.\n\n### Query\n\n```ql\nimport go\n\nfrom CallExpr execCall, CallExpr inputCall\nwhere execCall.getTarget().hasQualifiedName("os/exec", "Command") and\n      inputCall.getTarget().hasQualifiedName("os", "Getenv") and\n      DataFlow::localFlow(DataFlow::exprNode(inputCall), DataFlow::exprNode(execCall.getAnArgument()))\nselect execCall, "Environment variable flows to command execution"\n```\n\n## Example 9: Range Over Map in Goroutine\n\n### Target Pattern\n\nRange over map in goroutine without copying the value (race condition risk).\n\n### Query\n\n```ql\nimport go\n\nfrom GoStmt goStmt, RangeStmt rangeStmt, Variable mapVar\nwhere goStmt.getExpr().(FuncLit).getBody().getAStmt*() = rangeStmt and\n      rangeStmt.getDomain() = mapVar.getARead() and\n      mapVar.getType().toString().matches("map[%")\nselect rangeStmt, "Range over map " + mapVar + " in goroutine may cause race condition"\n```\n\n## Example 10: Slice Bounds Check Missing\n\n### Target Pattern\n\nSlice access without bounds checking.\n\n### Query\n\n```ql\nimport go\n\nfrom IndexExpr index, Variable slice\nwhere index.getBase() = slice.getARead() and\n      slice.getType().toString().matches("[]%") and\n      not exists(IfStmt guard, CallExpr lenCall, RelationalComparisonExpr compare |\n        lenCall.getTarget().getName() = "len" and\n        lenCall.getArgument(0) = slice.getARead() and\n        compare.getAnOperand() = index.getIndex() and\n        compare.getAnOperand() = lenCall and\n        guard.getCondition() = compare\n      )\nselect index, "Slice access without bounds check: " + slice\n```\n\n## Usage Patterns\n\n### Finding Specific Function Calls\n\n```ql\n// Find all calls to specific function\nfrom CallExpr call\nwhere call.getTarget().hasQualifiedName("fmt", "Printf")\nselect call\n\n// Find method calls on specific type\nfrom CallExpr call, SelectorExpr sel\nwhere call.getCallee() = sel and\n      sel.getBase().getType().toString() = "MyType" and\n      sel.getSelector().getName() = "MyMethod"\nselect call\n```\n\n### Working with Control Flow\n\n```ql\n// Find if statements with specific conditions\nfrom IfStmt ifStmt, EqlExpr eq\nwhere ifStmt.getCondition() = eq and\n      eq.getRightOperand().(Ident).getName() = "nil"\nselect ifStmt\n\n// Find loops with range\nfrom RangeStmt rangeStmt\nwhere rangeStmt.getKey().getName() != "_" and\n      rangeStmt.getValue().getName() != "_"\nselect rangeStmt\n```\n\n### Package and Import Analysis\n\n```ql\n// Find specific imports\nfrom ImportSpec spec\nwhere spec.getPath().getValue() = "unsafe"\nselect spec, "Unsafe package imported"\n\n// Find package-level variables\nfrom Variable v\nwhere v.isPackageLevel() and\n      v.getName().matches("debug%")\nselect v\n```\n\n## Testing and Refinement\n\n### Running Queries in VS Code\n\n1. Open VS Code with CodeQL extension\n2. Paste query after `import go`\n3. Click "Run Query" or use Ctrl+Shift+P \u2192 "CodeQL: Run Query"\n4. Click results to jump to code locations\n\n### Refining Results\n\n```ql\n// Add guards to exclude false positives\nwhere not exists(CommentGroup comment |\n    comment.getText().matches("%TODO%") and\n    comment.getLocation().getStartLine() < result.getLocation().getStartLine()\n  )\n\n// Restrict to specific files or packages\nwhere result.getFile().getBaseName().matches("%.go") and\n      not result.getFile().getAbsolutePath().matches("%test%")\n```\n\n### Extensions and Improvements\n\n- Add guards to exclude writes to temporary copies\n- Restrict to exported methods/types\n- Focus on specific packages with `hasQualifiedName`\n- Convert to path queries to show data flow\n- Add more specific type checking\n\nThese examples provide practical starting points for finding real Go programming issues and can be customized for specific codebases and requirements.\n';
+
+// src/resources/languages/go_dataflow.md
+var go_dataflow_default = '# Analyzing Data Flow in Go\n\n## Purpose\n\nUse CodeQL\'s Go data-flow libraries to find how values and taint propagate through Go programs. Cover local flow/taint (intra-procedural) and global flow/taint (inter-procedural), with configurable sources/sinks/barriers.\n\n## Core Concepts\n\n### Data Flow vs Taint Tracking\n\n- **Data Flow**: Tracks exact value preservation through assignments, calls, and returns\n- **Taint Tracking**: Tracks influence/contamination, including non-value-preserving operations like concatenation\n\n### Node Hierarchy\n\n- **`Node`** - Base class for data flow nodes\n  - **`ExprNode`** - Expression in the AST\n  - **`ParameterNode`** - Function parameter\n  - **`InstructionNode`** - Intermediate representation instruction\n\n### Node Conversion\n\n- **AST to DataFlow**: `DataFlow::exprNode(expr)`, `DataFlow::parameterNode(param)`\n- **DataFlow to AST**: `node.asExpr()`, `node.asParameter()`, `node.asInstruction()`\n\n## Local Data Flow\n\n### Basic Predicates\n\n- **`localFlowStep(Node a, Node b)`** - Direct flow from `a` to `b` within same function\n- **`localFlow(Node a, Node b)`** - Transitive closure (`localFlowStep*`)\n\n### Example: Tracking to Function Arguments\n\n```ql\nimport go\nfrom Function osOpen, CallExpr call, Expr src\nwhere osOpen.hasQualifiedName("os","Open") and\n      call.getTarget() = osOpen and\n      DataFlow::localFlow(DataFlow::exprNode(src), DataFlow::exprNode(call.getArgument(0)))\nselect src, "flows to os.Open argument"\n```\n\n### Local Flow Patterns\n\n```ql\n// Variable assignment flow\nfrom Variable v, Expr source, Expr use\nwhere DataFlow::localFlow(DataFlow::exprNode(source), DataFlow::exprNode(use)) and\n      source = v.getAnAssignment() and\n      use = v.getARead()\nselect source, use\n\n// Parameter to return flow\nfrom Function f, Parameter p, ReturnStmt ret\nwhere DataFlow::localFlow(DataFlow::parameterNode(p), DataFlow::exprNode(ret.getAResult()))\nselect p, ret\n```\n\n## Local Taint Tracking\n\n### Basic Predicates\n\n- **`localTaintStep(Node a, Node b)`** - Direct taint from `a` to `b`\n- **`localTaint(Node a, Node b)`** - Transitive taint closure\n\n### Taint vs Flow Examples\n\n```ql\n// String concatenation - taint but not flow\nfrom Expr source, Expr concat\nwhere concat.(AddExpr).getAnOperand() = source and\n      TaintTracking::localTaint(DataFlow::exprNode(source), DataFlow::exprNode(concat))\nselect source, concat\n\n// Array element access - taint propagation\nfrom Expr array, Expr element\nwhere element.(IndexExpr).getBase() = array and\n      TaintTracking::localTaint(DataFlow::exprNode(array), DataFlow::exprNode(element))\nselect array, element\n```\n\n## Global Data Flow\n\n### Configuration Interface\n\nImplement `DataFlow::ConfigSig`:\n\n```ql\nmodule MyConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) {\n    // Define where flow starts\n  }\n\n  predicate isSink(DataFlow::Node sink) {\n    // Define where flow ends\n  }\n\n  predicate isBarrier(DataFlow::Node node) {\n    // Optional: block flow through certain nodes\n  }\n\n  predicate isAdditionalFlowStep(DataFlow::Node node1, DataFlow::Node node2) {\n    // Optional: add custom flow edges\n  }\n}\n\nmodule MyFlow = DataFlow::Global<MyConfig>;\n```\n\n### Usage Pattern\n\n```ql\nfrom DataFlow::Node source, DataFlow::Node sink\nwhere MyFlow::flow(source, sink)\nselect source, "flows to $@", sink, "sink"\n```\n\n### Complete Example: Hard-coded Strings to URL Parse\n\n```ql\nmodule StringToUrlConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) {\n    source.asExpr() instanceof StringLit\n  }\n\n  predicate isSink(DataFlow::Node sink) {\n    exists(CallExpr call |\n      call.getTarget().hasQualifiedName("net/url", "Parse") and\n      sink.asExpr() = call.getArgument(0)\n    )\n  }\n}\n\nmodule StringToUrlFlow = DataFlow::Global<StringToUrlConfig>;\n\nfrom DataFlow::Node source, DataFlow::Node sink\nwhere StringToUrlFlow::flow(source, sink)\nselect source, "String literal flows to URL parse $@", sink, "here"\n```\n\n## Global Taint Tracking\n\n### Configuration Interface\n\nSame as data flow but with taint semantics:\n\n```ql\nmodule MyTaintConfig implements TaintTracking::ConfigSig {\n  predicate isSource(DataFlow::Node source) {\n    source instanceof RemoteFlowSource  // Built-in remote sources\n  }\n\n  predicate isSink(DataFlow::Node sink) {\n    exists(CallExpr call |\n      call.getTarget().hasQualifiedName("os/exec", "Command") and\n      sink.asExpr() = call.getAnArgument()\n    )\n  }\n}\n\nmodule MyTaintFlow = TaintTracking::Global<MyTaintConfig>;\n```\n\n### Built-in Sources\n\n```ql\n// RemoteFlowSource covers common user input sources\nclass MyRemoteSource extends RemoteFlowSource {\n  MyRemoteSource() {\n    // Additional remote sources beyond built-ins\n  }\n}\n```\n\n## Advanced Flow Configuration\n\n### Custom Flow Steps\n\n```ql\npredicate isAdditionalFlowStep(DataFlow::Node node1, DataFlow::Node node2) {\n  // Custom builder pattern\n  exists(CallExpr call |\n    call.getTarget().getName() = "WithValue" and\n    node1.asExpr() = call.getReceiver() and\n    node2.asExpr() = call\n  )\n  or\n  // Flow through slice append\n  exists(CallExpr append |\n    append.getTarget().getName() = "append" and\n    node1.asExpr() = append.getAnArgument() and\n    node2.asExpr() = append\n  )\n}\n```\n\n### Barriers and Sanitizers\n\n```ql\npredicate isBarrier(DataFlow::Node node) {\n  // Block flow through validation functions\n  exists(CallExpr call |\n    call.getTarget().getName().matches("%Validate%") and\n    node.asExpr() = call\n  )\n  or\n  // Block at error checks\n  exists(IfStmt guard, NeqExpr check |\n    check.getRightOperand().(Ident).getName() = "nil" and\n    guard.getCondition() = check and\n    node.asExpr().getParent*() = guard.getThen()\n  )\n}\n```\n\n## Common Data Flow Patterns\n\n### Environment Variables to Sinks\n\n```ql\nclass GetenvSource extends DataFlow::Node {\n  GetenvSource() {\n    exists(CallExpr call |\n      call.getTarget().hasQualifiedName("os", "Getenv") and\n      this.asExpr() = call\n    )\n  }\n}\n\nmodule EnvToSinkConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) { source instanceof GetenvSource }\n  predicate isSink(DataFlow::Node sink) { /* define sinks */ }\n}\n```\n\n### Command Line Arguments\n\n```ql\nclass CommandLineArgSource extends DataFlow::Node {\n  CommandLineArgSource() {\n    exists(IndexExpr access |\n      access.getBase().(Ident).getName() = "Args" and\n      access.getBase().getType().toString() = "[]string" and\n      this.asExpr() = access\n    )\n  }\n}\n```\n\n### HTTP Request Data\n\n```ql\nclass HttpRequestSource extends DataFlow::Node {\n  HttpRequestSource() {\n    exists(CallExpr call, SelectorExpr sel |\n      sel.getBase().getType().toString().matches("%Request%") and\n      sel.getSelector().getName() in ["FormValue", "PostFormValue", "Header"] and\n      call.getCallee() = sel and\n      this.asExpr() = call\n    )\n  }\n}\n```\n\n### Database Queries\n\n```ql\npredicate isDatabaseQuerySink(DataFlow::Node sink) {\n  exists(CallExpr call, Function target |\n    call.getTarget() = target and\n    target.hasQualifiedName("database/sql", ["Query", "QueryRow", "Exec", "Prepare"]) and\n    sink.asExpr() = call.getArgument(0)\n  )\n}\n```\n\n## Path Queries for Better Results\n\n### Basic Path Query Structure\n\n```ql\n/**\n * @kind path-problem\n */\nimport go\nimport DataFlow::PathGraph\n\n// ... config definition ...\n\nfrom MyFlow::PathNode source, MyFlow::PathNode sink\nwhere MyFlow::flowPath(source, sink)\nselect sink.getNode(), source, sink,\n       "Value from $@ reaches sink", source.getNode(), "source"\n```\n\n### Multi-step Flow Analysis\n\n```ql\n// First: literal to getenv parameter\nmodule LiteralToGetenvConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) { source.asExpr() instanceof StringLit }\n  predicate isSink(DataFlow::Node sink) {\n    exists(CallExpr call |\n      call.getTarget().hasQualifiedName("os", "Getenv") and\n      sink.asExpr() = call.getArgument(0)\n    )\n  }\n}\n\n// Second: getenv result to url.Parse\nmodule GetenvToUrlConfig implements DataFlow::ConfigSig {\n  predicate isSource(DataFlow::Node source) {\n    exists(CallExpr call |\n      call.getTarget().hasQualifiedName("os", "Getenv") and\n      source.asExpr() = call\n    )\n  }\n  predicate isSink(DataFlow::Node sink) {\n    exists(CallExpr call |\n      call.getTarget().hasQualifiedName("net/url", "Parse") and\n      sink.asExpr() = call.getArgument(0)\n    )\n  }\n}\n```\n\n## Performance and Precision Tips\n\n### Query Optimization\n\n- Start with local flow/taint for better performance\n- Use specific predicates rather than broad matching\n- Prefer `hasQualifiedName` over string patterns\n- Add barriers to reduce false paths\n\n### Debugging Flow\n\n```ql\n// Debug: show intermediate flow steps\nfrom DataFlow::Node n1, DataFlow::Node n2\nwhere DataFlow::localFlowStep(n1, n2) and\n      n1.getFile().getBaseName() = "target.go"\nselect n1, n2\n```\n\n### Testing Configurations\n\n```ql\n// Test source identification\nfrom DataFlow::Node source\nwhere MyConfig::isSource(source)\nselect source\n\n// Test sink identification\nfrom DataFlow::Node sink\nwhere MyConfig::isSink(sink)\nselect sink\n```\n\n## Integration with Security Queries\n\n### Combining Multiple Configurations\n\n```ql\n// Union of different taint sources\npredicate isAnyTaintSource(DataFlow::Node source) {\n  source instanceof RemoteFlowSource or\n  source instanceof GetenvSource or\n  source instanceof CommandLineArgSource\n}\n\n// Combined configuration\nmodule UnifiedTaintConfig implements TaintTracking::ConfigSig {\n  predicate isSource(DataFlow::Node source) { isAnyTaintSource(source) }\n  predicate isSink(DataFlow::Node sink) { /* any dangerous sink */ }\n}\n```\n\n### Framework-specific Flow\n\n```ql\n// Framework method chaining\npredicate isFrameworkFlowStep(DataFlow::Node node1, DataFlow::Node node2) {\n  exists(CallExpr call |\n    call.getReceiver() = node1.asExpr() and\n    call.getTarget().getName().regexpMatch("With|Set|Add") and\n    node2.asExpr() = call\n  )\n}\n```\n\nThis provides the foundation for building sophisticated security queries that can track how untrusted data flows through Go programs to reach dangerous operations.\n';
+
+// src/resources/languages/go_library_modeling.md
+var go_library_modeling_default = "# Customizing Library Models for Go\n\n## Purpose\n\nCustomize data-flow/taint analysis for Go by modeling frameworks/libraries via data extensions (YAML) and model packs. This enables accurate flow tracking through third-party libraries not included in CodeQL databases.\n\n## Data Extensions Overview\n\n### Structure\n\nData extensions use YAML format to extend CodeQL's knowledge of library behavior:\n\n```yaml\nextensions:\n  - addsTo:\n      pack: codeql/go-all\n      extensible: <extensible-predicate>\n    data:\n      - <tuple1>\n      - <tuple2>\n```\n\n### Union Semantics\n\n- Multiple YAML files are combined\n- Rows are merged across files\n- Duplicates are automatically removed\n- Order of files doesn't matter\n\n## Extensible Predicates for Go\n\n### Source Models\n\n**`sourceModel(package, type, subtypes, name, signature, ext, output, kind, provenance)`**\n\nDefine sources of untrusted data (e.g., user input):\n\n- **package**: Go package path (e.g., \"net/http\")\n- **type**: Type name (\"\" for package-level functions)\n- **subtypes**: Include subtypes (true/false)\n- **name**: Function/method name\n- **signature**: Function signature (\"\" for any)\n- **ext**: External library marker (\"\" for stdlib)\n- **output**: Access path where taint emerges\n- **kind**: Threat model category\n- **provenance**: Origin marker (manual/ai-manual/etc.)\n\n**Example**: HTTP request as source\n\n```yaml\n- ['net/http', 'Request', false, 'FormValue', '', '', 'ReturnValue', 'remote', 'manual']\n```\n\n### Sink Models\n\n**`sinkModel(package, type, subtypes, name, signature, ext, input, kind, provenance)`**\n\nDefine dangerous operations (sinks):\n\n- **input**: Access path where taint is dangerous\n\n**Example**: Command execution sink\n\n```yaml\n- ['os/exec', '', false, 'Command', '', '', 'Argument[1]', 'command-injection', 'manual']\n```\n\n### Summary Models\n\n**`summaryModel(package, type, subtypes, name, signature, ext, input, output, kind, provenance)`**\n\nDefine how data flows through functions when dependency code isn't in the database:\n\n- **input**: Where data enters the function\n- **output**: Where data exits the function\n\n**Example**: String builder flow\n\n```yaml\n- ['strings', 'Builder', false, 'WriteString', '', '', 'Argument[0]', 'Receiver', 'taint', 'manual']\n```\n\n### Neutral Models\n\n**`neutralModel(package, type, name, signature, kind, provenance)`**\n\nDefine low-impact flows to reduce over-taint/noise:\n\n**Example**: Safe string operations\n\n```yaml\n- ['strings', '', 'ToUpper', '', 'value', 'manual']\n```\n\n## Access Paths\n\n### Basic Access Paths\n\n- **`Argument[i]`** - ith argument (0-indexed)\n- **`ReturnValue`** - Function return value\n- **`Receiver`** - Method receiver\n- **`Qualifier`** - Object being called on\n\n### Complex Access Paths\n\n- **`Argument[i].Field[\"name\"]`** - Field of argument\n- **`Argument[i].ArrayElement`** - Array/slice elements\n- **`ReturnValue.ArrayElement`** - Elements of returned array/slice\n- **`Field[\"name\"].ArrayElement`** - Elements of field array\n\n### Examples\n\n```yaml\n# Array/slice element flow\n- ['slices', '', false, 'Max', '', '', 'Argument[0].ArrayElement', 'ReturnValue', 'value', 'manual']\n\n# Nested array flow\n- [\n    'slices',\n    '',\n    false,\n    'Concat',\n    '',\n    '',\n    'Argument[0].ArrayElement.ArrayElement',\n    'ReturnValue.ArrayElement',\n    'value',\n    'manual'\n  ]\n\n# Struct field flow\n- [\n    'encoding/json',\n    '',\n    false,\n    'Unmarshal',\n    '',\n    '',\n    'Argument[0]',\n    'Argument[1].Field[*]',\n    'taint',\n    'manual'\n  ]\n```\n\n## Flow Kinds\n\n### Value vs Taint\n\n- **\"value\"**: Moves whole values (precise data flow)\n- **\"taint\"**: Propagates taint only (influence tracking)\n\n### Security Categories\n\nCommon `kind` values for threat modeling:\n\n- **\"remote\"**: Remote user input\n- **\"command-injection\"**: Command execution\n- **\"sql-injection\"**: Database queries\n- **\"path-injection\"**: File system access\n- **\"code-injection\"**: Code execution\n- **\"xss\"**: Cross-site scripting\n\n## Complete Examples\n\n### HTTP Framework Modeling\n\n```yaml\nextensions:\n  - addsTo:\n      pack: codeql/go-all\n      extensible: sourceModel\n    data:\n      # HTTP request sources\n      - ['net/http', 'Request', false, 'FormValue', '', '', 'ReturnValue', 'remote', 'manual']\n      - ['net/http', 'Request', false, 'PostFormValue', '', '', 'ReturnValue', 'remote', 'manual']\n      - ['net/http', 'Request', false, 'Header', '', '', 'ReturnValue', 'remote', 'manual']\n      - ['net/http', 'Request', false, 'URL', '', '', 'ReturnValue.Field[*]', 'remote', 'manual']\n\n  - addsTo:\n      pack: codeql/go-all\n      extensible: sinkModel\n    data:\n      # HTTP response sinks\n      - ['net/http', 'ResponseWriter', false, 'Write', '', '', 'Argument[0]', 'xss', 'manual']\n      - [\n          'net/http',\n          'ResponseWriter',\n          false,\n          'Header',\n          '',\n          '',\n          'ReturnValue',\n          'response-header',\n          'manual'\n        ]\n```\n\n### Database Library Modeling\n\n```yaml\nextensions:\n  - addsTo:\n      pack: codeql/go-all\n      extensible: summaryModel\n    data:\n      # Database query builders\n      - [\n          'github.com/jmoiron/sqlx',\n          'DB',\n          false,\n          'Query',\n          '',\n          '',\n          'Argument[0]',\n          'ReturnValue.Field[*]',\n          'taint',\n          'manual'\n        ]\n      - [\n          'github.com/jmoiron/sqlx',\n          'DB',\n          false,\n          'Select',\n          '',\n          '',\n          'Argument[1]',\n          'Argument[0].Field[*]',\n          'taint',\n          'manual'\n        ]\n\n  - addsTo:\n      pack: codeql/go-all\n      extensible: sinkModel\n    data:\n      # SQL injection sinks\n      - [\n          'github.com/jmoiron/sqlx',\n          'DB',\n          false,\n          'Query',\n          '',\n          '',\n          'Argument[0]',\n          'sql-injection',\n          'manual'\n        ]\n      - [\n          'github.com/jmoiron/sqlx',\n          'DB',\n          false,\n          'Exec',\n          '',\n          '',\n          'Argument[0]',\n          'sql-injection',\n          'manual'\n        ]\n```\n\n### JSON Processing\n\n```yaml\nextensions:\n  - addsTo:\n      pack: codeql/go-all\n      extensible: summaryModel\n    data:\n      # JSON unmarshaling\n      - [\n          'encoding/json',\n          '',\n          false,\n          'Unmarshal',\n          '',\n          '',\n          'Argument[0]',\n          'Argument[1].Field[*]',\n          'taint',\n          'manual'\n        ]\n      - [\n          'encoding/json',\n          '',\n          false,\n          'Marshal',\n          '',\n          '',\n          'Argument[0].Field[*]',\n          'ReturnValue',\n          'taint',\n          'manual'\n        ]\n\n  - addsTo:\n      pack: codeql/go-all\n      extensible: sourceModel\n    data:\n      # JSON from HTTP as source\n      - [\n          'encoding/json',\n          'Decoder',\n          false,\n          'Decode',\n          '',\n          '',\n          'Argument[0].Field[*]',\n          'remote',\n          'manual'\n        ]\n```\n\n### String Processing Libraries\n\n```yaml\nextensions:\n  - addsTo:\n      pack: codeql/go-all\n      extensible: summaryModel\n    data:\n      # String builder patterns\n      - [\n          'strings',\n          'Builder',\n          false,\n          'WriteString',\n          '',\n          '',\n          'Argument[0]',\n          'Receiver',\n          'taint',\n          'manual'\n        ]\n      - [\n          'strings',\n          'Builder',\n          false,\n          'String',\n          '',\n          '',\n          'Receiver',\n          'ReturnValue',\n          'taint',\n          'manual'\n        ]\n\n      # Template processing\n      - [\n          'text/template',\n          'Template',\n          false,\n          'Execute',\n          '',\n          '',\n          'Argument[1].Field[*]',\n          'Argument[0]',\n          'taint',\n          'manual'\n        ]\n      - [\n          'html/template',\n          'Template',\n          false,\n          'Execute',\n          '',\n          '',\n          'Argument[1].Field[*]',\n          'Argument[0]',\n          'taint',\n          'manual'\n        ]\n```\n\n## Model Packs\n\n### Pack Structure\n\nCreate a CodeQL model pack to group and distribute YAML files:\n\n```yaml\n# codeql-pack.yml\nname: my-org/go-security-models\nversion: 1.0.0\ndependencies:\n  codeql/go-all: '*'\ndataExtensions: '*.yml'\n```\n\n### Directory Structure\n\n```\nmy-go-models/\n\u251C\u2500\u2500 codeql-pack.yml\n\u251C\u2500\u2500 http-frameworks.yml\n\u251C\u2500\u2500 database-orms.yml\n\u2514\u2500\u2500 json-libraries.yml\n```\n\n### Publishing to GitHub Container Registry\n\n```bash\ncodeql pack publish\n```\n\n### Consuming Model Packs\n\n```yaml\n# In consumer's codeql-pack.yml\ndependencies:\n  my-org/go-security-models: '^1.0.0'\n```\n\nOr via CLI:\n\n```bash\ncodeql database analyze --packs my-org/go-security-models\n```\n\n## Advanced Patterns\n\n### Framework-specific Source Patterns\n\n```yaml\n# Gin framework\n- ['github.com/gin-gonic/gin', 'Context', false, 'Param', '', '', 'ReturnValue', 'remote', 'manual']\n- ['github.com/gin-gonic/gin', 'Context', false, 'Query', '', '', 'ReturnValue', 'remote', 'manual']\n- [\n    'github.com/gin-gonic/gin',\n    'Context',\n    false,\n    'PostForm',\n    '',\n    '',\n    'ReturnValue',\n    'remote',\n    'manual'\n  ]\n\n# Echo framework\n- [\n    'github.com/labstack/echo/v4',\n    'Context',\n    false,\n    'Param',\n    '',\n    '',\n    'ReturnValue',\n    'remote',\n    'manual'\n  ]\n- [\n    'github.com/labstack/echo/v4',\n    'Context',\n    false,\n    'QueryParam',\n    '',\n    '',\n    'ReturnValue',\n    'remote',\n    'manual'\n  ]\n- [\n    'github.com/labstack/echo/v4',\n    'Context',\n    false,\n    'FormValue',\n    '',\n    '',\n    'ReturnValue',\n    'remote',\n    'manual'\n  ]\n```\n\n### ORM and Query Builder Models\n\n```yaml\n# GORM models\n- ['gorm.io/gorm', 'DB', false, 'Raw', '', '', 'Argument[0]', 'ReturnValue', 'taint', 'manual']\n- ['gorm.io/gorm', 'DB', false, 'Exec', '', '', 'Argument[0]', '', 'sql-injection', 'manual']\n\n# Squirrel query builder\n- [\n    'github.com/Masterminds/squirrel',\n    'SelectBuilder',\n    false,\n    'Where',\n    '',\n    '',\n    'Argument[0]',\n    'Receiver',\n    'taint',\n    'manual'\n  ]\n- [\n    'github.com/Masterminds/squirrel',\n    'SelectBuilder',\n    false,\n    'ToSql',\n    '',\n    '',\n    'Receiver',\n    'ReturnValue',\n    'taint',\n    'manual'\n  ]\n```\n\n### Utility Library Flows\n\n```yaml\n# Viper configuration\n- ['github.com/spf13/viper', '', false, 'GetString', '', '', '', 'ReturnValue', 'config', 'manual']\n- ['github.com/spf13/viper', '', false, 'Get', '', '', '', 'ReturnValue', 'config', 'manual']\n\n# Cobra CLI arguments\n- [\n    'github.com/spf13/cobra',\n    'Command',\n    false,\n    'Flags',\n    '',\n    '',\n    '',\n    'ReturnValue',\n    'cli-input',\n    'manual'\n  ]\n```\n\n## Workflow and Best Practices\n\n### Development Process\n\n1. **Identify Gap**: Find library calls that break data flow paths\n2. **Analyze Library**: Understand how data flows through the library\n3. **Create Models**: Start with summaries for common flows\n4. **Add Sources/Sinks**: Define security-relevant entry/exit points\n5. **Test and Iterate**: Validate with path queries and unit tests\n\n### Model Quality Guidelines\n\n- **Narrow Matching**: Use `hasQualifiedName` for precision\n- **Specific Access Paths**: Be precise about which fields/elements flow\n- **Appropriate Kinds**: Match `kind` to actual threat model\n- **Documentation**: Comment complex access paths\n- **Testing**: Validate with realistic code examples\n\n### Performance Considerations\n\n- Avoid overly broad models that create too many paths\n- Use `neutralModel` to reduce noise from safe operations\n- Consider performance impact of complex access paths\n- Test query performance with models enabled\n\n### Integration Testing\n\n```ql\n// Test model coverage\nfrom DataFlow::Node source, DataFlow::Node sink\nwhere MyFlow::flow(source, sink) and\n      source.getFile().getBaseName() = \"test_library.go\"\nselect source, sink\n\n// Verify specific library modeling\nfrom CallExpr call\nwhere call.getTarget().hasQualifiedName(\"my/library\", \"MyFunction\")\nselect call, \"Library call found\"\n```\n\nThis comprehensive approach to library modeling enables accurate security analysis even when third-party library source code isn't available in the CodeQL database.\n";
+
+// src/resources/languages/go_security_query_guide.md
+var go_security_query_guide_default = "# Go Security Query Guide\n\nLanguage-specific notes for writing Go security queries in CodeQL. For the general taint-tracking template and workflow, see the `security_templates` resource.\n\n## Imports\n\n```ql\nimport go\n```\n\nThe `go` top-level import re-exports data flow, taint tracking, and standard library models. For path-problem queries add `import MyFlow::PathGraph` after defining your flow module.\n\n## Sources and Sinks\n\n- **Sources**: Use `RemoteFlowSource` (covers `net/http` handlers, gRPC, and other HTTP frameworks). Also consider `UntrustedFlowSource` for broader input coverage.\n- **Sinks**: Model as `DataFlow::Node` subclasses matching dangerous APIs (e.g., `os/exec`, `database/sql`, `html/template`). Existing sink libraries live under `semmle.go.security.*`.\n- **Barriers**: Model sanitizers as `DataFlow::Node` subclasses and reference them in `isBarrier`.\n\n## Key Library Modules\n\n| Module                             | Purpose                                  |\n| ---------------------------------- | ---------------------------------------- |\n| `semmle.go.dataflow.DataFlow`      | Data flow nodes and global analysis      |\n| `semmle.go.dataflow.TaintTracking` | Taint tracking analysis                  |\n| `semmle.go.security.*`             | Pre-built vulnerability-specific configs |\n| `semmle.go.frameworks.*`           | Framework-specific API models            |\n";
+
+// src/resources/languages/java_ast.md
+var java_ast_default = '# CodeQL AST nodes for `java` language\n\n## CodeQL\'s core AST classes for `java` language\n\nBased on comprehensive analysis of CodeQL\'s Java test results from GitHub, here are the core AST classes for Java analysis:\n\n### Compilation and Package Structure\n\n**Top-Level Units:**\n\n- `CompilationUnit` - Java source file compilation units (e.g., `CompilationUnit A`)\n- `ImportType` - Single type imports (e.g., `import HashMap`, `import IOException`)\n- `ImportOnDemandFromPackage` - Wildcard imports (e.g., `import java.util.*`)\n\n### Class and Interface Declarations\n\n**Class Structure:**\n\n- `Class` - Class declarations (e.g., `class A`, `class Test`)\n- `Interface` - Interface declarations (e.g., `interface Ann1`)\n- `GenericType` - Generic classes with type parameters\n- `ParameterizedType` - Parameterized types with specific type arguments\n\n**Generic Support:**\n\n- `TypeVariable` - Generic type parameters (e.g., `T`, `S extends Comparable`)\n- Generic class declarations and instantiations\n- Diamond operator support (`<>`) for type inference\n\n### Type System\n\n**Basic Type Access:**\n\n- `TypeAccess` - Type references (e.g., `String`, `int`, `void`, `Object`)\n- `ArrayTypeAccess` - Array types (e.g., `String[]`, `int[][]`)\n- Type access in generic contexts (e.g., `List<String>`, `Map<String,Integer>`)\n\n**Advanced Type Features:**\n\n- Parameterized types with multiple type arguments\n- Nested type access and inner class types\n- Array types with multiple dimensions\n\n### Field and Variable Declarations\n\n**Field Declarations:**\n\n- `FieldDeclaration` - Class field declarations (e.g., `String[] a;`, `float ff;`)\n- Field initialization with expressions\n- Generic field types (e.g., `List<> l`, `Map<String,Integer> m`)\n\n**Variable Declarations:**\n\n- `LocalVariableDeclStmt` - Local variable declaration statements\n- `LocalVariableDeclExpr` - Local variable declarator expressions\n- `Parameter` - Method and constructor parameters\n- `VarDecl` - Variable declaration identifiers\n\n### Method and Constructor Declarations\n\n**Method Structure:**\n\n- `Method` - Method declarations with return types and parameters\n- `Constructor` - Constructor declarations\n- Method signatures with generic types and varargs support\n\n**Parameter Handling:**\n\n- Parameter declarations with type access\n- Varargs parameters (e.g., `int... is`, `Object... os`)\n- Generic parameter types\n\n### Expressions\n\n**Primary Expressions:**\n\n- `IntegerLiteral` - Integer constants (e.g., `42`, `1`, `2`)\n- `FloatLiteral` - Floating-point literals (e.g., `2.3f`)\n- `StringLiteral` - String literals (e.g., `"hello"`, `"rawtypes"`)\n- `NullLiteral` - Null literal (`null`)\n- `BooleanLiteral` - Boolean literals (`true`, `false`)\n\n**Variable Access:**\n\n- `VarAccess` - Variable references (e.g., `thing`, `o`, `Initializers.SFIELD`)\n- Qualified variable access with type prefixes\n\n**Object Creation:**\n\n- `ClassInstanceExpr` - Object instantiation (e.g., `new ArrayList<>()`, `new LinkedHashMap<String,Integer>()`)\n- Constructor calls with type arguments\n- Anonymous class instances\n\n**Method Calls:**\n\n- `MethodCall` - Method invocations (e.g., `source()`, `sink()`)\n- Method calls with arguments and generic types\n\n**Type Operations:**\n\n- `CastExpr` - Type casting (e.g., `(E) thing`)\n- `InstanceOfExpr` - instanceof checks with pattern matching\n\n### Statements\n\n**Control Flow:**\n\n- `BlockStmt` - Block statements containing multiple statements\n- `IfStmt` - Conditional statements\n- `SwitchStmt` - Switch statements with traditional and pattern cases\n- `SwitchExpr` - Switch expressions with yield statements\n- `ReturnStmt` - Return statements\n- `YieldStmt` - Yield statements in switch expressions\n\n**Exception Handling:**\n\n- `TryStmt` - Try-catch-finally statements\n- `CatchClause` - Catch clauses with exception types\n- `ThrowStmt` - Throw statements\n- Multi-catch support for multiple exception types\n\n**Constructor Calls:**\n\n- `ThisConstructorInvocationStmt` - this() constructor calls\n- `SuperConstructorInvocationStmt` - super() constructor calls\n\n### Modern Java Features\n\n**Pattern Matching (Java 14+):**\n\n- `PatternCase` - Pattern matching in switch statements\n- `RecordPatternExpr` - Record pattern matching expressions\n- Pattern case declarations with local variables\n- Guarded patterns and complex pattern matching\n\n**Switch Expressions:**\n\n- `ConstCase` - Traditional constant cases\n- `DefaultCase` - Default cases in switch statements\n- Pattern-based case statements with guards\n\n**Records (Java 14+):**\n\n- Record declarations and pattern matching\n- Record component access and destructuring\n\n### Annotations and Documentation\n\n**Annotations:**\n\n- `Annotation` - Annotation usage (e.g., `@SuppressWarnings("rawtypes")`)\n- Annotation with arguments and values\n\n**Documentation:**\n\n- `Javadoc` - Javadoc comments (e.g., `/** A JavaDoc comment */`)\n- `JavadocText` - Text content within Javadoc\n- `JavadocTag` - Javadoc tags (e.g., `@author someone`)\n- Multi-line Javadoc support\n\n### Enum Support\n\n**Enumeration Features:**\n\n- Enum class declarations\n- Enum constant declarations with initialization\n- Enum constants with constructor arguments\n\n### Lambda Expressions and Functional Interfaces\n\n**Functional Programming:**\n\n- Anonymous class expressions for functional interfaces\n- Functional interface implementations (e.g., `BiFunction<Integer,Integer,Integer>`)\n- Lambda-style anonymous parameter handling\n\n### Advanced Expression Features\n\n**Complex Expressions:**\n\n- Parenthesized expressions for precedence control\n- Conditional expressions (ternary operator)\n- Assignment expressions and compound assignments\n\n**Array Operations:**\n\n- Array access and indexing expressions\n- Array initialization and manipulation\n- Multi-dimensional array support\n\n### Modifier Support\n\n**Access Modifiers:**\n\n- Support for `public`, `private`, `protected` modifiers\n- `static`, `final`, `abstract` modifier handling\n- Enum constant modifiers and initialization\n\n### Collection Framework Integration\n\n**Collections:**\n\n- Generic collection types (e.g., `List<String>`, `Map<String,Integer>`)\n- Collection instantiation with type inference\n- Iterator and collection method support\n\n### Error Handling and Diagnostics\n\n**Error Types:**\n\n- `ErrorExpr` - Error expressions for malformed code\n- `ErrorType` - Error types for type resolution failures\n- Error handling in generic contexts\n\n### Example AST Hierarchy\n\nA typical Java method declaration produces the following AST node hierarchy:\n\n```text\nCompilationUnit\n  \u2514\u2500\u2500 ClassDecl\n        \u251C\u2500\u2500 FieldDecl\n        \u2502     \u251C\u2500\u2500 TypeAccess\n        \u2502     \u2514\u2500\u2500 VarDeclExpr\n        \u251C\u2500\u2500 MethodDecl\n        \u2502     \u251C\u2500\u2500 TypeAccess (return type)\n        \u2502     \u251C\u2500\u2500 Parameter\n        \u2502     \u2502     \u2514\u2500\u2500 TypeAccess\n        \u2502     \u2514\u2500\u2500 Block\n        \u2502           \u251C\u2500\u2500 ExprStmt\n        \u2502           \u2502     \u2514\u2500\u2500 MethodCall\n        \u2502           \u2502           \u251C\u2500\u2500 VarAccess\n        \u2502           \u2502           \u2514\u2500\u2500 StringLiteral\n        \u2502           \u2514\u2500\u2500 ReturnStmt\n        \u2502                 \u2514\u2500\u2500 VarAccess\n        \u2514\u2500\u2500 ConstructorDecl\n              \u2514\u2500\u2500 Block\n```\n\nUse `PrintAST` on your test code to see the exact hierarchy for your specific source patterns.\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `java` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="java"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n\n## Expected test results for open-source `PrintAst.ql` query\n\nThe following links can be fetched to get the expected results for different unit tests of the open-source `PrintAst.ql` query for the `java` language:\n\n- [library-tests/comments/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/comments/PrintAst.expected)\n- [library-tests/dependency-counts/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/dependency-counts/PrintAst.expected)\n- [library-tests/generics/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/generics/PrintAst.expected)\n- [library-tests/java7/Diamond/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/java7/Diamond/PrintAst.expected)\n- [library-tests/java7/MultiCatch/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/java7/MultiCatch/PrintAst.expected)\n- [library-tests/modifiers/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/modifiers/PrintAst.expected)\n- [library-tests/guards12/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/guards12/PrintAst.expected)\n- [library-tests/pattern-instanceof/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/pattern-instanceof/PrintAst.expected)\n- [library-tests/typeaccesses/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/typeaccesses/PrintAst.expected)\n- [library-tests/JDK/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/JDK/PrintAst.expected)\n- [library-tests/constants/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/constants/PrintAst.expected)\n- [library-tests/errortype/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/errortype/PrintAst.expected)\n- [library-tests/comment-encoding/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/comment-encoding/PrintAst.expected)\n- [library-tests/dependency/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/dependency/PrintAst.expected)\n- [library-tests/errortype-with-params/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/errortype-with-params/PrintAst.expected)\n- [library-tests/printAst/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/printAst/PrintAst.expected)\n- [library-tests/constructors/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/constructors/PrintAst.expected)\n- [library-tests/arrays/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/arrays/PrintAst.expected)\n- [library-tests/errorexpr/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/errorexpr/PrintAst.expected)\n- [library-tests/fields/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/fields/PrintAst.expected)\n- [library-tests/javadoc/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/javadoc/PrintAst.expected)\n- [library-tests/collections/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/collections/PrintAst.expected)\n- [library-tests/varargs/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/varargs/PrintAst.expected)\n- [library-tests/reflection/PrintAst.expected](https://github.com/github/codeql/blob/main/java/ql/test/library-tests/reflection/PrintAst.expected)\n';
+
+// src/resources/languages/javascript_ast.md
+var javascript_ast_default = '# CodeQL AST nodes for `javascript` language\n\n## CodeQL\'s core AST classes for `javascript` language\n\nBased on comprehensive analysis of CodeQL\'s JavaScript test results from GitHub, here are the core AST classes for JavaScript/TypeScript analysis:\n\n### Core Expression Classes\n\n**Primary Expressions:**\n\n- `Literal` - String, number, boolean, null literals (e.g., `"hello"`, `42`, `true`, `null`)\n- `VarRef` - Variable references (e.g., `x`, `myVar`)\n- `ThisExpr` - The `this` keyword\n- `ArrayExpr` - Array literals (e.g., `[1, 2, 3]`, `["source"]`)\n- `ObjectExpr` - Object literals with properties (e.g., `{rel: "noopener"}`)\n\n**Function and Call Expressions:**\n\n- `FunctionExpr` - Function expressions and arrow functions\n- `ArrowFunctionExpr` - Arrow function expressions (e.g., `(x) => x`, `() => true`)\n- `CallExpr` - Function calls (e.g., `func()`, `getResource()`)\n- `MethodCallExpr` - Method calls (e.g., `console.log()`, `arr.push()`)\n- `NewExpr` - Constructor calls (e.g., `new Date()`, `new C3<number>()`)\n\n**Access and Member Expressions:**\n\n- `DotExpr` - Property access (e.g., `obj.prop`, `console.log`, `arr.length`)\n- `IndexExpr` - Array/object indexing (e.g., `arr[0]`, `props["a:b"]`)\n- `SpreadElement` - Spread syntax (e.g., `...arr`, `...linkTypes`)\n\n**Operators and Assignments:**\n\n- `BinaryExpr` - Binary operations (e.g., `x + y`, `i < arr.length`, `typeof val !== "string"`)\n- `UnaryExpr` - Unary operations (e.g., `!condition`, `typeof val`, `++i`)\n- `AssignExpr` - Assignment expressions (e.g., `x = 5`, `test = 20`)\n- `CompoundAssignExpr` - Compound assignments (e.g., `a2 &&= a3`)\n- `UpdateExpr` - Increment/decrement (e.g., `i++`, `--count`)\n\n### Statement Classes\n\n**Declaration Statements:**\n\n- `DeclStmt` - Variable declarations (e.g., `var x = 5`, `const arr = []`)\n- `VariableDeclarator` - Individual variable declarators within declarations\n- `VarDecl` - Variable declaration identifiers\n- `FunctionDeclStmt` - Function declarations\n- `ClassDefinition` - Class declarations with constructors and methods\n\n**Control Flow Statements:**\n\n- `IfStmt` - Conditional statements with test expressions and blocks\n- `ForStmt` - For loops with initialization, condition, and update\n- `ForOfStmt` - For-of loops for iterating arrays and iterables\n- `WhileStmt` - While loops\n- `BlockStmt` - Block statements containing multiple statements\n- `ReturnStmt` - Return statements with optional expressions\n- `BreakStmt` - Break statements for loop control\n- `ContinueStmt` - Continue statements\n- `ThrowStmt` - Throw statements for error handling\n\n**Expression Statements:**\n\n- `ExprStmt` - Expression statements wrapping expressions\n\n### Modern JavaScript Features\n\n**ES6+ and Modern Syntax:**\n\n- `TemplateString` - Template literals with interpolation\n- `TaggedTemplateExpr` - Tagged template literals\n- `ParenthesizedExpr` - Parenthesized expressions\n- `ConditionalExpr` - Ternary conditional expressions\n\n**Resource Management (Modern):**\n\n- `ExplicitResource` - Using declarations for resource management (e.g., `using stream = getResource()`)\n- Resource management in async contexts and for loops\n\n### TypeScript-Specific AST Classes\n\n**Type Annotations:**\n\n- `KeywordTypeExpr` - Built-in types (e.g., `string`, `number`, `boolean`, `any`, `void`)\n- `ArrayTypeExpr` - Array types (e.g., `string[]`, `number[][]`)\n- `UnionTypeExpr` - Union types (e.g., `string | number | boolean`)\n- `IntersectionTypeExpr` - Intersection types (e.g., `string & number & boolean`)\n- `TupleTypeExpr` - Tuple types (e.g., `[number, string, boolean]`, `[...T, ...U]`)\n- `ParenthesizedTypeExpr` - Parenthesized types (e.g., `(string)`, `(boolean | string)`)\n\n**Advanced Types:**\n\n- `GenericTypeExpr` - Generic types (e.g., `Generic<number>`, `Generic<Leaf[]>`)\n- `LocalTypeAccess` - Local type references (e.g., `Interface`, `Generic`, `Leaf`)\n- `FunctionTypeExpr` - Function types (e.g., `() => number`, `new () => Object`)\n- `TypeofTypeExpr` - Typeof types (e.g., `typeof x`)\n- `IsTypeExpr` - Type predicate expressions (e.g., `x is Generic<Leaf[]>`, `this is Leaf`)\n- `PredicateTypeExpr` - Assertion signatures (e.g., `asserts condition`)\n- `RestTypeExpr` - Rest types in tuples (e.g., `...T`, `...number[]`)\n\n**Type Declarations:**\n\n- `TypeDefinition` - Type definitions and interfaces\n- `InterfaceDeclaration` - Interface declarations with properties\n- `TypeParameter` - Generic type parameters (e.g., `T`, `S extends number`)\n- `FieldDeclaration` - Interface/class field declarations\n\n**Type Access:**\n\n- `LocalVarTypeAccess` - Local variable type access (e.g., `x` in type position)\n- `ThisVarTypeAccess` - This type access (e.g., `this` in type predicates)\n\n### JSX Classes (React Support)\n\n**JSX Elements:**\n\n- `JsxElement` - JSX elements (e.g., `<div>`, `<MyComponent>`, `<Foo/>`)\n- `JsxFragment` - JSX fragments (e.g., `<>...</>`)\n- `JsxAttribute` - JSX attributes (e.g., `href={href}`, `target="_blank"`)\n- `JsxEmptyExpr` - Empty JSX expressions (e.g., `{/* comment */}`)\n\n**JSX Structure:**\n\n- JSX elements support attributes, spread attributes, and nested content\n- Namespaced attributes (e.g., `a:b="hello"`)\n- Component references and dot notation (e.g., `MyComponents.FancyLink`)\n\n### Decorator Support\n\n**Decorator Classes:**\n\n- `Decorator` - Decorator expressions (e.g., `@Dec()`)\n- Decorators on classes, methods, and properties\n- Support for decorator factories and complex decorator expressions\n\n### Pattern Matching\n\n**Destructuring Patterns:**\n\n- `ObjectPattern` - Object destructuring patterns\n- `ArrayPattern` - Array destructuring patterns\n- `PropertyPattern` - Property patterns in object destructuring\n- `RestElement` - Rest elements in destructuring\n\n### Array Methods and Operations\n\n**Array-Specific AST:**\n\n- Comprehensive support for array methods: `forEach`, `map`, `filter`, `find`, `findLast`, `findLastIndex`\n- Array method chaining with proper AST representation\n- Spread operations in arrays and function calls\n- Array manipulation methods: `push`, `pop`, `slice`, `splice`, `toSpliced`\n\n### Class and OOP Features\n\n**Class Components:**\n\n- `ClassInitializedMember` - Class members (methods, constructors)\n- `ConstructorDefinition` - Class constructors\n- `MethodDefinition` - Class methods\n- `FieldDeclaration` - Class fields and properties\n\n### Parameter Handling\n\n**Parameter Types:**\n\n- `SimpleParameter` - Simple function parameters\n- `Parameter` - General parameter interface\n- `RestParameter` - Rest parameters (e.g., `...args`)\n\n### Utility and Meta Classes\n\n**Labels and References:**\n\n- `Label` - Property names, method names, and identifiers\n- `Identifier` - General identifiers in various contexts\n\n**Parser Infrastructure:**\n\n- `Arguments` - Function call arguments container\n- `Parameters` - Function parameter container\n- `Body` - Statement body container\n- `Attributes` - JSX attributes container\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `javascript` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="javascript"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n\n## Expected test results for open-source `PrintAst.ql` query\n\nThe following links can be fetched to get the expected results for different unit tests of the open-source `PrintAst.ql` query for the `javascript` language:\n\n- [library-tests/RegExp/VFlagOperations/QuotedString/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/RegExp/VFlagOperations/QuotedString/printAst.expected)\n- [library-tests/RegExp/VFlagOperations/Subtraction/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/RegExp/VFlagOperations/Subtraction/printAst.expected)\n- [library-tests/RegExp/VFlagOperations/CombinationOfOperators/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/RegExp/VFlagOperations/CombinationOfOperators/printAst.expected)\n- [library-tests/RegExp/VFlagOperations/Intersection/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/RegExp/VFlagOperations/Intersection/printAst.expected)\n- [library-tests/TypeScript/TypeAnnotations/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/TypeScript/TypeAnnotations/printAst.expected)\n- [library-tests/HTML/HTMLElementAndHTMLAttribute/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/HTML/HTMLElementAndHTMLAttribute/printAst.expected)\n- [library-tests/JSON/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/JSON/printAst.expected)\n- [library-tests/Arrays/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/Arrays/printAst.expected)\n- [library-tests/AST/Decorators/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/AST/Decorators/printAst.expected)\n- [library-tests/AST/ExplicitResource/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/AST/ExplicitResource/printAst.expected)\n- [library-tests/YAML/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/YAML/printAst.expected)\n- [library-tests/frameworks/AngularJS/expressions/parsing/AstNodes.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/frameworks/AngularJS/expressions/parsing/AstNodes.expected)\n- [library-tests/JSX/printAst.expected](https://github.com/github/codeql/blob/main/javascript/ql/test/library-tests/JSX/printAst.expected)\n';
+
+// src/resources/languages/javascript_security_query_guide.md
+var javascript_security_query_guide_default = "# JavaScript Security Query Guide\n\nLanguage-specific notes for writing JavaScript/TypeScript security queries in CodeQL. For the general taint-tracking template and workflow, see the `security_templates` resource.\n\n## Imports\n\n```ql\nimport javascript\n```\n\nThe `javascript` top-level import re-exports data flow, taint tracking, and framework models. For path-problem queries add `import MyFlow::PathGraph` after defining your flow module.\n\n## Sources and Sinks\n\n- **Sources**: Use `RemoteFlowSource` (covers Express, Koa, Hapi, Fastify, and other HTTP frameworks automatically).\n- **Sinks**: Use or extend existing sink classes from `semmle.javascript.security.dataflow.*` (e.g., `DomBasedXss`, `SqlInjection`, `ServerSideUrlRedirect`), or model custom sinks as `DataFlow::Node` subclasses.\n- **Sanitizers**: Extend `Sanitizer` classes in the relevant `semmle.javascript.security.dataflow.*` module.\n\n## Key Library Modules\n\n| Module                                     | Purpose                                  |\n| ------------------------------------------ | ---------------------------------------- |\n| `semmle.javascript.dataflow.DataFlow`      | Data flow nodes and global analysis      |\n| `semmle.javascript.dataflow.TaintTracking` | Taint tracking analysis                  |\n| `semmle.javascript.security.dataflow.*`    | Pre-built vulnerability-specific configs |\n| `semmle.javascript.frameworks.*`           | Framework-specific API models            |\n";
+
+// src/resources/languages/python_ast.md
+var python_ast_default = '# CodeQL AST nodes for `python` language\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `python` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="python"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n\n## CodeQL\'s core AST classes for `python` language\n\n### Expression Types\n\n- **`Call`** - Function/method calls (e.g., `func(args)`)\n- **`Attribute`** - Attribute access (e.g., `obj.attr`, `module.function`)\n- **`Subscript`** - Subscript operations (e.g., `obj[key]`, `list[0]`)\n- **`Name`** - Variable references and identifiers\n- **`StringLiteral`** - String literals (e.g., `"hello"`, `\'world\'`)\n- **`Bytes`** - Byte string literals\n- **`List`** - List literals (e.g., `[1, 2, 3]`)\n- **`Dict`** - Dictionary literals (e.g., `{"key": "value"}`)\n- **`KeyValuePair`** - Key-value pairs in dictionaries\n- **`BinOp`** - Binary operations (e.g., `+`, `-`, `*`)\n- **`UnaryExpr`** - Unary expressions (e.g., `not`, `-`)\n\n### Statement Types\n\n- **`FunctionDef`** - Function definitions\n- **`FunctionExpr`** - Function expressions\n- **`Function`** - Function objects\n- **`ClassDef`** - Class definitions\n- **`ClassExpr`** - Class expressions\n- **`Class`** - Class objects\n- **`Import`** - Import statements (`import module`)\n- **`ImportFrom`** - From-import statements (`from module import name`)\n- **`ImportExpr`** - Import expressions\n- **`Assign`** - Assignment statements (e.g., `x = y`)\n- **`AssignStmt`** - Assignment statement nodes\n- **`If`** - Conditional statements\n- **`For`** - For loop statements\n- **`While`** - While loop statements\n- **`Return`** - Return statements\n- **`ExprStmt`** - Expression statements\n- **`Pass`** - Pass statements\n\n### Parameters and Arguments\n\n- **`Parameter`** - Function parameters\n- **`arguments`** - Function argument lists\n- **`parameters`** - Function parameter lists\n\n### Control Flow\n\n- **`StmtList`** - Statement lists (body, orelse)\n- **`body`** - Statement body containers\n- **`orelse`** - Else clause containers\n\n### YAML Support (for configuration files)\n\n- **`YamlScalar`** - YAML scalar values\n- **`YamlMapping`** - YAML mapping/dictionary structures\n- **`YamlSequence`** - YAML sequence/list structures\n- **`YamlAliasNode`** - YAML alias references\n\n## Expected test results for open-source `PrintAst.ql` query\n\nThe following links can be fetched to get the expected results for different unit tests of the open-source `PrintAst.ql` query for the `python` language:\n\n- [github-codeql:python/ql/test/library-tests/taint/general/printAst.expected](https://github.com/github/codeql/blob/main/python/ql/test/library-tests/taint/general/printAst.expected)\n- [github-codeql:python/ql/test/library-tests/Yaml/printAst.expected](https://github.com/github/codeql/blob/main/python/ql/test/library-tests/Yaml/printAst.expected)\n';
+
+// src/resources/languages/python_security_query_guide.md
+var python_security_query_guide_default = '# Python Security Query Guide\n\nLanguage-specific notes for writing Python security queries in CodeQL. For the general taint-tracking template and workflow, see the `security_templates` resource.\n\n## Imports\n\n```ql\nimport python\nimport semmle.python.dataflow.new.DataFlow\nimport semmle.python.dataflow.new.TaintTracking\nimport semmle.python.Concepts\nimport semmle.python.ApiGraphs\n```\n\nFor path-problem queries add `import MyFlow::PathGraph` after defining your flow module.\n\n## Sources and Sinks\n\n- **Sources**: Use `RemoteFlowSource` from `semmle.python.dataflow.new.RemoteFlowSources` (covers Flask, Django, FastAPI, and other HTTP frameworks).\n- **Sinks**: Use the `Concepts` module (e.g., `SqlExecution`, `SystemCommandExecution`, `FileSystemAccess`) or model custom sinks as `DataFlow::Node` subclasses.\n- **Barriers**: Use `semmle.python.dataflow.new.BarrierGuards` for common sanitizer patterns.\n\n## ApiGraph Navigation (Framework Modeling)\n\nUse `API::moduleImport("pkg")` to get a reference to an imported module, then chain `.getMember()`, `.getACall()`, `.getReturn()`, `.getParameter()`, and `.getASubclass()` to navigate the API surface. Convert to data flow nodes via `.asSource()` / `.asSink()`.\n\n## Key Library Modules\n\n| Module                                         | Purpose                                     |\n| ---------------------------------------------- | ------------------------------------------- |\n| `semmle.python.dataflow.new.DataFlow`          | Data flow nodes and global analysis         |\n| `semmle.python.dataflow.new.TaintTracking`     | Taint tracking analysis                     |\n| `semmle.python.Concepts`                       | Abstract security concepts (sinks)          |\n| `semmle.python.ApiGraphs`                      | API-graph navigation for framework modeling |\n| `semmle.python.dataflow.new.RemoteFlowSources` | Remote flow source definitions              |\n';
+
+// src/resources/languages/ruby_ast.md
+var ruby_ast_default = '# CodeQL AST nodes for `ruby` language\n\n## CodeQL\'s core AST classes for `ruby` language\n\nBased on comprehensive analysis of GitHub CodeQL Ruby AST test results\n\n### Expression Types\n\n#### Literal Expressions\n\n- **IntegerLiteral**: Numeric constants (1, 2, 100, -5)\n- **StringLiteral**: String constants with StringTextComponent and StringEscapeSequenceComponent\n- **BooleanLiteral**: true/false values\n- **NilLiteral**: nil value\n- **SymbolLiteral**: :foo, :"foo bar" symbols with StringTextComponent\n- **ArrayLiteral**: [1, 2, 3] arrays (desugared to Array.[])\n- **HashLiteral**: {:foo => 1} hashes (desugared to Hash.[])\n- **RegExpLiteral**: /foo.\\*/ regular expressions with RegExpSequence, RegExpConstant, RegExpStar, RegExpDot\n- **RangeLiteral**: 1..10, 1...10 ranges with getBegin/getEnd\n- **HereDoc**: <<SQL heredoc strings\n\n#### Variable Access\n\n- **LocalVariableAccess**: Local variable references\n- **InstanceVariableAccess**: @instance_var with getReceiver\n- **ClassVariableAccess**: @@class_var\n- **GlobalVariableAccess**: $global_var\n- **SelfVariableAccess**: self references\n\n#### Constant Access\n\n- **ConstantReadAccess**: Reading constants with optional getScopeExpr\n- **ConstantAssignment**: Assigning to constants with optional getScopeExpr\n\n#### Method and Call Expressions\n\n- **MethodCall**: Method invocations with getReceiver, getArgument, getBlock\n- **SetterMethodCall**: Setter method calls (foo=)\n- **SuperCall**: super calls with getArgument, getBlock\n\n#### Binary Operations\n\n- **AddExpr**: + addition\n- **SubExpr**: - subtraction\n- **MulExpr**: \\* multiplication\n- **DivExpr**: / division\n- **ModExpr**: % modulo\n- **PowerExpr**: \\*\\* exponentiation\n- **EqExpr**: == equality\n- **NeExpr**: != inequality\n- **LTExpr**: < less than\n- **LEExpr**: <= less than or equal\n- **GTExpr**: > greater than\n- **GEExpr**: >= greater than or equal\n- **SpaceshipExpr**: <=> spaceship operator\n- **RegExpMatchExpr**: =~ regex match\n- **NoRegExpMatchExpr**: !~ regex no match\n\n#### Logical Operations\n\n- **LogicalAndExpr**: && and \'and\'\n- **LogicalOrExpr**: || and \'or\'\n- **NotExpr**: ! negation\n\n#### Bitwise Operations\n\n- **BitwiseAndExpr**: & bitwise and\n- **BitwiseOrExpr**: | bitwise or\n- **BitwiseXorExpr**: ^ bitwise xor\n- **LeftShiftExpr**: << left shift\n- **RightShiftExpr**: >> right shift\n\n#### Unary Operations\n\n- **UnaryMinusExpr**: -value\n- **UnaryPlusExpr**: +value\n- **ComplementExpr**: ~value\n\n#### Assignment Operations\n\n- **AssignExpr**: = assignment\n- **AssignAddExpr**: += (desugared to = and +)\n- **AssignSubExpr**: -= (desugared to = and -)\n- **AssignMulExpr**: _= (desugared to = and _)\n- **AssignDivExpr**: /= (desugared to = and /)\n- **AssignModExpr**: %= (desugared to = and %)\n- **AssignPowerExpr**: **= (desugared to = and **)\n- **AssignLogicalAndExpr**: &&= (desugared to = and &&)\n- **AssignLogicalOrExpr**: ||= (desugared to = and ||)\n- **AssignBitwiseAndExpr**: &= (desugared to = and &)\n- **AssignBitwiseOrExpr**: |= (desugared to = and |)\n- **AssignBitwiseXorExpr**: ^= (desugared to = and ^)\n- **AssignLeftShiftExpr**: <<= (desugared to = and <<)\n- **AssignRightShiftExpr**: >>= (desugared to = and >>)\n\n#### Special Expressions\n\n- **TernaryIfExpr**: condition ? true_val : false_val\n- **SplatExpr**: \\*args splat operator\n- **HashSplatExpr**: \\*\\*kwargs hash splat\n- **DefinedExpr**: defined? operator\n- **DestructuredLhsExpr**: (a, b, c) destructuring assignment left side\n\n### Statement Types\n\n#### Method Definitions\n\n- **Method**: Regular method definitions with getParameter, getStmt\n- **SingletonMethod**: Class method definitions with getObject\n\n#### Class and Module Definitions\n\n- **ClassDeclaration**: Class definitions with optional getSuperclassExpr\n- **ModuleDeclaration**: Module definitions\n\n#### Control Flow Statements\n\n- **IfExpr**: if/elsif/else conditionals with getCondition, getThen, getElse\n- **UnlessExpr**: unless conditionals with getCondition, getThen, getElse\n- **IfModifierExpr**: statement if condition\n- **UnlessModifierExpr**: statement unless condition\n- **CaseExpr**: case statements with getValue, getBranch\n- **WhenClause**: when branches with getPattern, getBody\n- **InClause**: in pattern matching with getPattern, getCondition, getBody\n\n#### Loop Statements\n\n- **WhileExpr**: while loops with getCondition, getBody\n- **WhileModifierExpr**: statement while condition\n- **UntilExpr**: until loops with getCondition, getBody\n- **UntilModifierExpr**: statement until condition\n- **ForExpr**: for loops (desugared to each with blocks)\n\n#### Flow Control\n\n- **NextStmt**: next statement\n- **BreakStmt**: break statement\n- **ReturnStmt**: return statement\n- **RedoStmt**: redo statement\n- **RetryStmt**: retry statement\n\n#### Block Statements\n\n- **BeginExpr**: begin/rescue/ensure/end blocks\n- **RescueClause**: rescue clauses\n- **EnsureClause**: ensure clauses\n- **EndBlock**: END {} blocks\n\n#### Utility Statements\n\n- **UndefStmt**: undef method_name\n- **AliasStmt**: alias new_name old_name\n- **StmtSequence**: Statement sequences\n\n### Parameters\n\n#### Basic Parameters\n\n- **SimpleParameter**: Regular parameters with getDefiningAccess\n- **OptionalParameter**: Parameters with default values, getDefaultValue\n- **KeywordParameter**: Keyword parameters with optional getDefaultValue\n- **SplatParameter**: \\*args parameters with getDefiningAccess\n- **HashSplatParameter**: \\*\\*kwargs parameters with getDefiningAccess\n- **HashSplatNilParameter**: \\*\\*nil parameters\n- **BlockParameter**: &block parameters with getDefiningAccess\n- **DestructuredParameter**: (a, b) destructured parameters with getElement\n\n### Control Flow\n\n#### Conditional Expressions\n\n- **IfExpr**: Complete if/elsif/else with getBranch structure\n- **UnlessExpr**: unless statements with conditional logic\n- **CaseExpr**: case/when/else with pattern matching\n- **TernaryIfExpr**: Inline conditional expressions\n\n#### Loop Constructs\n\n- **WhileExpr**: while condition do body end\n- **UntilExpr**: until condition do body end\n- **ForExpr**: for var in collection (desugared to each)\n\n#### Block Constructs\n\n- **DoBlock**: do |params| body end blocks\n- **BraceBlock**: { |params| body } blocks\n- **Lambda**: -> { } and lambda { } constructs\n\n#### Pattern Matching\n\n- **ArrayPattern**: [a, b, *rest] array patterns\n- **AlternativePattern**: pattern1 | pattern2\n- **AsPattern**: pattern => variable\n- **CapturePattern**: Variable capture patterns\n\n#### Exception Handling\n\n- **BeginExpr**: begin/rescue/ensure structure\n- **RescueClause**: Exception rescue clauses\n- **EnsureClause**: Cleanup ensure clauses\n\n### Method Names and Identifiers\n\n- **MethodName**: Method name identifiers in various contexts\n- **Toplevel**: Top-level program scope\n\n## Expected test results for local `PrintAst.ql` query\n\nThis repo contains a variant of the open-source `PrintAst.ql` query for `ruby` language, with modifications for local testing:\n\n- Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="ruby"` to run the bundled PrintAST query\n- Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results\n\n## Expected test results for open-source `PrintAst.ql` query\n\nThe following links can be fetched to get the expected results for different unit tests of the open-source `PrintAst.ql` query for the `ruby` language:\n\n- https://github.com/github/codeql/blob/main/ruby/ql/test/library-tests/ast/Ast.expected\n- https://github.com/github/codeql/blob/main/ruby/ql/test/library-tests/ast/AstDesugar.expected\n';
 
 // src/types/language-types.ts
 var LANGUAGE_RESOURCES = [
   {
     language: "actions",
-    astFile: "ql/languages/actions/tools/dev/actions_ast.prompt.md"
+    astContent: actions_ast_default
   },
   {
     language: "cpp",
-    astFile: "ql/languages/cpp/tools/dev/cpp_ast.prompt.md",
-    securityFile: "ql/languages/cpp/tools/dev/cpp_security_query_guide.prompt.md"
+    astContent: cpp_ast_default,
+    securityContent: cpp_security_query_guide_default
   },
   {
     language: "csharp",
-    astFile: "ql/languages/csharp/tools/dev/csharp_ast.prompt.md",
-    securityFile: "ql/languages/csharp/tools/dev/csharp_security_query_guide.prompt.md"
+    astContent: csharp_ast_default,
+    securityContent: csharp_security_query_guide_default
   },
   {
     language: "go",
-    astFile: "ql/languages/go/tools/dev/go_ast.prompt.md",
-    securityFile: "ql/languages/go/tools/dev/go_security_query_guide.prompt.md",
-    additionalFiles: {
-      "dataflow": "ql/languages/go/tools/dev/go_dataflow.prompt.md",
-      "library-modeling": "ql/languages/go/tools/dev/go_library_modeling.prompt.md",
-      "basic-queries": "ql/languages/go/tools/dev/go_basic_queries.prompt.md"
+    astContent: go_ast_default,
+    securityContent: go_security_query_guide_default,
+    additionalResources: {
+      "basic-queries": go_basic_queries_default,
+      "dataflow": go_dataflow_default,
+      "library-modeling": go_library_modeling_default
     }
   },
   {
     language: "java",
-    astFile: "ql/languages/java/tools/dev/java_ast.prompt.md"
+    astContent: java_ast_default
   },
   {
     language: "javascript",
-    astFile: "ql/languages/javascript/tools/dev/javascript_ast.prompt.md",
-    securityFile: "ql/languages/javascript/tools/dev/javascript_security_query_guide.prompt.md"
+    astContent: javascript_ast_default,
+    securityContent: javascript_security_query_guide_default
   },
   {
     language: "python",
-    astFile: "ql/languages/python/tools/dev/python_ast.prompt.md",
-    securityFile: "ql/languages/python/tools/dev/python_security_query_guide.prompt.md"
-  },
-  {
-    language: "ql",
-    astFile: "ql/languages/ql/tools/dev/ql_ast.prompt.md"
+    astContent: python_ast_default,
+    securityContent: python_security_query_guide_default
   },
   {
     language: "ruby",
-    astFile: "ql/languages/ruby/tools/dev/ruby_ast.prompt.md"
+    astContent: ruby_ast_default
   }
 ];
 
 // src/resources/language-resources.ts
-init_package_paths();
 init_logger();
-function getQLBasePath() {
-  return workspaceRootDir;
-}
-function loadResourceContent(relativePath) {
-  try {
-    const fullPath = join17(getQLBasePath(), relativePath);
-    if (!existsSync12(fullPath)) {
-      logger.warn(`Resource file not found: ${fullPath}`);
-      return null;
-    }
-    return readFileSync11(fullPath, "utf-8");
-  } catch (error2) {
-    logger.error(`Error loading resource file ${relativePath}:`, error2);
-    return null;
-  }
-}
 function registerLanguageASTResources(server) {
   for (const langResource of LANGUAGE_RESOURCES) {
-    if (!langResource.astFile) continue;
+    if (!langResource.astContent) continue;
     const resourceUri = `codeql://languages/${langResource.language}/ast`;
+    const content = langResource.astContent;
     server.resource(
       `${langResource.language.toUpperCase()} AST Reference`,
       resourceUri,
@@ -63615,34 +63896,21 @@ function registerLanguageASTResources(server) {
         description: `CodeQL AST class reference for ${langResource.language} programs`,
         mimeType: "text/markdown"
       },
-      async () => {
-        const content = loadResourceContent(langResource.astFile);
-        if (!content) {
-          return {
-            contents: [{
-              uri: resourceUri,
-              mimeType: "text/markdown",
-              text: `# ${langResource.language.toUpperCase()} AST Reference
-
-Resource file not found or could not be loaded.`
-            }]
-          };
-        }
-        return {
-          contents: [{
-            uri: resourceUri,
-            mimeType: "text/markdown",
-            text: content
-          }]
-        };
-      }
+      async () => ({
+        contents: [{
+          uri: resourceUri,
+          mimeType: "text/markdown",
+          text: content
+        }]
+      })
     );
   }
 }
 function registerLanguageSecurityResources(server) {
   for (const langResource of LANGUAGE_RESOURCES) {
-    if (!langResource.securityFile) continue;
+    if (!langResource.securityContent) continue;
     const resourceUri = `codeql://languages/${langResource.language}/security`;
+    const content = langResource.securityContent;
     server.resource(
       `${langResource.language.toUpperCase()} Security Patterns`,
       resourceUri,
@@ -63650,34 +63918,20 @@ function registerLanguageSecurityResources(server) {
         description: `CodeQL security query patterns and framework modeling for ${langResource.language}`,
         mimeType: "text/markdown"
       },
-      async () => {
-        const content = loadResourceContent(langResource.securityFile);
-        if (!content) {
-          return {
-            contents: [{
-              uri: resourceUri,
-              mimeType: "text/markdown",
-              text: `# ${langResource.language.toUpperCase()} Security Patterns
-
-Resource file not found or could not be loaded.`
-            }]
-          };
-        }
-        return {
-          contents: [{
-            uri: resourceUri,
-            mimeType: "text/markdown",
-            text: content
-          }]
-        };
-      }
+      async () => ({
+        contents: [{
+          uri: resourceUri,
+          mimeType: "text/markdown",
+          text: content
+        }]
+      })
     );
   }
 }
 function registerLanguageAdditionalResources(server) {
   for (const langResource of LANGUAGE_RESOURCES) {
-    if (!langResource.additionalFiles) continue;
-    for (const [resourceType, filePath] of Object.entries(langResource.additionalFiles)) {
+    if (!langResource.additionalResources) continue;
+    for (const [resourceType, content] of Object.entries(langResource.additionalResources)) {
       const resourceUri = `codeql://languages/${langResource.language}/${resourceType}`;
       server.resource(
         `${langResource.language.toUpperCase()} ${resourceType.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}`,
@@ -63686,27 +63940,13 @@ function registerLanguageAdditionalResources(server) {
           description: `CodeQL ${resourceType.replace("-", " ")} guide for ${langResource.language}`,
           mimeType: "text/markdown"
         },
-        async () => {
-          const content = loadResourceContent(filePath);
-          if (!content) {
-            return {
-              contents: [{
-                uri: resourceUri,
-                mimeType: "text/markdown",
-                text: `# ${langResource.language.toUpperCase()} ${resourceType.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-
-Resource file not found or could not be loaded.`
-              }]
-            };
-          }
-          return {
-            contents: [{
-              uri: resourceUri,
-              mimeType: "text/markdown",
-              text: content
-            }]
-          };
-        }
+        async () => ({
+          contents: [{
+            uri: resourceUri,
+            mimeType: "text/markdown",
+            text: content
+          }]
+        })
       );
     }
   }
@@ -64361,7 +64601,7 @@ var Low = class {
 };
 
 // ../node_modules/lowdb/lib/adapters/node/TextFile.js
-import { readFileSync as readFileSync12, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
+import { readFileSync as readFileSync11, renameSync, writeFileSync as writeFileSync6 } from "node:fs";
 import path3 from "node:path";
 var TextFileSync = class {
   #tempFilename;
@@ -64374,7 +64614,7 @@ var TextFileSync = class {
   read() {
     let data;
     try {
-      data = readFileSync12(this.#filename, "utf-8");
+      data = readFileSync11(this.#filename, "utf-8");
     } catch (e) {
       if (e.code === "ENOENT") {
         return null;
@@ -64425,7 +64665,7 @@ var JSONFileSync = class extends DataFileSync {
 // src/lib/session-data-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync9, writeFileSync as writeFileSync7 } from "fs";
-import { join as join18 } from "path";
+import { join as join17 } from "path";
 import { randomUUID as randomUUID2 } from "crypto";
 
 // src/types/monitoring.ts
@@ -64569,7 +64809,7 @@ var SessionDataManager = class {
     });
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
-    const adapter = new JSONFileSync(join18(this.storageDir, "sessions.json"));
+    const adapter = new JSONFileSync(join17(this.storageDir, "sessions.json"));
     this.db = new Low(adapter, {
       sessions: []
     });
@@ -64601,9 +64841,9 @@ var SessionDataManager = class {
       mkdirSync9(this.storageDir, { recursive: true });
       const subdirs = ["sessions-archive", "exports"];
       for (const subdir of subdirs) {
-        mkdirSync9(join18(this.storageDir, subdir), { recursive: true });
+        mkdirSync9(join17(this.storageDir, subdir), { recursive: true });
       }
-      const configPath = join18(this.storageDir, "config.json");
+      const configPath = join17(this.storageDir, "config.json");
       try {
         writeFileSync7(configPath, JSON.stringify(this.config, null, 2), { flag: "wx" });
       } catch (e) {
@@ -64782,9 +65022,9 @@ var SessionDataManager = class {
       if (!session) return;
       const date3 = new Date(session.endTime || session.startTime);
       const monthDir = `${date3.getFullYear()}-${String(date3.getMonth() + 1).padStart(2, "0")}`;
-      const archiveDir = join18(this.storageDir, "sessions-archive", monthDir);
+      const archiveDir = join17(this.storageDir, "sessions-archive", monthDir);
       mkdirSync9(archiveDir, { recursive: true });
-      const archiveFile = join18(archiveDir, `${sessionId}.json`);
+      const archiveFile = join17(archiveDir, `${sessionId}.json`);
       writeFileSync7(archiveFile, JSON.stringify(session, null, 2));
       await this.db.read();
       this.db.data.sessions = this.db.data.sessions.filter((s) => s.sessionId !== sessionId);
@@ -64836,7 +65076,7 @@ var SessionDataManager = class {
       ...this.config,
       ...configUpdate
     });
-    const configPath = join18(this.storageDir, "config.json");
+    const configPath = join17(this.storageDir, "config.json");
     writeFileSync7(configPath, JSON.stringify(this.config, null, 2));
     logger.info("Updated monitoring configuration");
   }
@@ -64846,7 +65086,7 @@ function parseBoolEnv(envVar, defaultValue) {
   return envVar.toLowerCase() === "true" || envVar === "1";
 }
 var sessionDataManager = new SessionDataManager({
-  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join18(getProjectTmpBase(), ".ql-mcp-tracking"),
+  storageLocation: process.env.MONITORING_STORAGE_LOCATION || join17(getProjectTmpBase(), ".ql-mcp-tracking"),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false)
 });
 
@@ -65722,7 +65962,7 @@ init_package_paths();
 init_logger();
 import_dotenv.default.config({ path: resolve12(packageRootDir, ".env"), quiet: true });
 var PACKAGE_NAME = "codeql-development-mcp-server";
-var VERSION = "2.24.2";
+var VERSION = "2.24.3";
 async function startServer(mode = "stdio") {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
   const codeqlBinary = resolveCodeQLBinary();

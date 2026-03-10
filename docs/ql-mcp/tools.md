@@ -4,62 +4,13 @@
 
 ## Overview
 
-The server exposes **38 default tools** and **11 opt-in monitoring tools**. Default tools are registered on startup; monitoring tools require explicit opt-in (see [Monitoring and Reporting](../mcp-server-monitoring-and-reporting.md)). Users control which tools are enabled in their MCP client configuration.
+The server exposes default tools and opt-in monitoring tools. Default tools are registered on startup; monitoring tools require explicit opt-in (see [Monitoring and Reporting](../mcp-server-monitoring-and-reporting.md)). Users control which tools are enabled in their MCP client configuration.
+
+> **Authoritative reference**: The MCP-served resource at `codeql://server/tools` ([`server/src/resources/server-tools.md`](../../server/src/resources/server-tools.md)) is the canonical documentation for default tools. Update that file when adding, removing, or changing any default tool.
 
 ## Default Tools
 
-### CodeQL CLI Tools
-
-| Tool                          | Description                                                                                                                  |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats (text, csv, json). Supports `--result-set`, `--rows` for pagination       |
-| `codeql_bqrs_info`            | Get metadata about BQRS result files: result sets, column types, row counts. Supports `--format=json` and pagination offsets |
-| `codeql_bqrs_interpret`       | Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats) |
-| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS, and SARIF output                        |
-| `codeql_database_create`      | Create a CodeQL database from source code                                                                                    |
-| `codeql_generate_log-summary` | Create a summary of a structured JSON evaluator event log file                                                               |
-| `codeql_generate_query-help`  | Generate query help documentation from QLDoc comments                                                                        |
-| `codeql_pack_install`         | Install CodeQL pack dependencies                                                                                             |
-| `codeql_pack_ls`              | List CodeQL packs under some local directory path                                                                            |
-| `codeql_query_compile`        | Compile and validate CodeQL queries                                                                                          |
-| `codeql_query_format`         | Automatically format CodeQL source code files                                                                                |
-| `codeql_query_run`            | Execute a CodeQL query against a database                                                                                    |
-| `codeql_resolve_database`     | Resolve database path and validate database structure                                                                        |
-| `codeql_resolve_languages`    | List installed CodeQL extractor packs                                                                                        |
-| `codeql_resolve_library-path` | Resolve library path for CodeQL queries and libraries                                                                        |
-| `codeql_resolve_metadata`     | Resolve and return the key-value metadata pairs from a CodeQL query source file                                              |
-| `codeql_resolve_qlref`        | Resolve qlref files to their corresponding query files                                                                       |
-| `codeql_resolve_queries`      | List available CodeQL queries found on the local filesystem                                                                  |
-| `codeql_resolve_tests`        | Resolve the local filesystem paths of unit tests and/or queries under some base directory                                    |
-| `codeql_test_accept`          | Accept new test results as the expected baseline                                                                             |
-| `codeql_test_extract`         | Extract test databases for CodeQL query tests                                                                                |
-| `codeql_test_run`             | Run CodeQL query tests                                                                                                       |
-
-### Language Server Protocol (LSP) Tools
-
-| Tool                     | Description                                                                                     |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
-| `codeql_lsp_completion`  | Get code completions at a cursor position in a CodeQL file                                      |
-| `codeql_lsp_definition`  | Go to the definition of a CodeQL symbol at a given position                                     |
-| `codeql_lsp_diagnostics` | Authoritative syntax and semantic validation of CodeQL (QL) code via the CodeQL Language Server |
-| `codeql_lsp_references`  | Find all references to a CodeQL symbol at a given position                                      |
-
-### Query Development Tools
-
-| Tool                             | Description                                                                                                        |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `create_codeql_query`            | Create directory structure and files for a new CodeQL query with tests                                             |
-| `find_class_position`            | Find the start/end line and column of a class for quick evaluation                                                 |
-| `find_codeql_query_files`        | Find and track all files and directories related to a CodeQL query, including resolved metadata                    |
-| `find_predicate_position`        | Find the start/end line and column of a predicate for quick evaluation                                             |
-| `list_codeql_databases`          | List CodeQL databases discovered in configured base directories (`CODEQL_DATABASES_BASE_DIRS`). Filter by language |
-| `list_mrva_run_results`          | List MRVA (Multi-Repository Variant Analysis) run results with per-repo details (`CODEQL_MRVA_RUN_RESULTS_DIRS`)   |
-| `list_query_run_results`         | List query run result directories with artifact inventory. Filter by `queryName`, `language`, or `queryPath`       |
-| `profile_codeql_query`           | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log JSON file |
-| `profile_codeql_query_from_logs` | Parse existing CodeQL evaluator logs into a performance profile without re-running the query                       |
-| `quick_evaluate`                 | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                       |
-| `register_database`              | Register a CodeQL database given a local path to the database directory                                            |
-| `validate_codeql_query`          | Quick heuristic validation for CodeQL query structure (does not compile the query)                                 |
+For the complete default tools reference (CodeQL CLI tools, LSP tools, query development tools, common workflows, and input conventions), see [`server/src/resources/server-tools.md`](../../server/src/resources/server-tools.md).
 
 ## Optional Monitoring Tools
 

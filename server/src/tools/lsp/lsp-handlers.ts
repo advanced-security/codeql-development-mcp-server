@@ -206,7 +206,7 @@ export function extractNamesFromDocumentSymbols(symbols: DocumentSymbol[] | Symb
     });
   }
 
-  collectSymbolNames(symbols);
+  collectSymbolNames(symbols as (DocumentSymbol | SymbolInformation)[]);
 
-  return symbolNames
+  return symbolNames;
 }

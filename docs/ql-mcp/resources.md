@@ -4,16 +4,22 @@
 
 ## Overview
 
-The server exposes **4 static learning resources** and a set of **dynamic per-language resources** that supply AI assistants with CodeQL reference material. Resources are read-only and backed by `*.prompt.md` files bundled with the server.
+The server exposes **10 static resources** and a set of **dynamic per-language resources** that supply AI assistants with CodeQL reference material. Resources are read-only and backed by `.md` files bundled with the server.
 
 ## Static Resources
 
-| Resource                    | URI                                 | Description                                         |
-| --------------------------- | ----------------------------------- | --------------------------------------------------- |
-| CodeQL Getting Started      | `codeql://learning/getting-started` | Comprehensive introduction to CodeQL for beginners  |
-| CodeQL Query Basics         | `codeql://learning/query-basics`    | Learn the fundamentals of writing CodeQL queries    |
-| CodeQL Security Templates   | `codeql://templates/security`       | Ready-to-use security query templates               |
-| CodeQL Performance Patterns | `codeql://patterns/performance`     | Best practices for writing efficient CodeQL queries |
+| Resource                       | URI                                           | Description                                                                       |
+| ------------------------------ | --------------------------------------------- | --------------------------------------------------------------------------------- |
+| CodeQL Query Basics            | `codeql://learning/query-basics`              | QL query writing reference: syntax, metadata, patterns, testing                   |
+| CodeQL Test-Driven Development | `codeql://learning/test-driven-development`   | TDD theory and workflow for developing CodeQL queries                             |
+| CodeQL Performance Patterns    | `codeql://patterns/performance`               | Performance profiling and optimization for CodeQL queries                         |
+| CodeQL Server Overview         | `codeql://server/overview`                    | MCP server orientation guide: tools, prompts, resources, and workflows            |
+| CodeQL Server Prompts          | `codeql://server/prompts`                     | Complete reference of MCP prompts for CodeQL development workflows                |
+| CodeQL Server Queries          | `codeql://server/queries`                     | Overview of bundled tools queries: PrintAST, PrintCFG, CallGraphFrom, CallGraphTo |
+| CodeQL Server Tools            | `codeql://server/tools`                       | Complete reference of default MCP tools for CodeQL development                    |
+| CodeQL Security Templates      | `codeql://templates/security`                 | Security query templates for multiple languages and vulnerability classes         |
+| CodeQL Query Unit Testing      | `codeql://guides/query-unit-testing`          | Guide for creating and running unit tests for CodeQL queries                      |
+| CodeQL Dataflow Migration      | `codeql://guides/dataflow-migration-v1-to-v2` | Guide for migrating from legacy v1 dataflow API to modern v2 module-based API     |
 
 ## Language-Specific Resources
 
@@ -28,7 +34,6 @@ Each supported language can expose one or more of the following resource types u
 | java       |       ✓       |                   |                                           |
 | javascript |       ✓       |         ✓         |                                           |
 | python     |       ✓       |         ✓         |                                           |
-| ql         |       ✓       |                   |                                           |
 | ruby       |       ✓       |                   |                                           |
 
 ### Resource Types

@@ -85,13 +85,21 @@ trap cleanup EXIT
 # Use a long-running stdin feeder as a SEPARATE backgrounded process, then
 # connect it to the server via a named pipe (FIFO) to avoid bash subshell
 # PID issues with `A | B &`.
-FIFO="$(mktemp -u)"
-mkfifo "${FIFO}" 2>/dev/null || {
-  # mkfifo may not exist on Windows Git Bash — fall back to /dev/null stdin.
-  # The server will exit immediately on EOF but we can still check if startup
-  # succeeds before the transport closes.
-  FIFO=""
-}
+#
+# On Windows (MSYS2/Git Bash), mkfifo creates MSYS2-specific named pipes
+# that native Windows processes (node.exe) cannot read from reliably.
+# Force the process-substitution fallback on Windows, which creates a
+# Windows-compatible pipe handle that node.exe can read from correctly.
+FIFO=""
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    # Windows: skip mkfifo — native node.exe cannot read from MSYS2 FIFOs.
+    ;;
+  *)
+    FIFO="$(mktemp -u)"
+    mkfifo "${FIFO}" 2>/dev/null || { FIFO=""; }
+    ;;
+esac
 
 if [[ -n "${FIFO}" ]]; then
   # Feed the FIFO in the background so the server's stdin stays open
@@ -101,7 +109,9 @@ if [[ -n "${FIFO}" ]]; then
   node "${SERVER_BUNDLE}" < "${FIFO}" > /dev/null 2> "${STDERR_FILE}" &
   SERVER_PID=$!
 else
-  # Fallback: use process substitution to keep stdin open
+  # Fallback: use process substitution to keep stdin open.
+  # On Windows, Git Bash converts process substitution into a Windows
+  # pipe handle that node.exe (native process) can read correctly.
   node "${SERVER_BUNDLE}" < <(sleep 30) > /dev/null 2> "${STDERR_FILE}" &
   SERVER_PID=$!
 fi
@@ -140,9 +150,9 @@ if kill -0 "${SERVER_PID}" 2>/dev/null; then
 else
   wait "${SERVER_PID}" 2>/dev/null && EXIT_CODE=0 || EXIT_CODE=$?
 
-  # On Windows, mkfifo is unavailable and the process-substitution fallback
-  # may not keep stdin open reliably.  When the STDIO transport receives EOF
-  # the server shuts down cleanly (exit 0) even though startup succeeded.
+  # On Windows, process substitution may not keep stdin open reliably.
+  # When the STDIO transport receives EOF the server shuts down cleanly
+  # (exit 0) even though startup succeeded.
   # Accept that as a pass when the logs prove the server started correctly.
   if [[ "${EXIT_CODE}" -eq 0 ]] && check_startup_logs; then
     echo ""
