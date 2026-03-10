@@ -14,7 +14,19 @@
           "resultSize": 5,
           "pipelineCount": 1,
           "evaluationStrategy": "SIMPLE_INTENSIONAL",
-          "dependencies": []
+          "dependencies": [],
+          "pipelineStages": [
+            {
+              "durationMs": 50,
+              "resultSize": 5,
+              "counts": [
+                5
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
+          ]
         },
         {
           "predicateName": "QueryA::sink/0#def456",
@@ -25,6 +37,18 @@
           "evaluationStrategy": "SIMPLE_INTENSIONAL",
           "dependencies": [
             "QueryA::source/0#abc123"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 30,
+              "resultSize": 3,
+              "counts": [
+                3
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
           ]
         }
       ],
@@ -42,7 +66,19 @@
           "resultSize": 8,
           "pipelineCount": 1,
           "evaluationStrategy": "EXTENSIONAL",
-          "dependencies": []
+          "dependencies": [],
+          "pipelineStages": [
+            {
+              "durationMs": 80,
+              "resultSize": 8,
+              "counts": [
+                8
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
+          ]
         },
         {
           "predicateName": "QueryB::flowStep/2#mno345",
@@ -53,6 +89,18 @@
           "evaluationStrategy": "SIMPLE_INTENSIONAL",
           "dependencies": [
             "QueryB::entryPoint/0#jkl012"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 80,
+              "resultSize": 12,
+              "counts": [
+                12
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
           ]
         },
         {
@@ -65,6 +113,18 @@
           "dependencies": [
             "QueryB::flowStep/2#mno345",
             "QueryB::entryPoint/0#jkl012"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 30,
+              "resultSize": 2,
+              "counts": [
+                2
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
           ]
         }
       ],

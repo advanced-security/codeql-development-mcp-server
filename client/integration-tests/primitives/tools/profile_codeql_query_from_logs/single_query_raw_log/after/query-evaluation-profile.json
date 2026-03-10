@@ -24,6 +24,22 @@
           "evaluationStrategy": "SIMPLE_INTENSIONAL",
           "dependencies": [
             "cached_Files::Container.splitAbsolutePath/2#dispred#43b82b7b"
+          ],
+          "raSteps": [
+            "{3} r1 = SCAN `cached_Files::Container.splitAbsolutePath/2#dispred#43b82b7b` OUTPUT In.1, In.2, In.0",
+            "return r1"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 27.982793,
+              "resultSize": 27,
+              "counts": [
+                27
+              ],
+              "duplicationPercentages": [
+                3
+              ]
+            }
           ]
         },
         {
@@ -36,6 +52,28 @@
           "dependencies": [
             "Files::Container.splitAbsolutePath/2#dispred#43b82b7b_120#join_rhs",
             "files"
+          ],
+          "raSteps": [
+            "{2} r1 = CONSTANT(unique string, unique int)[\"ExampleQuery1.js\",1]",
+            "{1}    | JOIN WITH `Files::Container.splitAbsolutePath/2#dispred#43b82b7b_120#join_rhs` ON FIRST 2 OUTPUT Rhs.2",
+            "{1}    | JOIN WITH files ON FIRST 1 OUTPUT Lhs.0",
+            "return r1"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 3.566771,
+              "resultSize": 1,
+              "counts": [
+                1,
+                1,
+                1
+              ],
+              "duplicationPercentages": [
+                0,
+                0,
+                0
+              ]
+            }
           ]
         },
         {
@@ -47,6 +85,17 @@
           "evaluationStrategy": "SIMPLE_INTENSIONAL",
           "dependencies": [
             "m#Files::Impl::File.getURL/0#dispred#3f789d74#bf"
+          ],
+          "raSteps": [
+            "return `m#Files::Impl::File.getURL/0#dispred#3f789d74#bf`"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 2.426605,
+              "resultSize": 1,
+              "counts": [],
+              "duplicationPercentages": []
+            }
           ]
         },
         {
@@ -59,6 +108,22 @@
           "dependencies": [
             "m#Files::Container.getAbsolutePath/0#dispred#051b95e1#bf",
             "files"
+          ],
+          "raSteps": [
+            "{2} r1 = JOIN `m#Files::Container.getAbsolutePath/0#dispred#051b95e1#bf` WITH files ON FIRST 1 OUTPUT Lhs.0, Rhs.1",
+            "return r1"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 0.468087,
+              "resultSize": 1,
+              "counts": [
+                1
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
           ]
         },
         {
@@ -71,6 +136,25 @@
           "dependencies": [
             "m#Files::Impl::File.getURL/0#dispred#3f789d74#bf",
             "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf"
+          ],
+          "raSteps": [
+            "{4} r1 = JOIN `m#Files::Impl::File.getURL/0#dispred#3f789d74#bf` WITH `Files::Container.getAbsolutePath/0#dispred#051b95e1#bf` ON FIRST 1 OUTPUT Lhs.0, _, Rhs.1, _",
+            "{2}    | REWRITE WITH Tmp.1 := \"file://\", Tmp.3 := \":0:0:0:0\", Out.1 := (Tmp.1 ++ In.2 ++ Tmp.3) KEEPING 2",
+            "return r1"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 6.740615,
+              "resultSize": 1,
+              "counts": [
+                1,
+                1
+              ],
+              "duplicationPercentages": [
+                0,
+                0
+              ]
+            }
           ]
         },
         {
@@ -82,6 +166,22 @@
           "evaluationStrategy": "SIMPLE_INTENSIONAL",
           "dependencies": [
             "Files::Impl::File.getURL/0#dispred#3f789d74#bf"
+          ],
+          "raSteps": [
+            "{1} r1 = SCAN `Files::Impl::File.getURL/0#dispred#3f789d74#bf` OUTPUT In.0",
+            "return r1"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 0.350187,
+              "resultSize": 1,
+              "counts": [
+                1
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
           ]
         },
         {
@@ -93,6 +193,22 @@
           "evaluationStrategy": "SIMPLE_INTENSIONAL",
           "dependencies": [
             "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf"
+          ],
+          "raSteps": [
+            "{1} r1 = SCAN `Files::Container.getAbsolutePath/0#dispred#051b95e1#bf` OUTPUT In.0",
+            "return r1"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 0.302116,
+              "resultSize": 1,
+              "counts": [
+                1
+              ],
+              "duplicationPercentages": [
+                0
+              ]
+            }
           ]
         },
         {
@@ -108,6 +224,79 @@
             "Files::Container.getAbsolutePath/0#dispred#051b95e1#bf_0#antijoin_rhs",
             "Files::Impl::File.getURL/0#dispred#3f789d74#bf",
             "Files::Impl::File.getURL/0#dispred#3f789d74#bf_0#antijoin_rhs"
+          ],
+          "raSteps": [
+            "{2} r1 = JOIN `m#Files::Impl::File.getURL/0#dispred#3f789d74#bf` WITH `Files::Container.getAbsolutePath/0#dispred#051b95e1#bf` ON FIRST 1 OUTPUT Lhs.0, Rhs.1",
+            "",
+            "{1} r2 = `m#Files::Impl::File.getURL/0#dispred#3f789d74#bf` AND NOT `Files::Container.getAbsolutePath/0#dispred#051b95e1#bf_0#antijoin_rhs`(FIRST 1)",
+            "{2}    | SCAN OUTPUT In.0, _",
+            "{2}    | REWRITE WITH Out.1 := \"(no string representation)\"",
+            "",
+            "{2} r3 = r1 UNION r2",
+            "{4}    | JOIN WITH `Files::Impl::File.getURL/0#dispred#3f789d74#bf` ON FIRST 1 OUTPUT Lhs.0, Lhs.1, Rhs.1, _",
+            "{4}    | REWRITE WITH Out.3 := \"Example test code file found for codeql_test_extract example query.\"",
+            "",
+            "{1} r4 = `m#Files::Impl::File.getURL/0#dispred#3f789d74#bf` AND NOT `Files::Container.getAbsolutePath/0#dispred#051b95e1#bf_0#antijoin_rhs`(FIRST 1)",
+            "{2}    | SCAN OUTPUT In.0, _",
+            "{2}    | REWRITE WITH Out.1 := \"(no string representation)\"",
+            "",
+            "{2} r5 = r1 UNION r4",
+            "{2}    | AND NOT `Files::Impl::File.getURL/0#dispred#3f789d74#bf_0#antijoin_rhs`(FIRST 1)",
+            "{4}    | SCAN OUTPUT In.0, In.1, _, _",
+            "{4}    | REWRITE WITH Out.2 := \"\", Out.3 := \"Example test code file found for codeql_test_extract example query.\"",
+            "",
+            "{4} r6 = r3 UNION r5",
+            "return r6"
+          ],
+          "pipelineStages": [
+            {
+              "durationMs": 4.209695,
+              "resultSize": 1,
+              "counts": [
+                1,
+                -1,
+                -1,
+                0,
+                0,
+                -1,
+                1,
+                1,
+                1,
+                -1,
+                -1,
+                0,
+                0,
+                -1,
+                1,
+                -1,
+                0,
+                0,
+                -1,
+                1
+              ],
+              "duplicationPercentages": [
+                0,
+                -1,
+                -1,
+                0,
+                0,
+                -1,
+                0,
+                0,
+                0,
+                -1,
+                -1,
+                0,
+                0,
+                -1,
+                0,
+                -1,
+                0,
+                0,
+                -1,
+                0
+              ]
+            }
           ]
         }
       ],

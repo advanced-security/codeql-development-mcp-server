@@ -1,0 +1,63 @@
+# CodeQL Evaluator Profile — Predicate Detail
+# Generated: 2026-03-10T13:53:19.904Z
+# Log format: raw
+# CodeQL version: 2.23.1
+# Use read_file with line ranges from the JSON response to access individual predicates.
+
+== Query: QueryA.ql ==
+   Total: 200.00ms | Predicates evaluated: 2 | Cache hits: 1
+
+--- QueryA::source/0#abc123 ---
+    Eval order: 1 of 2
+    Duration:   65.00 ms
+    Result:     5 tuples
+    Strategy:   SIMPLE_INTENSIONAL
+    Position:   /workspace/QueryA.ql:10,1-12,5
+    Pipeline stages (1):
+      [1] 50.00ms -> 5 tuples (counts=[5])
+
+--- QueryA::sink/0#def456 ---
+    Eval order: 2 of 2
+    Duration:   45.00 ms
+    Result:     3 tuples
+    Strategy:   SIMPLE_INTENSIONAL
+    Position:   /workspace/QueryA.ql:14,1-16,5
+    Dependencies (1):
+      - QueryA::source/0#abc123
+    Pipeline stages (1):
+      [1] 30.00ms -> 3 tuples (counts=[3])
+
+== Query: QueryB.ql ==
+   Total: 300.00ms | Predicates evaluated: 3 | Cache hits: 0
+
+--- QueryB::entryPoint/0#jkl012 ---
+    Eval order: 1 of 3
+    Duration:   95.00 ms
+    Result:     8 tuples
+    Strategy:   EXTENSIONAL
+    Position:   /workspace/QueryB.ql:8,1-10,3
+    Pipeline stages (1):
+      [1] 80.00ms -> 8 tuples (counts=[8])
+
+--- QueryB::flowStep/2#mno345 ---
+    Eval order: 2 of 3
+    Duration:   95.00 ms
+    Result:     12 tuples
+    Strategy:   SIMPLE_INTENSIONAL
+    Position:   /workspace/QueryB.ql:12,1-18,5
+    Dependencies (1):
+      - QueryB::entryPoint/0#jkl012
+    Pipeline stages (1):
+      [1] 80.00ms -> 12 tuples (counts=[12])
+
+--- QueryB::result/3#pqr678 ---
+    Eval order: 3 of 3
+    Duration:   45.00 ms
+    Result:     2 tuples
+    Strategy:   SIMPLE_INTENSIONAL
+    Position:   /workspace/QueryB.ql:20,1-22,5
+    Dependencies (2):
+      - QueryB::flowStep/2#mno345
+      - QueryB::entryPoint/0#jkl012
+    Pipeline stages (1):
+      [1] 30.00ms -> 2 tuples (counts=[2])
