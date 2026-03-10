@@ -3,7 +3,7 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { searchQlCode } from '../../../../src/tools/codeql/search-ql-code';
 import { cleanupTestTempDir, createTestTempDir } from '../../../utils/temp-dir';
@@ -282,6 +282,39 @@ describe('searchQlCode', () => {
 
       expect(result.results[0].contextBefore).toEqual(['before']);
       expect(result.results[0].contextAfter).toEqual(['after']);
+    });
+  });
+
+  describe('.codeql directory exclusion', () => {
+    it('should skip .codeql directories by default', async () => {
+      tempDir = createTestTempDir('search-ql-code');
+      const srcDir = join(tempDir, 'src');
+      const codeqlDir = join(tempDir, '.codeql', 'pack');
+      mkdirSync(srcDir, { recursive: true });
+      mkdirSync(codeqlDir, { recursive: true });
+      writeFileSync(join(srcDir, 'Query.qll'), 'class MySource {}\n');
+      writeFileSync(join(codeqlDir, 'Query.qll'), 'class MySource {}\n');
+
+      const result = await searchQlCode({ pattern: 'MySource', paths: [tempDir] });
+
+      expect(result.totalMatches).toBe(1);
+      expect(result.results[0].filePath).toContain('src');
+      expect(result.results[0].filePath).not.toContain('.codeql');
+    });
+
+    it('should also skip node_modules directories', async () => {
+      tempDir = createTestTempDir('search-ql-code');
+      const srcDir = join(tempDir, 'lib');
+      const nmDir = join(tempDir, 'node_modules', 'dep');
+      mkdirSync(srcDir, { recursive: true });
+      mkdirSync(nmDir, { recursive: true });
+      writeFileSync(join(srcDir, 'Lib.qll'), 'findme\n');
+      writeFileSync(join(nmDir, 'Dep.qll'), 'findme\n');
+
+      const result = await searchQlCode({ pattern: 'findme', paths: [tempDir] });
+
+      expect(result.totalMatches).toBe(1);
+      expect(result.results[0].filePath).toContain('lib');
     });
   });
 });

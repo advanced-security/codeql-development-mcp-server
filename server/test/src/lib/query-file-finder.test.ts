@@ -302,4 +302,72 @@ describe('Query File Finder', () => {
       }
     });
   });
+
+  describe('hints', () => {
+    it('should include hint about missing test directory', async () => {
+      const srcDir = path.join(testDir, 'javascript', 'src', 'NoTestQuery');
+      fs.mkdirSync(srcDir, { recursive: true });
+
+      const queryFile = path.join(srcDir, 'NoTestQuery.ql');
+      fs.writeFileSync(queryFile, 'import javascript\nselect 1');
+
+      const result = await findCodeQLQueryFiles(queryFile, undefined, false);
+
+      expect(result.hints).toBeDefined();
+      expect(result.hints.some((h: string) => h.includes('No test directory'))).toBe(true);
+    });
+
+    it('should include hint about missing documentation', async () => {
+      const srcDir = path.join(testDir, 'javascript', 'src', 'NoDocQuery');
+      fs.mkdirSync(srcDir, { recursive: true });
+
+      const queryFile = path.join(srcDir, 'NoDocQuery.ql');
+      fs.writeFileSync(queryFile, 'import javascript\nselect 1');
+
+      const result = await findCodeQLQueryFiles(queryFile, undefined, false);
+
+      expect(result.hints).toBeDefined();
+      expect(result.hints.some((h: string) => h.includes('No query documentation'))).toBe(true);
+    });
+
+    it('should have no test-related hints when tests exist', async () => {
+      const srcDir = path.join(testDir, 'javascript', 'src', 'WithTestQuery');
+      const testDirPath = path.join(testDir, 'javascript', 'test', 'WithTestQuery');
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.mkdirSync(testDirPath, { recursive: true });
+
+      const queryFile = path.join(srcDir, 'WithTestQuery.ql');
+      const mdFile = path.join(srcDir, 'WithTestQuery.md');
+      const testCodeFile = path.join(testDirPath, 'WithTestQuery.js');
+      const expectedFile = path.join(testDirPath, 'WithTestQuery.expected');
+
+      fs.writeFileSync(queryFile, 'import javascript\nselect 1');
+      fs.writeFileSync(mdFile, '# WithTestQuery');
+      fs.writeFileSync(testCodeFile, '// test');
+      fs.writeFileSync(expectedFile, '');
+
+      const result = await findCodeQLQueryFiles(queryFile, undefined, false);
+
+      expect(result.hints).toBeDefined();
+      expect(result.hints.some((h: string) => h.includes('No test directory'))).toBe(false);
+      expect(result.hints.some((h: string) => h.includes('No query documentation'))).toBe(false);
+    });
+
+    it('should include hint about missing .expected when test dir exists', async () => {
+      const srcDir = path.join(testDir, 'javascript', 'src', 'NoExpQuery');
+      const testDirPath = path.join(testDir, 'javascript', 'test', 'NoExpQuery');
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.mkdirSync(testDirPath, { recursive: true });
+
+      const queryFile = path.join(srcDir, 'NoExpQuery.ql');
+      const mdFile = path.join(srcDir, 'NoExpQuery.md');
+      fs.writeFileSync(queryFile, 'import javascript\nselect 1');
+      fs.writeFileSync(mdFile, '# NoExpQuery');
+
+      const result = await findCodeQLQueryFiles(queryFile, undefined, false);
+
+      expect(result.hints).toBeDefined();
+      expect(result.hints.some((h: string) => h.includes('.expected'))).toBe(true);
+    });
+  });
 });

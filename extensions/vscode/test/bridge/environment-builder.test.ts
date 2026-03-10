@@ -87,9 +87,40 @@ describe('EnvironmentBuilder', () => {
     expect(env.TRANSPORT_MODE).toBe('stdio');
   });
 
-  it('should include CODEQL_MCP_TMP_DIR under global storage', async () => {
+  it('should include CODEQL_MCP_TMP_DIR under global storage when no workspace', async () => {
     const env = await builder.build();
     expect(env.CODEQL_MCP_TMP_DIR).toBe('/mock/global-storage/codeql-mcp/tmp');
+  });
+
+  it('should set CODEQL_MCP_TMP_DIR to workspace scratch dir when workspace folders exist', async () => {
+    const vscode = await import('vscode');
+    const origFolders = vscode.workspace.workspaceFolders;
+    (vscode.workspace.workspaceFolders as any) = [
+      { uri: { fsPath: '/mock/workspace' }, name: 'ws', index: 0 },
+    ];
+
+    builder.invalidate();
+    const env = await builder.build();
+    expect(env.CODEQL_MCP_TMP_DIR).toBe('/mock/workspace/.codeql/ql-mcp');
+    expect(env.CODEQL_MCP_SCRATCH_DIR).toBe('/mock/workspace/.codeql/ql-mcp');
+
+    (vscode.workspace.workspaceFolders as any) = origFolders;
+  });
+
+  it('should set CODEQL_MCP_WORKSPACE_FOLDERS with all workspace folder paths', async () => {
+    const vscode = await import('vscode');
+    const { delimiter } = await import('path');
+    const origFolders = vscode.workspace.workspaceFolders;
+    (vscode.workspace.workspaceFolders as any) = [
+      { uri: { fsPath: '/mock/ws-a' }, name: 'a', index: 0 },
+      { uri: { fsPath: '/mock/ws-b' }, name: 'b', index: 1 },
+    ];
+
+    builder.invalidate();
+    const env = await builder.build();
+    expect(env.CODEQL_MCP_WORKSPACE_FOLDERS).toBe(['/mock/ws-a', '/mock/ws-b'].join(delimiter));
+
+    (vscode.workspace.workspaceFolders as any) = origFolders;
   });
 
   it('should include CODEQL_ADDITIONAL_PACKS with database storage path', async () => {

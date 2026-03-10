@@ -273,6 +273,20 @@ export async function findCodeQLQueryFiles(
   const testPackPath = findNearestQlpack(testDir);
   const testPackDir = testPackPath ? path.dirname(testPackPath) : testDir;
 
+  // Build contextual hints for LLM consumers
+  const hints: string[] = [];
+  if (!testDirectory.exists) {
+    hints.push('No test directory found. To run this query you will need a user-provided database (databasePath). Test-driven profiling is not available without tests.');
+  } else if (testCodePaths.length === 0) {
+    hints.push('Test directory exists but contains no test source code files. Consider creating test code to enable test-driven workflows.');
+  }
+  if (!expectedResultsPath.exists && testDirectory.exists) {
+    hints.push('No .expected file found. Run codeql_test_run to generate initial expected results, then verify them.');
+  }
+  if (!documentationPath.exists) {
+    hints.push('No query documentation (.md) file found. Use the document_codeql_query prompt to generate one.');
+  }
+
   return {
     queryName,
     language: detectedLanguage,
@@ -297,6 +311,8 @@ export async function findCodeQLQueryFiles(
         testDatabaseDir: testDatabasePath.path
       }
     },
+
+    hints,
 
     metadata,
 

@@ -9,7 +9,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createReadStream, lstatSync, readdirSync, readFileSync, realpathSync } from 'fs';
-import { extname, join, resolve } from 'path';
+import { basename, extname, join, resolve } from 'path';
 import { createInterface } from 'readline';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
@@ -29,6 +29,9 @@ const MAX_CONTEXT_LINES = 50;
 
 /** Maximum allowed value for `maxResults`. */
 const MAX_MAX_RESULTS = 10_000;
+
+/** Directory names to skip during traversal (compiled pack caches, deps). */
+const SKIP_DIRS = new Set(['.codeql', 'node_modules', '.git']);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,6 +90,9 @@ function collectFiles(
       }
       fileCount.value++;
     } else if (stat.isDirectory()) {
+      // Skip well-known directories that mirror source or contain deps
+      if (SKIP_DIRS.has(basename(p))) return;
+
       // Track visited directories by real path to prevent cycles
       let realPath: string;
       try {
@@ -328,7 +334,7 @@ export function registerSearchQlCodeTool(server: McpServer): void {
     },
     async ({ pattern, paths, includeExtensions, caseSensitive, contextLines, maxResults }) => {
       try {
-        const result = searchQlCode({
+        const result = await searchQlCode({
           pattern,
           paths,
           includeExtensions,

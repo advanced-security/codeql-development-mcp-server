@@ -31255,7 +31255,7 @@ var require_view = __commonJS({
     var path4 = __require("node:path");
     var fs3 = __require("node:fs");
     var dirname8 = path4.dirname;
-    var basename7 = path4.basename;
+    var basename8 = path4.basename;
     var extname3 = path4.extname;
     var join19 = path4.join;
     var resolve14 = path4.resolve;
@@ -31294,7 +31294,7 @@ var require_view = __commonJS({
         var root = roots[i];
         var loc = resolve14(root, name);
         var dir = dirname8(loc);
-        var file = basename7(loc);
+        var file = basename8(loc);
         path5 = this.resolve(dir, file);
       }
       return path5;
@@ -31324,7 +31324,7 @@ var require_view = __commonJS({
       if (stat && stat.isFile()) {
         return path5;
       }
-      path5 = join19(dir, basename7(file, ext), "index" + ext);
+      path5 = join19(dir, basename8(file, ext), "index" + ext);
       stat = tryStat(path5);
       if (stat && stat.isFile()) {
         return path5;
@@ -34608,7 +34608,7 @@ var require_content_disposition = __commonJS({
     "use strict";
     module.exports = contentDisposition;
     module.exports.parse = parse4;
-    var basename7 = __require("path").basename;
+    var basename8 = __require("path").basename;
     var ENCODE_URL_ATTR_CHAR_REGEXP = /[\x00-\x20"'()*,/:;<=>?@[\\\]{}\x7f]/g;
     var HEX_ESCAPE_REGEXP = /%[0-9A-Fa-f]{2}/;
     var HEX_ESCAPE_REPLACE_REGEXP = /%([0-9A-Fa-f]{2})/g;
@@ -34643,9 +34643,9 @@ var require_content_disposition = __commonJS({
       if (typeof fallback === "string" && NON_LATIN1_REGEXP.test(fallback)) {
         throw new TypeError("fallback must be ISO-8859-1 string");
       }
-      var name = basename7(filename);
+      var name = basename8(filename);
       var isQuotedString = TEXT_REGEXP.test(name);
-      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name) : basename7(fallback);
+      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name) : basename8(fallback);
       var hasFallback = typeof fallbackName === "string" && fallbackName !== name;
       if (hasFallback || !isQuotedString || HEX_ESCAPE_REGEXP.test(name)) {
         params["filename*"] = name;
@@ -57007,6 +57007,26 @@ init_package_paths();
 init_temp_dir();
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync5, readdirSync as readdirSync2, statSync as statSync2 } from "fs";
 import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join6, resolve as resolve4 } from "path";
+function resolveDatabasePath(dbPath) {
+  if (existsSync4(join6(dbPath, "codeql-database.yml"))) {
+    return dbPath;
+  }
+  try {
+    const entries = readdirSync2(dbPath);
+    for (const entry of entries) {
+      const candidate = join6(dbPath, entry);
+      try {
+        if (statSync2(candidate).isDirectory() && existsSync4(join6(candidate, "codeql-database.yml"))) {
+          logger.info(`Resolved multi-language database directory: ${dbPath} -> ${candidate}`);
+          return candidate;
+        }
+      } catch {
+      }
+    }
+  } catch {
+  }
+  return dbPath;
+}
 var defaultCLIResultProcessor = (result, _params) => {
   if (!result.success) {
     return `Command failed (exit code ${result.exitCode || "unknown"}):
@@ -57122,25 +57142,7 @@ function registerCLITool(server, definition) {
           positionalArgs = [...positionalArgs, qlref];
         }
         if (options.database && name === "codeql_resolve_database") {
-          let dbPath = options.database;
-          if (!existsSync4(join6(dbPath, "codeql-database.yml"))) {
-            try {
-              const entries = readdirSync2(dbPath);
-              for (const entry of entries) {
-                const candidate = join6(dbPath, entry);
-                try {
-                  if (statSync2(candidate).isDirectory() && existsSync4(join6(candidate, "codeql-database.yml"))) {
-                    logger.info(`Resolved database directory: ${dbPath} -> ${candidate}`);
-                    dbPath = candidate;
-                    break;
-                  }
-                } catch {
-                }
-              }
-            } catch {
-            }
-          }
-          positionalArgs = [...positionalArgs, dbPath];
+          positionalArgs = [...positionalArgs, resolveDatabasePath(options.database)];
           delete options.database;
         }
         if (options.database && name === "codeql_database_create") {
@@ -57149,7 +57151,7 @@ function registerCLITool(server, definition) {
         }
         if (name === "codeql_database_analyze") {
           if (options.database) {
-            positionalArgs = [...positionalArgs, options.database];
+            positionalArgs = [...positionalArgs, resolveDatabasePath(options.database)];
             delete options.database;
           }
           if (options.queries) {
@@ -57179,6 +57181,9 @@ function registerCLITool(server, definition) {
             if (options.database && typeof options.database === "string" && !isAbsolute4(options.database)) {
               options.database = resolve4(getUserWorkspaceDir(), options.database);
               logger.info(`Resolved database path to: ${options.database}`);
+            }
+            if (options.database && typeof options.database === "string") {
+              options.database = resolveDatabasePath(options.database);
             }
             const resolvedQuery = await resolveQueryPath(params, logger);
             if (resolvedQuery) {
@@ -60737,6 +60742,18 @@ async function findCodeQLQueryFiles(queryFilePath, language, resolveMetadata = t
   }
   const testPackPath = findNearestQlpack(testDir);
   const testPackDir = testPackPath ? path.dirname(testPackPath) : testDir;
+  const hints = [];
+  if (!testDirectory.exists) {
+    hints.push("No test directory found. To run this query you will need a user-provided database (databasePath). Test-driven profiling is not available without tests.");
+  } else if (testCodePaths.length === 0) {
+    hints.push("Test directory exists but contains no test source code files. Consider creating test code to enable test-driven workflows.");
+  }
+  if (!expectedResultsPath.exists && testDirectory.exists) {
+    hints.push("No .expected file found. Run codeql_test_run to generate initial expected results, then verify them.");
+  }
+  if (!documentationPath.exists) {
+    hints.push("No query documentation (.md) file found. Use the document_codeql_query prompt to generate one.");
+  }
   return {
     queryName,
     language: detectedLanguage,
@@ -60759,6 +60776,7 @@ async function findCodeQLQueryFiles(queryFilePath, language, resolveMetadata = t
         testDatabaseDir: testDatabasePath.path
       }
     },
+    hints,
     metadata,
     missingFiles,
     packMetadata,
@@ -62884,13 +62902,14 @@ var codeqlResolveTestsTool = {
 
 // src/tools/codeql/search-ql-code.ts
 import { createReadStream as createReadStream3, lstatSync, readdirSync as readdirSync8, readFileSync as readFileSync9, realpathSync } from "fs";
-import { extname as extname2, join as join15, resolve as resolve9 } from "path";
+import { basename as basename6, extname as extname2, join as join15, resolve as resolve9 } from "path";
 import { createInterface as createInterface3 } from "readline";
 init_logger();
 var MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 var MAX_FILES_TRAVERSED = 1e4;
 var MAX_CONTEXT_LINES = 50;
 var MAX_MAX_RESULTS = 1e4;
+var SKIP_DIRS2 = /* @__PURE__ */ new Set([".codeql", "node_modules", ".git"]);
 function collectFiles(paths, extensions, fileCount) {
   const files = [];
   const visitedDirs = /* @__PURE__ */ new Set();
@@ -62909,6 +62928,7 @@ function collectFiles(paths, extensions, fileCount) {
       }
       fileCount.value++;
     } else if (stat.isDirectory()) {
+      if (SKIP_DIRS2.has(basename6(p))) return;
       let realPath;
       try {
         realPath = realpathSync(p);
@@ -63066,7 +63086,7 @@ function registerSearchQlCodeTool(server) {
     },
     async ({ pattern, paths, includeExtensions, caseSensitive, contextLines, maxResults }) => {
       try {
-        const result = searchQlCode({
+        const result = await searchQlCode({
           pattern,
           paths,
           includeExtensions,
@@ -64185,7 +64205,7 @@ function registerLanguageResources(server) {
 }
 
 // src/prompts/workflow-prompts.ts
-import { basename as basename6 } from "path";
+import { basename as basename7 } from "path";
 
 // src/prompts/document-codeql-query.prompt.md
 var document_codeql_query_prompt_default = '---\nagent: agent\n---\n\n# Document a CodeQL Query\n\nThis prompt guides you through creating or updating documentation for a CodeQL query file. The documentation is stored as a sibling file to the query with a standardized markdown format.\n\n## Purpose\n\nThe `document_codeql_query` prompt creates/updates **query documentation files** for a specific version of a CodeQL query. Documentation files are stored alongside the query file and provide concise yet comprehensive information about what the query does.\n\nFor creating **workshop learning content** with detailed explanations and visual diagrams, use the `explain_codeql_query` prompt instead.\n\n## Required Inputs\n\n- **queryPath**: Path to the CodeQL query file (`.ql` or `.qlref`)\n- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, swift)\n\n## Documentation File Conventions\n\n### File Location and Naming\n\nFor a query file `QueryFileBaseName.ql`, the documentation file should be:\n\n- **Primary**: `QueryFileBaseName.md` (markdown format, preferred)\n- **Legacy**: `QueryFileBaseName.qhelp` (XML-based query help format)\n\nDocumentation files are **siblings** to the query file (same directory).\n\n### Handling Existing Documentation\n\n1. **No documentation exists**: Create new `QueryFileBaseName.md` file\n2. **`.md` file exists**: Update the existing markdown file\n3. **`.qhelp` file exists**: Use #codeql_generate_query-help tool to convert to markdown, then update\n\n## Workflow Checklist\n\nUse the following MCP server tools to gather context before creating documentation:\n\n### Phase 1: Query Discovery\n\n- [ ] **Step 1: Locate query files**\n  - Tool: #find_codeql_query_files\n  - Parameters: `queryPath` = provided query path\n  - Gather: Query source file path, existing documentation files, test files\n  - Check: Does `QueryFileBaseName.md` or `QueryFileBaseName.qhelp` exist?\n\n- [ ] **Step 2: Read query metadata**\n  - Tool: #codeql_resolve_metadata\n  - Parameters: `query` = query file path\n  - Gather: @name, @description, @kind, @id, @tags, @precision, @severity\n\n### Phase 2: Convert Existing qhelp (if needed)\n\n- [ ] **Step 3: Convert qhelp to markdown** (only if `.qhelp` exists)\n  - Tool: #codeql_generate_query-help\n  - Parameters: `query` = query file path, `format` = "markdown"\n  - Use output as starting point for updated documentation\n\n### Phase 3: Gather Query Context\n\n- [ ] **Step 4: Validate query structure**\n  - Tool: #validate_codeql_query\n  - Parameters: `query` = query source code\n  - Gather: Structural validation, suggestions\n  - Note: This is a heuristic check only \u2014 for full validation, use #codeql_query_compile\n\n- [ ] **Step 5: Explore query types** (if deeper understanding needed)\n  - Tool: #codeql_lsp_definition \u2014 navigate to class/predicate definitions\n  - Tool: #codeql_lsp_completion \u2014 explore member predicates on types used in the query\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri` (pack root)\n  - Run #codeql_pack_install first \u2014 LSP tools require resolved dependencies\n\n- [ ] **Step 6: Run tests** (if tests exist from Step 1)\n  - Tool: #codeql_test_run\n  - Parameters: `tests` = test directories\n  - Gather: Pass/fail status, confirms query behavior\n\n### Phase 4: Create/Update Documentation\n\nBased on gathered context, create or update the documentation file.\n\n## Documentation Format\n\nThe documentation file (`QueryFileBaseName.md`) should follow this standardized format with these sections:\n\n### Section 1: Title and Description\n\n- H1 heading with the query name from @name metadata\n- One paragraph description from @description, expanded if needed\n\n### Section 2: Metadata Table\n\nA table with these rows:\n\n- ID: The @id value in backticks\n- Kind: The @kind value (problem, path-problem, etc.)\n- Severity: The @severity value\n- Precision: The @precision value\n- Tags: The @tags values\n\n### Section 3: Overview\n\nConcise explanation of what vulnerability/issue this query detects and why it matters. 2-4 sentences.\n\n### Section 4: Recommendation\n\nBrief guidance on how developers should fix issues flagged by this query. Include code patterns to use or avoid.\n\n### Section 5: Example\n\nTwo subsections:\n\n- **Vulnerable Code**: A code block showing a pattern that would be flagged by this query\n- **Fixed Code**: A code block showing the corrected version of the code\n\nUse the appropriate language identifier for the code blocks (e.g., `javascript`, `python`, `java`).\n\n### Section 6: References\n\nA list of links to:\n\n- Relevant CWE if security query\n- Relevant documentation or standards\n- CodeQL documentation for related concepts\n\n## Output Actions\n\nAfter generating documentation content:\n\n1. **For new documentation**: Create the file at `[QueryDirectory]/QueryFileBaseName.md`\n2. **For existing `.md` file**: Update the file with new content, preserving any custom sections\n3. **For existing `.qhelp` file**: Create new `.md` file (keeping `.qhelp` for backward compatibility)\n\n## Important Notes\n\n- **Be concise**: Documentation should be brief but complete. This is reference documentation, not tutorial content.\n- **Keep it current**: Documentation should reflect the current behavior of the query.\n- **Use examples from tests**: If unit tests exist, use those code patterns as examples.\n- **Standard format**: Always use the format above for consistency across all query documentation.\n- **Metadata accuracy**: Ensure documented metadata matches actual query metadata.\n- **For workshops**: Use `explain_codeql_query` prompt when creating workshop content that requires deeper explanations and visual diagrams.\n';
@@ -64395,7 +64415,7 @@ ${content}`
     workshopCreationWorkflowSchema.shape,
     async ({ queryPath, language, workshopName, numStages }) => {
       const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
-      const derivedName = workshopName || basename6(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
+      const derivedName = workshopName || basename7(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
       const contextSection = buildWorkshopContext(
         queryPath,
         language,
