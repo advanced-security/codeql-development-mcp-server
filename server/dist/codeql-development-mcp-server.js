@@ -57013,17 +57013,30 @@ function resolveDatabasePath(dbPath) {
   }
   try {
     const entries = readdirSync2(dbPath);
+    const candidates = [];
     for (const entry of entries) {
       const candidate = join6(dbPath, entry);
       try {
         if (statSync2(candidate).isDirectory() && existsSync4(join6(candidate, "codeql-database.yml"))) {
-          logger.info(`Resolved multi-language database directory: ${dbPath} -> ${candidate}`);
-          return candidate;
+          candidates.push(candidate);
         }
       } catch {
       }
     }
-  } catch {
+    if (candidates.length === 1) {
+      logger.info(`Resolved database directory: ${dbPath} -> ${candidates[0]}`);
+      return candidates[0];
+    }
+    if (candidates.length > 1) {
+      const names = candidates.map((c) => basename2(c)).join(", ");
+      throw new Error(
+        `Ambiguous database path: ${dbPath} contains multiple databases (${names}). Specify the full path to the desired database subfolder.`
+      );
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Ambiguous database path")) {
+      throw err;
+    }
   }
   return dbPath;
 }
@@ -63058,9 +63071,21 @@ async function searchQlCode(params) {
   for (const file of filesToSearch) {
     if (collectedEnough) {
       try {
-        const content = readFileSync9(file, "utf-8");
-        for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-          if (regex.test(line)) totalMatches++;
+        const st = lstatSync(file);
+        if (!st.isFile()) continue;
+        if (st.size > MAX_FILE_SIZE_BYTES) {
+          const rl = createInterface3({
+            input: createReadStream3(file, { encoding: "utf-8" }),
+            crlfDelay: Infinity
+          });
+          for await (const line of rl) {
+            if (regex.test(line)) totalMatches++;
+          }
+        } else {
+          const content = readFileSync9(file, "utf-8");
+          for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+            if (regex.test(line)) totalMatches++;
+          }
         }
       } catch {
       }

@@ -18,9 +18,12 @@ export type { CLIExecutionResult } from './cli-executor';
 /**
  * Resolve a database path that may point to a multi-language database root
  * (i.e. a directory that does not contain `codeql-database.yml` itself but
- * has a single language subfolder that does). This handles the common case
- * where vscode-codeql stores databases in a parent directory with language
+ * has a language subfolder that does). This handles the common case where
+ * vscode-codeql stores databases in a parent directory with language
  * subfolders like `javascript/`, `python/`, etc.
+ *
+ * When multiple candidate children are found, throws an error describing
+ * the ambiguity so the caller can pick the right one explicitly.
  */
 function resolveDatabasePath(dbPath: string): string {
   if (existsSync(join(dbPath, 'codeql-database.yml'))) {
@@ -28,19 +31,34 @@ function resolveDatabasePath(dbPath: string): string {
   }
   try {
     const entries = readdirSync(dbPath);
+    const candidates: string[] = [];
     for (const entry of entries) {
       const candidate = join(dbPath, entry);
       try {
         if (statSync(candidate).isDirectory() &&
             existsSync(join(candidate, 'codeql-database.yml'))) {
-          logger.info(`Resolved multi-language database directory: ${dbPath} -> ${candidate}`);
-          return candidate;
+          candidates.push(candidate);
         }
       } catch {
         // Skip inaccessible entries
       }
     }
-  } catch {
+    if (candidates.length === 1) {
+      logger.info(`Resolved database directory: ${dbPath} -> ${candidates[0]}`);
+      return candidates[0];
+    }
+    if (candidates.length > 1) {
+      const names = candidates.map((c) => basename(c)).join(', ');
+      throw new Error(
+        `Ambiguous database path: ${dbPath} contains multiple databases (${names}). ` +
+        'Specify the full path to the desired database subfolder.'
+      );
+    }
+  } catch (err) {
+    // Re-throw ambiguity errors
+    if (err instanceof Error && err.message.startsWith('Ambiguous database path')) {
+      throw err;
+    }
     // Parent directory not readable — return original path
   }
   return dbPath;

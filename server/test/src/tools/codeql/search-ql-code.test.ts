@@ -174,6 +174,26 @@ describe('searchQlCode', () => {
       expect(result.results).toHaveLength(5);
     });
 
+    it('should report accurate totalMatches across files when truncated', async () => {
+      tempDir = createTestTempDir('search-ql-code');
+      // Create 5 files, each with 4 matches = 20 total matches
+      for (let i = 0; i < 5; i++) {
+        const lines = Array.from({ length: 4 }, (_, j) => `match_${i}_${j}`).join('\n');
+        writeFileSync(join(tempDir, `File${i}.qll`), lines);
+      }
+
+      const result = await searchQlCode({
+        pattern: 'match_',
+        paths: [tempDir],
+        maxResults: 3
+      });
+
+      expect(result.returnedMatches).toBe(3);
+      expect(result.totalMatches).toBe(20);
+      expect(result.truncated).toBe(true);
+      expect(result.filesSearched).toBe(5);
+    });
+
     it('should not set truncated when within limit', async () => {
       const dir = setupTestFiles({
         'Test.qll': 'match1\nmatch2\nmatch3\n'

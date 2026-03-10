@@ -1,5 +1,4 @@
 # CodeQL Evaluator Profile — Predicate Detail
-# Generated: 2026-03-10T18:36:19.453Z
 # Log format: raw
 # CodeQL version: 2.23.1
 # Use read_file with line ranges from the JSON response to access individual predicates.
