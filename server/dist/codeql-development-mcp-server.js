@@ -62967,42 +62967,55 @@ function collectFiles(paths, extensions, fileCount) {
   }
   return files;
 }
-function searchFileSmall(filePath, regex, contextLines) {
+async function searchFile(filePath, regex, contextLines, maxCollect) {
   let content;
   try {
     content = readFileSync9(filePath, "utf-8");
   } catch {
-    return [];
+    return { matches: [], totalCount: 0 };
+  }
+  if (Buffer.byteLength(content, "utf-8") > MAX_FILE_SIZE_BYTES) {
+    return searchFileStreaming(filePath, regex, contextLines, maxCollect);
   }
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const matches = [];
+  let totalCount = 0;
   for (let i = 0; i < lines.length; i++) {
     if (regex.test(lines[i])) {
-      const match = {
-        filePath,
-        lineNumber: i + 1,
-        lineContent: lines[i]
-      };
-      if (contextLines > 0) {
-        const beforeStart = Math.max(0, i - contextLines);
-        const afterEnd = Math.min(lines.length - 1, i + contextLines);
-        match.contextBefore = lines.slice(beforeStart, i);
-        match.contextAfter = lines.slice(i + 1, afterEnd + 1);
+      totalCount++;
+      if (matches.length < maxCollect) {
+        const match = {
+          filePath,
+          lineNumber: i + 1,
+          lineContent: lines[i]
+        };
+        if (contextLines > 0) {
+          const beforeStart = Math.max(0, i - contextLines);
+          const afterEnd = Math.min(lines.length - 1, i + contextLines);
+          match.contextBefore = lines.slice(beforeStart, i);
+          match.contextAfter = lines.slice(i + 1, afterEnd + 1);
+        }
+        matches.push(match);
       }
-      matches.push(match);
     }
   }
-  return matches;
+  return { matches, totalCount };
 }
-async function searchFileLarge(filePath, regex, contextLines) {
+async function searchFileStreaming(filePath, regex, contextLines, maxCollect) {
   const matches = [];
   const recentLines = [];
   const pending = [];
   let lineNumber = 0;
-  const rl = createInterface3({
-    input: createReadStream3(filePath, { encoding: "utf-8" }),
-    crlfDelay: Infinity
-  });
+  let totalCount = 0;
+  let rl;
+  try {
+    rl = createInterface3({
+      input: createReadStream3(filePath, { encoding: "utf-8" }),
+      crlfDelay: Infinity
+    });
+  } catch {
+    return { matches: [], totalCount: 0 };
+  }
   for await (const line of rl) {
     lineNumber++;
     for (const p of pending) {
@@ -63015,17 +63028,20 @@ async function searchFileLarge(filePath, regex, contextLines) {
       pending.shift();
     }
     if (regex.test(line)) {
-      const match = {
-        filePath,
-        lineNumber,
-        lineContent: line
-      };
-      if (contextLines > 0) {
-        match.contextBefore = recentLines.slice(-contextLines);
-        match.contextAfter = [];
-        pending.push({ match, afterNeeded: contextLines });
+      totalCount++;
+      if (matches.length < maxCollect) {
+        const match = {
+          filePath,
+          lineNumber,
+          lineContent: line
+        };
+        if (contextLines > 0) {
+          match.contextBefore = recentLines.slice(-contextLines);
+          match.contextAfter = [];
+          pending.push({ match, afterNeeded: contextLines });
+        }
+        matches.push(match);
       }
-      matches.push(match);
     }
     if (contextLines > 0) {
       recentLines.push(line);
@@ -63034,21 +63050,7 @@ async function searchFileLarge(filePath, regex, contextLines) {
       }
     }
   }
-  return matches;
-}
-function searchFile(filePath, regex, contextLines) {
-  try {
-    const st = lstatSync(filePath);
-    if (!st.isFile()) {
-      return [];
-    }
-    if (st.size > MAX_FILE_SIZE_BYTES) {
-      return searchFileLarge(filePath, regex, contextLines);
-    }
-  } catch {
-    return [];
-  }
-  return searchFileSmall(filePath, regex, contextLines);
+  return { matches, totalCount };
 }
 async function searchQlCode(params) {
   const {
@@ -63067,40 +63069,16 @@ async function searchQlCode(params) {
   const filesToSearch = collectFiles(paths, includeExtensions, fileCount);
   const allMatches = [];
   let totalMatches = 0;
-  let collectedEnough = false;
   for (const file of filesToSearch) {
-    if (collectedEnough) {
-      try {
-        const st = lstatSync(file);
-        if (!st.isFile()) continue;
-        if (st.size > MAX_FILE_SIZE_BYTES) {
-          const rl = createInterface3({
-            input: createReadStream3(file, { encoding: "utf-8" }),
-            crlfDelay: Infinity
-          });
-          for await (const line of rl) {
-            if (regex.test(line)) totalMatches++;
-          }
-        } else {
-          const content = readFileSync9(file, "utf-8");
-          for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-            if (regex.test(line)) totalMatches++;
-          }
-        }
-      } catch {
-      }
-      continue;
-    }
-    const fileMatches = await searchFile(file, regex, contextLines);
-    totalMatches += fileMatches.length;
-    for (const m of fileMatches) {
-      if (allMatches.length < maxResults) {
-        allMatches.push(m);
-      }
-    }
-    if (allMatches.length >= maxResults) {
-      collectedEnough = true;
-    }
+    const remainingSlots = Math.max(0, maxResults - allMatches.length);
+    const { matches: fileMatches, totalCount } = await searchFile(
+      file,
+      regex,
+      contextLines,
+      remainingSlots
+    );
+    totalMatches += totalCount;
+    allMatches.push(...fileMatches);
   }
   return {
     results: allMatches,

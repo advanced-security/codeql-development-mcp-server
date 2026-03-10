@@ -128,6 +128,7 @@ suite('copyDatabases E2E — query against copied database', () => {
 
     const stagedDb = path.join(stagingDir, 'ExampleQuery1.testproj');
     console.log(`[copydb-e2e] Copying real database → staging: ${stagedDb}`);
+    fs.mkdirSync(stagingDir, { recursive: true });
     copyDirSync(realDbPath, stagedDb);
 
     // Inject a .lock file into the cache directory (mimicking query server).

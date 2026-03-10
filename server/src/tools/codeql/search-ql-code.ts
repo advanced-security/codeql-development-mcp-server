@@ -125,101 +125,117 @@ function collectFiles(
 }
 
 /**
- * Search a small file (≤ MAX_FILE_SIZE_BYTES) by reading it entirely into
- * memory. This is the fast path for typical QL source files.
+ * Search a file for matches. Returns up to `maxCollect` full match objects
+ * (with context) and a `totalCount` of all regex hits in the file.
+ *
+ * Tries an in-memory read first. If the file exceeds MAX_FILE_SIZE_BYTES,
+ * falls back to streaming. All I/O is attempted directly with error
+ * catching — no stat-then-read sequences — to avoid TOCTOU races.
  */
-function searchFileSmall(
+async function searchFile(
   filePath: string,
   regex: RegExp,
-  contextLines: number
-): SearchMatch[] {
+  contextLines: number,
+  maxCollect: number
+): Promise<{ matches: SearchMatch[]; totalCount: number }> {
+  // Fast path: try reading the whole file.
   let content: string;
   try {
     content = readFileSync(filePath, 'utf-8');
   } catch {
-    return [];
+    return { matches: [], totalCount: 0 };
   }
 
-  // Normalize line endings for cross-platform compatibility
+  // If file is too large, fall back to streaming
+  if (Buffer.byteLength(content, 'utf-8') > MAX_FILE_SIZE_BYTES) {
+    return searchFileStreaming(filePath, regex, contextLines, maxCollect);
+  }
+
+  // In-memory search
   const lines = content.replace(/\r\n/g, '\n').split('\n');
   const matches: SearchMatch[] = [];
+  let totalCount = 0;
 
   for (let i = 0; i < lines.length; i++) {
     if (regex.test(lines[i])) {
-      const match: SearchMatch = {
-        filePath,
-        lineNumber: i + 1,
-        lineContent: lines[i]
-      };
-
-      if (contextLines > 0) {
-        const beforeStart = Math.max(0, i - contextLines);
-        const afterEnd = Math.min(lines.length - 1, i + contextLines);
-        match.contextBefore = lines.slice(beforeStart, i);
-        match.contextAfter = lines.slice(i + 1, afterEnd + 1);
+      totalCount++;
+      if (matches.length < maxCollect) {
+        const match: SearchMatch = {
+          filePath,
+          lineNumber: i + 1,
+          lineContent: lines[i]
+        };
+        if (contextLines > 0) {
+          const beforeStart = Math.max(0, i - contextLines);
+          const afterEnd = Math.min(lines.length - 1, i + contextLines);
+          match.contextBefore = lines.slice(beforeStart, i);
+          match.contextAfter = lines.slice(i + 1, afterEnd + 1);
+        }
+        matches.push(match);
       }
-
-      matches.push(match);
     }
   }
 
-  return matches;
+  return { matches, totalCount };
 }
 
 /**
- * Search a large file (> MAX_FILE_SIZE_BYTES) by streaming it line-by-line
- * to avoid allocating huge buffers. Context lines are maintained via a
- * fixed-size rolling window.
+ * Stream a file line-by-line, collecting up to `maxCollect` matches with
+ * context and counting all hits. Used for files exceeding MAX_FILE_SIZE_BYTES.
  */
-async function searchFileLarge(
+async function searchFileStreaming(
   filePath: string,
   regex: RegExp,
-  contextLines: number
-): Promise<SearchMatch[]> {
+  contextLines: number,
+  maxCollect: number
+): Promise<{ matches: SearchMatch[]; totalCount: number }> {
   const matches: SearchMatch[] = [];
-  // Rolling window of recent lines for contextBefore
   const recentLines: string[] = [];
-  // Pending matches that still need contextAfter lines
   const pending: { match: SearchMatch; afterNeeded: number }[] = [];
   let lineNumber = 0;
+  let totalCount = 0;
 
-  const rl = createInterface({
-    input: createReadStream(filePath, { encoding: 'utf-8' }),
-    crlfDelay: Infinity
-  });
+  let rl: ReturnType<typeof createInterface>;
+  try {
+    rl = createInterface({
+      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      crlfDelay: Infinity
+    });
+  } catch {
+    return { matches: [], totalCount: 0 };
+  }
 
   for await (const line of rl) {
     lineNumber++;
 
-    // Feed this line as contextAfter to any pending matches
+    // Feed contextAfter to pending matches
     for (const p of pending) {
       if (p.afterNeeded > 0) {
         p.match.contextAfter!.push(line);
         p.afterNeeded--;
       }
     }
-    // Flush fully-resolved pending matches
     while (pending.length > 0 && pending[0].afterNeeded === 0) {
       pending.shift();
     }
 
     if (regex.test(line)) {
-      const match: SearchMatch = {
-        filePath,
-        lineNumber,
-        lineContent: line
-      };
-
-      if (contextLines > 0) {
-        match.contextBefore = recentLines.slice(-contextLines);
-        match.contextAfter = [];
-        pending.push({ match, afterNeeded: contextLines });
+      totalCount++;
+      if (matches.length < maxCollect) {
+        const match: SearchMatch = {
+          filePath,
+          lineNumber,
+          lineContent: line
+        };
+        if (contextLines > 0) {
+          match.contextBefore = recentLines.slice(-contextLines);
+          match.contextAfter = [];
+          pending.push({ match, afterNeeded: contextLines });
+        }
+        matches.push(match);
       }
-
-      matches.push(match);
     }
 
-    // Maintain rolling window
     if (contextLines > 0) {
       recentLines.push(line);
       if (recentLines.length > contextLines) {
@@ -228,31 +244,7 @@ async function searchFileLarge(
     }
   }
 
-  return matches;
-}
-
-/**
- * Search a single file for matches against the compiled regex.
- * Uses in-memory read for small files and streaming for large files.
- */
-function searchFile(
-  filePath: string,
-  regex: RegExp,
-  contextLines: number
-): SearchMatch[] | Promise<SearchMatch[]> {
-  try {
-    const st = lstatSync(filePath);
-    if (!st.isFile()) {
-      return [];
-    }
-    if (st.size > MAX_FILE_SIZE_BYTES) {
-      return searchFileLarge(filePath, regex, contextLines);
-    }
-  } catch {
-    return [];
-  }
-
-  return searchFileSmall(filePath, regex, contextLines);
+  return { matches, totalCount };
 }
 
 /**
@@ -288,49 +280,14 @@ export async function searchQlCode(params: {
 
   const allMatches: SearchMatch[] = [];
   let totalMatches = 0;
-  let collectedEnough = false;
 
   for (const file of filesToSearch) {
-    if (collectedEnough) {
-      // Still need totalMatches count but skip storing results.
-      // Use streaming for large files to avoid loading into memory.
-      try {
-        const st = lstatSync(file);
-        if (!st.isFile()) continue;
-        if (st.size > MAX_FILE_SIZE_BYTES) {
-          // Stream large files line-by-line for counting
-          const rl = createInterface({
-            input: createReadStream(file, { encoding: 'utf-8' }),
-            crlfDelay: Infinity
-          });
-          for await (const line of rl) {
-            if (regex.test(line)) totalMatches++;
-          }
-        } else {
-          // Small files: read directly (fast path)
-          const content = readFileSync(file, 'utf-8');
-          for (const line of content.replace(/\r\n/g, '\n').split('\n')) {
-            if (regex.test(line)) totalMatches++;
-          }
-        }
-      } catch {
-        // skip unreadable files
-      }
-      continue;
-    }
-
-    const fileMatches = await searchFile(file, regex, contextLines);
-    totalMatches += fileMatches.length;
-
-    for (const m of fileMatches) {
-      if (allMatches.length < maxResults) {
-        allMatches.push(m);
-      }
-    }
-
-    if (allMatches.length >= maxResults) {
-      collectedEnough = true;
-    }
+    const remainingSlots = Math.max(0, maxResults - allMatches.length);
+    const { matches: fileMatches, totalCount } = await searchFile(
+      file, regex, contextLines, remainingSlots
+    );
+    totalMatches += totalCount;
+    allMatches.push(...fileMatches);
   }
 
   return {

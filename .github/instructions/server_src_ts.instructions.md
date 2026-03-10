@@ -33,3 +33,4 @@ This file contains instructions for working with TypeScript source code files in
 
 - NEVER leave any trailing whitespace on any line.
 - NEVER guess at what a `codeql` or `qlt` CLI subcommand does; ALWAYS verify against the official `codeql <subcommand> -h -vv` or `qlt <subcommand> -h` documentation, respectively.
+- **NEVER use stat/lstat followed by a separate read/open on the same path** — this is a TOCTOU (Time-of-Check-Time-of-Use) race condition (CWE-367). Instead, attempt the operation directly (e.g., `readFileSync`) within a try/catch block. If you need to know the file size before reading, read first and then check the buffer size — do NOT stat then read. For directory traversal, `lstatSync` is acceptable since it is the operation itself (checking entry type), not a precursor to a separate operation.
