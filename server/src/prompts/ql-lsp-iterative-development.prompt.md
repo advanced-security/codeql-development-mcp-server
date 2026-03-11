@@ -127,7 +127,8 @@ Returns: { start_line: 12, start_col: 13, end_line: 12, end_col: 20 }
 ```
 
 > **Note**: #find_class_position finds `class` definitions only — it does not find
-> `module` definitions. Use #find_predicate_position for predicates inside modules.
+> `module` definitions. Use #find_predicate_position for predicates inside modules,
+> or use #search_ql_code to search across QL files by text or regex pattern.
 
 **Combining with LSP tools**: To navigate to a predicate's definition in library code:
 
@@ -253,6 +254,6 @@ quick_evaluate(file=..., db=test.testproj, symbol="isSink")  →  inspect result
 - **#codeql_lsp_diagnostics cannot resolve imports**. For `import javascript`
   and similar, use #codeql_query_compile on the on-disk file instead.
 - **#find_class_position finds `class` only**, not `module` definitions.
-  Use grep or #find_predicate_position for predicates inside modules.
+  Use #search_ql_code or #find_predicate_position for predicates inside modules.
 - **#codeql_lsp_references scope** depends on `workspace_uri`. Point it at
   a library pack root to find usages across library code.

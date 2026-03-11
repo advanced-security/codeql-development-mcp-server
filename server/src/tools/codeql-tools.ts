@@ -22,6 +22,7 @@ import {
   codeqlQueryFormatTool,
   codeqlQueryRunTool,
   codeqlResolveDatabaseTool,
+  codeqlResolveFilesTool,
   codeqlResolveLanguagesTool,
   codeqlResolveLibraryPathTool,
   codeqlResolveMetadataTool,
@@ -41,7 +42,8 @@ import {
   registerProfileCodeQLQueryTool,
   registerQuickEvaluateTool,
   registerReadDatabaseSourceTool,
-  registerRegisterDatabaseTool
+  registerRegisterDatabaseTool,
+  registerSearchQlCodeTool
 } from './codeql';
 import { logger } from '../utils/logger';
 
@@ -149,6 +151,7 @@ export function registerCodeQLTools(server: McpServer): void {
   registerCLITool(server, codeqlQueryFormatTool);
   registerCLITool(server, codeqlQueryRunTool);
   registerCLITool(server, codeqlResolveDatabaseTool);
+  registerCLITool(server, codeqlResolveFilesTool);
   registerCLITool(server, codeqlResolveLanguagesTool);
   registerCLITool(server, codeqlResolveLibraryPathTool);
   registerCLITool(server, codeqlResolveMetadataTool);
@@ -171,4 +174,5 @@ export function registerCodeQLTools(server: McpServer): void {
   registerQuickEvaluateTool(server);
   registerReadDatabaseSourceTool(server);
   registerRegisterDatabaseTool(server);
+  registerSearchQlCodeTool(server);
 }

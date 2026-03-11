@@ -59,7 +59,7 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_DATABASES_BASE_DIRS;
     assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
 
-    for (const dir of dirs.split(':')) {
+    for (const dir of dirs.split(path.delimiter)) {
       if (dir.length === 0) continue;
       // Parent must exist (the leaf directory may not yet exist if no databases
       // have been created, but the parent storage root should).
@@ -79,23 +79,24 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_DATABASES_BASE_DIRS;
     assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
 
-    const parts = dirs.split(':');
+    const parts = dirs.split(path.delimiter);
 
-    // When a workspace is open, there should be at least 2 paths
-    // (global + workspace). When no workspace is open (e.g. Extension
-    // Development Host without --folder-uri), only the global path is present.
+    // When copyDatabases is enabled (default), the managed databases/ directory
+    // under our globalStorage replaces individual source paths. When disabled,
+    // the original global + workspace storage paths are used.
     const hasWorkspaceStorage = parts.some((p: string) => p.includes('workspaceStorage'));
+    const hasManagedDir = parts.some((p: string) => path.basename(p) === 'databases');
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
       assert.ok(
-        hasWorkspaceStorage,
-        `CODEQL_DATABASES_BASE_DIRS should include a workspaceStorage path when a workspace is open: ${dirs}`,
+        hasWorkspaceStorage || hasManagedDir,
+        `CODEQL_DATABASES_BASE_DIRS should include a workspaceStorage path or managed databases dir when a workspace is open: ${dirs}`,
       );
     }
-    // Always should have at least the global storage path
+    // Always should have at least the global storage path or managed dir
     const hasGlobalStorage = parts.some((p: string) => p.includes('globalStorage'));
     assert.ok(
-      hasGlobalStorage,
-      `CODEQL_DATABASES_BASE_DIRS should include a globalStorage path: ${dirs}`,
+      hasGlobalStorage || hasManagedDir,
+      `CODEQL_DATABASES_BASE_DIRS should include a globalStorage path or managed databases dir: ${dirs}`,
     );
   });
 
@@ -110,7 +111,7 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_QUERY_RUN_RESULTS_DIRS;
     assert.ok(dirs, 'CODEQL_QUERY_RUN_RESULTS_DIRS not set');
 
-    for (const dir of dirs.split(':')) {
+    for (const dir of dirs.split(path.delimiter)) {
       if (dir.length === 0) continue;
       // The immediate parent (GitHub.vscode-codeql storage root) only exists
       // after first activation.  Verify the grandparent (VS Code's globalStorage
@@ -134,7 +135,7 @@ suite('vscode-codeql Bridge Tests', () => {
     const dirs = env.CODEQL_MRVA_RUN_RESULTS_DIRS;
     assert.ok(dirs, 'CODEQL_MRVA_RUN_RESULTS_DIRS not set');
 
-    for (const dir of dirs.split(':')) {
+    for (const dir of dirs.split(path.delimiter)) {
       if (dir.length === 0) continue;
       // The immediate parent (GitHub.vscode-codeql storage root) only exists
       // after first activation.  Verify the grandparent (VS Code's globalStorage
@@ -173,4 +174,99 @@ suite('vscode-codeql Bridge Tests', () => {
       }
     }
   });
+
+  // --- copyDatabases feature tests ---
+
+  test('copyDatabases default: CODEQL_DATABASES_BASE_DIRS should use managed databases/ dir', async () => {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) return;
+
+    const env = await envBuilder.build();
+    const dirs = env.CODEQL_DATABASES_BASE_DIRS;
+    assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
+
+    // With the default setting (copyDatabases: true), the env should contain
+    // a single managed path ending with /databases that lives under the MCP
+    // extension's own globalStorage — NOT under GitHub.vscode-codeql.
+    const parts = dirs.split(path.delimiter);
+    const managedParts = parts.filter((p: string) => path.basename(p) === 'databases');
+    assert.ok(
+      managedParts.length >= 1,
+      `Expected at least one path ending with /databases in CODEQL_DATABASES_BASE_DIRS: ${dirs}`,
+    );
+    for (const managed of managedParts) {
+      assert.ok(
+        !managed.includes('GitHub.vscode-codeql'),
+        `Managed databases path should NOT be under GitHub.vscode-codeql: ${managed}`,
+      );
+    }
+  });
+
+  test('copyDatabases default: managed databases dir parent should exist', async () => {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) return;
+
+    const env = await envBuilder.build();
+    const dirs = env.CODEQL_DATABASES_BASE_DIRS;
+    assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
+
+    const parts = dirs.split(path.delimiter);
+    for (const dir of parts) {
+      if (path.basename(dir) !== 'databases') continue;
+      // The parent of the managed databases/ dir is our extension's
+      // globalStorage, which VS Code creates on activation.
+      const parent = path.dirname(dir);
+      assert.ok(
+        fs.existsSync(parent),
+        `Parent of managed databases dir should exist: ${parent}`,
+      );
+    }
+  });
+
+  test('copyDatabases default: managed databases dir should not contain .lock files', async () => {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) return;
+
+    const env = await envBuilder.build();
+    const dirs = env.CODEQL_DATABASES_BASE_DIRS;
+    assert.ok(dirs, 'CODEQL_DATABASES_BASE_DIRS not set');
+
+    for (const dir of dirs.split(path.delimiter)) {
+      if (path.basename(dir) !== 'databases' || !fs.existsSync(dir)) continue;
+      // Walk the managed database directory and assert no .lock files exist
+      const lockFiles = findLockFiles(dir);
+      assert.strictEqual(
+        lockFiles.length,
+        0,
+        `Managed databases dir should not contain .lock files, but found: ${lockFiles.join(', ')}`,
+      );
+    }
+  });
 });
+
+/**
+ * Recursively find all `.lock` files under a directory.
+ */
+function findLockFiles(dir: string): string[] {
+  const results: string[] = [];
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    const full = path.join(dir, entry);
+    try {
+      const stat = fs.statSync(full);
+      if (stat.isDirectory()) {
+        results.push(...findLockFiles(full));
+      } else if (entry === '.lock') {
+        results.push(full);
+      }
+    } catch {
+      // skip
+    }
+  }
+  return results;
+}

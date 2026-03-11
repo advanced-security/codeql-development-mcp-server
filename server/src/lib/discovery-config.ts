@@ -2,7 +2,8 @@
  * Discovery configuration for locating CodeQL databases, query run results,
  * and MRVA (Multi-Repository Variant Analysis) run results.
  *
- * Reads colon-separated directory lists from environment variables:
+ * Reads directory lists from environment variables using the platform-native
+ * path-list delimiter (`path.delimiter`: `:` on POSIX, `;` on Windows):
  * - `CODEQL_DATABASES_BASE_DIRS` — directories to search for CodeQL databases
  * - `CODEQL_MRVA_RUN_RESULTS_DIRS` — directories containing MRVA run result subdirectories
  * - `CODEQL_QUERY_RUN_RESULTS_DIRS` — directories containing per-run query result subdirectories
@@ -11,15 +12,17 @@
  * CLI users can set them manually.
  */
 
+import { delimiter } from 'path';
+
 /**
- * Parse a colon-separated list of directories from an environment variable.
+ * Parse a platform-delimited list of directories from an environment variable.
  */
 function parsePathList(envValue: string | undefined): string[] {
   if (!envValue) {
     return [];
   }
   return envValue
-    .split(':')
+    .split(delimiter)
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
 }
@@ -30,7 +33,7 @@ function parsePathList(envValue: string | undefined): string[] {
  * Each directory is expected to contain one or more CodeQL database directories
  * (each with a `codeql-database.yml` file).
  *
- * Set via `CODEQL_DATABASES_BASE_DIRS` (colon-separated).
+ * Set via `CODEQL_DATABASES_BASE_DIRS` (platform-delimited).
  */
 export function getDatabaseBaseDirs(): string[] {
   return parsePathList(process.env.CODEQL_DATABASES_BASE_DIRS);
@@ -44,7 +47,7 @@ export function getDatabaseBaseDirs(): string[] {
  * subdirectories with `repo_task.json`, `results/results.sarif`, and
  * `results/results.bqrs`.
  *
- * Set via `CODEQL_MRVA_RUN_RESULTS_DIRS` (colon-separated).
+ * Set via `CODEQL_MRVA_RUN_RESULTS_DIRS` (platform-delimited).
  */
 export function getMrvaRunResultsDirs(): string[] {
   return parsePathList(process.env.CODEQL_MRVA_RUN_RESULTS_DIRS);
@@ -57,7 +60,7 @@ export function getMrvaRunResultsDirs(): string[] {
  * `<QueryName>.ql-<nanoid>/`, each holding artifacts such as
  * `evaluator-log.jsonl`, `results.bqrs`, and `results-interpreted.sarif`.
  *
- * Set via `CODEQL_QUERY_RUN_RESULTS_DIRS` (colon-separated).
+ * Set via `CODEQL_QUERY_RUN_RESULTS_DIRS` (platform-delimited).
  */
 export function getQueryRunResultsDirs(): string[] {
   return parsePathList(process.env.CODEQL_QUERY_RUN_RESULTS_DIRS);

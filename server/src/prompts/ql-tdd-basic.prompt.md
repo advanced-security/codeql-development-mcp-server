@@ -120,7 +120,7 @@ For detailed guidance, reference the MCP resource: `codeql://learning/test-drive
 
 - [ ] **Optimize Performance** (if needed)
   - Run with evaluator-log enabled
-  - Tool: #codeql_generate_log_summary
+  - Tool: #profile_codeql_query_from_logs
   - Resource: `codeql://patterns/performance`
   - Optimize expensive operations
 

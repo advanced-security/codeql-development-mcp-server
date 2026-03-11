@@ -85,6 +85,18 @@ describe('Resources', () => {
       expect(result.length).toBeGreaterThan(0);
       expect(result).toContain('Tools');
     });
+
+    it('should document the search_ql_code tool', () => {
+      const result = getServerTools();
+
+      expect(result).toContain('search_ql_code');
+    });
+
+    it('should document the codeql_resolve_files tool', () => {
+      const result = getServerTools();
+
+      expect(result).toContain('codeql_resolve_files');
+    });
   });
 
   describe('getTestDrivenDevelopment', () => {

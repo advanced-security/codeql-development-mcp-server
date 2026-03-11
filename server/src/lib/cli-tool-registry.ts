@@ -9,11 +9,60 @@ import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { getUserWorkspaceDir, packageRootDir, resolveToolQueryPackPath } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, rmSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
+
+/**
+ * Resolve a database path that may point to a multi-language database root
+ * (i.e. a directory that does not contain `codeql-database.yml` itself but
+ * has a language subfolder that does). This handles the common case where
+ * vscode-codeql stores databases in a parent directory with language
+ * subfolders like `javascript/`, `python/`, etc.
+ *
+ * When multiple candidate children are found, throws an error describing
+ * the ambiguity so the caller can pick the right one explicitly.
+ */
+function resolveDatabasePath(dbPath: string): string {
+  if (existsSync(join(dbPath, 'codeql-database.yml'))) {
+    return dbPath;
+  }
+  try {
+    const entries = readdirSync(dbPath);
+    const candidates: string[] = [];
+    for (const entry of entries) {
+      const candidate = join(dbPath, entry);
+      try {
+        if (statSync(candidate).isDirectory() &&
+            existsSync(join(candidate, 'codeql-database.yml'))) {
+          candidates.push(candidate);
+        }
+      } catch {
+        // Skip inaccessible entries
+      }
+    }
+    if (candidates.length === 1) {
+      logger.info(`Resolved database directory: ${dbPath} -> ${candidates[0]}`);
+      return candidates[0];
+    }
+    if (candidates.length > 1) {
+      const names = candidates.map((c) => basename(c)).join(', ');
+      throw new Error(
+        `Ambiguous database path: ${dbPath} contains multiple databases (${names}). ` +
+        'Specify the full path to the desired database subfolder.'
+      );
+    }
+  } catch (err) {
+    // Re-throw ambiguity errors
+    if (err instanceof Error && err.message.startsWith('Ambiguous database path')) {
+      throw err;
+    }
+    // Parent directory not readable — return original path
+  }
+  return dbPath;
+}
 
 export interface CLIToolDefinition {
   name: string;
@@ -84,7 +133,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Extract tool-specific parameters that should not be passed to CLI
         // Note: format is extracted for tools that use it internally but not on CLI
         // For codeql_bqrs_interpret, codeql_bqrs_decode, codeql_bqrs_info, codeql_generate_query-help, and codeql_database_analyze, format should be passed to CLI
-        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_bqrs_info' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze';
+        const formatShouldBePassedToCLI = name === 'codeql_bqrs_interpret' || name === 'codeql_bqrs_decode' || name === 'codeql_bqrs_info' || name === 'codeql_generate_query-help' || name === 'codeql_database_analyze' || name === 'codeql_resolve_files';
         
         const extractedParams = formatShouldBePassedToCLI
           ? {
@@ -176,7 +225,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Handle database parameter as positional argument for resolve database tool
         if (options.database && name === 'codeql_resolve_database') {
-          positionalArgs = [...positionalArgs, options.database as string];
+          positionalArgs = [...positionalArgs, resolveDatabasePath(options.database as string)];
           delete options.database;
         }
 
@@ -189,7 +238,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Handle database and queries parameters as positional arguments for database analyze tool
         if (name === 'codeql_database_analyze') {
           if (options.database) {
-            positionalArgs = [...positionalArgs, options.database as string];
+            positionalArgs = [...positionalArgs, resolveDatabasePath(options.database as string)];
             delete options.database;
           }
           if (options.queries) {
@@ -231,6 +280,10 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             if (options.database && typeof options.database === 'string' && !isAbsolute(options.database)) {
               options.database = resolve(getUserWorkspaceDir(), options.database);
               logger.info(`Resolved database path to: ${options.database}`);
+            }
+            // Auto-resolve multi-language DB root to language subfolder
+            if (options.database && typeof options.database === 'string') {
+              options.database = resolveDatabasePath(options.database);
             }
             
             // Implement query resolution logic with enhanced results processing
@@ -341,6 +394,13 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             // Handle directory parameter as positional argument
             if (directory) {
               positionalArgs = [...positionalArgs, directory as string];
+            }
+            break;
+
+          case 'codeql_resolve_files':
+            // Handle dir parameter as positional argument
+            if (dir) {
+              positionalArgs = [...positionalArgs, dir as string];
             }
             break;
             

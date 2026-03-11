@@ -9,14 +9,27 @@
  *   `evaluationStrategy`.
  *
  * Both formats use pretty-printed JSON separated by `}\n{` boundaries.
+ *
+ * Files are streamed line-by-line so that very large evaluator logs
+ * (hundreds of MB) are handled without loading the entire file into memory.
  */
 
-import { readFileSync } from 'fs';
+import { createReadStream } from 'fs';
+import { createInterface } from 'readline';
 import { logger } from '../utils/logger';
 
 // ---------------------------------------------------------------------------
 // Public interfaces
 // ---------------------------------------------------------------------------
+
+/** Per-pipeline execution data showing tuple count progression. */
+export interface PipelineStage {
+  durationMs: number;
+  resultSize: number;
+  /** Tuple counts at each RA step within the pipeline. */
+  counts: number[];
+  duplicationPercentages?: number[];
+}
 
 /** Performance profile for a single evaluated predicate. */
 export interface PredicateProfile {
@@ -27,6 +40,10 @@ export interface PredicateProfile {
   pipelineCount?: number;
   evaluationStrategy?: string;
   dependencies: string[];
+  /** RA operation text for each pipeline step (from the `ra` field). */
+  raSteps?: string[];
+  /** Per-pipeline execution data with tuple count progressions. */
+  pipelineStages?: PipelineStage[];
 }
 
 /** Performance profile for a single query within a log. */
@@ -65,64 +82,88 @@ export function detectLogFormat(firstEvent: Record<string, unknown>): 'raw' | 's
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Streaming JSON object parser
 // ---------------------------------------------------------------------------
 
 /**
- * Split a pretty-printed multi-JSON file into individual JSON strings.
- *
- * The log file contains multiple JSON objects that are pretty-printed,
- * separated by the pattern `}\n\n{` (closing brace, blank line, opening
- * brace). We split on `\n}\n` boundaries and reconstruct valid objects.
+ * Stream a pretty-printed multi-JSON file and yield parsed objects one at
+ * a time. Uses readline to process the file line-by-line, tracking brace
+ * depth to detect object boundaries. This avoids loading the entire file
+ * into memory.
  */
-function splitJsonObjects(content: string): string[] {
-  // Trim leading/trailing whitespace
-  const trimmed = content.trim();
-  if (trimmed.length === 0) {
-    return [];
-  }
-
-  // Split on closing-brace + newline(s) + opening-brace boundaries.
-  // We use a regex that matches `}\n` followed by optional blank lines
-  // then `{` – capturing the boundary so we can reconstruct.
-  const parts = trimmed.split(/\n\}\s*\n\s*\{/);
-
-  if (parts.length === 1) {
-    // Single object or single-line – return as-is
-    return [trimmed];
-  }
-
-  // Reconstruct: first part needs closing `}`, middle parts need both,
-  // last part needs opening `{`.
-  return parts.map((part, idx) => {
-    if (idx === 0) {
-      return part + '\n}';
-    }
-    if (idx === parts.length - 1) {
-      return '{\n' + part;
-    }
-    return '{\n' + part + '\n}';
+async function* streamJsonObjects(
+  logPath: string
+): AsyncGenerator<Record<string, unknown>> {
+  const rl = createInterface({
+    input: createReadStream(logPath, { encoding: 'utf-8' }),
+    crlfDelay: Infinity,
   });
-}
 
-/**
- * Parse all JSON objects from an evaluator log file.
- */
-function parseJsonObjects(logPath: string): Record<string, unknown>[] {
-  const content = readFileSync(logPath, 'utf-8');
-  const objectStrings = splitJsonObjects(content);
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  const lines: string[] = [];
 
-  const results: Record<string, unknown>[] = [];
-  for (const objStr of objectStrings) {
-    try {
-      results.push(JSON.parse(objStr) as Record<string, unknown>);
-    } catch {
-      logger.warn(
-        `Failed to parse evaluator log object: ${objStr.substring(0, 120)}...`
-      );
+  for await (const line of rl) {
+    // Track whether this line pushes us into or out of objects. We need to
+    // handle strings (which may contain `{` or `}`) and escape sequences.
+    for (const ch of line) {
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === '\\' && inString) {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      if (ch === '}') depth--;
+    }
+
+    if (depth > 0 || (depth === 0 && line.trim().length > 0 && lines.length > 0)) {
+      lines.push(line);
+    } else if (depth === 0 && lines.length === 0 && line.trim().length > 0) {
+      // Single-line object or start of multi-line
+      lines.push(line);
+    }
+
+    // When depth returns to 0 and we have accumulated lines, emit an object
+    if (depth === 0 && lines.length > 0) {
+      const objStr = lines.join('\n');
+      lines.length = 0;
+      inString = false;
+      escape = false;
+
+      if (objStr.trim().length === 0) continue;
+
+      try {
+        yield JSON.parse(objStr) as Record<string, unknown>;
+      } catch {
+        logger.warn(
+          `Failed to parse evaluator log object: ${objStr.substring(0, 120)}...`,
+        );
+      }
     }
   }
-  return results;
+
+  // Handle any trailing accumulated lines (unterminated object)
+  if (lines.length > 0) {
+    const objStr = lines.join('\n');
+    if (objStr.trim().length > 0) {
+      try {
+        yield JSON.parse(objStr) as Record<string, unknown>;
+      } catch {
+        logger.warn(
+          `Failed to parse trailing evaluator log object: ${objStr.substring(0, 120)}...`,
+        );
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -132,12 +173,22 @@ function parseJsonObjects(logPath: string): Record<string, unknown>[] {
 /**
  * Parse a raw `evaluator-log.jsonl` file into {@link ProfileData}.
  *
+ * Streams the file line-by-line and processes events incrementally.
  * Tracks `QUERY_STARTED`/`QUERY_COMPLETED` pairs, computes predicate
  * durations from `PREDICATE_STARTED`/`PREDICATE_COMPLETED` nanoTime
  * differences, and groups predicates by `queryCausingWork`.
  */
-export function parseRawEvaluatorLog(logPath: string): ProfileData {
-  const events = parseJsonObjects(logPath);
+export async function parseRawEvaluatorLog(logPath: string): Promise<ProfileData> {
+  return processRawEvents(streamJsonObjects(logPath));
+}
+
+/**
+ * Internal: process an async stream of raw evaluator log events.
+ * Separated from I/O so that `parseEvaluatorLog` can share the stream.
+ */
+async function processRawEvents(
+  events: AsyncIterable<Record<string, unknown>>,
+): Promise<ProfileData> {
 
   let codeqlVersion: string | undefined;
 
@@ -156,8 +207,15 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
       queryCausingWork?: number;
       nanoTime: number;
       pipelineCount: number;
+      raSteps?: string[];
+      pipelineStages: PipelineStage[];
     }
   >();
+
+  // Maps: pipeline eventId → pipeline start nanoTime
+  const pipelineStartNanoTimes = new Map<number, number>();
+  // Maps: pipeline eventId → parent predicate eventId
+  const pipelineToPredicateMap = new Map<number, number>();
 
   // Completed predicate profiles grouped by query eventId
   const queryPredicates = new Map<number, PredicateProfile[]>();
@@ -167,8 +225,10 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
   const queryCacheHits = new Map<number, number>();
   // Fallback query eventId for predicates without queryCausingWork
   let firstQueryEventId: number | undefined;
+  let totalEvents = 0;
 
-  for (const event of events) {
+  for await (const event of events) {
+    totalEvents++;
     const eventType = event.type as string | undefined;
 
     switch (eventType) {
@@ -201,6 +261,12 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
       case 'PREDICATE_STARTED': {
         const eid = event.eventId as number;
         const deps = event.dependencies as Record<string, string> | undefined;
+        // Extract RA pipeline steps if present
+        const raObj = event.ra as Record<string, unknown> | undefined;
+        let raSteps: string[] | undefined;
+        if (raObj && Array.isArray(raObj.pipeline)) {
+          raSteps = (raObj.pipeline as string[]).map((s) => s.trim());
+        }
         predicateStartEvents.set(eid, {
           predicateName: (event.predicateName as string) || 'unknown',
           position: event.position as string | undefined,
@@ -209,24 +275,37 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
           queryCausingWork: event.queryCausingWork as number | undefined,
           nanoTime: event.nanoTime as number,
           pipelineCount: 0,
+          raSteps,
+          pipelineStages: [],
         });
         break;
       }
 
+      case 'PIPELINE_STARTED': {
+        const eid = event.eventId as number;
+        pipelineStartNanoTimes.set(eid, event.nanoTime as number);
+        const predEid = event.predicateStartEvent as number;
+        pipelineToPredicateMap.set(eid, predEid);
+        break;
+      }
+
       case 'PIPELINE_COMPLETED': {
-        // Count pipelines for the parent predicate
         const pipelineStartEid = event.startEvent as number;
-        // Find the pipeline_started event to get predicateStartEvent
-        const pipelineStartEvt = events.find(
-          (e) =>
-            (e.type as string) === 'PIPELINE_STARTED' &&
-            (e.eventId as number) === pipelineStartEid
-        );
-        if (pipelineStartEvt) {
-          const predEid = pipelineStartEvt.predicateStartEvent as number;
+        const predEid = pipelineToPredicateMap.get(pipelineStartEid);
+        const startNano = pipelineStartNanoTimes.get(pipelineStartEid);
+        if (predEid !== undefined) {
           const predStart = predicateStartEvents.get(predEid);
           if (predStart) {
             predStart.pipelineCount += 1;
+            const pipelineDurationMs = startNano !== undefined
+              ? ((event.nanoTime as number) - startNano) / 1_000_000
+              : 0;
+            predStart.pipelineStages.push({
+              durationMs: pipelineDurationMs,
+              resultSize: (event.resultSize as number) ?? 0,
+              counts: (event.counts as number[]) ?? [],
+              duplicationPercentages: event.duplicationPercentages as number[] | undefined,
+            });
           }
         }
         break;
@@ -251,6 +330,11 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
                 : undefined,
             evaluationStrategy: predStart.predicateType,
             dependencies: predStart.dependencies,
+            raSteps: predStart.raSteps,
+            pipelineStages:
+              predStart.pipelineStages.length > 0
+                ? predStart.pipelineStages
+                : undefined,
           };
 
           const qEid =
@@ -303,7 +387,7 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
     codeqlVersion,
     logFormat: 'raw',
     queries,
-    totalEvents: events.length,
+    totalEvents,
   };
 }
 
@@ -314,13 +398,22 @@ export function parseRawEvaluatorLog(logPath: string): ProfileData {
 /**
  * Parse an `evaluator-log.summary.jsonl` file into {@link ProfileData}.
  *
+ * Streams the file line-by-line and processes events incrementally.
  * Summary events carry `millis` directly (already in ms). Predicates are
  * grouped by `queryCausingWork` which is a **string** (query name) in the
  * summary format.
  */
-export function parseSummaryLog(logPath: string): ProfileData {
-  const events = parseJsonObjects(logPath);
+export async function parseSummaryLog(logPath: string): Promise<ProfileData> {
+  return processSummaryEvents(streamJsonObjects(logPath));
+}
 
+/**
+ * Internal: process an async stream of summary log events.
+ * Separated from I/O so that `parseEvaluatorLog` can share the stream.
+ */
+async function processSummaryEvents(
+  events: AsyncIterable<Record<string, unknown>>,
+): Promise<ProfileData> {
   let codeqlVersion: string | undefined;
 
   // queryCausingWork (string) → collected predicates
@@ -329,8 +422,11 @@ export function parseSummaryLog(logPath: string): ProfileData {
   const queryTotalMs = new Map<string, number>();
   // Track cache hits per query
   const queryCacheHits = new Map<string, number>();
+  let totalEvents = 0;
 
-  for (const event of events) {
+  for await (const event of events) {
+    totalEvents++;
+
     // Header detection
     if (event.summaryLogVersion !== undefined) {
       codeqlVersion = event.codeqlVersion as string | undefined;
@@ -358,6 +454,13 @@ export function parseSummaryLog(logPath: string): ProfileData {
     const deps = event.dependencies as Record<string, string> | undefined;
     const pipelineRuns = event.pipelineRuns as number | undefined;
 
+    // Extract RA steps from summary events
+    const raObj = event.ra as string | undefined;
+    let raSteps: string[] | undefined;
+    if (typeof raObj === 'string' && raObj.length > 0) {
+      raSteps = raObj.replace(/\r\n/g, '\n').split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+    }
+
     const profile: PredicateProfile = {
       predicateName,
       position: event.position as string | undefined,
@@ -366,6 +469,7 @@ export function parseSummaryLog(logPath: string): ProfileData {
       pipelineCount: pipelineRuns,
       evaluationStrategy: strategy,
       dependencies: deps ? Object.keys(deps) : [],
+      raSteps,
     };
 
     // Check if this is a cached entry
@@ -405,7 +509,7 @@ export function parseSummaryLog(logPath: string): ProfileData {
     codeqlVersion,
     logFormat: 'summary',
     queries,
-    totalEvents: events.length,
+    totalEvents,
   };
 }
 
@@ -416,14 +520,20 @@ export function parseSummaryLog(logPath: string): ProfileData {
 /**
  * Auto-detect the log format and parse accordingly.
  *
+ * Streams the file once — the first event determines the format, then
+ * the remaining events are processed by the appropriate parser.
+ *
  * @param logPath - Absolute path to `evaluator-log.jsonl` or
  *   `evaluator-log.summary.jsonl`.
  * @returns Parsed profile data.
  */
-export function parseEvaluatorLog(logPath: string): ProfileData {
-  const events = parseJsonObjects(logPath);
+export async function parseEvaluatorLog(logPath: string): Promise<ProfileData> {
+  const stream = streamJsonObjects(logPath);
+  const iterator = stream[Symbol.asyncIterator]();
 
-  if (events.length === 0) {
+  // Read the first event to detect format
+  const first = await iterator.next();
+  if (first.done) {
     return {
       logFormat: 'raw',
       queries: [],
@@ -431,10 +541,21 @@ export function parseEvaluatorLog(logPath: string): ProfileData {
     };
   }
 
-  const format = detectLogFormat(events[0]);
+  const firstEvent = first.value;
+  const format = detectLogFormat(firstEvent);
+
+  // Create an async iterable that yields the first event, then the rest
+  async function* prependFirst(): AsyncGenerator<Record<string, unknown>> {
+    yield firstEvent;
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      yield next.value;
+    }
+  }
 
   if (format === 'raw') {
-    return parseRawEvaluatorLog(logPath);
+    return processRawEvents(prependFirst());
   }
-  return parseSummaryLog(logPath);
+  return processSummaryEvents(prependFirst());
 }

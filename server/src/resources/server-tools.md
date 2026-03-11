@@ -19,6 +19,7 @@ This resource provides a complete reference of the default tools exposed by the 
 | `codeql_query_format`         | Automatically format CodeQL source code files                                                                                |
 | `codeql_query_run`            | Execute a CodeQL query against a database                                                                                    |
 | `codeql_resolve_database`     | Resolve database path and validate database structure                                                                        |
+| `codeql_resolve_files`        | Find files in a directory tree, filtered by extension and glob patterns. Useful for discovering QL library files             |
 | `codeql_resolve_languages`    | List installed CodeQL extractor packs                                                                                        |
 | `codeql_resolve_library-path` | Resolve library path for CodeQL queries and libraries                                                                        |
 | `codeql_resolve_metadata`     | Resolve and return key-value metadata pairs from a CodeQL query source file                                                  |
@@ -50,10 +51,11 @@ This resource provides a complete reference of the default tools exposed by the 
 | `list_mrva_run_results`          | List MRVA (Multi-Repository Variant Analysis) run results with per-repo details                              |
 | `list_query_run_results`         | List query run result directories with artifact inventory. Filter by `queryName`, `language`, or `queryPath` |
 | `profile_codeql_query`           | Profile the performance of a CodeQL query run against a specific database by analyzing the evaluator log     |
-| `profile_codeql_query_from_logs` | Parse existing CodeQL evaluator logs into a performance profile without re-running the query                 |
+| `profile_codeql_query_from_logs` | Parse evaluator logs into a compact profile with line-indexed detail file for targeted read_file access      |
 | `quick_evaluate`                 | Quick evaluate either a class or a predicate in a CodeQL query for debugging                                 |
 | `read_database_source`           | Read source file contents from a CodeQL database source archive. Omit `filePath` to list all files           |
 | `register_database`              | Register a CodeQL database given a local path to the database directory                                      |
+| `search_ql_code`                 | Search QL source files for text or regex patterns with structured results (replaces grep for QL code)        |
 | `validate_codeql_query`          | Quick heuristic validation for CodeQL query structure (does not compile the query)                           |
 
 ## Common Tool Workflows
@@ -75,8 +77,14 @@ This resource provides a complete reference of the default tools exposed by the 
 ### Profile Query Performance
 
 1. `codeql_query_run` with `evaluationOutput` — run query and capture evaluator logs
-2. `profile_codeql_query_from_logs` — analyze evaluator logs for bottlenecks
-3. `codeql_generate_log-summary` — generate a human-readable log summary
+2. `profile_codeql_query_from_logs` — analyze evaluator logs: slowest predicates, RA operations, tuple count progressions, dependencies
+
+### Discover and Search QL Code
+
+1. `codeql_resolve_files` — find QL files by extension and glob patterns in library packs
+2. `search_ql_code` — search QL source files for classes, predicates, or patterns by text/regex
+3. `codeql_lsp_definition` — navigate to the definition of a discovered symbol
+4. `codeql_lsp_references` — find all usages of a symbol across a pack
 
 ### Interactive Development
 

@@ -3,11 +3,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
-import { 
-  registerCLITool, 
-  defaultCLIResultProcessor, 
+import {
+  registerCLITool,
+  defaultCLIResultProcessor,
   createCodeQLSchemas,
   createQLTSchemas,
   createBQRSResultProcessor,
@@ -15,6 +17,7 @@ import {
   CLIToolDefinition
 } from '../../../src/lib/cli-tool-registry';
 import { CLIExecutionResult } from '../../../src/lib/cli-executor';
+import { createTestTempDir } from '../../utils/temp-dir';
 
 // Mock the CLI executor
 vi.mock('../../../src/lib/cli-executor', () => ({
@@ -333,6 +336,76 @@ describe('registerCLITool handler behavior', () => {
       ['/path/to/db'],
       undefined
     );
+  });
+
+  it('should auto-resolve single-child database directory for codeql_resolve_database', async () => {
+    // Create a parent directory with one database subdirectory
+    const parentDir = createTestTempDir('db-resolve-single-');
+    const dbDir = join(parentDir, 'javascript');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), 'primaryLanguage: javascript\n');
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_resolve_database',
+      description: 'Resolve database',
+      command: 'codeql',
+      subcommand: 'resolve database',
+      inputSchema: { database: z.string() }
+    };
+
+    registerCLITool(mockServer, definition);
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: '{"languages": ["javascript"]}',
+      stderr: '',
+      success: true
+    });
+
+    await handler({ database: parentDir });
+
+    // Should resolve to the child directory
+    expect(executeCodeQLCommand).toHaveBeenCalledWith(
+      'resolve database',
+      expect.any(Object),
+      [dbDir],
+      undefined
+    );
+
+    // Cleanup
+    rmSync(parentDir, { recursive: true, force: true });
+  });
+
+  it('should error on ambiguous multi-database directory for codeql_resolve_database', async () => {
+    // Create a parent directory with two database subdirectories
+    const parentDir = createTestTempDir('db-resolve-ambiguous-');
+    for (const lang of ['javascript', 'python']) {
+      const dbDir = join(parentDir, lang);
+      mkdirSync(dbDir, { recursive: true });
+      writeFileSync(join(dbDir, 'codeql-database.yml'), `primaryLanguage: ${lang}\n`);
+    }
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_resolve_database',
+      description: 'Resolve database',
+      command: 'codeql',
+      subcommand: 'resolve database',
+      inputSchema: { database: z.string() }
+    };
+
+    registerCLITool(mockServer, definition);
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    const result = await handler({ database: parentDir });
+
+    // Should return an error about ambiguous databases
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('Ambiguous database path');
+    expect(result.content[0].text).toContain('javascript');
+    expect(result.content[0].text).toContain('python');
+
+    // Cleanup
+    rmSync(parentDir, { recursive: true, force: true });
   });
 
   it('should handle database parameter as positional argument for codeql_database_create', async () => {

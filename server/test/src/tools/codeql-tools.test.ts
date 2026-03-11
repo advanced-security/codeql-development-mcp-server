@@ -36,15 +36,19 @@ describe('registerCodeQLTools', () => {
     expect(toolNames).toContain('list_query_run_results');
     expect(toolNames).toContain('quick_evaluate');
     expect(toolNames).toContain('register_database');
+    expect(toolNames).toContain('search_ql_code');
+
+    // CLI tools
+    expect(toolNames).toContain('codeql_resolve_files');
     
     // explain_codeql_query has been converted to a prompt, so it should NOT be in the tool list
     expect(toolNames).not.toContain('explain_codeql_query');
     // rank_sarif_results has been removed in favor of SARIF prompts
     expect(toolNames).not.toContain('rank_sarif_results');
     
-    // Total tools registered: 2 high-level helpers + 11 specialized tools + 22 CLI tools = 35
+    // Total tools registered: 2 high-level helpers + 12 specialized tools + 23 CLI tools = 37
     // (codeql_lsp_diagnostics moved to registerLSPTools in tools/lsp/)
-    expect(mockServer.tool).toHaveBeenCalledTimes(35);
+    expect(mockServer.tool).toHaveBeenCalledTimes(37);
   });
 
   it('should register validate_codeql_query with correct parameters', () => {
@@ -77,5 +81,30 @@ describe('registerCodeQLTools', () => {
     expect(createCall[2]).toHaveProperty('description');
     expect(createCall[2]).toHaveProperty('queryId');
     expect(createCall[3]).toBeInstanceOf(Function);
+  });
+
+  it('should register search_ql_code with correct parameters', () => {
+    registerCodeQLTools(mockServer);
+
+    const searchCall = (mockServer.tool as any).mock.calls.find(
+      (call: any) => call[0] === 'search_ql_code'
+    );
+
+    expect(searchCall).toBeDefined();
+    expect(searchCall[1]).toContain('Search QL source files');
+    expect(searchCall[2]).toHaveProperty('pattern');
+    expect(searchCall[2]).toHaveProperty('paths');
+    expect(searchCall[3]).toBeInstanceOf(Function);
+  });
+
+  it('should register codeql_resolve_files as a CLI tool', () => {
+    registerCodeQLTools(mockServer);
+
+    const resolveFilesCall = (mockServer.tool as any).mock.calls.find(
+      (call: any) => call[0] === 'codeql_resolve_files'
+    );
+
+    expect(resolveFilesCall).toBeDefined();
+    expect(resolveFilesCall[1]).toContain('Find files');
   });
 });

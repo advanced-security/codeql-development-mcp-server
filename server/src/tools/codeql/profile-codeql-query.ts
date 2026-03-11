@@ -6,9 +6,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { executeCodeQLCommand } from '../../lib/cli-executor';
 import { logger } from '../../utils/logger';
-import { writeFileSync, readFileSync, existsSync } from 'fs';
+import { writeFileSync, existsSync } from 'fs';
+import { createReadStream } from 'fs';
 import { join, dirname, basename } from 'path';
 import { mkdirSync } from 'fs';
+import { createInterface } from 'readline';
 
 interface EvaluatorLogEvent {
   time: string;
@@ -40,92 +42,125 @@ interface ProfileData {
 }
 
 /**
- * Parse evaluator log and create profile data
+ * Parse evaluator log and create profile data.
+ *
+ * Streams the file line-by-line to avoid loading the entire (potentially
+ * very large) evaluator log into memory.
  */
-function parseEvaluatorLog(logPath: string): ProfileData {
-  const logContent = readFileSync(logPath, 'utf-8');
-  
-  // Split by empty lines to get each JSON object (handles both JSONL and pretty-printed JSON)
-  const jsonObjects = logContent.split('\n\n').filter((s) => s.trim());
-  const events: EvaluatorLogEvent[] = jsonObjects
-    .map((obj) => {
-      try {
-        return JSON.parse(obj);
-      } catch (_error) {
-        logger.warn(`Failed to parse evaluator log object: ${obj.substring(0, 100)}...`);
-        return null;
-      }
-    })
-    .filter((event): event is EvaluatorLogEvent => event !== null);
-
+async function parseEvaluatorLog(logPath: string): Promise<ProfileData> {
   // Map to track pipeline nodes by their start event ID
   const pipelineMap = new Map<number, Partial<PipelineNode>>();
   // Map to track dependency event IDs by predicate name
   const predicateNameToEventId = new Map<string, number>();
-  
+  // Track PREDICATE_STARTED nanoTimes for duration calculation
+  const predicateStartNanoTimes = new Map<number, number>();
+
   let queryName = '';
   let queryStartTime = 0;
   let queryEndTime = 0;
+  let totalEvents = 0;
 
-  for (const event of events) {
-    switch (event.type) {
-      case 'QUERY_STARTED':
-        queryName = (event.queryName as string) || '';
-        queryStartTime = event.nanoTime;
-        break;
+  // --- Streaming JSON object parser (brace-depth tracking) ---
+  const rl = createInterface({
+    input: createReadStream(logPath, { encoding: 'utf-8' }),
+    crlfDelay: Infinity,
+  });
 
-      case 'QUERY_COMPLETED':
-        queryEndTime = event.nanoTime;
-        break;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  const lines: string[] = [];
 
-      case 'PREDICATE_STARTED': {
-        const predicateName = event.predicateName as string;
-        const position = event.position as string | undefined;
-        const predicateType = event.predicateType as string | undefined;
-        const dependencies = event.dependencies as Record<string, string> | undefined;
-        
-        // Track this predicate's event ID by name for dependency resolution
-        predicateNameToEventId.set(predicateName, event.eventId);
-        
-        // Get dependency event IDs
-        const dependencyEventIds: number[] = [];
-        const dependencyNames: string[] = [];
-        if (dependencies) {
-          for (const depName of Object.keys(dependencies)) {
-            dependencyNames.push(depName);
-            const depEventId = predicateNameToEventId.get(depName);
-            if (depEventId !== undefined) {
-              dependencyEventIds.push(depEventId);
+  for await (const line of rl) {
+    for (const ch of line) {
+      if (escape) { escape = false; continue; }
+      if (ch === '\\' && inString) { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      if (ch === '}') depth--;
+    }
+
+    if (depth > 0 || (depth === 0 && line.trim().length > 0 && lines.length > 0)) {
+      lines.push(line);
+    } else if (depth === 0 && lines.length === 0 && line.trim().length > 0) {
+      lines.push(line);
+    }
+
+    if (depth === 0 && lines.length > 0) {
+      const objStr = lines.join('\n');
+      lines.length = 0;
+      inString = false;
+      escape = false;
+
+      if (objStr.trim().length === 0) continue;
+
+      let event: EvaluatorLogEvent;
+      try {
+        event = JSON.parse(objStr);
+      } catch {
+        logger.warn(`Failed to parse evaluator log object: ${objStr.substring(0, 100)}...`);
+        continue;
+      }
+      totalEvents++;
+
+      // --- Process event ---
+      switch (event.type) {
+        case 'QUERY_STARTED':
+          queryName = (event.queryName as string) || '';
+          queryStartTime = event.nanoTime;
+          break;
+
+        case 'QUERY_COMPLETED':
+          queryEndTime = event.nanoTime;
+          break;
+
+        case 'PREDICATE_STARTED': {
+          const predicateName = event.predicateName as string;
+          const position = event.position as string | undefined;
+          const predicateType = event.predicateType as string | undefined;
+          const dependencies = event.dependencies as Record<string, string> | undefined;
+
+          predicateNameToEventId.set(predicateName, event.eventId);
+          predicateStartNanoTimes.set(event.eventId, event.nanoTime);
+
+          const dependencyEventIds: number[] = [];
+          const dependencyNames: string[] = [];
+          if (dependencies) {
+            for (const depName of Object.keys(dependencies)) {
+              dependencyNames.push(depName);
+              const depEventId = predicateNameToEventId.get(depName);
+              if (depEventId !== undefined) {
+                dependencyEventIds.push(depEventId);
+              }
             }
           }
+
+          pipelineMap.set(event.eventId, {
+            eventId: event.eventId,
+            name: predicateName,
+            position,
+            type: predicateType,
+            startTime: event.nanoTime,
+            dependencies: dependencyNames,
+            dependencyEventIds,
+          });
+          break;
         }
 
-        pipelineMap.set(event.eventId, {
-          eventId: event.eventId,
-          name: predicateName,
-          position,
-          type: predicateType,
-          startTime: event.nanoTime,
-          dependencies: dependencyNames,
-          dependencyEventIds,
-        });
-        break;
-      }
-
-      case 'PREDICATE_COMPLETED': {
-        const startEventId = event.startEvent as number;
-        const pipelineInfo = pipelineMap.get(startEventId);
-        if (pipelineInfo) {
-          const startEvent = events.find((e) => e.eventId === startEventId);
-          if (startEvent) {
-            const duration = (event.nanoTime - startEvent.nanoTime) / 1_000_000; // Convert to ms
+        case 'PREDICATE_COMPLETED': {
+          const startEventId = event.startEvent as number;
+          const pipelineInfo = pipelineMap.get(startEventId);
+          const startNano = predicateStartNanoTimes.get(startEventId);
+          if (pipelineInfo && startNano !== undefined) {
+            const duration = (event.nanoTime - startNano) / 1_000_000;
             pipelineInfo.endTime = event.nanoTime;
             pipelineInfo.duration = duration;
             pipelineInfo.resultSize = event.resultSize as number | undefined;
             pipelineInfo.tupleCount = event.tupleCount as number | undefined;
           }
+          break;
         }
-        break;
       }
     }
   }
@@ -140,7 +175,7 @@ function parseEvaluatorLog(logPath: string): ProfileData {
   return {
     queryName,
     totalDuration,
-    totalEvents: events.length,
+    totalEvents,
     pipelines,
   };
 }
@@ -304,7 +339,7 @@ export function registerProfileCodeQLQueryTool(server: McpServer): void {
 
         // Parse the evaluator log
         logger.info(`Parsing evaluator log from: ${logPath}`);
-        const profile = parseEvaluatorLog(logPath);
+        const profile = await parseEvaluatorLog(logPath);
 
         // Determine output directory for profile
         const profileOutputDir = outputDir || dirname(logPath);

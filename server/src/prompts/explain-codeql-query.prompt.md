@@ -20,12 +20,10 @@ For creating/updating **query documentation files** (`.md` or `.qhelp`), use the
 
 ## Agent AI Instructions
 
-**Critical**: The evaluator logs and profiler outputs from CodeQL can be very large files. Instead of reading them line by line, use grep-style CLI commands to investigate these files efficiently. Key patterns to search for:
+**Critical**: The evaluator logs and profiler outputs from CodeQL can be very large files. Use the MCP server tools to analyze them efficiently:
 
-- Pipeline evaluation times: `grep -E "Pipeline|eval [0-9]+ms" <logfile>`
-- Predicate evaluation order: `grep -E "Evaluation done|evaluated" <logfile>`
-- Tuple counts: `grep -E "tuples|rows" <logfile>`
-- RA operations: `grep -E "SCAN|JOIN|AGGREGATE" <logfile>`
+- Use #profile_codeql_query_from_logs to extract pipeline timing, predicate evaluation order, tuple count progressions, RA operations, and dependencies from evaluator logs — this single tool provides all evaluator log analysis
+- Use #search_ql_code to find predicates, classes, or patterns across QL library files
 
 ## Choosing a Database
 
@@ -103,25 +101,7 @@ Skip this phase entirely if no database is available.
   - Gather: Pipeline execution order, predicate timing data, tuple counts
   - **Critical**: This reveals the actual bottom-up evaluation order of predicates
 
-- [ ] **Step 7: Analyze evaluator log** (for large logs)
-  - Use CLI grep commands to extract key performance data from evaluator logs:
-  - Replace `<evaluator-log-file>` with the log file path from Step 6a
-
-  ```bash
-  # Find pipeline evaluation order and timing
-  grep -E "Pipeline.*evaluated|eval [0-9]+ms" <evaluator-log-file>
-
-  # Find predicate evaluation completion
-  grep "Evaluation done" <evaluator-log-file>
-
-  # Extract tuple counts for understanding data sizes
-  grep -E "tuples|resultSize" <evaluator-log-file>
-
-  # Find the most expensive operations
-  grep -E "eval [0-9]{4,}ms" <evaluator-log-file> | sort -t'[' -k2 -rn | head -20
-  ```
-
-- [ ] **Step 8: Quick evaluate specific predicates** (as needed)
+- [ ] **Step 7: Quick evaluate specific predicates** (as needed)
   - First, locate the predicate: Tool: #find_predicate_position with `file` and `name`
   - Then evaluate: Tool: #quick_evaluate with `file`, `db`, and `symbol`
   - Use when: You need more context on how a specific predicate or class behaves
@@ -172,7 +152,7 @@ Generate a `mermaid` `flowchart BU` (bottom-up) diagram showing the evaluation o
 ## Important Notes
 
 - **Always use tools first**: Do not generate explanations based only on query source code. Use the MCP tools to gather actual runtime data.
-- **Use grep for large files**: Evaluator logs can be huge. Use CLI grep commands to extract relevant data efficiently.
+- **Use the profiler tool for evaluator logs**: Evaluator logs can be huge. Use #profile_codeql_query_from_logs which returns compact JSON with per-predicate metrics and a line-indexed detail file. Use `read_file` with the `detailLines` ranges from the response to access full RA operations and tuple progressions for any predicate — do not use CLI grep or read log files directly.
 - **Evaluation order matters**: CodeQL evaluates bottom-up, not top-down. The profiler output reveals the true execution order.
 - **Focus on learning**: This is for workshop content, so include educational context and explanations suitable for CodeQL learners.
 - **Visual diagrams**: Always include a mermaid diagram showing evaluation order.

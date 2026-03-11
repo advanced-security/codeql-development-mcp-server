@@ -9,10 +9,9 @@ The `profile_codeql_query_from_logs` tool is the primary means of evaluating the
 ### Workflow
 
 1. **Run the query**: Use `codeql_query_run` with `evaluationOutput` set to a directory path. This generates evaluator log files.
-2. **Generate a log summary**: Use `codeql_generate_log-summary` to create a human-readable summary of the evaluator log.
-3. **Profile**: Use `profile_codeql_query_from_logs` to parse the evaluator log into a structured performance profile identifying expensive predicates, pipeline stages, and tuple counts.
-4. **Identify bottlenecks**: Review the profile output for predicates with high evaluation times or unexpectedly large result sets.
-5. **Refine**: Modify the query to address identified bottlenecks, then re-run and re-profile to verify improvements.
+2. **Profile**: Use `profile_codeql_query_from_logs` to parse the evaluator log. Returns compact JSON with the slowest predicates (by wall-clock time) and per-predicate metrics. Full RA operations and pipeline-stage tuple progressions are in a line-indexed detail file — use `read_file` with the `detailLines` ranges from the response to drill into any predicate.
+3. **Identify bottlenecks**: Review the profile JSON for predicates with high evaluation times, tuple count explosions in pipeline stages, or expensive RA operations (large JOINs, cross-products).
+4. **Refine**: Modify the query to address identified bottlenecks, then re-run and re-profile to verify improvements.
 
 ### What the Profile Shows
 
@@ -83,8 +82,8 @@ For monorepos with multiple independent applications separated by process/networ
 
 | Tool / Prompt                                    | Purpose                                                  |
 | ------------------------------------------------ | -------------------------------------------------------- |
-| `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (no re-run needed)  |
-| `codeql_generate_log-summary`                    | Generate a human-readable evaluator log summary          |
+| `profile_codeql_query_from_logs`                 | Profile from existing evaluator logs (primary tool)      |
+| `codeql_generate_log-summary`                    | Optional: human-readable evaluator log summary           |
 | `codeql_query_run`                               | Execute a query (set `evaluationOutput` to capture logs) |
 | `explain_codeql_query` prompt                    | Understand query evaluation flow with Mermaid diagrams   |
 | `run_query_and_summarize_false_positives` prompt | Assess result quality (precision)                        |

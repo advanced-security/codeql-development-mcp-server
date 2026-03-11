@@ -144,6 +144,8 @@ suite('MCP Server Tool Integration Tests', () => {
     assert.ok(toolNames.includes('list_codeql_databases'), 'Should include list_codeql_databases');
     assert.ok(toolNames.includes('list_query_run_results'), 'Should include list_query_run_results');
     assert.ok(toolNames.includes('list_mrva_run_results'), 'Should include list_mrva_run_results');
+    assert.ok(toolNames.includes('search_ql_code'), 'Should include search_ql_code');
+    assert.ok(toolNames.includes('codeql_resolve_files'), 'Should include codeql_resolve_files');
 
     console.log(`[mcp-tool-e2e] Server provides ${response.tools.length} tools`);
   });

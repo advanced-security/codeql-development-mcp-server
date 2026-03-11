@@ -75,4 +75,10 @@ describe('StoragePaths', () => {
   it('should be disposable', () => {
     expect(() => paths.dispose()).not.toThrow();
   });
+
+  it('should compute the managed database storage path under our own storage', () => {
+    const result = paths.getManagedDatabaseStoragePath();
+    expect(result).toContain('advanced-security.vscode-codeql-development-mcp-server');
+    expect(result).toContain('databases');
+  });
 });

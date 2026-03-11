@@ -1,0 +1,8 @@
+{
+  "sessions": [],
+  "parameters": {
+    "pattern": "isSource",
+    "paths": ["server/ql/javascript/examples/src"],
+    "contextLines": 1
+  }
+}
