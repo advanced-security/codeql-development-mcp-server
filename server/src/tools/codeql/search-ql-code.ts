@@ -8,7 +8,7 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { createReadStream, lstatSync, readdirSync, readFileSync, realpathSync } from 'fs';
+import { closeSync, createReadStream, fstatSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync } from 'fs';
 import { basename, extname, join, resolve } from 'path';
 import { createInterface } from 'readline';
 import { z } from 'zod';
@@ -128,9 +128,10 @@ function collectFiles(
  * Search a file for matches. Returns up to `maxCollect` full match objects
  * (with context) and a `totalCount` of all regex hits in the file.
  *
- * Tries an in-memory read first. If the file exceeds MAX_FILE_SIZE_BYTES,
- * falls back to streaming. All I/O is attempted directly with error
- * catching — no stat-then-read sequences — to avoid TOCTOU races.
+ * Opens a single file descriptor, uses fstatSync(fd) to check size, then
+ * either reads in-memory (small files) or streams (large files) — all via
+ * the same fd. This avoids both TOCTOU races and reading huge files into
+ * memory before the size check.
  */
 async function searchFile(
   filePath: string,
@@ -138,18 +139,36 @@ async function searchFile(
   contextLines: number,
   maxCollect: number
 ): Promise<{ matches: SearchMatch[]; totalCount: number }> {
-  // Fast path: try reading the whole file.
-  let content: string;
+  // Open once; fstatSync(fd) is safe — it operates on the handle, not the path.
+  let fd: number;
   try {
-    content = readFileSync(filePath, 'utf-8');
+    fd = openSync(filePath, 'r');
   } catch {
     return { matches: [], totalCount: 0 };
   }
 
-  // If file is too large, fall back to streaming
-  if (Buffer.byteLength(content, 'utf-8') > MAX_FILE_SIZE_BYTES) {
-    return searchFileStreaming(filePath, regex, contextLines, maxCollect);
+  let size: number;
+  try {
+    size = fstatSync(fd).size;
+  } catch {
+    try { closeSync(fd); } catch { /* ignore */ }
+    return { matches: [], totalCount: 0 };
   }
+
+  // Large files: stream directly from the open fd
+  if (size > MAX_FILE_SIZE_BYTES) {
+    return searchFileStreaming(filePath, regex, contextLines, maxCollect, fd);
+  }
+
+  // Small files: read entirely into memory from the open fd, then close
+  let content: string;
+  try {
+    content = readFileSync(fd, 'utf-8');
+  } catch {
+    try { closeSync(fd); } catch { /* ignore */ }
+    return { matches: [], totalCount: 0 };
+  }
+  try { closeSync(fd); } catch { /* ignore */ }
 
   // In-memory search
   const lines = content.replace(/\r\n/g, '\n').split('\n');
@@ -182,12 +201,16 @@ async function searchFile(
 /**
  * Stream a file line-by-line, collecting up to `maxCollect` matches with
  * context and counting all hits. Used for files exceeding MAX_FILE_SIZE_BYTES.
+ *
+ * When `fd` is provided the stream is created from the already-open file
+ * descriptor (autoClose: true) so the fd is closed when the stream ends.
  */
 async function searchFileStreaming(
   filePath: string,
   regex: RegExp,
   contextLines: number,
-  maxCollect: number
+  maxCollect: number,
+  fd?: number
 ): Promise<{ matches: SearchMatch[]; totalCount: number }> {
   const matches: SearchMatch[] = [];
   const recentLines: string[] = [];
@@ -197,11 +220,20 @@ async function searchFileStreaming(
 
   let rl: ReturnType<typeof createInterface>;
   try {
+    const streamOpts: Record<string, unknown> = { encoding: 'utf-8' };
+    if (fd !== undefined) {
+      streamOpts.fd = fd;
+      streamOpts.autoClose = true;
+      streamOpts.start = 0;
+    }
     rl = createInterface({
-      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      input: createReadStream(filePath, streamOpts as Parameters<typeof createReadStream>[1]),
       crlfDelay: Infinity
     });
   } catch {
+    if (fd !== undefined) {
+      try { closeSync(fd); } catch { /* ignore */ }
+    }
     return { matches: [], totalCount: 0 };
   }
 

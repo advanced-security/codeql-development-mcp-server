@@ -62913,7 +62913,7 @@ var codeqlResolveTestsTool = {
 };
 
 // src/tools/codeql/search-ql-code.ts
-import { createReadStream as createReadStream3, lstatSync, readdirSync as readdirSync8, readFileSync as readFileSync9, realpathSync } from "fs";
+import { closeSync, createReadStream as createReadStream3, fstatSync, lstatSync, openSync, readdirSync as readdirSync8, readFileSync as readFileSync9, realpathSync } from "fs";
 import { basename as basename6, extname as extname2, join as join15, resolve as resolve9 } from "path";
 import { createInterface as createInterface3 } from "readline";
 init_logger();
@@ -62968,14 +62968,38 @@ function collectFiles(paths, extensions, fileCount) {
   return files;
 }
 async function searchFile(filePath, regex, contextLines, maxCollect) {
-  let content;
+  let fd;
   try {
-    content = readFileSync9(filePath, "utf-8");
+    fd = openSync(filePath, "r");
   } catch {
     return { matches: [], totalCount: 0 };
   }
-  if (Buffer.byteLength(content, "utf-8") > MAX_FILE_SIZE_BYTES) {
-    return searchFileStreaming(filePath, regex, contextLines, maxCollect);
+  let size;
+  try {
+    size = fstatSync(fd).size;
+  } catch {
+    try {
+      closeSync(fd);
+    } catch {
+    }
+    return { matches: [], totalCount: 0 };
+  }
+  if (size > MAX_FILE_SIZE_BYTES) {
+    return searchFileStreaming(filePath, regex, contextLines, maxCollect, fd);
+  }
+  let content;
+  try {
+    content = readFileSync9(fd, "utf-8");
+  } catch {
+    try {
+      closeSync(fd);
+    } catch {
+    }
+    return { matches: [], totalCount: 0 };
+  }
+  try {
+    closeSync(fd);
+  } catch {
   }
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const matches = [];
@@ -63001,7 +63025,7 @@ async function searchFile(filePath, regex, contextLines, maxCollect) {
   }
   return { matches, totalCount };
 }
-async function searchFileStreaming(filePath, regex, contextLines, maxCollect) {
+async function searchFileStreaming(filePath, regex, contextLines, maxCollect, fd) {
   const matches = [];
   const recentLines = [];
   const pending = [];
@@ -63009,11 +63033,23 @@ async function searchFileStreaming(filePath, regex, contextLines, maxCollect) {
   let totalCount = 0;
   let rl;
   try {
+    const streamOpts = { encoding: "utf-8" };
+    if (fd !== void 0) {
+      streamOpts.fd = fd;
+      streamOpts.autoClose = true;
+      streamOpts.start = 0;
+    }
     rl = createInterface3({
-      input: createReadStream3(filePath, { encoding: "utf-8" }),
+      input: createReadStream3(filePath, streamOpts),
       crlfDelay: Infinity
     });
   } catch {
+    if (fd !== void 0) {
+      try {
+        closeSync(fd);
+      } catch {
+      }
+    }
     return { matches: [], totalCount: 0 };
   }
   for await (const line of rl) {

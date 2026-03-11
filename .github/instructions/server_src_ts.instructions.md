@@ -24,13 +24,9 @@ This file contains instructions for working with TypeScript source code files in
 - PREFER the import of functionality from `@modelcontextprotocol/sdk` over direct implementation, unless absolutely necessary.
 - PREFER to implement each MCP server primitive in its own file named after the primitive, e.g., `server/src/<lib-example>/<primitive-example>.ts`.
 - PREFER many simple MCP server primitives that each do one thing well over fewer complex MCP server primitives that do many things.
-- PREFER copying and/or adapting existing `*.prompt.md` files matching one of the following patterns:
-  - `ql/.github/prompts/*.prompt.md`
-  - `ql/languages/*/tools/dev/*.prompt.md`
-  - `ql/resources/{codeql,qlt}/*.prompt.md`
 
 ## CONTRAINTS
 
 - NEVER leave any trailing whitespace on any line.
-- NEVER guess at what a `codeql` or `qlt` CLI subcommand does; ALWAYS verify against the official `codeql <subcommand> -h -vv` or `qlt <subcommand> -h` documentation, respectively.
+- NEVER guess at what a `codeql` CLI subcommand does; ALWAYS verify against the official `codeql <subcommand> -h -vv` documentation.
 - **NEVER use stat/lstat followed by a separate read/open on the same path** — this is a TOCTOU (Time-of-Check-Time-of-Use) race condition (CWE-367). Instead, attempt the operation directly (e.g., `readFileSync`) within a try/catch block. If you need to know the file size before reading, read first and then check the buffer size — do NOT stat then read. For directory traversal, `lstatSync` is acceptable since it is the operation itself (checking entry type), not a precursor to a separate operation.
