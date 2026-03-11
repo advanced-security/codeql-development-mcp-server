@@ -8,8 +8,10 @@
  */
 
 // Static imports — esbuild inlines the file contents as string literals.
+import checkForDuplicatedCode from './check-for-duplicated-code.prompt.md';
 import documentCodeqlQuery from './document-codeql-query.prompt.md';
 import explainCodeqlQuery from './explain-codeql-query.prompt.md';
+import findOverlappingQueries from './find-overlapping-queries.prompt.md';
 import qlLspIterativeDevelopment from './ql-lsp-iterative-development.prompt.md';
 import qlTddAdvanced from './ql-tdd-advanced.prompt.md';
 import qlTddBasic from './ql-tdd-basic.prompt.md';
@@ -27,8 +29,10 @@ import workshopCreationWorkflow from './workshop-creation-workflow.prompt.md';
  * `loadPromptTemplate()` throughout the codebase.
  */
 const PROMPT_TEMPLATES: Record<string, string> = {
+  'check-for-duplicated-code.prompt.md': checkForDuplicatedCode,
   'document-codeql-query.prompt.md': documentCodeqlQuery,
   'explain-codeql-query.prompt.md': explainCodeqlQuery,
+  'find-overlapping-queries.prompt.md': findOverlappingQueries,
   'ql-lsp-iterative-development.prompt.md': qlLspIterativeDevelopment,
   'ql-tdd-advanced.prompt.md': qlTddAdvanced,
   'ql-tdd-basic.prompt.md': qlTddBasic,

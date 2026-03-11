@@ -204,6 +204,47 @@ export const documentCodeqlQuerySchema = z.object({
 });
 
 /**
+ * Schema for check_for_duplicated_code prompt parameters.
+ *
+ * - `queryPath` is **required** – the file to audit.
+ * - `workspaceUri` is optional – if omitted the agent will derive it from the
+ *   pack root containing the query.
+ */
+export const checkForDuplicatedCodeSchema = z.object({
+  queryPath: z
+    .string()
+    .describe('Path to the .ql or .qll file to audit for duplicated definitions'),
+  workspaceUri: z
+    .string()
+    .optional()
+    .describe('Pack root directory containing codeql-pack.yml (for LSP resolution)'),
+});
+
+/**
+ * Schema for find_overlapping_queries prompt parameters.
+ *
+ * - `queryDescription` is **required** – describes the new query's purpose.
+ * - `language` is **required** – the target CodeQL language.
+ * - `packRoot` is optional – directory containing `codeql-pack.yml` for the
+ *   pack that will own the new query.
+ */
+export const findOverlappingQueriesSchema = z.object({
+  queryDescription: z
+    .string()
+    .describe(
+      'Description of the new query\'s purpose and target constructs '
+      + '(e.g. "detect placement-new on types with non-trivial destructors")'
+    ),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .describe('Target language for the new query (e.g. cpp, java, python)'),
+  packRoot: z
+    .string()
+    .optional()
+    .describe('Directory containing codeql-pack.yml for the pack that will own the new query'),
+});
+
+/**
  * Schema for ql_lsp_iterative_development prompt parameters.
  *
  * All parameters are optional.
@@ -229,8 +270,10 @@ export const qlLspIterativeDevelopmentSchema = z.object({
 
 /** Names of every workflow prompt registered with the MCP server. */
 export const WORKFLOW_PROMPT_NAMES = [
+  'check_for_duplicated_code',
   'document_codeql_query',
   'explain_codeql_query',
+  'find_overlapping_queries',
   'ql_lsp_iterative_development',
   'ql_tdd_advanced',
   'ql_tdd_basic',
@@ -576,6 +619,68 @@ export function registerWorkflowPrompts(server: McpServer): void {
             }
           }
         ]
+      };
+    }
+  );
+
+  // Check for Duplicated Code Prompt
+  server.prompt(
+    'check_for_duplicated_code',
+    'Check a .ql or .qll file for classes, predicates, and modules that duplicate definitions already available in the standard CodeQL libraries or shared project .qll files',
+    checkForDuplicatedCodeSchema.shape,
+    async ({ queryPath, workspaceUri }) => {
+      const template = loadPromptTemplate('check-for-duplicated-code.prompt.md');
+
+      const contextSection = `## File to Audit
+
+- **Query Path**: ${queryPath}
+${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
+` : ''}
+`;
+
+      return {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: contextSection + template,
+            },
+          },
+        ],
+      };
+    }
+  );
+
+  // Find Overlapping Queries Prompt
+  server.prompt(
+    'find_overlapping_queries',
+    'Discover existing .ql query files and .qll library files whose content may overlap with a new query design, identifying reusable classes, predicates, and modules',
+    findOverlappingQueriesSchema.shape,
+    async ({ queryDescription, language, packRoot }) => {
+      const template = loadPromptTemplate('find-overlapping-queries.prompt.md');
+
+      const contextSection =
+        `## New Query Context
+
+`
+        + `- **Query Description**: ${queryDescription}
+`
+        + `- **Language**: ${language}
+`
+        + (packRoot ? `- **Pack Root**: ${packRoot}
+` : '');
+
+      return {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: contextSection + '\n' + template,
+            },
+          },
+        ],
       };
     }
   );
