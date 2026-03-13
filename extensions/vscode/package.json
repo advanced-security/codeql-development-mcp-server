@@ -148,6 +148,7 @@
     "bundle": "node esbuild.config.js",
     "bundle:server": "node scripts/bundle-server.js",
     "clean": "rm -rf dist server .vscode-test/* *.vsix",
+    "download:vscode": "node scripts/download-vscode.js",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
     "package": "vsce package --no-dependencies --out codeql-development-mcp-server-v$(node -e 'process.stdout.write(require(`./package.json`).version)').vsix",
