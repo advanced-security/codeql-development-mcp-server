@@ -148,6 +148,7 @@
     "bundle": "node esbuild.config.js",
     "bundle:server": "node scripts/bundle-server.js",
     "clean": "rm -rf dist server .vscode-test/* *.vsix",
+    "download:vscode": "node scripts/download-vscode.js",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
     "package": "vsce package --no-dependencies --out codeql-development-mcp-server-v$(node -e 'process.stdout.write(require(`./package.json`).version)').vsix",
@@ -162,13 +163,13 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.3.5",
-    "@types/vscode": "^1.109.0",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@types/node": "^25.5.0",
+    "@types/vscode": "^1.110.0",
+    "@vitest/coverage-v8": "^4.1.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
-    "esbuild": "^0.27.3",
+    "esbuild": "^0.27.4",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
@@ -176,7 +177,7 @@
     "mocha": "^11.7.5",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1",
-    "vitest": "^4.0.18"
+    "typescript-eslint": "^8.57.0",
+    "vitest": "^4.1.0"
   }
 }
