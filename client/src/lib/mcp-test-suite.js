@@ -22,6 +22,7 @@ export class MCPTestSuite {
     await this.testReadResource();
     await this.testListPrompts();
     await this.testGetPrompt();
+    await this.testGetPromptWithInvalidPath();
   }
 
   /**
@@ -128,6 +129,58 @@ export class MCPTestSuite {
       return hasMessages;
     } catch (error) {
       this.logger.logTest("Get Prompt", false, error);
+      return false;
+    }
+  }
+
+  /**
+   * Test that prompts handle invalid file paths gracefully.
+   *
+   * The explain_codeql_query prompt requires a `queryPath` parameter.
+   * When given a nonexistent path it should return a user-friendly error
+   * message inside the prompt response rather than throwing a raw MCP
+   * protocol error.
+   */
+  async testGetPromptWithInvalidPath() {
+    try {
+      this.logger.log("Testing prompt error handling with invalid file path...");
+
+      const result = await this.client.getPrompt({
+        name: "explain_codeql_query",
+        arguments: {
+          queryPath: "nonexistent/path/to/query.ql",
+          language: "javascript"
+        }
+      });
+
+      // The prompt should return messages (not throw) even for an invalid path
+      const hasMessages = result.messages && result.messages.length > 0;
+      if (!hasMessages) {
+        this.logger.logTest(
+          "Get Prompt with Invalid Path (explain_codeql_query)",
+          false,
+          "Expected messages in response"
+        );
+        return false;
+      }
+
+      // The response should contain a human-readable error about the invalid path
+      const text = result.messages[0]?.content?.text || "";
+      const mentionsPathError =
+        text.includes("does not exist") ||
+        text.includes("not found") ||
+        text.includes("could not be found") ||
+        text.includes("File not found") ||
+        text.includes("⚠");
+
+      this.logger.log(`Prompt response mentions path error: ${mentionsPathError}`);
+      this.logger.logTest("Get Prompt with Invalid Path (explain_codeql_query)", mentionsPathError);
+
+      return mentionsPathError;
+    } catch (error) {
+      // If the server throws instead of returning a message this test fails,
+      // which is the exact behaviour we want to fix.
+      this.logger.logTest("Get Prompt with Invalid Path (explain_codeql_query)", false, error);
       return false;
     }
   }
