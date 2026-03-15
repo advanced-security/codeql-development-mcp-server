@@ -20,6 +20,9 @@ try {
   const vscodeExecutablePath = await downloadAndUnzipVSCode(version);
   console.log(`✅ VS Code downloaded to: ${vscodeExecutablePath}`);
 } catch (error) {
-  console.error('❌ Failed to download VS Code:', error.message);
+  console.error(
+    '❌ Failed to download VS Code:',
+    error instanceof Error ? error.message : String(error),
+  );
   process.exit(1);
 }
