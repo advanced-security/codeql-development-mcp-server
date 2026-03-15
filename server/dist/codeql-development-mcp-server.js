@@ -2991,7 +2991,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve14.call(this, root, ref);
+      let _sch = resolve15.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -3018,7 +3018,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve14(root, ref) {
+    function resolve15(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3593,7 +3593,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve14(baseURI, relativeURI, options) {
+    function resolve15(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse4(baseURI, schemelessOptions), parse4(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -3820,7 +3820,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve14,
+      resolve: resolve15,
       resolveComponent,
       equal,
       serialize,
@@ -9611,7 +9611,7 @@ var require_compile2 = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve14.call(this, root, ref);
+      let _sch = resolve15.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -9638,7 +9638,7 @@ var require_compile2 = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve14(root, ref) {
+    function resolve15(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -17919,10 +17919,10 @@ var require_raw_body = __commonJS({
       if (done) {
         return readStream(stream, encoding, length, limit, wrap(done));
       }
-      return new Promise(function executor(resolve14, reject) {
+      return new Promise(function executor(resolve15, reject) {
         readStream(stream, encoding, length, limit, function onRead(err, buf) {
           if (err) return reject(err);
-          resolve14(buf);
+          resolve15(buf);
         });
       });
     }
@@ -31258,7 +31258,7 @@ var require_view = __commonJS({
     var basename8 = path4.basename;
     var extname3 = path4.extname;
     var join19 = path4.join;
-    var resolve14 = path4.resolve;
+    var resolve15 = path4.resolve;
     module.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -31292,7 +31292,7 @@ var require_view = __commonJS({
       debug('lookup "%s"', name);
       for (var i = 0; i < roots.length && !path5; i++) {
         var root = roots[i];
-        var loc = resolve14(root, name);
+        var loc = resolve15(root, name);
         var dir = dirname8(loc);
         var file = basename8(loc);
         path5 = this.resolve(dir, file);
@@ -31317,7 +31317,7 @@ var require_view = __commonJS({
       });
       sync = false;
     };
-    View.prototype.resolve = function resolve15(dir, file) {
+    View.prototype.resolve = function resolve16(dir, file) {
       var ext = this.ext;
       var path5 = join19(dir, file);
       var stat = tryStat(path5);
@@ -33458,7 +33458,7 @@ var require_application = __commonJS({
     var compileETag = require_utils4().compileETag;
     var compileQueryParser = require_utils4().compileQueryParser;
     var compileTrust = require_utils4().compileTrust;
-    var resolve14 = __require("node:path").resolve;
+    var resolve15 = __require("node:path").resolve;
     var once = require_once();
     var Router = require_router();
     var slice = Array.prototype.slice;
@@ -33512,7 +33512,7 @@ var require_application = __commonJS({
       this.mountpath = "/";
       this.locals.settings = this.settings;
       this.set("view", View);
-      this.set("views", resolve14("views"));
+      this.set("views", resolve15("views"));
       this.set("jsonp callback name", "callback");
       if (env === "production") {
         this.enable("view cache");
@@ -34971,7 +34971,7 @@ var require_send = __commonJS({
     var extname3 = path4.extname;
     var join19 = path4.join;
     var normalize = path4.normalize;
-    var resolve14 = path4.resolve;
+    var resolve15 = path4.resolve;
     var sep2 = path4.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
@@ -35000,7 +35000,7 @@ var require_send = __commonJS({
       this._maxage = opts.maxAge || opts.maxage;
       this._maxage = typeof this._maxage === "string" ? ms(this._maxage) : Number(this._maxage);
       this._maxage = !isNaN(this._maxage) ? Math.min(Math.max(0, this._maxage), MAX_MAXAGE) : 0;
-      this._root = opts.root ? resolve14(opts.root) : null;
+      this._root = opts.root ? resolve15(opts.root) : null;
     }
     util2.inherits(SendStream, Stream);
     SendStream.prototype.error = function error2(status, err) {
@@ -35149,7 +35149,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = normalize(path5).split(sep2);
-        path5 = resolve14(path5);
+        path5 = resolve15(path5);
       }
       if (containsDotFile(parts)) {
         debug('%s dotfile "%s"', this._dotfiles, path5);
@@ -35527,7 +35527,7 @@ var require_response = __commonJS({
     var cookie = require_cookie();
     var send = require_send();
     var extname3 = path4.extname;
-    var resolve14 = path4.resolve;
+    var resolve15 = path4.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = __require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -35733,7 +35733,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve14(path5) : path5;
+      var fullPath = !opts.root ? resolve15(path5) : path5;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type2) {
@@ -35982,7 +35982,7 @@ var require_serve_static = __commonJS({
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
     var parseUrl = require_parseurl();
-    var resolve14 = __require("path").resolve;
+    var resolve15 = __require("path").resolve;
     var send = require_send();
     var url = __require("url");
     module.exports = serveStatic;
@@ -36001,7 +36001,7 @@ var require_serve_static = __commonJS({
         throw new TypeError("option setHeaders must be function");
       }
       opts.maxage = opts.maxage || opts.maxAge || 0;
-      opts.root = resolve14(root);
+      opts.root = resolve15(root);
       var onDirectory = redirect ? createRedirectDirectoryListener() : createNotFoundDirectoryListener();
       return function serveStatic2(req, res, next) {
         if (req.method !== "GET" && req.method !== "HEAD") {
@@ -36992,7 +36992,7 @@ var init_temp_dir = __esm({
 import { clearTimeout as clearTimeout2, setTimeout as setTimeout2 } from "timers";
 function waitForProcessReady(child, name, opts) {
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
-  return new Promise((resolve14, reject) => {
+  return new Promise((resolve15, reject) => {
     let settled = false;
     const cleanup = () => {
       settled = true;
@@ -37006,13 +37006,13 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.debug(`${name}: ready (stderr output detected)`);
       cleanup();
-      resolve14();
+      resolve15();
     };
     const onStdout = () => {
       if (settled) return;
       logger.debug(`${name}: ready (stdout output detected)`);
       cleanup();
-      resolve14();
+      resolve15();
     };
     const onError = (error2) => {
       if (settled) return;
@@ -37028,7 +37028,7 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.warn(`${name}: readiness timeout (${timeoutMs} ms) \u2014 proceeding anyway`);
       cleanup();
-      resolve14();
+      resolve15();
     }, timeoutMs);
     child.stderr?.on("data", onStderr);
     child.stdout?.on("data", onStdout);
@@ -37196,7 +37196,7 @@ var init_language_server = __esm({
           method,
           params
         };
-        return new Promise((resolve14, reject) => {
+        return new Promise((resolve15, reject) => {
           const timer = setTimeout3(() => {
             if (this.pendingResponses.has(id)) {
               this.pendingResponses.delete(id);
@@ -37210,7 +37210,7 @@ var init_language_server = __esm({
             },
             resolve: (val) => {
               clearTimeout3(timer);
-              resolve14(val);
+              resolve15(val);
             }
           });
           this.sendMessage(message);
@@ -37299,7 +37299,7 @@ var init_language_server = __esm({
           throw new Error("Language server is not initialized");
         }
         const documentUri = uri || pathToFileURL(join2(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-        return new Promise((resolve14, reject) => {
+        return new Promise((resolve15, reject) => {
           let diagnosticsReceived = false;
           const timeout = setTimeout3(() => {
             if (!diagnosticsReceived) {
@@ -37315,7 +37315,7 @@ var init_language_server = __esm({
               this.sendNotification("textDocument/didClose", {
                 textDocument: { uri: documentUri }
               });
-              resolve14(params.diagnostics);
+              resolve15(params.diagnostics);
             }
           };
           this.on("diagnostics", diagnosticsHandler);
@@ -37430,22 +37430,22 @@ var init_language_server = __esm({
         } catch (error2) {
           logger.warn("Error during graceful shutdown:", error2);
         }
-        await new Promise((resolve14) => {
+        await new Promise((resolve15) => {
           const timer = setTimeout3(() => {
             if (this.server) {
               this.server.kill("SIGTERM");
             }
-            resolve14();
+            resolve15();
           }, 1e3);
           if (this.server) {
             this.server.once("exit", () => {
               clearTimeout3(timer);
               this.server = null;
-              resolve14();
+              resolve15();
             });
           } else {
             clearTimeout3(timer);
-            resolve14();
+            resolve15();
           }
         });
         this.isInitialized = false;
@@ -37535,8 +37535,8 @@ var init_query_server = __esm({
           method,
           params
         };
-        return new Promise((resolve14, reject) => {
-          this.pendingRequests.set(id, { reject, resolve: resolve14 });
+        return new Promise((resolve15, reject) => {
+          this.pendingRequests.set(id, { reject, resolve: resolve15 });
           try {
             this.sendRaw(message);
           } catch (error2) {
@@ -37550,7 +37550,7 @@ var init_query_server = __esm({
               reject(new Error(`Query server request timeout for method: ${method}`));
             }
           }, timeoutMs);
-          const originalResolve = resolve14;
+          const originalResolve = resolve15;
           const originalReject = reject;
           const wrapped = {
             reject: (err) => {
@@ -37578,23 +37578,23 @@ var init_query_server = __esm({
         } catch (error2) {
           logger.warn("Error during query server graceful shutdown:", error2);
         }
-        await new Promise((resolve14) => {
+        await new Promise((resolve15) => {
           const timer = setTimeout4(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve14();
+            resolve15();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout4(timer);
               this.process = null;
-              resolve14();
+              resolve15();
             });
           } else {
             clearTimeout4(timer);
-            resolve14();
+            resolve15();
           }
         });
       }
@@ -37755,9 +37755,9 @@ var init_cli_server = __esm({
        * @returns The stdout output from the command.
        */
       runCommand(args) {
-        return new Promise((resolve14, reject) => {
+        return new Promise((resolve15, reject) => {
           const execute = () => {
-            this.executeCommand({ args, reject, resolve: resolve14 });
+            this.executeCommand({ args, reject, resolve: resolve15 });
           };
           if (this.commandInProgress) {
             this.commandQueue.push(execute);
@@ -37780,23 +37780,23 @@ var init_cli_server = __esm({
         } catch (error2) {
           logger.warn("Error during CLI server shutdown request:", error2);
         }
-        await new Promise((resolve14) => {
+        await new Promise((resolve15) => {
           const timer = setTimeout5(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve14();
+            resolve15();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout5(timer);
               this.process = null;
-              resolve14();
+              resolve15();
             });
           } else {
             clearTimeout5(timer);
-            resolve14();
+            resolve15();
           }
         });
         this.commandInProgress = false;
@@ -38041,11 +38041,11 @@ var init_server_manager = __esm({
       async warmUpLanguageServer() {
         try {
           const { packageRootDir: packageRootDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-          const { resolve: resolve14 } = await import("path");
+          const { resolve: resolve15 } = await import("path");
           const config2 = {
             checkErrors: "ON_CHANGE",
             loglevel: "WARN",
-            searchPath: resolve14(packageRootDir2, "ql")
+            searchPath: resolve15(packageRootDir2, "ql")
           };
           logger.info("Warming up language server (background JVM start)...");
           await this.getLanguageServer(config2);
@@ -40923,10 +40923,10 @@ var require_adm_zip = __commonJS({
          * @param {function|string} [props.namefix] - optional function to help fix filename
          */
         addLocalFolderPromise: function(localPath2, props) {
-          return new Promise((resolve14, reject) => {
+          return new Promise((resolve15, reject) => {
             this.addLocalFolderAsync2(Object.assign({ localPath: localPath2 }, props), (err, done) => {
               if (err) reject(err);
-              if (done) resolve14(this);
+              if (done) resolve15(this);
             });
           });
         },
@@ -41113,12 +41113,12 @@ var require_adm_zip = __commonJS({
           keepOriginalPermission = get_Bool(false, keepOriginalPermission);
           overwrite = get_Bool(false, overwrite);
           if (!callback) {
-            return new Promise((resolve14, reject) => {
+            return new Promise((resolve15, reject) => {
               this.extractAllToAsync(targetPath, overwrite, keepOriginalPermission, function(err) {
                 if (err) {
                   reject(err);
                 } else {
-                  resolve14(this);
+                  resolve15(this);
                 }
               });
             });
@@ -41216,11 +41216,11 @@ var require_adm_zip = __commonJS({
                  */
         writeZipPromise: function(targetFileName, props) {
           const { overwrite, perm } = Object.assign({ overwrite: true }, props);
-          return new Promise((resolve14, reject) => {
+          return new Promise((resolve15, reject) => {
             if (!targetFileName && opts.filename) targetFileName = opts.filename;
             if (!targetFileName) reject("ADM-ZIP: ZIP File Name Missing");
             this.toBufferPromise().then((zipData) => {
-              const ret = (done) => done ? resolve14(done) : reject("ADM-ZIP: Wasn't able to write zip file");
+              const ret = (done) => done ? resolve15(done) : reject("ADM-ZIP: Wasn't able to write zip file");
               filetools.writeFileToAsync(targetFileName, zipData, overwrite, perm, ret);
             }, reject);
           });
@@ -41229,8 +41229,8 @@ var require_adm_zip = __commonJS({
          * @returns {Promise<Buffer>} A promise to the Buffer.
          */
         toBufferPromise: function() {
-          return new Promise((resolve14, reject) => {
-            _zip.toAsyncBuffer(resolve14, reject);
+          return new Promise((resolve15, reject) => {
+            _zip.toAsyncBuffer(resolve15, reject);
           });
         },
         /**
@@ -53328,7 +53328,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve14) => setTimeout(resolve14, pollInterval));
+        await new Promise((resolve15) => setTimeout(resolve15, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -53345,7 +53345,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve14, reject) => {
+    return new Promise((resolve15, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -53423,7 +53423,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve14(parseResult.data);
+            resolve15(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -53684,12 +53684,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve14, reject) => {
+    return new Promise((resolve15, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve14, interval);
+      const timeoutId = setTimeout(resolve15, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -54789,7 +54789,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve14) => setTimeout(resolve14, pollInterval));
+      await new Promise((resolve15) => setTimeout(resolve15, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -55432,12 +55432,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve14) => {
+    return new Promise((resolve15) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve14();
+        resolve15();
       } else {
-        this._stdout.once("drain", resolve14);
+        this._stdout.once("drain", resolve15);
       }
     });
   }
@@ -55870,7 +55870,7 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
         });
         if (!chunk) {
           if (i === 1) {
-            await new Promise((resolve14) => setTimeout(resolve14));
+            await new Promise((resolve15) => setTimeout(resolve15));
             maxReadCount = 3;
             continue;
           }
@@ -56366,9 +56366,9 @@ data:
       const initRequest = messages.find((m) => isInitializeRequest(m));
       const clientProtocolVersion = initRequest ? initRequest.params.protocolVersion : req.headers.get("mcp-protocol-version") ?? DEFAULT_NEGOTIATED_PROTOCOL_VERSION;
       if (this._enableJsonResponse) {
-        return new Promise((resolve14) => {
+        return new Promise((resolve15) => {
           this._streamMapping.set(streamId, {
-            resolveJson: resolve14,
+            resolveJson: resolve15,
             cleanup: () => {
               this._streamMapping.delete(streamId);
             }
@@ -56703,7 +56703,7 @@ var import_express = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 import { realpathSync as realpathSync2 } from "fs";
-import { resolve as resolve13 } from "path";
+import { resolve as resolve14 } from "path";
 import { pathToFileURL as pathToFileURL5 } from "url";
 
 // src/lib/cli-tool-registry.ts
@@ -64257,7 +64257,8 @@ function registerLanguageResources(server) {
 }
 
 // src/prompts/workflow-prompts.ts
-import { basename as basename7 } from "path";
+import { basename as basename7, isAbsolute as isAbsolute7, resolve as resolve13 } from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/prompts/document-codeql-query.prompt.md
 var document_codeql_query_prompt_default = '---\nagent: agent\n---\n\n# Document a CodeQL Query\n\nThis prompt guides you through creating or updating documentation for a CodeQL query file. The documentation is stored as a sibling file to the query with a standardized markdown format.\n\n## Purpose\n\nThe `document_codeql_query` prompt creates/updates **query documentation files** for a specific version of a CodeQL query. Documentation files are stored alongside the query file and provide concise yet comprehensive information about what the query does.\n\nFor creating **workshop learning content** with detailed explanations and visual diagrams, use the `explain_codeql_query` prompt instead.\n\n## Required Inputs\n\n- **queryPath**: Path to the CodeQL query file (`.ql` or `.qlref`)\n- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, swift)\n\n## Documentation File Conventions\n\n### File Location and Naming\n\nFor a query file `QueryFileBaseName.ql`, the documentation file should be:\n\n- **Primary**: `QueryFileBaseName.md` (markdown format, preferred)\n- **Legacy**: `QueryFileBaseName.qhelp` (XML-based query help format)\n\nDocumentation files are **siblings** to the query file (same directory).\n\n### Handling Existing Documentation\n\n1. **No documentation exists**: Create new `QueryFileBaseName.md` file\n2. **`.md` file exists**: Update the existing markdown file\n3. **`.qhelp` file exists**: Use #codeql_generate_query-help tool to convert to markdown, then update\n\n## Workflow Checklist\n\nUse the following MCP server tools to gather context before creating documentation:\n\n### Phase 1: Query Discovery\n\n- [ ] **Step 1: Locate query files**\n  - Tool: #find_codeql_query_files\n  - Parameters: `queryPath` = provided query path\n  - Gather: Query source file path, existing documentation files, test files\n  - Check: Does `QueryFileBaseName.md` or `QueryFileBaseName.qhelp` exist?\n\n- [ ] **Step 2: Read query metadata**\n  - Tool: #codeql_resolve_metadata\n  - Parameters: `query` = query file path\n  - Gather: @name, @description, @kind, @id, @tags, @precision, @severity\n\n### Phase 2: Convert Existing qhelp (if needed)\n\n- [ ] **Step 3: Convert qhelp to markdown** (only if `.qhelp` exists)\n  - Tool: #codeql_generate_query-help\n  - Parameters: `query` = query file path, `format` = "markdown"\n  - Use output as starting point for updated documentation\n\n### Phase 3: Gather Query Context\n\n- [ ] **Step 4: Validate query structure**\n  - Tool: #validate_codeql_query\n  - Parameters: `query` = query source code\n  - Gather: Structural validation, suggestions\n  - Note: This is a heuristic check only \u2014 for full validation, use #codeql_query_compile\n\n- [ ] **Step 5: Explore query types** (if deeper understanding needed)\n  - Tool: #codeql_lsp_definition \u2014 navigate to class/predicate definitions\n  - Tool: #codeql_lsp_completion \u2014 explore member predicates on types used in the query\n  - Parameters: `file_path`, `line` (0-based), `character` (0-based), `workspace_uri` (pack root)\n  - Run #codeql_pack_install first \u2014 LSP tools require resolved dependencies\n\n- [ ] **Step 6: Run tests** (if tests exist from Step 1)\n  - Tool: #codeql_test_run\n  - Parameters: `tests` = test directories\n  - Gather: Pass/fail status, confirms query behavior\n\n### Phase 4: Create/Update Documentation\n\nBased on gathered context, create or update the documentation file.\n\n## Documentation Format\n\nThe documentation file (`QueryFileBaseName.md`) should follow this standardized format with these sections:\n\n### Section 1: Title and Description\n\n- H1 heading with the query name from @name metadata\n- One paragraph description from @description, expanded if needed\n\n### Section 2: Metadata Table\n\nA table with these rows:\n\n- ID: The @id value in backticks\n- Kind: The @kind value (problem, path-problem, etc.)\n- Severity: The @severity value\n- Precision: The @precision value\n- Tags: The @tags values\n\n### Section 3: Overview\n\nConcise explanation of what vulnerability/issue this query detects and why it matters. 2-4 sentences.\n\n### Section 4: Recommendation\n\nBrief guidance on how developers should fix issues flagged by this query. Include code patterns to use or avoid.\n\n### Section 5: Example\n\nTwo subsections:\n\n- **Vulnerable Code**: A code block showing a pattern that would be flagged by this query\n- **Fixed Code**: A code block showing the corrected version of the code\n\nUse the appropriate language identifier for the code blocks (e.g., `javascript`, `python`, `java`).\n\n### Section 6: References\n\nA list of links to:\n\n- Relevant CWE if security query\n- Relevant documentation or standards\n- CodeQL documentation for related concepts\n\n## Output Actions\n\nAfter generating documentation content:\n\n1. **For new documentation**: Create the file at `[QueryDirectory]/QueryFileBaseName.md`\n2. **For existing `.md` file**: Update the file with new content, preserving any custom sections\n3. **For existing `.qhelp` file**: Create new `.md` file (keeping `.qhelp` for backward compatibility)\n\n## Important Notes\n\n- **Be concise**: Documentation should be brief but complete. This is reference documentation, not tutorial content.\n- **Keep it current**: Documentation should reflect the current behavior of the query.\n- **Use examples from tests**: If unit tests exist, use those code patterns as examples.\n- **Standard format**: Always use the format above for consistency across all query documentation.\n- **Metadata accuracy**: Ensure documented metadata matches actual query metadata.\n- **For workshops**: Use `explain_codeql_query` prompt when creating workshop content that requires deeper explanations and visual diagrams.\n';
@@ -64325,6 +64326,7 @@ function processPromptTemplate(template, variables) {
 
 // src/prompts/workflow-prompts.ts
 init_logger();
+init_package_paths();
 var SUPPORTED_LANGUAGES = [
   "actions",
   "cpp",
@@ -64396,33 +64398,50 @@ var WORKFLOW_PROMPT_NAMES = [
   "tools_query_workflow",
   "workshop_creation_workflow"
 ];
+function resolvePromptPath(inputPath) {
+  if (!inputPath) return void 0;
+  let p = inputPath;
+  if (p.startsWith("file://")) {
+    try {
+      p = fileURLToPath3(p);
+    } catch {
+      p = p.slice("file://".length);
+    }
+  }
+  return isAbsolute7(p) ? p : resolve13(getUserWorkspaceDir(), p);
+}
 function registerWorkflowPrompts(server) {
   server.prompt(
     "test_driven_development",
     "Test-driven development workflow for CodeQL queries using MCP tools",
     testDrivenDevelopmentSchema.shape,
     async ({ language, queryName }) => {
-      const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
-      const content = processPromptTemplate(template, {
-        language,
-        queryName: queryName || "[QueryName]"
-      });
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `## Context
+      try {
+        const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
+        const content = processPromptTemplate(template, {
+          language,
+          queryName: queryName || "[QueryName]"
+        });
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `## Context
 
 - **Language**: ${language}
 ${queryName ? `- **Query Name**: ${queryName}
 ` : ""}
 ${content}`
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`test_driven_development prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64436,29 +64455,35 @@ ${content}`
       sourceFunction,
       targetFunction
     }) => {
-      const template = loadPromptTemplate("tools-query-workflow.prompt.md");
-      const content = processPromptTemplate(template, {
-        language,
-        database
-      });
-      const contextSection = buildToolsQueryContext(
-        language,
-        database,
-        sourceFiles,
-        sourceFunction,
-        targetFunction
-      );
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + content
+      try {
+        const resolvedDatabase = resolvePromptPath(database) ?? database;
+        const template = loadPromptTemplate("tools-query-workflow.prompt.md");
+        const content = processPromptTemplate(template, {
+          language,
+          database: resolvedDatabase
+        });
+        const contextSection = buildToolsQueryContext(
+          language,
+          resolvedDatabase,
+          sourceFiles,
+          sourceFunction,
+          targetFunction
+        );
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + content
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`tools_query_workflow prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64466,25 +64491,31 @@ ${content}`
     "Guide for creating CodeQL query development workshops from production-grade queries",
     workshopCreationWorkflowSchema.shape,
     async ({ queryPath, language, workshopName, numStages }) => {
-      const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
-      const derivedName = workshopName || basename7(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
-      const contextSection = buildWorkshopContext(
-        queryPath,
-        language,
-        derivedName,
-        numStages
-      );
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+      try {
+        const resolvedQueryPath = resolvePromptPath(queryPath) ?? queryPath;
+        const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
+        const derivedName = workshopName || basename7(resolvedQueryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
+        const contextSection = buildWorkshopContext(
+          resolvedQueryPath,
+          language,
+          derivedName,
+          numStages
+        );
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`workshop_creation_workflow prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64492,30 +64523,35 @@ ${content}`
     "Test-driven CodeQL query development checklist - write tests first, implement query, iterate until tests pass",
     qlTddBasicSchema.shape,
     async ({ language, queryName }) => {
-      const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
-      let contextSection = "## Your Development Context\n\n";
-      if (language) {
-        contextSection += `- **Language**: ${language}
+      try {
+        const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
+        let contextSection = "## Your Development Context\n\n";
+        if (language) {
+          contextSection += `- **Language**: ${language}
 `;
-      }
-      if (queryName) {
-        contextSection += `- **Query Name**: ${queryName}
+        }
+        if (queryName) {
+          contextSection += `- **Query Name**: ${queryName}
 `;
-      }
-      if (language || queryName) {
-        contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        if (language || queryName) {
+          contextSection += "\n";
+        }
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`ql_tdd_basic prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64523,34 +64559,40 @@ ${content}`
     "Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis",
     qlTddAdvancedSchema.shape,
     async ({ language, queryName, database }) => {
-      const template = loadPromptTemplate("ql-tdd-advanced.prompt.md");
-      let contextSection = "## Your Development Context\n\n";
-      if (language) {
-        contextSection += `- **Language**: ${language}
+      try {
+        const resolvedDatabase = resolvePromptPath(database);
+        const template = loadPromptTemplate("ql-tdd-advanced.prompt.md");
+        let contextSection = "## Your Development Context\n\n";
+        if (language) {
+          contextSection += `- **Language**: ${language}
 `;
-      }
-      if (queryName) {
-        contextSection += `- **Query Name**: ${queryName}
+        }
+        if (queryName) {
+          contextSection += `- **Query Name**: ${queryName}
 `;
-      }
-      if (database) {
-        contextSection += `- **Database**: ${database}
+        }
+        if (resolvedDatabase) {
+          contextSection += `- **Database**: ${resolvedDatabase}
 `;
-      }
-      if (language || queryName || database) {
-        contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        if (language || queryName || resolvedDatabase) {
+          contextSection += "\n";
+        }
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`ql_tdd_advanced prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64558,30 +64600,36 @@ ${content}`
     "Analyze SARIF results to identify likely false positives in CodeQL query results",
     sarifRankSchema.shape,
     async ({ queryId, sarifPath }) => {
-      const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
-      let contextSection = "## Analysis Context\n\n";
-      if (queryId) {
-        contextSection += `- **Query ID**: ${queryId}
+      try {
+        const resolvedSarifPath = resolvePromptPath(sarifPath);
+        const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
+        let contextSection = "## Analysis Context\n\n";
+        if (queryId) {
+          contextSection += `- **Query ID**: ${queryId}
 `;
-      }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}
+        }
+        if (resolvedSarifPath) {
+          contextSection += `- **SARIF File**: ${resolvedSarifPath}
 `;
-      }
-      if (queryId || sarifPath) {
-        contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        if (queryId || resolvedSarifPath) {
+          contextSection += "\n";
+        }
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`sarif_rank_false_positives prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64589,30 +64637,36 @@ ${content}`
     "Analyze SARIF results to identify likely true positives in CodeQL query results",
     sarifRankSchema.shape,
     async ({ queryId, sarifPath }) => {
-      const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
-      let contextSection = "## Analysis Context\n\n";
-      if (queryId) {
-        contextSection += `- **Query ID**: ${queryId}
+      try {
+        const resolvedSarifPath = resolvePromptPath(sarifPath);
+        const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
+        let contextSection = "## Analysis Context\n\n";
+        if (queryId) {
+          contextSection += `- **Query ID**: ${queryId}
 `;
-      }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}
+        }
+        if (resolvedSarifPath) {
+          contextSection += `- **SARIF File**: ${resolvedSarifPath}
 `;
-      }
-      if (queryId || sarifPath) {
-        contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        if (queryId || resolvedSarifPath) {
+          contextSection += "\n";
+        }
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`sarif_rank_true_positives prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64620,24 +64674,30 @@ ${content}`
     "Help a user figure out where their query may need improvement to have a lower false positive rate",
     describeFalsePositivesSchema.shape,
     async ({ queryPath }) => {
-      const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
-      let contextSection = "## Analysis Context\n\n";
-      if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}
+      try {
+        const resolvedQueryPath = resolvePromptPath(queryPath);
+        const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
+        let contextSection = "## Analysis Context\n\n";
+        if (resolvedQueryPath) {
+          contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
-      }
-      contextSection += "\n";
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        contextSection += "\n";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`run_query_and_summarize_false_positives prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64645,28 +64705,35 @@ ${content}`
     "Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams",
     explainCodeqlQuerySchema.shape,
     async ({ queryPath, language, databasePath }) => {
-      const template = loadPromptTemplate("explain-codeql-query.prompt.md");
-      let contextSection = "## Query to Explain\n\n";
-      contextSection += `- **Query Path**: ${queryPath}
+      try {
+        const resolvedQueryPath = resolvePromptPath(queryPath) ?? queryPath;
+        const resolvedDatabasePath = resolvePromptPath(databasePath);
+        const template = loadPromptTemplate("explain-codeql-query.prompt.md");
+        let contextSection = "## Query to Explain\n\n";
+        contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
-      contextSection += `- **Language**: ${language}
+        contextSection += `- **Language**: ${language}
 `;
-      if (databasePath) {
-        contextSection += `- **Database Path**: ${databasePath}
+        if (resolvedDatabasePath) {
+          contextSection += `- **Database Path**: ${resolvedDatabasePath}
 `;
-      }
-      contextSection += "\n";
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        contextSection += "\n";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`explain_codeql_query prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64674,24 +64741,30 @@ ${content}`
     "Create or update documentation for a CodeQL query - generates standardized markdown documentation as a sibling file to the query",
     documentCodeqlQuerySchema.shape,
     async ({ queryPath, language }) => {
-      const template = loadPromptTemplate("document-codeql-query.prompt.md");
-      const contextSection = `## Query to Document
+      try {
+        const resolvedQueryPath = resolvePromptPath(queryPath) ?? queryPath;
+        const template = loadPromptTemplate("document-codeql-query.prompt.md");
+        const contextSection = `## Query to Document
 
-- **Query Path**: ${queryPath}
+- **Query Path**: ${resolvedQueryPath}
 - **Language**: ${language}
 
 `;
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`document_codeql_query prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   server.prompt(
@@ -64699,34 +64772,41 @@ ${content}`
     "Iterative CodeQL query development using LSP tools for completion, navigation, and validation",
     qlLspIterativeDevelopmentSchema.shape,
     async ({ language, queryPath, workspaceUri }) => {
-      const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
-      let contextSection = "## Your Development Context\n\n";
-      if (language) {
-        contextSection += `- **Language**: ${language}
+      try {
+        const resolvedQueryPath = resolvePromptPath(queryPath);
+        const resolvedWorkspaceUri = resolvePromptPath(workspaceUri);
+        const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
+        let contextSection = "## Your Development Context\n\n";
+        if (language) {
+          contextSection += `- **Language**: ${language}
 `;
-      }
-      if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}
+        }
+        if (resolvedQueryPath) {
+          contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
-      }
-      if (workspaceUri) {
-        contextSection += `- **Workspace URI**: ${workspaceUri}
+        }
+        if (resolvedWorkspaceUri) {
+          contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}
 `;
-      }
-      if (language || queryPath || workspaceUri) {
-        contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        if (language || resolvedQueryPath || resolvedWorkspaceUri) {
+          contextSection += "\n";
+        }
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
+          ]
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`ql_lsp_iterative_development prompt failed: ${msg}`, { cause: err });
+      }
     }
   );
   logger.info(`Registered ${WORKFLOW_PROMPT_NAMES.length} workflow prompts`);
@@ -66186,7 +66266,7 @@ init_cli_executor();
 init_server_manager();
 init_package_paths();
 init_logger();
-import_dotenv.default.config({ path: resolve13(packageRootDir, ".env"), quiet: true });
+import_dotenv.default.config({ path: resolve14(packageRootDir, ".env"), quiet: true });
 var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.24.3";
 async function startServer(mode = "stdio") {
@@ -66242,10 +66322,10 @@ async function startServer(mode = "stdio") {
     });
     const host = process.env.HTTP_HOST || "localhost";
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
-    return new Promise((resolve14, reject) => {
+    return new Promise((resolve15, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve14();
+        resolve15();
       });
       httpServer.on("error", (error2) => {
         logger.error("HTTP server error:", error2);
@@ -66282,7 +66362,7 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? realpathSync2(resolve13(process.argv[1])) : void 0;
+var scriptPath = process.argv[1] ? realpathSync2(resolve14(process.argv[1])) : void 0;
 if (scriptPath && import.meta.url === pathToFileURL5(scriptPath).href) {
   main();
 }

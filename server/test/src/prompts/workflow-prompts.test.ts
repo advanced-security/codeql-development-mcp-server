@@ -24,6 +24,7 @@ import {
   qlTddAdvancedSchema,
   qlTddBasicSchema,
   registerWorkflowPrompts,
+  resolvePromptPath,
   sarifRankSchema,
   SUPPORTED_LANGUAGES,
   testDrivenDevelopmentSchema,
@@ -38,6 +39,16 @@ import {
 vi.mock('../../../src/prompts/prompt-loader', () => ({
   loadPromptTemplate: vi.fn(() => '# mock template\n'),
   processPromptTemplate: vi.fn(() => '# processed mock template\n'),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock package-paths so resolvePromptPath uses a deterministic workspace dir.
+// This mock is intentionally global: it affects every test in this file that
+// invokes resolvePromptPath (directly or via a prompt handler). Tests that
+// supply absolute paths are unaffected (isAbsolute short-circuits the call).
+// ---------------------------------------------------------------------------
+vi.mock('../../../src/utils/package-paths', () => ({
+  getUserWorkspaceDir: vi.fn(() => '/mock/workspace'),
 }));
 
 // ---------------------------------------------------------------------------
@@ -71,6 +82,39 @@ function getRegisteredHandler(
 }
 
 describe('Workflow Prompts', () => {
+  // -----------------------------------------------------------------------
+  // resolvePromptPath
+  // -----------------------------------------------------------------------
+  describe('resolvePromptPath', () => {
+    it('should return undefined for undefined input', () => {
+      expect(resolvePromptPath(undefined)).toBeUndefined();
+    });
+
+    it('should return undefined for empty string input', () => {
+      expect(resolvePromptPath('')).toBeUndefined();
+    });
+
+    it('should return an absolute path unchanged', () => {
+      expect(resolvePromptPath('/abs/path/to/query.ql')).toBe('/abs/path/to/query.ql');
+    });
+
+    it('should resolve a relative path against the workspace root', () => {
+      expect(resolvePromptPath('relative/query.ql')).toBe('/mock/workspace/relative/query.ql');
+    });
+
+    it('should resolve a bare filename against the workspace root', () => {
+      expect(resolvePromptPath('query.ql')).toBe('/mock/workspace/query.ql');
+    });
+
+    it('should convert a file:// URI to a filesystem path', () => {
+      expect(resolvePromptPath('file:///abs/path/to/query.ql')).toBe('/abs/path/to/query.ql');
+    });
+
+    it('should resolve a relative path with dot-segments against the workspace root', () => {
+      expect(resolvePromptPath('some/../other/query.ql')).toBe('/mock/workspace/other/query.ql');
+    });
+  });
+
   // -----------------------------------------------------------------------
   // SUPPORTED_LANGUAGES
   // -----------------------------------------------------------------------
@@ -1295,6 +1339,124 @@ describe('Workflow Prompts', () => {
       expect(text).not.toContain('**Language**');
       expect(text).not.toContain('**Query Path**');
       expect(text).not.toContain('**Workspace URI**');
+    });
+
+    // -------------------------------------------------------------------
+    // Relative path resolution in handlers
+    // -------------------------------------------------------------------
+    it('document_codeql_query handler should resolve relative queryPath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'go',
+        queryPath: 'queries/SqlInjection.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Query Path**: /mock/workspace/queries/SqlInjection.ql');
+    });
+
+    it('explain_codeql_query handler should resolve relative queryPath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'python',
+        queryPath: 'queries/Xss.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Query Path**: /mock/workspace/queries/Xss.ql');
+    });
+
+    it('explain_codeql_query handler should resolve relative databasePath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'java',
+        queryPath: '/abs/query.ql',
+        databasePath: 'databases/mydb',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Database Path**: /mock/workspace/databases/mydb');
+    });
+
+    it('tools_query_workflow handler should resolve relative database against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
+      const result: PromptResult = await handler({
+        database: 'databases/mydb',
+        language: 'cpp',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Database**: /mock/workspace/databases/mydb');
+    });
+
+    it('ql_tdd_advanced handler should resolve relative database against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
+      const result: PromptResult = await handler({
+        database: 'databases/mydb',
+        language: 'swift',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Database**: /mock/workspace/databases/mydb');
+    });
+
+    it('sarif_rank_false_positives handler should resolve relative sarifPath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'sarif_rank_false_positives');
+      const result: PromptResult = await handler({
+        sarifPath: 'results/scan.sarif',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**SARIF File**: /mock/workspace/results/scan.sarif');
+    });
+
+    it('sarif_rank_true_positives handler should resolve relative sarifPath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'sarif_rank_true_positives');
+      const result: PromptResult = await handler({
+        sarifPath: 'results/scan.sarif',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**SARIF File**: /mock/workspace/results/scan.sarif');
+    });
+
+    it('run_query_and_summarize_false_positives handler should resolve relative queryPath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
+      const result: PromptResult = await handler({
+        queryPath: 'queries/SqlInjection.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Query Path**: /mock/workspace/queries/SqlInjection.ql');
+    });
+
+    it('workshop_creation_workflow handler should resolve relative queryPath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        queryPath: 'queries/Xss.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Target Query**: /mock/workspace/queries/Xss.ql');
+    });
+
+    it('ql_lsp_iterative_development handler should resolve relative queryPath against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
+      const result: PromptResult = await handler({
+        queryPath: 'queries/MyQuery.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Query Path**: /mock/workspace/queries/MyQuery.ql');
+    });
+
+    it('ql_lsp_iterative_development handler should convert file:// workspaceUri to plain path', async () => {
+      const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
+      const result: PromptResult = await handler({
+        workspaceUri: 'file:///workspace/my-pack',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Workspace URI**: /workspace/my-pack');
+    });
+
+    it('ql_lsp_iterative_development handler should resolve relative workspaceUri against workspace root', async () => {
+      const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
+      const result: PromptResult = await handler({
+        workspaceUri: 'my-pack',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('**Workspace URI**: /mock/workspace/my-pack');
     });
   });
 
