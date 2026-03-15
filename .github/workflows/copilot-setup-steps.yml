@@ -60,3 +60,23 @@ jobs:
 
       - name: Copilot Setup - Install CodeQL packs used in integration tests
         run: ./server/scripts/install-packs.sh
+
+      # VS Code extension integration test prerequisites
+      - name: Copilot Setup - Install xvfb and VS Code dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgbm1 libgtk-3-0 libxshmfence1
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
+
+      - name: Copilot Setup - Build server (extension dependency)
+        run: npm run build -w server
+
+      - name: Copilot Setup - Bundle extension and server
+        working-directory: extensions/vscode
+        run: |
+          npm run bundle
+          npm run bundle:server
+
+      - name: Copilot Setup - Download VS Code for integration tests
+        working-directory: extensions/vscode
+        run: npm run download:vscode
