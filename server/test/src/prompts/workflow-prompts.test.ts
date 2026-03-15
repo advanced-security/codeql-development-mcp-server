@@ -12,7 +12,7 @@
  * 7. All SUPPORTED_LANGUAGES are accepted by every schema with a language field.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   buildToolsQueryContext,
@@ -24,6 +24,7 @@ import {
   qlTddAdvancedSchema,
   qlTddBasicSchema,
   registerWorkflowPrompts,
+  resolvePromptFilePath,
   sarifRankSchema,
   SUPPORTED_LANGUAGES,
   testDrivenDevelopmentSchema,
@@ -31,6 +32,9 @@ import {
   WORKFLOW_PROMPT_NAMES,
   workshopCreationWorkflowSchema,
 } from '../../../src/prompts/workflow-prompts';
+import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 // ---------------------------------------------------------------------------
 // Mock prompt-loader so tests never read .prompt.md files from disk.
@@ -1454,6 +1458,117 @@ describe('Workflow Prompts', () => {
       );
 
       expect(result).toContain('language="swift"');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // resolvePromptFilePath
+  // -----------------------------------------------------------------------
+  describe('resolvePromptFilePath', () => {
+    let testDir: string;
+
+    beforeEach(() => {
+      testDir = createTestTempDir('prompt-path-test');
+    });
+
+    afterEach(() => {
+      cleanupTestTempDir(testDir);
+    });
+
+    it('should resolve an existing absolute path and return it unchanged', () => {
+      const filePath = join(testDir, 'query.ql');
+      writeFileSync(filePath, 'select 1');
+
+      const result = resolvePromptFilePath(filePath);
+      expect(result.resolvedPath).toBe(filePath);
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('should resolve a relative path against the workspace root', () => {
+      // Create a file relative to testDir
+      const relPath = 'sub/query.ql';
+      mkdirSync(join(testDir, 'sub'), { recursive: true });
+      writeFileSync(join(testDir, 'sub', 'query.ql'), 'select 1');
+
+      const result = resolvePromptFilePath(relPath, testDir);
+      expect(result.resolvedPath).toBe(join(testDir, 'sub', 'query.ql'));
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('should return a warning when the resolved path does not exist', () => {
+      const result = resolvePromptFilePath('nonexistent/path/query.ql', testDir);
+      expect(result.resolvedPath).toBe(join(testDir, 'nonexistent', 'path', 'query.ql'));
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain('does not exist');
+    });
+
+    it('should return a warning for path traversal attempts', () => {
+      const result = resolvePromptFilePath('../../../etc/passwd', testDir);
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain('path traversal');
+    });
+
+    it('should return the original path as resolvedPath even for invalid paths', () => {
+      const result = resolvePromptFilePath('nonexistent.ql', testDir);
+      expect(result.resolvedPath).toBe(join(testDir, 'nonexistent.ql'));
+    });
+
+    it('should handle an empty string path with a warning', () => {
+      const result = resolvePromptFilePath('', testDir);
+      expect(result.warning).toBeDefined();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Handler path resolution: resolved paths appear in handler output
+  // -----------------------------------------------------------------------
+  describe('Handler path resolution and error handling', () => {
+    let mockServer: McpServer;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockServer = { prompt: vi.fn() } as unknown as McpServer;
+      registerWorkflowPrompts(mockServer);
+    });
+
+    it('explain_codeql_query handler should include warning for nonexistent queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        queryPath: 'nonexistent/query.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
+    });
+
+    it('document_codeql_query handler should include warning for nonexistent queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'java',
+        queryPath: 'nonexistent/nowhere/query.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
+    });
+
+    it('workshop_creation_workflow handler should include warning for nonexistent queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
+      const result: PromptResult = await handler({
+        language: 'python',
+        queryPath: 'missing/Workshop.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
+    });
+
+    it('tools_query_workflow handler should include warning for nonexistent database path', async () => {
+      const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
+      const result: PromptResult = await handler({
+        language: 'go',
+        database: 'nonexistent/db',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
     });
   });
 });

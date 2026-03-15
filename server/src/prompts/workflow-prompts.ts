@@ -7,8 +7,10 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { basename } from 'path';
+import { basename, isAbsolute, normalize, relative, resolve } from 'path';
+import { existsSync } from 'fs';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
+import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
 
 /** Supported CodeQL languages for tools queries */
@@ -23,6 +25,84 @@ export const SUPPORTED_LANGUAGES = [
   'ruby',
   'swift'
 ] as const;
+
+// ────────────────────────────────────────────────────────────────────────────
+// File-path resolution for prompt parameters
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Result of resolving a user-supplied file path in a prompt parameter.
+ *
+ * `resolvedPath` is always set (to the best-effort absolute path).
+ * `warning` is set only when the path is problematic — the caller should
+ * embed it in the prompt response so the user sees a clear message.
+ */
+export interface PromptFilePathResult {
+  resolvedPath: string;
+  warning?: string;
+}
+
+/**
+ * Resolve a user-supplied file path for a prompt parameter.
+ *
+ * Relative paths are resolved against `workspaceRoot` (which defaults to
+ * `getUserWorkspaceDir()`).  The function never throws — it returns a
+ * `warning` string when the path is empty, contains traversal sequences, or
+ * does not exist on disk.
+ *
+ * @param filePath      - The raw path value from the prompt parameter.
+ * @param workspaceRoot - Directory to resolve relative paths against.
+ * @returns An object with the resolved absolute path and an optional warning.
+ */
+export function resolvePromptFilePath(
+  filePath: string,
+  workspaceRoot?: string,
+): PromptFilePathResult {
+  if (!filePath || filePath.trim() === '') {
+    return {
+      resolvedPath: filePath ?? '',
+      warning: '⚠ **File path is empty.** Please provide a valid file path.',
+    };
+  }
+
+  const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
+
+  // Normalise first to collapse any . or .. segments.
+  const normalizedPath = normalize(filePath);
+
+  // Detect path traversal attempts.
+  if (normalizedPath.includes('..')) {
+    return {
+      resolvedPath: filePath,
+      warning: `⚠ **Invalid file path** — path traversal detected in \`${filePath}\`. Please provide a path within your workspace.`,
+    };
+  }
+
+  // Resolve to absolute path.
+  const absolutePath = isAbsolute(normalizedPath)
+    ? normalizedPath
+    : resolve(effectiveRoot, normalizedPath);
+
+  // If a workspace root was given (or inferred), verify the resolved path
+  // stays within it.
+  const rel = relative(effectiveRoot, absolutePath);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    return {
+      resolvedPath: absolutePath,
+      warning: `⚠ **File path** \`${filePath}\` **resolves outside the workspace root.** Resolved to: \`${absolutePath}\``,
+    };
+  }
+
+  // Check existence on disk.
+  if (!existsSync(absolutePath)) {
+    return {
+      resolvedPath: absolutePath,
+      warning: `⚠ **File path** \`${filePath}\` **does not exist.** Resolved to: \`${absolutePath}\``,
+    };
+  }
+
+  return { resolvedPath: absolutePath };
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Exported parameter schemas for each workflow prompt.
@@ -292,18 +372,29 @@ export function registerWorkflowPrompts(server: McpServer): void {
       targetFunction
     }) => {
       const template = loadPromptTemplate('tools-query-workflow.prompt.md');
+
+      // Resolve the database path and collect any warnings.
+      const warnings: string[] = [];
+      const dbResult = resolvePromptFilePath(database);
+      const resolvedDatabase = dbResult.resolvedPath;
+      if (dbResult.warning) warnings.push(dbResult.warning);
+
       const content = processPromptTemplate(template, {
         language,
-        database
+        database: resolvedDatabase
       });
 
       const contextSection = buildToolsQueryContext(
         language,
-        database,
+        resolvedDatabase,
         sourceFiles,
         sourceFunction,
         targetFunction
       );
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -311,7 +402,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + content
+              text: warningSection + contextSection + content
             }
           }
         ]
@@ -327,21 +418,31 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ queryPath, language, workshopName, numStages }) => {
       const template = loadPromptTemplate('workshop-creation-workflow.prompt.md');
 
+      // Resolve the query path and collect any warnings.
+      const warnings: string[] = [];
+      const qpResult = resolvePromptFilePath(queryPath);
+      const resolvedQueryPath = qpResult.resolvedPath;
+      if (qpResult.warning) warnings.push(qpResult.warning);
+
       // Derive workshop name from query path if not provided
       const derivedName =
         workshopName ||
-        basename(queryPath)
+        basename(resolvedQueryPath)
           .replace(/\.(ql|qlref)$/, '')
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-') ||
         'codeql-workshop';
 
       const contextSection = buildWorkshopContext(
-        queryPath,
+        resolvedQueryPath,
         language,
         derivedName,
         numStages
       );
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -349,7 +450,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template
+              text: warningSection + contextSection + template
             }
           }
         ]
@@ -398,6 +499,14 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ language, queryName, database }) => {
       const template = loadPromptTemplate('ql-tdd-advanced.prompt.md');
 
+      const warnings: string[] = [];
+      let resolvedDatabase = database;
+      if (database) {
+        const dbResult = resolvePromptFilePath(database);
+        resolvedDatabase = dbResult.resolvedPath;
+        if (dbResult.warning) warnings.push(dbResult.warning);
+      }
+
       let contextSection = '## Your Development Context\n\n';
       if (language) {
         contextSection += `- **Language**: ${language}\n`;
@@ -405,12 +514,16 @@ export function registerWorkflowPrompts(server: McpServer): void {
       if (queryName) {
         contextSection += `- **Query Name**: ${queryName}\n`;
       }
-      if (database) {
-        contextSection += `- **Database**: ${database}\n`;
+      if (resolvedDatabase) {
+        contextSection += `- **Database**: ${resolvedDatabase}\n`;
       }
-      if (language || queryName || database) {
+      if (language || queryName || resolvedDatabase) {
         contextSection += '\n';
       }
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -418,7 +531,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template
+              text: warningSection + contextSection + template
             }
           }
         ]
@@ -434,16 +547,28 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ queryId, sarifPath }) => {
       const template = loadPromptTemplate('sarif-rank-false-positives.prompt.md');
 
+      const warnings: string[] = [];
+      let resolvedSarifPath = sarifPath;
+      if (sarifPath) {
+        const spResult = resolvePromptFilePath(sarifPath);
+        resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
+      }
+
       let contextSection = '## Analysis Context\n\n';
       if (queryId) {
         contextSection += `- **Query ID**: ${queryId}\n`;
       }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}\n`;
+      if (resolvedSarifPath) {
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
       }
-      if (queryId || sarifPath) {
+      if (queryId || resolvedSarifPath) {
         contextSection += '\n';
       }
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -451,7 +576,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template
+              text: warningSection + contextSection + template
             }
           }
         ]
@@ -467,16 +592,28 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ queryId, sarifPath }) => {
       const template = loadPromptTemplate('sarif-rank-true-positives.prompt.md');
 
+      const warnings: string[] = [];
+      let resolvedSarifPath = sarifPath;
+      if (sarifPath) {
+        const spResult = resolvePromptFilePath(sarifPath);
+        resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
+      }
+
       let contextSection = '## Analysis Context\n\n';
       if (queryId) {
         contextSection += `- **Query ID**: ${queryId}\n`;
       }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}\n`;
+      if (resolvedSarifPath) {
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
       }
-      if (queryId || sarifPath) {
+      if (queryId || resolvedSarifPath) {
         contextSection += '\n';
       }
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -484,7 +621,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template
+              text: warningSection + contextSection + template
             }
           }
         ]
@@ -500,12 +637,24 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ queryPath }) => {
       const template = loadPromptTemplate('run-query-and-summarize-false-positives.prompt.md');
 
-      let contextSection = '## Analysis Context\n\n';
+      const warnings: string[] = [];
+      let resolvedQueryPath = queryPath;
       if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}\n`;
+        const qpResult = resolvePromptFilePath(queryPath);
+        resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+      }
+
+      let contextSection = '## Analysis Context\n\n';
+      if (resolvedQueryPath) {
+        contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
       }
 
       contextSection += '\n';
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -513,7 +662,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template
+              text: warningSection + contextSection + template
             }
           }
         ]
@@ -529,13 +678,29 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ queryPath, language, databasePath }) => {
       const template = loadPromptTemplate('explain-codeql-query.prompt.md');
 
-      let contextSection = '## Query to Explain\n\n';
-      contextSection += `- **Query Path**: ${queryPath}\n`;
-      contextSection += `- **Language**: ${language}\n`;
+      const warnings: string[] = [];
+      const qpResult = resolvePromptFilePath(queryPath);
+      const resolvedQueryPath = qpResult.resolvedPath;
+      if (qpResult.warning) warnings.push(qpResult.warning);
+
+      let resolvedDatabasePath = databasePath;
       if (databasePath) {
-        contextSection += `- **Database Path**: ${databasePath}\n`;
+        const dbResult = resolvePromptFilePath(databasePath);
+        resolvedDatabasePath = dbResult.resolvedPath;
+        if (dbResult.warning) warnings.push(dbResult.warning);
+      }
+
+      let contextSection = '## Query to Explain\n\n';
+      contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
+      contextSection += `- **Language**: ${language}\n`;
+      if (resolvedDatabasePath) {
+        contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
       }
       contextSection += '\n';
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -543,7 +708,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template
+              text: warningSection + contextSection + template
             }
           }
         ]
@@ -559,12 +724,21 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ queryPath, language }) => {
       const template = loadPromptTemplate('document-codeql-query.prompt.md');
 
+      const warnings: string[] = [];
+      const qpResult = resolvePromptFilePath(queryPath);
+      const resolvedQueryPath = qpResult.resolvedPath;
+      if (qpResult.warning) warnings.push(qpResult.warning);
+
       const contextSection = `## Query to Document
 
-- **Query Path**: ${queryPath}
+- **Query Path**: ${resolvedQueryPath}
 - **Language**: ${language}
 
 `;
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -572,7 +746,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template
+              text: warningSection + contextSection + template
             }
           }
         ]
@@ -588,19 +762,38 @@ export function registerWorkflowPrompts(server: McpServer): void {
     async ({ language, queryPath, workspaceUri }) => {
       const template = loadPromptTemplate('ql-lsp-iterative-development.prompt.md');
 
+      const warnings: string[] = [];
+      let resolvedQueryPath = queryPath;
+      if (queryPath) {
+        const qpResult = resolvePromptFilePath(queryPath);
+        resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+      }
+
+      let resolvedWorkspaceUri = workspaceUri;
+      if (workspaceUri) {
+        const wsResult = resolvePromptFilePath(workspaceUri);
+        resolvedWorkspaceUri = wsResult.resolvedPath;
+        if (wsResult.warning) warnings.push(wsResult.warning);
+      }
+
       let contextSection = '## Your Development Context\n\n';
       if (language) {
         contextSection += `- **Language**: ${language}\n`;
       }
-      if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}\n`;
+      if (resolvedQueryPath) {
+        contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
       }
-      if (workspaceUri) {
-        contextSection += `- **Workspace URI**: ${workspaceUri}\n`;
+      if (resolvedWorkspaceUri) {
+        contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}\n`;
       }
-      if (language || queryPath || workspaceUri) {
+      if (language || resolvedQueryPath || resolvedWorkspaceUri) {
         contextSection += '\n';
       }
+
+      const warningSection = warnings.length > 0
+        ? warnings.join('\n') + '\n\n'
+        : '';
 
       return {
         messages: [
@@ -608,7 +801,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
             role: 'user',
             content: {
               type: 'text',
-              text: contextSection + template,
+              text: warningSection + contextSection + template,
             },
           },
         ],
