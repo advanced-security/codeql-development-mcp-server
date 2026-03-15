@@ -1539,6 +1539,8 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('does not exist');
+      // Verify the warning contains the resolved absolute path
+      expect(text).toContain('nonexistent/query.ql');
     });
 
     it('document_codeql_query handler should include warning for nonexistent queryPath', async () => {
@@ -1549,6 +1551,7 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('does not exist');
+      expect(text).toContain('nonexistent/nowhere/query.ql');
     });
 
     it('workshop_creation_workflow handler should include warning for nonexistent queryPath', async () => {
@@ -1559,8 +1562,11 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('does not exist');
+      expect(text).toContain('missing/Workshop.ql');
     });
 
+    // Only the `database` parameter is a file path — sourceFiles, sourceFunction,
+    // and targetFunction are plain string identifiers (not paths on disk).
     it('tools_query_workflow handler should include warning for nonexistent database path', async () => {
       const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
       const result: PromptResult = await handler({
@@ -1569,6 +1575,7 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('does not exist');
+      expect(text).toContain('nonexistent/db');
     });
   });
 });
