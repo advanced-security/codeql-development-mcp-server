@@ -93,7 +93,9 @@ export function resolvePromptFilePath(
     };
   }
 
-  // Check existence on disk.
+  // Check existence on disk (advisory only — the resolved path is always
+  // returned so that downstream tools can attempt the operation themselves
+  // and surface their own errors).
   if (!existsSync(absolutePath)) {
     return {
       resolvedPath: absolutePath,
