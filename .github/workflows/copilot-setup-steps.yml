@@ -65,7 +65,8 @@ jobs:
       - name: Copilot Setup - Install xvfb and VS Code dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libasound2t64 libgbm1 libgtk-3-0 libxshmfence1
+          sudo apt-get install -y xvfb libgbm1 libgtk-3-0 libxshmfence1
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
 
       - name: Copilot Setup - Build server (extension dependency)
         run: npm run build -w server

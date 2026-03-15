@@ -7,12 +7,26 @@
  * to ensure VS Code is available before running tests.
  *
  * Usage: node scripts/download-vscode.js [version]
- * Default version: stable
+ *
+ * The version defaults to the minimum VS Code version from engines.vscode in
+ * package.json (e.g. "^1.110.0" -> "1.110.0"). Pass "stable" or an explicit
+ * version to override.
  */
 
+import { readFileSync } from 'node:fs';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 
-const version = process.argv[2] || 'stable';
+function getEnginesVscodeVersion() {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
+  const range = pkg.engines?.vscode;
+  if (range) {
+    const match = range.match(/(\d+\.\d+\.\d+)/);
+    if (match) return match[1];
+  }
+  return 'stable';
+}
+
+const version = process.argv[2] || getEnginesVscodeVersion();
 
 console.log(`Downloading VS Code (${version}) for integration tests...`);
 
