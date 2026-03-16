@@ -15,8 +15,10 @@ vi.mock('../../../../src/tools/lsp/lsp-diagnostics', () => ({
 
 // Mock lsp-handlers
 vi.mock('../../../../src/tools/lsp/lsp-handlers', () => ({
+  extractNamesFromDocumentSymbols: vi.fn().mockReturnValue([]),
   lspCompletion: vi.fn().mockResolvedValue([]),
   lspDefinition: vi.fn().mockResolvedValue([]),
+  lspDocumentSymbols: vi.fn().mockResolvedValue([]),
   lspReferences: vi.fn().mockResolvedValue([]),
 }));
 
@@ -36,10 +38,10 @@ describe('registerLSPTools', () => {
     expect(registerLspDiagnosticsTool).toHaveBeenCalledWith(mockServer);
   });
 
-  it('should register 3 file-based LSP tools directly', () => {
+  it('should register 4 file-based LSP tools directly', () => {
     registerLSPTools(mockServer);
-    // 3 tools registered directly via server.tool (diagnostics is registered via delegate)
-    expect(mockServer.tool).toHaveBeenCalledTimes(3);
+    // 4 tools registered directly via server.tool (diagnostics is registered via delegate)
+    expect(mockServer.tool).toHaveBeenCalledTimes(4);
   });
 
   it('should register codeql_lsp_completion', () => {
@@ -72,6 +74,17 @@ describe('registerLSPTools', () => {
     expect(refsCall![1]).toContain('references');
     expect(refsCall![2]).toHaveProperty('file_path');
     expect(typeof refsCall![3]).toBe('function');
+  });
+
+  it('should register codeql_lsp_document_symbols', () => {
+    registerLSPTools(mockServer);
+    const calls = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls;
+    const docSymsCall = calls.find((c: unknown[]) => c[0] === 'codeql_lsp_document_symbols');
+    expect(docSymsCall).toBeDefined();
+    expect(docSymsCall![1]).toContain('classes, predicates, modules');
+    expect(docSymsCall![2]).toHaveProperty('file_path');
+    expect(docSymsCall![2]).toHaveProperty('names_only');
+    expect(typeof docSymsCall![3]).toBe('function');
   });
 
   it('should include optional parameters in all file-based schemas', () => {
@@ -122,6 +135,18 @@ describe('registerLSPTools', () => {
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed).toHaveProperty('referenceCount');
       expect(parsed).toHaveProperty('locations');
+    });
+
+    it('codeql_lsp_document_symbols handler should return JSON with symbolCount', async () => {
+      registerLSPTools(mockServer);
+      const calls = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls;
+      const handler = calls.find((c: unknown[]) => c[0] === 'codeql_lsp_document_symbols')![3];
+
+      const result = await handler({ file_path: '/test.ql' });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed).toHaveProperty('symbolCount');
+      expect(parsed).toHaveProperty('symbols');
     });
 
     it('handler should return isError on failure', async () => {
