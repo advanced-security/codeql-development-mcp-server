@@ -18,10 +18,12 @@ import {
   buildToolsQueryContext,
   buildWorkshopContext,
   checkForDuplicatedCodeSchema,
+  createSafePromptHandler,
   describeFalsePositivesSchema,
   documentCodeqlQuerySchema,
   explainCodeqlQuerySchema,
   findOverlappingQueriesSchema,
+  formatValidationError,
   qlLspIterativeDevelopmentSchema,
   qlTddAdvancedSchema,
   qlTddBasicSchema,
@@ -30,6 +32,7 @@ import {
   sarifRankSchema,
   SUPPORTED_LANGUAGES,
   testDrivenDevelopmentSchema,
+  toPermissiveShape,
   toolsQueryWorkflowSchema,
   WORKFLOW_PROMPT_NAMES,
   workshopCreationWorkflowSchema,
@@ -37,6 +40,7 @@ import {
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
 // Mock prompt-loader so tests never read .prompt.md files from disk.
@@ -994,10 +998,10 @@ describe('Workflow Prompts', () => {
     });
 
     // -------------------------------------------------------------------
-    // Schema-to-registration consistency: exported schema === registered
+    // Schema-to-registration consistency: permissive shape keys match
     // -------------------------------------------------------------------
     describe('schema-to-registration consistency', () => {
-      /** Map prompt name → exported schema .shape */
+      /** Map prompt name → exported strict schema .shape */
       const expectedSchemaShapes: Record<string, Record<string, unknown>> = {
         check_for_duplicated_code: checkForDuplicatedCodeSchema.shape,
         document_codeql_query: documentCodeqlQuerySchema.shape,
@@ -1015,7 +1019,7 @@ describe('Workflow Prompts', () => {
       };
 
       it.each(Object.entries(expectedSchemaShapes))(
-        'prompt "%s" should register the exported schema',
+        'prompt "%s" should register a permissive schema with matching keys',
         (promptName, expectedShape) => {
           registerWorkflowPrompts(mockServer);
 
@@ -1024,14 +1028,10 @@ describe('Workflow Prompts', () => {
           expect(match).toBeDefined();
 
           const registeredSchema = match![2] as Record<string, unknown>;
+          // The permissive shape must have the same parameter keys
           expect(Object.keys(registeredSchema).sort()).toEqual(
             Object.keys(expectedShape).sort()
           );
-
-          // Verify the Zod types are the same object references
-          for (const key of Object.keys(expectedShape)) {
-            expect(registeredSchema[key]).toBe(expectedShape[key]);
-          }
         }
       );
     });
@@ -1482,6 +1482,191 @@ describe('Workflow Prompts', () => {
   });
 
   // -----------------------------------------------------------------------
+  // toPermissiveShape
+  // -----------------------------------------------------------------------
+  describe('toPermissiveShape', () => {
+    it('should replace z.enum() with z.string()', () => {
+      const shape = {
+        language: z.enum(['javascript', 'python']).describe('The language'),
+      };
+      const permissive = toPermissiveShape(shape);
+
+      // The permissive shape should accept any string, not just enum values
+      const schema = z.object(permissive as Record<string, z.ZodTypeAny>);
+      expect(schema.safeParse({ language: 'rust' }).success).toBe(true);
+      expect(schema.safeParse({ language: 'javascript' }).success).toBe(true);
+    });
+
+    it('should preserve descriptions on enum fields', () => {
+      const shape = {
+        language: z.enum(['javascript']).describe('My description'),
+      };
+      const permissive = toPermissiveShape(shape);
+      expect(permissive.language.description).toBe('My description');
+    });
+
+    it('should replace optional z.enum() with optional z.string()', () => {
+      const shape = {
+        language: z.enum(['javascript', 'python']).optional().describe('desc'),
+      };
+      const permissive = toPermissiveShape(shape);
+
+      const schema = z.object(permissive as Record<string, z.ZodTypeAny>);
+      // Should accept any string
+      expect(schema.safeParse({ language: 'rust' }).success).toBe(true);
+      // Should accept missing field
+      expect(schema.safeParse({}).success).toBe(true);
+    });
+
+    it('should pass through non-enum types unchanged', () => {
+      const original = z.string().describe('A path');
+      const shape = { queryPath: original };
+      const permissive = toPermissiveShape(shape);
+      // Non-enum types should be the same object reference
+      expect(permissive.queryPath).toBe(original);
+    });
+
+    it('should pass through z.coerce.number() unchanged', () => {
+      const original = z.coerce.number().optional().describe('Stages');
+      const shape = { numStages: original };
+      const permissive = toPermissiveShape(shape);
+      expect(permissive.numStages).toBe(original);
+    });
+
+    it('should preserve all keys from the original shape', () => {
+      const permissive = toPermissiveShape(explainCodeqlQuerySchema.shape);
+      expect(Object.keys(permissive).sort()).toEqual(
+        Object.keys(explainCodeqlQuerySchema.shape).sort()
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // formatValidationError
+  // -----------------------------------------------------------------------
+  describe('formatValidationError', () => {
+    it('should format invalid_enum_value with available options', () => {
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'rust' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('test_driven_development', result.error);
+        expect(msg).toContain('Invalid input');
+        expect(msg).toContain('test_driven_development');
+        expect(msg).toContain('`language`');
+        expect(msg).toContain('rust');
+        expect(msg).toContain('javascript');
+        expect(msg).toContain('try again');
+      }
+    });
+
+    it('should format missing required field errors', () => {
+      const result = explainCodeqlQuerySchema.safeParse({});
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('explain_codeql_query', result.error);
+        expect(msg).toContain('Invalid input');
+        expect(msg).toContain('explain_codeql_query');
+      }
+    });
+
+    it('should include corrective guidance', () => {
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'invalid' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('test_prompt', result.error);
+        expect(msg).toContain('correct the input');
+      }
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // createSafePromptHandler
+  // -----------------------------------------------------------------------
+  describe('createSafePromptHandler', () => {
+    it('should call the inner handler when validation passes', async () => {
+      const innerHandler = vi.fn().mockResolvedValue({
+        messages: [{ role: 'user', content: { type: 'text', text: 'ok' } }],
+      });
+
+      const safe = createSafePromptHandler(
+        'test_driven_development',
+        testDrivenDevelopmentSchema,
+        innerHandler,
+      );
+
+      const result = await safe({ language: 'javascript' });
+      expect(innerHandler).toHaveBeenCalledWith({ language: 'javascript' });
+      expect(result.messages[0].content.text).toBe('ok');
+    });
+
+    it('should return inline error when validation fails (invalid enum)', async () => {
+      const innerHandler = vi.fn();
+
+      const safe = createSafePromptHandler(
+        'test_driven_development',
+        testDrivenDevelopmentSchema,
+        innerHandler,
+      );
+
+      const result = await safe({ language: 'rust' });
+      // Handler should NOT be called
+      expect(innerHandler).not.toHaveBeenCalled();
+      // Should return a message, not throw
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].content.text).toContain('Invalid input');
+      expect(result.messages[0].content.text).toContain('rust');
+    });
+
+    it('should return inline error when required fields are missing', async () => {
+      const innerHandler = vi.fn();
+
+      const safe = createSafePromptHandler(
+        'explain_codeql_query',
+        explainCodeqlQuerySchema,
+        innerHandler,
+      );
+
+      const result = await safe({});
+      expect(innerHandler).not.toHaveBeenCalled();
+      expect(result.messages[0].content.text).toContain('Invalid input');
+    });
+
+    it('should catch handler exceptions and return inline error', async () => {
+      const innerHandler = vi.fn().mockRejectedValue(
+        new Error('Template not found'),
+      );
+
+      const safe = createSafePromptHandler(
+        'test_driven_development',
+        testDrivenDevelopmentSchema,
+        innerHandler,
+      );
+
+      const result = await safe({ language: 'javascript' });
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].content.text).toContain('Error');
+      expect(result.messages[0].content.text).toContain('Template not found');
+    });
+
+    it('should accept valid optional fields', async () => {
+      const innerHandler = vi.fn().mockResolvedValue({
+        messages: [{ role: 'user', content: { type: 'text', text: 'ok' } }],
+      });
+
+      const safe = createSafePromptHandler(
+        'ql_tdd_basic',
+        qlTddBasicSchema,
+        innerHandler,
+      );
+
+      // All optional — empty args should pass
+      const result = await safe({});
+      expect(innerHandler).toHaveBeenCalled();
+      expect(result.messages[0].content.text).toBe('ok');
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // resolvePromptFilePath
   // -----------------------------------------------------------------------
   describe('resolvePromptFilePath', () => {
@@ -1596,6 +1781,40 @@ describe('Workflow Prompts', () => {
       const text = result.messages[0].content.text;
       expect(text).toContain('does not exist');
       expect(text).toContain('nonexistent/db');
+    });
+
+    // -----------------------------------------------------------------
+    // Invalid argument handling (issue #143): inline errors, not throws
+    // -----------------------------------------------------------------
+    it('explain_codeql_query handler should return inline error for invalid language', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'rust',
+        queryPath: '/q.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('Invalid input');
+      expect(text).toContain('rust');
+      expect(text).toContain('javascript');
+    });
+
+    it('test_driven_development handler should return inline error for invalid language', async () => {
+      const handler = getRegisteredHandler(mockServer, 'test_driven_development');
+      const result: PromptResult = await handler({
+        language: 'PYTHON',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('Invalid input');
+      expect(text).toContain('PYTHON');
+    });
+
+    it('document_codeql_query handler should return inline error when language is missing', async () => {
+      const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
+      const result: PromptResult = await handler({
+        queryPath: '/q.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('Invalid input');
     });
   });
 });

@@ -11,6 +11,7 @@
  * - A relative or nonexistent `queryPath` triggers a cryptic -32001 error
  * - Invalid paths propagate silently into the LLM context without any warning
  * - Path traversal attempts are not detected
+ * - Invalid enum values (e.g. unsupported language) crash with raw MCP errors
  */
 
 import * as assert from 'assert';
@@ -44,6 +45,17 @@ function resolveServerPath(): string {
   } catch {
     throw new Error(`MCP server not found at ${monorepo} or ${vsix}`);
   }
+}
+
+/**
+ * Extract the text content from the first message in a prompt result.
+ */
+function getFirstMessageText(result: Awaited<ReturnType<Client['getPrompt']>>): string {
+  assert.ok(result.messages, 'Prompt should return messages');
+  assert.ok(result.messages.length > 0, 'Prompt should return at least one message');
+  const content = result.messages[0]?.content as unknown as { type: string; text: string };
+  assert.ok(content?.text, 'First message should have text content');
+  return content.text;
 }
 
 suite('MCP Prompt Error Handling Integration Tests', () => {
@@ -82,6 +94,10 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     try { if (transport) await transport.close(); } catch { /* best-effort */ }
   });
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Prompt discovery
+  // ─────────────────────────────────────────────────────────────────────
+
   test('Server should list prompts including explain_codeql_query', async function () {
     this.timeout(15_000);
 
@@ -98,6 +114,10 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     console.log(`[mcp-prompt-e2e] Server provides ${response.prompts.length} prompts`);
   });
 
+  // ─────────────────────────────────────────────────────────────────────
+  // explain_codeql_query — path handling
+  // ─────────────────────────────────────────────────────────────────────
+
   test('explain_codeql_query with nonexistent relative path should return warning, not throw', async function () {
     this.timeout(15_000);
 
@@ -111,17 +131,12 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
       },
     });
 
-    // The prompt MUST return messages — not throw a protocol error.
-    assert.ok(result.messages, 'Prompt should return messages');
-    assert.ok(result.messages.length > 0, 'Prompt should return at least one message');
-
-    const text = result.messages[0]?.content as unknown as { type: string; text: string };
-    assert.ok(text?.text, 'First message should have text content');
+    const text = getFirstMessageText(result);
 
     // The response should contain a user-friendly warning about the invalid path.
     assert.ok(
-      text.text.includes('does not exist'),
-      `Response should warn that the path does not exist. Got:\n${text.text.slice(0, 500)}`,
+      text.includes('does not exist'),
+      `Response should warn that the path does not exist. Got:\n${text.slice(0, 500)}`,
     );
 
     console.log('[mcp-prompt-e2e] explain_codeql_query correctly returned warning for nonexistent path');
@@ -143,20 +158,58 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
       },
     });
 
-    assert.ok(result.messages, 'Prompt should return messages');
-    assert.ok(result.messages.length > 0, 'Prompt should return at least one message');
-
-    const text = result.messages[0]?.content as unknown as { type: string; text: string };
-    assert.ok(text?.text, 'First message should have text content');
+    const text = getFirstMessageText(result);
 
     // With a valid existing path, there should be no warning.
     assert.ok(
-      !text.text.includes('does not exist'),
-      `Response should NOT contain a "does not exist" warning for valid path. Got:\n${text.text.slice(0, 500)}`,
+      !text.includes('does not exist'),
+      `Response should NOT contain a "does not exist" warning for valid path. Got:\n${text.slice(0, 500)}`,
     );
 
     console.log('[mcp-prompt-e2e] explain_codeql_query returned clean response for valid path');
   });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // explain_codeql_query — invalid language should return error, not crash
+  // ─────────────────────────────────────────────────────────────────────
+
+  test('explain_codeql_query with invalid language should return user-friendly error', async function () {
+    this.timeout(15_000);
+
+    // VS Code slash command might let a user type an invalid language value.
+    // The server should return a helpful error message rather than a raw
+    // MCP protocol error (-32602).
+    try {
+      const result = await client.getPrompt({
+        name: 'explain_codeql_query',
+        arguments: {
+          queryPath: '/some/query.ql',
+          language: 'rust',
+        },
+      });
+
+      // If the server returns messages instead of throwing, the error info
+      // should be embedded in the response text.
+      const text = getFirstMessageText(result);
+      assert.ok(
+        text.includes('Invalid') || text.includes('invalid') || text.includes('not supported'),
+        `Response should indicate the language is invalid. Got:\n${text.slice(0, 500)}`,
+      );
+      console.log('[mcp-prompt-e2e] explain_codeql_query returned inline error for invalid language');
+    } catch (error: unknown) {
+      // If the SDK throws, verify the error message is user-friendly.
+      const msg = error instanceof Error ? error.message : String(error);
+      assert.ok(
+        msg.includes('Invalid') || msg.includes('invalid') || msg.includes('language'),
+        `Error should mention invalid argument. Got: ${msg.slice(0, 500)}`,
+      );
+      console.log(`[mcp-prompt-e2e] explain_codeql_query threw for invalid language: ${msg.slice(0, 200)}`);
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // document_codeql_query — path handling and invalid args
+  // ─────────────────────────────────────────────────────────────────────
 
   test('document_codeql_query with nonexistent path should return warning, not throw', async function () {
     this.timeout(15_000);
@@ -169,15 +222,210 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
       },
     });
 
-    assert.ok(result.messages, 'Prompt should return messages');
-    assert.ok(result.messages.length > 0, 'Prompt should return at least one message');
-
-    const text = result.messages[0]?.content as unknown as { type: string; text: string };
+    const text = getFirstMessageText(result);
     assert.ok(
-      text?.text?.includes('does not exist'),
-      `Response should warn that the path does not exist. Got:\n${(text?.text ?? '').slice(0, 500)}`,
+      text.includes('does not exist'),
+      `Response should warn that the path does not exist. Got:\n${text.slice(0, 500)}`,
     );
 
     console.log('[mcp-prompt-e2e] document_codeql_query correctly returned warning for nonexistent path');
+  });
+
+  test('document_codeql_query with path traversal should return warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'document_codeql_query',
+      arguments: {
+        queryPath: '../../../etc/passwd',
+        language: 'javascript',
+      },
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(
+      text.includes('path traversal') || text.includes('Invalid file path'),
+      `Response should warn about path traversal. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] document_codeql_query correctly warned about path traversal');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // workshop_creation_workflow — path and parameter handling
+  // ─────────────────────────────────────────────────────────────────────
+
+  test('workshop_creation_workflow with nonexistent queryPath should return warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'workshop_creation_workflow',
+      arguments: {
+        queryPath: 'missing/Workshop.ql',
+        language: 'python',
+      },
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(
+      text.includes('does not exist'),
+      `Response should warn that the path does not exist. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] workshop_creation_workflow correctly warned for nonexistent path');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // tools_query_workflow — database path handling
+  // ─────────────────────────────────────────────────────────────────────
+
+  test('tools_query_workflow with nonexistent database path should return warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'tools_query_workflow',
+      arguments: {
+        database: 'nonexistent/db',
+        language: 'go',
+      },
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(
+      text.includes('does not exist'),
+      `Response should warn that the database path does not exist. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] tools_query_workflow correctly warned for nonexistent database');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // sarif_rank_false_positives — optional sarifPath handling
+  // ─────────────────────────────────────────────────────────────────────
+
+  test('sarif_rank_false_positives with nonexistent sarifPath should return warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'sarif_rank_false_positives',
+      arguments: {
+        sarifPath: 'nonexistent/results.sarif',
+      },
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(
+      text.includes('does not exist'),
+      `Response should warn that the SARIF path does not exist. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] sarif_rank_false_positives correctly warned for nonexistent path');
+  });
+
+  test('sarif_rank_false_positives with no arguments should return content without warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'sarif_rank_false_positives',
+      arguments: {},
+    });
+
+    const text = getFirstMessageText(result);
+    // With no file paths provided, there should be no file-not-found warning.
+    assert.ok(
+      !text.includes('does not exist'),
+      `Response should not contain path warnings when no paths given. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] sarif_rank_false_positives returned clean response with no args');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // ql_tdd_advanced — optional database path handling
+  // ─────────────────────────────────────────────────────────────────────
+
+  test('ql_tdd_advanced with nonexistent database should return warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'ql_tdd_advanced',
+      arguments: {
+        language: 'javascript',
+        database: 'nonexistent/db',
+      },
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(
+      text.includes('does not exist'),
+      `Response should warn that the database does not exist. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] ql_tdd_advanced correctly warned for nonexistent database');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // ql_lsp_iterative_development — optional path handling
+  // ─────────────────────────────────────────────────────────────────────
+
+  test('ql_lsp_iterative_development with nonexistent queryPath should return warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'ql_lsp_iterative_development',
+      arguments: {
+        queryPath: 'nonexistent/query.ql',
+        language: 'python',
+      },
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(
+      text.includes('does not exist'),
+      `Response should warn that the query path does not exist. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] ql_lsp_iterative_development correctly warned for nonexistent path');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // All prompts with all-optional params should handle empty args gracefully
+  // ─────────────────────────────────────────────────────────────────────
+
+  test('ql_tdd_basic with empty arguments should return content without errors', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'ql_tdd_basic',
+      arguments: {},
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(text.length > 0, 'Should return non-empty content');
+    assert.ok(
+      !text.includes('does not exist'),
+      'Should not contain path warnings with no args',
+    );
+
+    console.log('[mcp-prompt-e2e] ql_tdd_basic returned clean response with empty args');
+  });
+
+  test('run_query_and_summarize_false_positives with nonexistent queryPath should return warning', async function () {
+    this.timeout(15_000);
+
+    const result = await client.getPrompt({
+      name: 'run_query_and_summarize_false_positives',
+      arguments: {
+        queryPath: 'nonexistent/fp-query.ql',
+      },
+    });
+
+    const text = getFirstMessageText(result);
+    assert.ok(
+      text.includes('does not exist'),
+      `Response should warn that the query path does not exist. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] run_query_and_summarize_false_positives correctly warned for nonexistent path');
   });
 });
