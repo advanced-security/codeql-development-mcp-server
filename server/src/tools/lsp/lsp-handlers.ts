@@ -12,7 +12,9 @@ import { pathToFileURL } from 'url';
 
 import {
   CompletionItem,
+  DocumentSymbol,
   LSPLocation,
+  SymbolInformation,
   TextDocumentPositionParams,
 } from '../../lib/language-server';
 import { logger } from '../../utils/logger';
@@ -146,4 +148,65 @@ export async function lspReferences(params: LSPToolParams): Promise<LSPLocation[
   } finally {
     server.closeDocument(docUri);
   }
+}
+
+/**
+ * File-level parameters for LSP tools that do not require a position.
+ */
+export interface LSPToolFileParams {
+  /** Optional override for the file content (if not reading from disk). */
+  fileContent?: string;
+  /** Path to the QL file. May be absolute or relative. */
+  filePath: string;
+  /** Optional search path for CodeQL libraries. */
+  searchPath?: string;
+  /** Optional workspace URI for context. */
+  workspaceUri?: string;
+}
+
+/**
+ * List all top-level document symbols (classes, predicates, modules) in a file.
+ */
+export async function lspDocumentSymbols(
+  params: LSPToolFileParams,
+): Promise<DocumentSymbol[] | SymbolInformation[]> {
+  logger.info(`LSP documentSymbol for ${params.filePath}`);
+  const server = await getInitializedLanguageServer({
+    serverOptions: { searchPath: params.searchPath },
+    workspaceUri: params.workspaceUri,
+  });
+  const paramsWithPosition: LSPToolParams = {
+    character: 0,
+    line: 0,
+    ...params,
+  };
+  const { absPath, docUri } = prepareDocumentPosition(paramsWithPosition);
+  await openDocumentForPosition(server, paramsWithPosition, absPath, docUri);
+
+  try {
+    return await server.getDocumentSymbols({ textDocument: { uri: docUri } });
+  } finally {
+    server.closeDocument(docUri);
+  }
+}
+
+export function extractNamesFromDocumentSymbols(symbols: DocumentSymbol[] | SymbolInformation[]): string[] {
+  /**
+   * Recursively collect symbol names from a DocumentSymbol tree.
+   */
+  let symbolNames: string[] = [];
+  function collectSymbolNames(symbols: (DocumentSymbol | SymbolInformation)[]): void {
+    symbols.forEach((s) => {
+      const sym = s as { name?: string };
+      symbolNames.push(sym.name ?? '(unknown)');
+      // Only recurse into children if this is a DocumentSymbol (not SymbolInformation)
+      if ('children' in sym && Array.isArray(sym.children)) {
+        collectSymbolNames(sym.children);
+      }
+    });
+  }
+
+  collectSymbolNames(symbols);
+
+  return symbolNames
 }
