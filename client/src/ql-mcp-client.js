@@ -155,7 +155,8 @@ class CodeQLMCPClient {
       this.mcpTestSuite = new MCPTestSuite(this.client, this.logger);
       this.integrationTestRunner = new IntegrationTestRunner(this.client, this.logger, {
         tools: this.options.tools,
-        tests: this.options.tests
+        tests: this.options.tests,
+        installPacks: this.options.installPacks
       });
       this.monitoringTestRunner = new MonitoringIntegrationTestRunner(this.client, this.logger);
 

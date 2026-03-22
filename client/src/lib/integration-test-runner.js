@@ -207,6 +207,14 @@ export class IntegrationTestRunner {
         this.logger.log(`Filtered to ${toolsToTest.length} tools: ${toolsToTest.join(", ")}`);
       }
 
+      // Skip codeql_pack_install test when --no-install-packs is passed, because the
+      // tool requires network access to download pack dependencies which may not be
+      // available in all environments (e.g. CI sandboxes with restricted internet).
+      if (this.options.installPacks === false) {
+        toolsToTest = toolsToTest.filter((tool) => tool !== "codeql_pack_install");
+        this.logger.log("Skipping codeql_pack_install test (--no-install-packs)", "WARN");
+      }
+
       this.logger.log(`Executing tests in priority order: ${toolsToTest.join(", ")}`);
 
       // Run tests for each tool in priority order
