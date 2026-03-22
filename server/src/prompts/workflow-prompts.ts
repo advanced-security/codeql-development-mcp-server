@@ -190,14 +190,13 @@ export const workshopCreationWorkflowSchema = z.object({
 /**
  * Schema for ql_tdd_basic prompt parameters.
  *
- * All parameters are optional – but at least one should be present so the
- * VS Code quick-pick dialog appears.
+ * - `language` is **required** – TDD workflows are language-specific.
+ * - `queryName` is optional.
  */
 export const qlTddBasicSchema = z.object({
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .optional()
-    .describe('Programming language for the query (optional)'),
+    .describe('Programming language for the query'),
   queryName: z
     .string()
     .optional()
@@ -207,7 +206,8 @@ export const qlTddBasicSchema = z.object({
 /**
  * Schema for ql_tdd_advanced prompt parameters.
  *
- * All parameters are optional.
+ * - `language` is **required** – TDD workflows are language-specific.
+ * - `database` and `queryName` are optional.
  */
 export const qlTddAdvancedSchema = z.object({
   database: z
@@ -216,8 +216,7 @@ export const qlTddAdvancedSchema = z.object({
     .describe('Path to the CodeQL database for analysis'),
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .optional()
-    .describe('Programming language for the query (optional)'),
+    .describe('Programming language for the query'),
   queryName: z
     .string()
     .optional()
@@ -227,7 +226,8 @@ export const qlTddAdvancedSchema = z.object({
 /**
  * Schema for sarif_rank_false_positives / sarif_rank_true_positives.
  *
- * Both parameters are optional.
+ * - `sarifPath` is **required** – the prompt needs a SARIF file to analyze.
+ * - `queryId` is optional – narrows analysis to a specific rule.
  */
 export const sarifRankSchema = z.object({
   queryId: z
@@ -236,33 +236,30 @@ export const sarifRankSchema = z.object({
     .describe('CodeQL query/rule identifier'),
   sarifPath: z
     .string()
-    .optional()
     .describe('Path to the SARIF file to analyze'),
 });
 
 /**
  * Schema for run_query_and_summarize_false_positives prompt parameters.
  *
- * All parameters are optional.
+ * - `queryPath` is **required** – the prompt needs a query to analyze.
  */
 export const describeFalsePositivesSchema = z.object({
   queryPath: z
     .string()
-    .optional()
     .describe('Path to the CodeQL query file'),
 });
 
 /**
  * Schema for explain_codeql_query prompt parameters.
  *
- * - `queryPath` and `language` are **required**.
- * - `databasePath` is optional.
+ * All three parameters are **required** – the prompt needs a query, its
+ * language, and a database to produce meaningful profiling output.
  */
 export const explainCodeqlQuerySchema = z.object({
   databasePath: z
     .string()
-    .optional()
-    .describe('Optional path to a real CodeQL database for profiling'),
+    .describe('Path to a CodeQL database for profiling'),
   language: z
     .enum(SUPPORTED_LANGUAGES)
     .describe('Programming language of the query'),
@@ -329,16 +326,15 @@ export const findOverlappingQueriesSchema = z.object({
 /**
  * Schema for ql_lsp_iterative_development prompt parameters.
  *
- * All parameters are optional.
+ * - `language` and `queryPath` are **required** – LSP tools need both.
+ * - `workspaceUri` is optional – defaults to the pack root.
  */
 export const qlLspIterativeDevelopmentSchema = z.object({
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .optional()
     .describe('Programming language for the query'),
   queryPath: z
     .string()
-    .optional()
     .describe('Path to the query file being developed'),
   workspaceUri: z
     .string()
@@ -389,8 +385,12 @@ export function toPermissiveShape(
 }
 
 /**
- * Widen a single Zod type: replace z.enum() with z.string(), preserving
- * wrappers like .optional() and .describe().
+ * Widen a single Zod type for permissive registration:
+ *
+ * - Replace z.enum() with z.string() (so any string value passes SDK
+ *   validation; the handler validates the enum via createSafePromptHandler)
+ * - Preserve optional/required status and .describe() metadata so
+ *   VS Code correctly marks fields in the slash-command input dialog.
  */
 function widenZodType(zodType: z.ZodTypeAny): z.ZodTypeAny {
   // Unwrap ZodOptional → widen inner → re-wrap (only if inner changed)
@@ -675,15 +675,11 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('ql-tdd-basic.prompt.md');
 
         let contextSection = '## Your Development Context\n\n';
-        if (language) {
-          contextSection += `- **Language**: ${language}\n`;
-        }
+        contextSection += `- **Language**: ${language}\n`;
         if (queryName) {
           contextSection += `- **Query Name**: ${queryName}\n`;
         }
-        if (language || queryName) {
-          contextSection += '\n';
-        }
+        contextSection += '\n';
 
         return {
           messages: [
@@ -720,18 +716,14 @@ export function registerWorkflowPrompts(server: McpServer): void {
         }
 
         let contextSection = '## Your Development Context\n\n';
-        if (language) {
-          contextSection += `- **Language**: ${language}\n`;
-        }
+        contextSection += `- **Language**: ${language}\n`;
         if (queryName) {
           contextSection += `- **Query Name**: ${queryName}\n`;
         }
         if (resolvedDatabase) {
           contextSection += `- **Database**: ${resolvedDatabase}\n`;
         }
-        if (language || queryName || resolvedDatabase) {
-          contextSection += '\n';
-        }
+        contextSection += '\n';
 
         const warningSection = warnings.length > 0
           ? warnings.join('\n') + '\n\n'
@@ -764,23 +756,16 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('sarif-rank-false-positives.prompt.md');
 
         const warnings: string[] = [];
-        let resolvedSarifPath = sarifPath;
-        if (sarifPath) {
-          const spResult = resolvePromptFilePath(sarifPath);
-          resolvedSarifPath = spResult.resolvedPath;
-          if (spResult.warning) warnings.push(spResult.warning);
-        }
+        const spResult = resolvePromptFilePath(sarifPath);
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
 
         let contextSection = '## Analysis Context\n\n';
         if (queryId) {
           contextSection += `- **Query ID**: ${queryId}\n`;
         }
-        if (resolvedSarifPath) {
-          contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
-        }
-        if (queryId || resolvedSarifPath) {
-          contextSection += '\n';
-        }
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
+        contextSection += '\n';
 
         const warningSection = warnings.length > 0
           ? warnings.join('\n') + '\n\n'
@@ -813,23 +798,16 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('sarif-rank-true-positives.prompt.md');
 
         const warnings: string[] = [];
-        let resolvedSarifPath = sarifPath;
-        if (sarifPath) {
-          const spResult = resolvePromptFilePath(sarifPath);
-          resolvedSarifPath = spResult.resolvedPath;
-          if (spResult.warning) warnings.push(spResult.warning);
-        }
+        const spResult = resolvePromptFilePath(sarifPath);
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
 
         let contextSection = '## Analysis Context\n\n';
         if (queryId) {
           contextSection += `- **Query ID**: ${queryId}\n`;
         }
-        if (resolvedSarifPath) {
-          contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
-        }
-        if (queryId || resolvedSarifPath) {
-          contextSection += '\n';
-        }
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
+        contextSection += '\n';
 
         const warningSection = warnings.length > 0
           ? warnings.join('\n') + '\n\n'
@@ -862,19 +840,11 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('run-query-and-summarize-false-positives.prompt.md');
 
         const warnings: string[] = [];
-        let resolvedQueryPath = queryPath;
-        if (queryPath) {
-          const qpResult = resolvePromptFilePath(queryPath);
-          resolvedQueryPath = qpResult.resolvedPath;
-          if (qpResult.warning) warnings.push(qpResult.warning);
-        }
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
 
-        let contextSection = '## Analysis Context\n\n';
-        if (resolvedQueryPath) {
-          contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
-        }
-
-        contextSection += '\n';
+        const contextSection = `## Analysis Context\n\n- **Query Path**: ${resolvedQueryPath}\n\n`;
 
         const warningSection = warnings.length > 0
           ? warnings.join('\n') + '\n\n'
@@ -911,19 +881,14 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
-        let resolvedDatabasePath = databasePath;
-        if (databasePath) {
-          const dbResult = resolvePromptFilePath(databasePath);
-          resolvedDatabasePath = dbResult.resolvedPath;
-          if (dbResult.warning) warnings.push(dbResult.warning);
-        }
+        const dbResult = resolvePromptFilePath(databasePath);
+        const resolvedDatabasePath = dbResult.resolvedPath;
+        if (dbResult.warning) warnings.push(dbResult.warning);
 
         let contextSection = '## Query to Explain\n\n';
         contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
         contextSection += `- **Language**: ${language}\n`;
-        if (resolvedDatabasePath) {
-          contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
-        }
+        contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
         contextSection += '\n';
 
         const warningSection = warnings.length > 0
@@ -1061,12 +1026,9 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         const template = loadPromptTemplate('ql-lsp-iterative-development.prompt.md');
 
         const warnings: string[] = [];
-        let resolvedQueryPath = queryPath;
-        if (queryPath) {
-          const qpResult = resolvePromptFilePath(queryPath);
-          resolvedQueryPath = qpResult.resolvedPath;
-          if (qpResult.warning) warnings.push(qpResult.warning);
-        }
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
 
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
@@ -1076,18 +1038,12 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         }
 
         let contextSection = '## Your Development Context\n\n';
-        if (language) {
-          contextSection += `- **Language**: ${language}\n`;
-        }
-        if (resolvedQueryPath) {
-          contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
-        }
+        contextSection += `- **Language**: ${language}\n`;
+        contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
         if (resolvedWorkspaceUri) {
           contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}\n`;
         }
-        if (language || resolvedQueryPath || resolvedWorkspaceUri) {
-          contextSection += '\n';
-        }
+        contextSection += '\n';
 
         const warningSection = warnings.length > 0
           ? warnings.join('\n') + '\n\n'

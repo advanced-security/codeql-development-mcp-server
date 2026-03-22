@@ -126,6 +126,7 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     const result = await client.getPrompt({
       name: 'explain_codeql_query',
       arguments: {
+        databasePath: 'nonexistent/database',
         queryPath: 'nonexistent/path/to/query.ql',
         language: 'javascript',
       },
@@ -153,6 +154,7 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     const result = await client.getPrompt({
       name: 'explain_codeql_query',
       arguments: {
+        databasePath: existingFile,
         queryPath: existingFile,
         language: 'javascript',
       },
@@ -183,6 +185,7 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
       const result = await client.getPrompt({
         name: 'explain_codeql_query',
         arguments: {
+          databasePath: '/some/db',
           queryPath: '/some/query.ql',
           language: 'rust',
         },
@@ -322,22 +325,25 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     console.log('[mcp-prompt-e2e] sarif_rank_false_positives correctly warned for nonexistent path');
   });
 
-  test('sarif_rank_false_positives with no arguments should return content without warning', async function () {
+  test('sarif_rank_false_positives with no arguments should reject missing sarifPath', async function () {
     this.timeout(15_000);
 
-    const result = await client.getPrompt({
-      name: 'sarif_rank_false_positives',
-      arguments: {},
-    });
+    // sarifPath is required; SDK should reject with a clear error.
+    try {
+      await client.getPrompt({
+        name: 'sarif_rank_false_positives',
+        arguments: {},
+      });
+      assert.fail('Should have thrown for missing required sarifPath');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      assert.ok(
+        msg.includes('sarifPath') || msg.includes('Required'),
+        `Error should mention the missing field. Got: ${msg.slice(0, 500)}`,
+      );
+    }
 
-    const text = getFirstMessageText(result);
-    // With no file paths provided, there should be no file-not-found warning.
-    assert.ok(
-      !text.includes('does not exist'),
-      `Response should not contain path warnings when no paths given. Got:\n${text.slice(0, 500)}`,
-    );
-
-    console.log('[mcp-prompt-e2e] sarif_rank_false_positives returned clean response with no args');
+    console.log('[mcp-prompt-e2e] sarif_rank_false_positives correctly rejected missing sarifPath');
   });
 
   // ─────────────────────────────────────────────────────────────────────
@@ -389,25 +395,28 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────
-  // All prompts with all-optional params should handle empty args gracefully
+  // Prompts with required fields should return validation error on empty args
   // ─────────────────────────────────────────────────────────────────────
 
-  test('ql_tdd_basic with empty arguments should return content without errors', async function () {
+  test('ql_tdd_basic with empty arguments should reject missing language', async function () {
     this.timeout(15_000);
 
-    const result = await client.getPrompt({
-      name: 'ql_tdd_basic',
-      arguments: {},
-    });
+    // language is required; SDK should reject with a clear error.
+    try {
+      await client.getPrompt({
+        name: 'ql_tdd_basic',
+        arguments: {},
+      });
+      assert.fail('Should have thrown for missing required language');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      assert.ok(
+        msg.includes('language') || msg.includes('Required'),
+        `Error should mention the missing field. Got: ${msg.slice(0, 500)}`,
+      );
+    }
 
-    const text = getFirstMessageText(result);
-    assert.ok(text.length > 0, 'Should return non-empty content');
-    assert.ok(
-      !text.includes('does not exist'),
-      'Should not contain path warnings with no args',
-    );
-
-    console.log('[mcp-prompt-e2e] ql_tdd_basic returned clean response with empty args');
+    console.log('[mcp-prompt-e2e] ql_tdd_basic correctly rejected missing language');
   });
 
   test('run_query_and_summarize_false_positives with nonexistent queryPath should return warning', async function () {

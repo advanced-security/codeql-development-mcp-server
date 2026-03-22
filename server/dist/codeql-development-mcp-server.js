@@ -64516,23 +64516,23 @@ var workshopCreationWorkflowSchema = external_exports.object({
   numStages: external_exports.coerce.number().optional().describe("Number of incremental stages (default: 4-8)")
 });
 var qlTddBasicSchema = external_exports.object({
-  language: external_exports.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
   queryName: external_exports.string().optional().describe("Name of the query to develop")
 });
 var qlTddAdvancedSchema = external_exports.object({
   database: external_exports.string().optional().describe("Path to the CodeQL database for analysis"),
-  language: external_exports.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
   queryName: external_exports.string().optional().describe("Name of the query to develop")
 });
 var sarifRankSchema = external_exports.object({
   queryId: external_exports.string().optional().describe("CodeQL query/rule identifier"),
-  sarifPath: external_exports.string().optional().describe("Path to the SARIF file to analyze")
+  sarifPath: external_exports.string().describe("Path to the SARIF file to analyze")
 });
 var describeFalsePositivesSchema = external_exports.object({
-  queryPath: external_exports.string().optional().describe("Path to the CodeQL query file")
+  queryPath: external_exports.string().describe("Path to the CodeQL query file")
 });
 var explainCodeqlQuerySchema = external_exports.object({
-  databasePath: external_exports.string().optional().describe("Optional path to a real CodeQL database for profiling"),
+  databasePath: external_exports.string().describe("Path to a CodeQL database for profiling"),
   language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
   queryPath: external_exports.string().describe("Path to the CodeQL query file (.ql or .qlref)")
 });
@@ -64552,8 +64552,8 @@ var findOverlappingQueriesSchema = external_exports.object({
   packRoot: external_exports.string().optional().describe("Directory containing codeql-pack.yml for the pack that will own the new query")
 });
 var qlLspIterativeDevelopmentSchema = external_exports.object({
-  language: external_exports.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query"),
-  queryPath: external_exports.string().optional().describe("Path to the query file being developed"),
+  language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
+  queryPath: external_exports.string().describe("Path to the query file being developed"),
   workspaceUri: external_exports.string().optional().describe("Workspace URI for LSP dependency resolution")
 });
 function toPermissiveShape(shape) {
@@ -64769,17 +64769,13 @@ ${content}`
       async ({ language, queryName }) => {
         const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
         let contextSection = "## Your Development Context\n\n";
-        if (language) {
-          contextSection += `- **Language**: ${language}
+        contextSection += `- **Language**: ${language}
 `;
-        }
         if (queryName) {
           contextSection += `- **Query Name**: ${queryName}
 `;
         }
-        if (language || queryName) {
-          contextSection += "\n";
-        }
+        contextSection += "\n";
         return {
           messages: [
             {
@@ -64811,10 +64807,8 @@ ${content}`
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
         let contextSection = "## Your Development Context\n\n";
-        if (language) {
-          contextSection += `- **Language**: ${language}
+        contextSection += `- **Language**: ${language}
 `;
-        }
         if (queryName) {
           contextSection += `- **Query Name**: ${queryName}
 `;
@@ -64823,9 +64817,7 @@ ${content}`
           contextSection += `- **Database**: ${resolvedDatabase}
 `;
         }
-        if (language || queryName || resolvedDatabase) {
-          contextSection += "\n";
-        }
+        contextSection += "\n";
         const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
         return {
           messages: [
@@ -64851,24 +64843,17 @@ ${content}`
       async ({ queryId, sarifPath }) => {
         const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
         const warnings = [];
-        let resolvedSarifPath = sarifPath;
-        if (sarifPath) {
-          const spResult = resolvePromptFilePath(sarifPath);
-          resolvedSarifPath = spResult.resolvedPath;
-          if (spResult.warning) warnings.push(spResult.warning);
-        }
+        const spResult = resolvePromptFilePath(sarifPath);
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
         let contextSection = "## Analysis Context\n\n";
         if (queryId) {
           contextSection += `- **Query ID**: ${queryId}
 `;
         }
-        if (resolvedSarifPath) {
-          contextSection += `- **SARIF File**: ${resolvedSarifPath}
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}
 `;
-        }
-        if (queryId || resolvedSarifPath) {
-          contextSection += "\n";
-        }
+        contextSection += "\n";
         const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
         return {
           messages: [
@@ -64894,24 +64879,17 @@ ${content}`
       async ({ queryId, sarifPath }) => {
         const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
         const warnings = [];
-        let resolvedSarifPath = sarifPath;
-        if (sarifPath) {
-          const spResult = resolvePromptFilePath(sarifPath);
-          resolvedSarifPath = spResult.resolvedPath;
-          if (spResult.warning) warnings.push(spResult.warning);
-        }
+        const spResult = resolvePromptFilePath(sarifPath);
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
         let contextSection = "## Analysis Context\n\n";
         if (queryId) {
           contextSection += `- **Query ID**: ${queryId}
 `;
         }
-        if (resolvedSarifPath) {
-          contextSection += `- **SARIF File**: ${resolvedSarifPath}
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}
 `;
-        }
-        if (queryId || resolvedSarifPath) {
-          contextSection += "\n";
-        }
+        contextSection += "\n";
         const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
         return {
           messages: [
@@ -64937,18 +64915,14 @@ ${content}`
       async ({ queryPath }) => {
         const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
         const warnings = [];
-        let resolvedQueryPath = queryPath;
-        if (queryPath) {
-          const qpResult = resolvePromptFilePath(queryPath);
-          resolvedQueryPath = qpResult.resolvedPath;
-          if (qpResult.warning) warnings.push(qpResult.warning);
-        }
-        let contextSection = "## Analysis Context\n\n";
-        if (resolvedQueryPath) {
-          contextSection += `- **Query Path**: ${resolvedQueryPath}
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+        const contextSection = `## Analysis Context
+
+- **Query Path**: ${resolvedQueryPath}
+
 `;
-        }
-        contextSection += "\n";
         const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
         return {
           messages: [
@@ -64977,21 +64951,16 @@ ${content}`
         const qpResult = resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
-        let resolvedDatabasePath = databasePath;
-        if (databasePath) {
-          const dbResult = resolvePromptFilePath(databasePath);
-          resolvedDatabasePath = dbResult.resolvedPath;
-          if (dbResult.warning) warnings.push(dbResult.warning);
-        }
+        const dbResult = resolvePromptFilePath(databasePath);
+        const resolvedDatabasePath = dbResult.resolvedPath;
+        if (dbResult.warning) warnings.push(dbResult.warning);
         let contextSection = "## Query to Explain\n\n";
         contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
         contextSection += `- **Language**: ${language}
 `;
-        if (resolvedDatabasePath) {
-          contextSection += `- **Database Path**: ${resolvedDatabasePath}
+        contextSection += `- **Database Path**: ${resolvedDatabasePath}
 `;
-        }
         contextSection += "\n";
         const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
         return {
@@ -65102,12 +65071,9 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
       async ({ language, queryPath, workspaceUri }) => {
         const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
         const warnings = [];
-        let resolvedQueryPath = queryPath;
-        if (queryPath) {
-          const qpResult = resolvePromptFilePath(queryPath);
-          resolvedQueryPath = qpResult.resolvedPath;
-          if (qpResult.warning) warnings.push(qpResult.warning);
-        }
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
           const wsResult = resolvePromptFilePath(workspaceUri);
@@ -65115,21 +65081,15 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
           if (wsResult.warning) warnings.push(wsResult.warning);
         }
         let contextSection = "## Your Development Context\n\n";
-        if (language) {
-          contextSection += `- **Language**: ${language}
+        contextSection += `- **Language**: ${language}
 `;
-        }
-        if (resolvedQueryPath) {
-          contextSection += `- **Query Path**: ${resolvedQueryPath}
+        contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
-        }
         if (resolvedWorkspaceUri) {
           contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}
 `;
         }
-        if (language || resolvedQueryPath || resolvedWorkspaceUri) {
-          contextSection += "\n";
-        }
+        contextSection += "\n";
         const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
         return {
           messages: [
