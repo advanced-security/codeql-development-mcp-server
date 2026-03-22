@@ -7,8 +7,10 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { basename } from 'path';
+import { basename, isAbsolute, normalize, relative, resolve } from 'path';
+import { existsSync } from 'fs';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
+import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
 
 /** Supported CodeQL languages for tools queries */
@@ -23,6 +25,86 @@ export const SUPPORTED_LANGUAGES = [
   'ruby',
   'swift'
 ] as const;
+
+// ────────────────────────────────────────────────────────────────────────────
+// File-path resolution for prompt parameters
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Result of resolving a user-supplied file path in a prompt parameter.
+ *
+ * `resolvedPath` is always set (to the best-effort absolute path).
+ * `warning` is set only when the path is problematic — the caller should
+ * embed it in the prompt response so the user sees a clear message.
+ */
+export interface PromptFilePathResult {
+  resolvedPath: string;
+  warning?: string;
+}
+
+/**
+ * Resolve a user-supplied file path for a prompt parameter.
+ *
+ * Relative paths are resolved against `workspaceRoot` (which defaults to
+ * `getUserWorkspaceDir()`).  The function never throws — it returns a
+ * `warning` string when the path is empty, contains traversal sequences, or
+ * does not exist on disk.
+ *
+ * @param filePath      - The raw path value from the prompt parameter.
+ * @param workspaceRoot - Directory to resolve relative paths against.
+ * @returns An object with the resolved absolute path and an optional warning.
+ */
+export function resolvePromptFilePath(
+  filePath: string,
+  workspaceRoot?: string,
+): PromptFilePathResult {
+  if (!filePath || filePath.trim() === '') {
+    return {
+      resolvedPath: filePath ?? '',
+      warning: '⚠ **File path is empty.** Please provide a valid file path.',
+    };
+  }
+
+  const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
+
+  // Normalise first to collapse any . or .. segments.
+  const normalizedPath = normalize(filePath);
+
+  // Detect path traversal attempts.
+  if (normalizedPath.includes('..')) {
+    return {
+      resolvedPath: filePath,
+      warning: `⚠ **Invalid file path** — path traversal detected in \`${filePath}\`. Please provide a path within your workspace.`,
+    };
+  }
+
+  // Resolve to absolute path.
+  const absolutePath = isAbsolute(normalizedPath)
+    ? normalizedPath
+    : resolve(effectiveRoot, normalizedPath);
+
+  // If a workspace root was given (or inferred), verify the resolved path
+  // stays within it.
+  const rel = relative(effectiveRoot, absolutePath);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    return {
+      resolvedPath: absolutePath,
+      warning: `⚠ **File path** \`${filePath}\` **resolves outside the workspace root.** Resolved to: \`${absolutePath}\``,
+    };
+  }
+
+  // Check existence on disk (advisory only — the resolved path is always
+  // returned so that downstream tools can attempt the operation themselves
+  // and surface their own errors).
+  if (!existsSync(absolutePath)) {
+    return {
+      resolvedPath: absolutePath,
+      warning: `⚠ **File path** \`${filePath}\` **does not exist.** Resolved to: \`${absolutePath}\``,
+    };
+  }
+
+  return { resolvedPath: absolutePath };
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Exported parameter schemas for each workflow prompt.
@@ -108,14 +190,13 @@ export const workshopCreationWorkflowSchema = z.object({
 /**
  * Schema for ql_tdd_basic prompt parameters.
  *
- * All parameters are optional – but at least one should be present so the
- * VS Code quick-pick dialog appears.
+ * - `language` is **required** – TDD workflows are language-specific.
+ * - `queryName` is optional.
  */
 export const qlTddBasicSchema = z.object({
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .optional()
-    .describe('Programming language for the query (optional)'),
+    .describe('Programming language for the query'),
   queryName: z
     .string()
     .optional()
@@ -125,7 +206,8 @@ export const qlTddBasicSchema = z.object({
 /**
  * Schema for ql_tdd_advanced prompt parameters.
  *
- * All parameters are optional.
+ * - `language` is **required** – TDD workflows are language-specific.
+ * - `database` and `queryName` are optional.
  */
 export const qlTddAdvancedSchema = z.object({
   database: z
@@ -134,8 +216,7 @@ export const qlTddAdvancedSchema = z.object({
     .describe('Path to the CodeQL database for analysis'),
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .optional()
-    .describe('Programming language for the query (optional)'),
+    .describe('Programming language for the query'),
   queryName: z
     .string()
     .optional()
@@ -145,7 +226,8 @@ export const qlTddAdvancedSchema = z.object({
 /**
  * Schema for sarif_rank_false_positives / sarif_rank_true_positives.
  *
- * Both parameters are optional.
+ * - `sarifPath` is **required** – the prompt needs a SARIF file to analyze.
+ * - `queryId` is optional – narrows analysis to a specific rule.
  */
 export const sarifRankSchema = z.object({
   queryId: z
@@ -154,33 +236,30 @@ export const sarifRankSchema = z.object({
     .describe('CodeQL query/rule identifier'),
   sarifPath: z
     .string()
-    .optional()
     .describe('Path to the SARIF file to analyze'),
 });
 
 /**
  * Schema for run_query_and_summarize_false_positives prompt parameters.
  *
- * All parameters are optional.
+ * - `queryPath` is **required** – the prompt needs a query to analyze.
  */
 export const describeFalsePositivesSchema = z.object({
   queryPath: z
     .string()
-    .optional()
     .describe('Path to the CodeQL query file'),
 });
 
 /**
  * Schema for explain_codeql_query prompt parameters.
  *
- * - `queryPath` and `language` are **required**.
- * - `databasePath` is optional.
+ * All three parameters are **required** – the prompt needs a query, its
+ * language, and a database to produce meaningful profiling output.
  */
 export const explainCodeqlQuerySchema = z.object({
   databasePath: z
     .string()
-    .optional()
-    .describe('Optional path to a real CodeQL database for profiling'),
+    .describe('Path to a CodeQL database for profiling'),
   language: z
     .enum(SUPPORTED_LANGUAGES)
     .describe('Programming language of the query'),
@@ -206,22 +285,182 @@ export const documentCodeqlQuerySchema = z.object({
 /**
  * Schema for ql_lsp_iterative_development prompt parameters.
  *
- * All parameters are optional.
+ * - `language` and `queryPath` are **required** – LSP tools need both.
+ * - `workspaceUri` is optional – defaults to the pack root.
  */
 export const qlLspIterativeDevelopmentSchema = z.object({
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .optional()
     .describe('Programming language for the query'),
   queryPath: z
     .string()
-    .optional()
     .describe('Path to the query file being developed'),
   workspaceUri: z
     .string()
     .optional()
     .describe('Workspace URI for LSP dependency resolution'),
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Error-recovery utilities for prompt handlers
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Prompt result shape returned by every workflow prompt handler.
+ */
+interface PromptResult {
+  messages: Array<{
+    role: 'user';
+    content: { type: 'text'; text: string };
+  }>;
+}
+
+/**
+ * Create a permissive copy of a Zod schema shape for MCP registration.
+ *
+ * The MCP SDK validates prompt arguments against the registered schema
+ * **before** invoking the handler. If validation fails, the SDK throws a
+ * raw `McpError(-32602)` with a cryptic JSON dump that is poor UX when
+ * surfaced as a VS Code slash-command error.
+ *
+ * This function converts every `z.enum()` field in the shape to a
+ * `z.string()` (preserving `.describe()` and `.optional()` modifiers) so
+ * that the SDK never rejects user input at the protocol layer. The strict
+ * enum validation then happens inside `createSafePromptHandler()`, which
+ * can return a user-friendly inline error instead of throwing.
+ *
+ * All non-enum field types are passed through unchanged.
+ */
+export function toPermissiveShape(
+  shape: Record<string, z.ZodTypeAny>,
+): Record<string, z.ZodTypeAny> {
+  const permissive: Record<string, z.ZodTypeAny> = {};
+
+  for (const [key, zodType] of Object.entries(shape)) {
+    permissive[key] = widenZodType(zodType);
+  }
+
+  return permissive;
+}
+
+/**
+ * Widen a single Zod type for permissive registration:
+ *
+ * - Replace z.enum() with z.string() (so any string value passes SDK
+ *   validation; the handler validates the enum via createSafePromptHandler)
+ * - Preserve optional/required status and .describe() metadata so
+ *   VS Code correctly marks fields in the slash-command input dialog.
+ */
+function widenZodType(zodType: z.ZodTypeAny): z.ZodTypeAny {
+  // Unwrap ZodOptional → widen inner → re-wrap (only if inner changed)
+  if (zodType instanceof z.ZodOptional) {
+    const inner = zodType.unwrap();
+    const widenedInner = widenZodType(inner);
+    if (widenedInner === inner) return zodType; // no change needed
+    const result = widenedInner.optional();
+    const desc = zodType.description;
+    return desc ? result.describe(desc) : result;
+  }
+
+  // Replace ZodEnum with ZodString, preserving description
+  if (zodType instanceof z.ZodEnum) {
+    const desc = zodType.description;
+    const replacement = z.string();
+    return desc ? replacement.describe(desc) : replacement;
+  }
+
+  // All other types (string, number, coerce, etc.) pass through unchanged
+  return zodType;
+}
+
+/**
+ * Format a Zod validation error into a user-friendly markdown message.
+ *
+ * Extracts the relevant details from ZodError issues and presents them
+ * as actionable guidance rather than raw JSON.
+ */
+export function formatValidationError(
+  promptName: string,
+  error: z.ZodError,
+): string {
+  const lines = [
+    `⚠ **Invalid input for \`${promptName}\`**`,
+    '',
+  ];
+
+  for (const issue of error.issues) {
+    const field = issue.path.length > 0 ? issue.path.join('.') : 'input';
+
+    if (issue.code === 'invalid_enum_value' && 'options' in issue) {
+      const opts = (issue.options as string[]).join(', ');
+      lines.push(
+        `- **\`${field}\`**: received \`${String(issue.received)}\` — ` +
+        `must be one of: ${opts}`,
+      );
+    } else if (issue.code === 'invalid_type') {
+      lines.push(
+        `- **\`${field}\`**: expected ${issue.expected}, received ${issue.received}`,
+      );
+    } else {
+      lines.push(`- **\`${field}\`**: ${issue.message}`);
+    }
+  }
+
+  lines.push(
+    '',
+    'Please correct the input and try again.',
+  );
+
+  return lines.join('\n');
+}
+
+/**
+ * Wrap a prompt handler with early validation and exception recovery.
+ *
+ * 1. Validates `rawArgs` against the **strict** Zod schema (with enums).
+ * 2. On validation failure → returns a user-friendly inline error message.
+ * 3. On unexpected handler exception → catches and returns inline error.
+ * 4. On success → returns the handler's result normally.
+ *
+ * This ensures slash-command users never see raw MCP protocol errors.
+ */
+export function createSafePromptHandler<T extends z.ZodObject<z.ZodRawShape>>(
+  promptName: string,
+  strictSchema: T,
+  handler: (_args: z.infer<T>) => Promise<PromptResult>,
+): (_rawArgs: Record<string, unknown>) => Promise<PromptResult> {
+  return async (rawArgs: Record<string, unknown>): Promise<PromptResult> => {
+    // Step 1: Validate with the strict schema
+    const parseResult = strictSchema.safeParse(rawArgs);
+    if (!parseResult.success) {
+      const errorText = formatValidationError(promptName, parseResult.error);
+      logger.warn(`Prompt ${promptName} validation failed: ${parseResult.error.message}`);
+      return {
+        messages: [{
+          role: 'user',
+          content: { type: 'text', text: errorText },
+        }],
+      };
+    }
+
+    // Step 2: Call the handler with validated args, catching exceptions
+    try {
+      return await handler(parseResult.data);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`Prompt ${promptName} handler error: ${msg}`);
+      return {
+        messages: [{
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `⚠ **Error in \`${promptName}\`**: ${msg}\n\nPlease check your inputs and try again.`,
+          },
+        }],
+      };
+    }
+  };
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Prompt names (exported for testing)
@@ -257,363 +496,467 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'test_driven_development',
     'Test-driven development workflow for CodeQL queries using MCP tools',
-    testDrivenDevelopmentSchema.shape,
-    async ({ language, queryName }) => {
-      const template = loadPromptTemplate('ql-tdd-basic.prompt.md');
-      const content = processPromptTemplate(template, {
-        language,
-        queryName: queryName || '[QueryName]'
-      });
+    toPermissiveShape(testDrivenDevelopmentSchema.shape),
+    createSafePromptHandler(
+      'test_driven_development',
+      testDrivenDevelopmentSchema,
+      async ({ language, queryName }) => {
+        const template = loadPromptTemplate('ql-tdd-basic.prompt.md');
+        const content = processPromptTemplate(template, {
+          language,
+          queryName: queryName || '[QueryName]'
+        });
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: `## Context\n\n- **Language**: ${language}\n${queryName ? `- **Query Name**: ${queryName}\n` : ''}\n${content}`
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: `## Context\n\n- **Language**: ${language}\n${queryName ? `- **Query Name**: ${queryName}\n` : ''}\n${content}`
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // Tools Query Workflow Prompt
   server.prompt(
     'tools_query_workflow',
     'Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure',
-    toolsQueryWorkflowSchema.shape,
-    async ({
-      language,
-      database,
-      sourceFiles,
-      sourceFunction,
-      targetFunction
-    }) => {
-      const template = loadPromptTemplate('tools-query-workflow.prompt.md');
-      const content = processPromptTemplate(template, {
-        language,
-        database
-      });
+    toPermissiveShape(toolsQueryWorkflowSchema.shape),
+    createSafePromptHandler(
+      'tools_query_workflow',
+      toolsQueryWorkflowSchema,
+      async ({ language, database, sourceFiles, sourceFunction, targetFunction }) => {
+        const template = loadPromptTemplate('tools-query-workflow.prompt.md');
 
-      const contextSection = buildToolsQueryContext(
-        language,
-        database,
-        sourceFiles,
-        sourceFunction,
-        targetFunction
-      );
+        const warnings: string[] = [];
+        const dbResult = resolvePromptFilePath(database);
+        const resolvedDatabase = dbResult.resolvedPath;
+        if (dbResult.warning) warnings.push(dbResult.warning);
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + content
+        const content = processPromptTemplate(template, {
+          language,
+          database: resolvedDatabase
+        });
+
+        const contextSection = buildToolsQueryContext(
+          language,
+          resolvedDatabase,
+          sourceFiles,
+          sourceFunction,
+          targetFunction
+        );
+
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + content
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // Workshop Creation Workflow Prompt
   server.prompt(
     'workshop_creation_workflow',
     'Guide for creating CodeQL query development workshops from production-grade queries',
-    workshopCreationWorkflowSchema.shape,
-    async ({ queryPath, language, workshopName, numStages }) => {
-      const template = loadPromptTemplate('workshop-creation-workflow.prompt.md');
+    toPermissiveShape(workshopCreationWorkflowSchema.shape),
+    createSafePromptHandler(
+      'workshop_creation_workflow',
+      workshopCreationWorkflowSchema,
+      async ({ queryPath, language, workshopName, numStages }) => {
+        const template = loadPromptTemplate('workshop-creation-workflow.prompt.md');
 
-      // Derive workshop name from query path if not provided
-      const derivedName =
-        workshopName ||
-        basename(queryPath)
-          .replace(/\.(ql|qlref)$/, '')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-') ||
-        'codeql-workshop';
+        const warnings: string[] = [];
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
 
-      const contextSection = buildWorkshopContext(
-        queryPath,
-        language,
-        derivedName,
-        numStages
-      );
+        const derivedName =
+          workshopName ||
+          basename(resolvedQueryPath)
+            .replace(/\.(ql|qlref)$/, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-') ||
+          'codeql-workshop';
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        const contextSection = buildWorkshopContext(
+          resolvedQueryPath,
+          language,
+          derivedName,
+          numStages
+        );
+
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // TDD Basic Prompt - Test-Driven Development Checklist
   server.prompt(
     'ql_tdd_basic',
     'Test-driven CodeQL query development checklist - write tests first, implement query, iterate until tests pass',
-    qlTddBasicSchema.shape,
-    async ({ language, queryName }) => {
-      const template = loadPromptTemplate('ql-tdd-basic.prompt.md');
+    toPermissiveShape(qlTddBasicSchema.shape),
+    createSafePromptHandler(
+      'ql_tdd_basic',
+      qlTddBasicSchema,
+      async ({ language, queryName }) => {
+        const template = loadPromptTemplate('ql-tdd-basic.prompt.md');
 
-      let contextSection = '## Your Development Context\n\n';
-      if (language) {
+        let contextSection = '## Your Development Context\n\n';
         contextSection += `- **Language**: ${language}\n`;
-      }
-      if (queryName) {
-        contextSection += `- **Query Name**: ${queryName}\n`;
-      }
-      if (language || queryName) {
+        if (queryName) {
+          contextSection += `- **Query Name**: ${queryName}\n`;
+        }
         contextSection += '\n';
-      }
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // TDD Advanced Prompt - Advanced Techniques with AST/CFG/CallGraph
   server.prompt(
     'ql_tdd_advanced',
     'Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis',
-    qlTddAdvancedSchema.shape,
-    async ({ language, queryName, database }) => {
-      const template = loadPromptTemplate('ql-tdd-advanced.prompt.md');
+    toPermissiveShape(qlTddAdvancedSchema.shape),
+    createSafePromptHandler(
+      'ql_tdd_advanced',
+      qlTddAdvancedSchema,
+      async ({ language, queryName, database }) => {
+        const template = loadPromptTemplate('ql-tdd-advanced.prompt.md');
 
-      let contextSection = '## Your Development Context\n\n';
-      if (language) {
+        const warnings: string[] = [];
+        let resolvedDatabase = database;
+        if (database) {
+          const dbResult = resolvePromptFilePath(database);
+          resolvedDatabase = dbResult.resolvedPath;
+          if (dbResult.warning) warnings.push(dbResult.warning);
+        }
+
+        let contextSection = '## Your Development Context\n\n';
         contextSection += `- **Language**: ${language}\n`;
-      }
-      if (queryName) {
-        contextSection += `- **Query Name**: ${queryName}\n`;
-      }
-      if (database) {
-        contextSection += `- **Database**: ${database}\n`;
-      }
-      if (language || queryName || database) {
+        if (queryName) {
+          contextSection += `- **Query Name**: ${queryName}\n`;
+        }
+        if (resolvedDatabase) {
+          contextSection += `- **Database**: ${resolvedDatabase}\n`;
+        }
         contextSection += '\n';
-      }
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // SARIF Rank False Positives Prompt
   server.prompt(
     'sarif_rank_false_positives',
     'Analyze SARIF results to identify likely false positives in CodeQL query results',
-    sarifRankSchema.shape,
-    async ({ queryId, sarifPath }) => {
-      const template = loadPromptTemplate('sarif-rank-false-positives.prompt.md');
+    toPermissiveShape(sarifRankSchema.shape),
+    createSafePromptHandler(
+      'sarif_rank_false_positives',
+      sarifRankSchema,
+      async ({ queryId, sarifPath }) => {
+        const template = loadPromptTemplate('sarif-rank-false-positives.prompt.md');
 
-      let contextSection = '## Analysis Context\n\n';
-      if (queryId) {
-        contextSection += `- **Query ID**: ${queryId}\n`;
-      }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}\n`;
-      }
-      if (queryId || sarifPath) {
+        const warnings: string[] = [];
+        const spResult = resolvePromptFilePath(sarifPath);
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
+
+        let contextSection = '## Analysis Context\n\n';
+        if (queryId) {
+          contextSection += `- **Query ID**: ${queryId}\n`;
+        }
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
         contextSection += '\n';
-      }
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // SARIF Rank True Positives Prompt
   server.prompt(
     'sarif_rank_true_positives',
     'Analyze SARIF results to identify likely true positives in CodeQL query results',
-    sarifRankSchema.shape,
-    async ({ queryId, sarifPath }) => {
-      const template = loadPromptTemplate('sarif-rank-true-positives.prompt.md');
+    toPermissiveShape(sarifRankSchema.shape),
+    createSafePromptHandler(
+      'sarif_rank_true_positives',
+      sarifRankSchema,
+      async ({ queryId, sarifPath }) => {
+        const template = loadPromptTemplate('sarif-rank-true-positives.prompt.md');
 
-      let contextSection = '## Analysis Context\n\n';
-      if (queryId) {
-        contextSection += `- **Query ID**: ${queryId}\n`;
-      }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}\n`;
-      }
-      if (queryId || sarifPath) {
+        const warnings: string[] = [];
+        const spResult = resolvePromptFilePath(sarifPath);
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
+
+        let contextSection = '## Analysis Context\n\n';
+        if (queryId) {
+          contextSection += `- **Query ID**: ${queryId}\n`;
+        }
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}\n`;
         contextSection += '\n';
-      }
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // Run a query and describe its false positives
   server.prompt(
     'run_query_and_summarize_false_positives',
     'Help a user figure out where their query may need improvement to have a lower false positive rate',
-    describeFalsePositivesSchema.shape,
-    async ({ queryPath }) => {
-      const template = loadPromptTemplate('run-query-and-summarize-false-positives.prompt.md');
+    toPermissiveShape(describeFalsePositivesSchema.shape),
+    createSafePromptHandler(
+      'run_query_and_summarize_false_positives',
+      describeFalsePositivesSchema,
+      async ({ queryPath }) => {
+        const template = loadPromptTemplate('run-query-and-summarize-false-positives.prompt.md');
 
-      let contextSection = '## Analysis Context\n\n';
-      if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}\n`;
-      }
+        const warnings: string[] = [];
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
 
-      contextSection += '\n';
+        const contextSection = `## Analysis Context\n\n- **Query Path**: ${resolvedQueryPath}\n\n`;
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // Explain CodeQL Query Prompt (for workshop learning content)
   server.prompt(
     'explain_codeql_query',
     'Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams',
-    explainCodeqlQuerySchema.shape,
-    async ({ queryPath, language, databasePath }) => {
-      const template = loadPromptTemplate('explain-codeql-query.prompt.md');
+    toPermissiveShape(explainCodeqlQuerySchema.shape),
+    createSafePromptHandler(
+      'explain_codeql_query',
+      explainCodeqlQuerySchema,
+      async ({ queryPath, language, databasePath }) => {
+        const template = loadPromptTemplate('explain-codeql-query.prompt.md');
 
-      let contextSection = '## Query to Explain\n\n';
-      contextSection += `- **Query Path**: ${queryPath}\n`;
-      contextSection += `- **Language**: ${language}\n`;
-      if (databasePath) {
-        contextSection += `- **Database Path**: ${databasePath}\n`;
-      }
-      contextSection += '\n';
+        const warnings: string[] = [];
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        const dbResult = resolvePromptFilePath(databasePath);
+        const resolvedDatabasePath = dbResult.resolvedPath;
+        if (dbResult.warning) warnings.push(dbResult.warning);
+
+        let contextSection = '## Query to Explain\n\n';
+        contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
+        contextSection += `- **Language**: ${language}\n`;
+        contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
+        contextSection += '\n';
+
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // Document CodeQL Query Prompt
   server.prompt(
     'document_codeql_query',
     'Create or update documentation for a CodeQL query - generates standardized markdown documentation as a sibling file to the query',
-    documentCodeqlQuerySchema.shape,
-    async ({ queryPath, language }) => {
-      const template = loadPromptTemplate('document-codeql-query.prompt.md');
+    toPermissiveShape(documentCodeqlQuerySchema.shape),
+    createSafePromptHandler(
+      'document_codeql_query',
+      documentCodeqlQuerySchema,
+      async ({ queryPath, language }) => {
+        const template = loadPromptTemplate('document-codeql-query.prompt.md');
 
-      const contextSection = `## Query to Document
+        const warnings: string[] = [];
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
 
-- **Query Path**: ${queryPath}
+        const contextSection = `## Query to Document
+
+- **Query Path**: ${resolvedQueryPath}
 - **Language**: ${language}
 
 `;
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      },
+    ),
   );
 
   // LSP-powered Iterative Development Prompt
   server.prompt(
     'ql_lsp_iterative_development',
     'Iterative CodeQL query development using LSP tools for completion, navigation, and validation',
-    qlLspIterativeDevelopmentSchema.shape,
-    async ({ language, queryPath, workspaceUri }) => {
-      const template = loadPromptTemplate('ql-lsp-iterative-development.prompt.md');
+    toPermissiveShape(qlLspIterativeDevelopmentSchema.shape),
+    createSafePromptHandler(
+      'ql_lsp_iterative_development',
+      qlLspIterativeDevelopmentSchema,
+      async ({ language, queryPath, workspaceUri }) => {
+        const template = loadPromptTemplate('ql-lsp-iterative-development.prompt.md');
 
-      let contextSection = '## Your Development Context\n\n';
-      if (language) {
+        const warnings: string[] = [];
+        const qpResult = resolvePromptFilePath(queryPath);
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+
+        let resolvedWorkspaceUri = workspaceUri;
+        if (workspaceUri) {
+          const wsResult = resolvePromptFilePath(workspaceUri);
+          resolvedWorkspaceUri = wsResult.resolvedPath;
+          if (wsResult.warning) warnings.push(wsResult.warning);
+        }
+
+        let contextSection = '## Your Development Context\n\n';
         contextSection += `- **Language**: ${language}\n`;
-      }
-      if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}\n`;
-      }
-      if (workspaceUri) {
-        contextSection += `- **Workspace URI**: ${workspaceUri}\n`;
-      }
-      if (language || queryPath || workspaceUri) {
+        contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
+        if (resolvedWorkspaceUri) {
+          contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}\n`;
+        }
         contextSection += '\n';
-      }
 
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: contextSection + template,
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + template,
+              },
             },
-          },
-        ],
-      };
-    }
+          ],
+        };
+      },
+    ),
   );
 
   logger.info(`Registered ${WORKFLOW_PROMPT_NAMES.length} workflow prompts`);
