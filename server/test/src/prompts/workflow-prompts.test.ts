@@ -381,26 +381,30 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = qlTddBasicSchema.safeParse({});
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept language only', () => {
+    it('should accept required language', () => {
       const result = qlTddBasicSchema.safeParse({ language: 'java' });
       expect(result.success).toBe(true);
     });
 
-    it('should accept queryName only', () => {
-      const result = qlTddBasicSchema.safeParse({ queryName: 'TestQ' });
+    it('should reject empty object (language is required)', () => {
+      const result = qlTddBasicSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept language with optional queryName', () => {
+      const result = qlTddBasicSchema.safeParse({ language: 'java', queryName: 'TestQ' });
       expect(result.success).toBe(true);
     });
 
-    it('should leave both fields as undefined when omitted', () => {
-      const result = qlTddBasicSchema.safeParse({});
+    it('should reject queryName without language', () => {
+      const result = qlTddBasicSchema.safeParse({ queryName: 'TestQ' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should leave queryName as undefined when omitted', () => {
+      const result = qlTddBasicSchema.safeParse({ language: 'java' });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.language).toBeUndefined();
         expect(result.data.queryName).toBeUndefined();
       }
     });
@@ -426,9 +430,14 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = qlTddAdvancedSchema.safeParse({});
+    it('should accept required language', () => {
+      const result = qlTddAdvancedSchema.safeParse({ language: 'swift' });
       expect(result.success).toBe(true);
+    });
+
+    it('should reject empty object (language is required)', () => {
+      const result = qlTddAdvancedSchema.safeParse({});
+      expect(result.success).toBe(false);
     });
 
     it('should accept all parameters', () => {
@@ -443,12 +452,11 @@ describe('Workflow Prompts', () => {
       }
     });
 
-    it('should leave all fields as undefined when omitted', () => {
-      const result = qlTddAdvancedSchema.safeParse({});
+    it('should leave optional fields as undefined when omitted', () => {
+      const result = qlTddAdvancedSchema.safeParse({ language: 'swift' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.database).toBeUndefined();
-        expect(result.data.language).toBeUndefined();
         expect(result.data.queryName).toBeUndefined();
       }
     });
@@ -474,22 +482,19 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = sarifRankSchema.safeParse({});
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept queryId only', () => {
-      const result = sarifRankSchema.safeParse({ queryId: 'js/xss' });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.queryId).toBe('js/xss');
-      }
-    });
-
-    it('should accept sarifPath only', () => {
+    it('should accept required sarifPath', () => {
       const result = sarifRankSchema.safeParse({ sarifPath: '/results.sarif' });
       expect(result.success).toBe(true);
+    });
+
+    it('should reject empty object (sarifPath is required)', () => {
+      const result = sarifRankSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject queryId alone (sarifPath is required)', () => {
+      const result = sarifRankSchema.safeParse({ queryId: 'js/xss' });
+      expect(result.success).toBe(false);
     });
 
     it('should accept both parameters', () => {
@@ -500,12 +505,11 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should leave both fields as undefined when omitted', () => {
-      const result = sarifRankSchema.safeParse({});
+    it('should leave queryId as undefined when omitted', () => {
+      const result = sarifRankSchema.safeParse({ sarifPath: '/path.sarif' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.queryId).toBeUndefined();
-        expect(result.data.sarifPath).toBeUndefined();
       }
     });
   });
@@ -522,52 +526,45 @@ describe('Workflow Prompts', () => {
 
     it('should accept required queryPath and language', () => {
       const result = explainCodeqlQuerySchema.safeParse({
+        databasePath: '/db',
         language: 'javascript',
         queryPath: '/q.ql',
       });
       expect(result.success).toBe(true);
     });
 
-    it('should accept optional databasePath', () => {
+    it('should reject missing databasePath', () => {
       const result = explainCodeqlQuerySchema.safeParse({
-        databasePath: '/db',
         language: 'python',
         queryPath: '/q.ql',
       });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.databasePath).toBe('/db');
-      }
-    });
-
-    it('should leave databasePath as undefined when omitted', () => {
-      const result = explainCodeqlQuerySchema.safeParse({
-        language: 'go',
-        queryPath: '/q.ql',
-      });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.databasePath).toBeUndefined();
-      }
+      expect(result.success).toBe(false);
     });
 
     it('should reject missing queryPath', () => {
-      const result = explainCodeqlQuerySchema.safeParse({ language: 'java' });
+      const result = explainCodeqlQuerySchema.safeParse({
+        databasePath: '/db',
+        language: 'java',
+      });
       expect(result.success).toBe(false);
     });
 
     it('should reject missing language', () => {
-      const result = explainCodeqlQuerySchema.safeParse({ queryPath: '/q.ql' });
+      const result = explainCodeqlQuerySchema.safeParse({
+        databasePath: '/db',
+        queryPath: '/q.ql',
+      });
       expect(result.success).toBe(false);
     });
 
-    it('should reject empty object (both required fields missing)', () => {
+    it('should reject empty object (all three fields required)', () => {
       const result = explainCodeqlQuerySchema.safeParse({});
       expect(result.success).toBe(false);
     });
 
     it.each([...SUPPORTED_LANGUAGES])('should accept language "%s"', (lang) => {
       const result = explainCodeqlQuerySchema.safeParse({
+        databasePath: '/db',
         language: lang,
         queryPath: '/q.ql',
       });
@@ -585,12 +582,7 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = describeFalsePositivesSchema.safeParse({});
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept queryPath', () => {
+    it('should accept required queryPath', () => {
       const result = describeFalsePositivesSchema.safeParse({
         queryPath: '/path/to/query.ql',
       });
@@ -600,12 +592,9 @@ describe('Workflow Prompts', () => {
       }
     });
 
-    it('should leave queryPath as undefined when omitted', () => {
+    it('should reject empty object (queryPath is required)', () => {
       const result = describeFalsePositivesSchema.safeParse({});
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.queryPath).toBeUndefined();
-      }
+      expect(result.success).toBe(false);
     });
   });
 
@@ -661,31 +650,50 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = qlLspIterativeDevelopmentSchema.safeParse({});
+    it('should accept required language and queryPath', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({
+        language: 'ruby',
+        queryPath: '/q.ql',
+      });
       expect(result.success).toBe(true);
+    });
+
+    it('should reject empty object (language and queryPath required)', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({});
+      expect(result.success).toBe(false);
     });
 
     it('should accept all parameters', () => {
       const result = qlLspIterativeDevelopmentSchema.safeParse({
         language: 'ruby',
         queryPath: '/q.ql',
-        workspaceUri: 'file:///ws',
+        workspaceUri: '/ws',
       });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.workspaceUri).toBe('file:///ws');
+        expect(result.data.workspaceUri).toBe('/ws');
       }
     });
 
-    it('should leave all fields as undefined when omitted', () => {
-      const result = qlLspIterativeDevelopmentSchema.safeParse({});
+    it('should leave workspaceUri as undefined when omitted', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({
+        language: 'ruby',
+        queryPath: '/q.ql',
+      });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.language).toBeUndefined();
-        expect(result.data.queryPath).toBeUndefined();
         expect(result.data.workspaceUri).toBeUndefined();
       }
+    });
+
+    it('should reject missing language', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({ queryPath: '/q.ql' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject missing queryPath', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({ language: 'ruby' });
+      expect(result.success).toBe(false);
     });
 
     it('should reject invalid language', () => {
@@ -694,7 +702,7 @@ describe('Workflow Prompts', () => {
     });
 
     it.each([...SUPPORTED_LANGUAGES])('should accept language "%s"', (lang) => {
-      const result = qlLspIterativeDevelopmentSchema.safeParse({ language: lang });
+      const result = qlLspIterativeDevelopmentSchema.safeParse({ language: lang, queryPath: '/q.ql' });
       expect(result.success).toBe(true);
     });
   });
@@ -794,26 +802,26 @@ describe('Workflow Prompts', () => {
       {
         name: 'qlTddBasicSchema',
         schema: qlTddBasicSchema,
-        required: [],
-        optional: ['language', 'queryName'],
+        required: ['language'],
+        optional: ['queryName'],
       },
       {
         name: 'qlTddAdvancedSchema',
         schema: qlTddAdvancedSchema,
-        required: [],
-        optional: ['database', 'language', 'queryName'],
+        required: ['language'],
+        optional: ['database', 'queryName'],
       },
       {
         name: 'sarifRankSchema',
         schema: sarifRankSchema,
-        required: [],
-        optional: ['queryId', 'sarifPath'],
+        required: ['sarifPath'],
+        optional: ['queryId'],
       },
       {
         name: 'explainCodeqlQuerySchema',
         schema: explainCodeqlQuerySchema,
-        required: ['language', 'queryPath'],
-        optional: ['databasePath'],
+        required: ['databasePath', 'language', 'queryPath'],
+        optional: [],
       },
       {
         name: 'documentCodeqlQuerySchema',
@@ -824,8 +832,8 @@ describe('Workflow Prompts', () => {
       {
         name: 'qlLspIterativeDevelopmentSchema',
         schema: qlLspIterativeDevelopmentSchema,
-        required: [],
-        optional: ['language', 'queryPath', 'workspaceUri'],
+        required: ['language', 'queryPath'],
+        optional: ['workspaceUri'],
       },
       {
         name: 'checkForDuplicatedCodeSchema',
@@ -1046,14 +1054,14 @@ describe('Workflow Prompts', () => {
       const minimalArgs: Record<string, Record<string, string>> = {
         check_for_duplicated_code: { queryPath: '/q.ql' },
         document_codeql_query: { language: 'java', queryPath: '/q.ql' },
-        explain_codeql_query: { language: 'java', queryPath: '/q.ql' },
+        explain_codeql_query: { databasePath: '/db', language: 'java', queryPath: '/q.ql' },
         find_overlapping_queries: { language: 'cpp', queryDescription: 'detect placement-new on non-trivial types' },
-        ql_lsp_iterative_development: {},
-        ql_tdd_advanced: {},
-        ql_tdd_basic: {},
-        run_query_and_summarize_false_positives: {},
-        sarif_rank_false_positives: {},
-        sarif_rank_true_positives: {},
+        ql_lsp_iterative_development: { language: 'ruby', queryPath: '/q.ql' },
+        ql_tdd_advanced: { language: 'javascript' },
+        ql_tdd_basic: { language: 'javascript' },
+        run_query_and_summarize_false_positives: { queryPath: '/q.ql' },
+        sarif_rank_false_positives: { sarifPath: '/results.sarif' },
+        sarif_rank_true_positives: { sarifPath: '/results.sarif' },
         test_driven_development: { language: 'javascript' },
         tools_query_workflow: { database: '/db', language: 'javascript' },
         workshop_creation_workflow: { language: 'javascript', queryPath: '/q.ql' },
@@ -1188,10 +1196,10 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Name**: WeakCrypto');
     });
 
-    it('ql_tdd_basic handler should still return content with no parameters', async () => {
+    it('ql_tdd_basic handler should return inline error with no parameters', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_basic');
       const result: PromptResult = await handler({});
-      expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+      expect(result.messages[0].content.text).toContain('Invalid input');
     });
 
     it('ql_tdd_advanced handler should include database in context', async () => {
@@ -1207,10 +1215,10 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Name**: TaintTrack');
     });
 
-    it('ql_tdd_advanced handler should still return content with no parameters', async () => {
+    it('ql_tdd_advanced handler should return inline error with no parameters', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
       const result: PromptResult = await handler({});
-      expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+      expect(result.messages[0].content.text).toContain('Invalid input');
     });
 
     it('sarif_rank_false_positives handler should include queryId and sarifPath', async () => {
@@ -1235,11 +1243,11 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**SARIF File**: /out.sarif');
     });
 
-    it('sarif_rank handlers should return content with no parameters', async () => {
+    it('sarif_rank handlers should return inline error with no parameters', async () => {
       for (const name of ['sarif_rank_false_positives', 'sarif_rank_true_positives']) {
         const handler = getRegisteredHandler(mockServer, name);
         const result: PromptResult = await handler({});
-        expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+        expect(result.messages[0].content.text).toContain('Invalid input');
       }
     });
 
@@ -1252,20 +1260,13 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Path**: /queries/SqlInjection.ql');
     });
 
-    it('run_query_and_summarize_false_positives handler should return content with no parameters', async () => {
+    it('run_query_and_summarize_false_positives handler should return inline error with no parameters', async () => {
       const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
       const result: PromptResult = await handler({});
-      expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+      expect(result.messages[0].content.text).toContain('Invalid input');
     });
 
-    it('run_query_and_summarize_false_positives handler should omit Query Path when not provided', async () => {
-      const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
-      const result: PromptResult = await handler({});
-      const text = result.messages[0].content.text;
-      expect(text).not.toContain('**Query Path**');
-    });
-
-    it('explain_codeql_query handler should include required and optional params', async () => {
+    it('explain_codeql_query handler should include all required params', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
         databasePath: '/db/path',
@@ -1278,14 +1279,14 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Database Path**: /db/path');
     });
 
-    it('explain_codeql_query handler should omit Database Path when not provided', async () => {
+    it('explain_codeql_query handler should return inline error when databasePath missing', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
         language: 'java',
         queryPath: '/q.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).not.toContain('**Database Path**');
+      expect(text).toContain('Invalid input');
     });
 
     it('document_codeql_query handler should include queryPath and language', async () => {
@@ -1299,7 +1300,7 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Language**: go');
     });
 
-    it('ql_lsp_iterative_development handler should include all optional params', async () => {
+    it('ql_lsp_iterative_development handler should include all params', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
       const result: PromptResult = await handler({
         language: 'ruby',
@@ -1312,12 +1313,15 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Workspace URI**: /pack/root');
     });
 
-    it('ql_lsp_iterative_development handler should omit absent optional params', async () => {
+    it('ql_lsp_iterative_development handler should omit workspaceUri when absent', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
-      const result: PromptResult = await handler({});
+      const result: PromptResult = await handler({
+        language: 'ruby',
+        queryPath: '/q.ql',
+      });
       const text = result.messages[0].content.text;
-      expect(text).not.toContain('**Language**');
-      expect(text).not.toContain('**Query Path**');
+      expect(text).toContain('**Language**: ruby');
+      expect(text).toContain('**Query Path**');
       expect(text).not.toContain('**Workspace URI**');
     });
   });
@@ -1485,16 +1489,18 @@ describe('Workflow Prompts', () => {
   // toPermissiveShape
   // -----------------------------------------------------------------------
   describe('toPermissiveShape', () => {
-    it('should replace z.enum() with z.string()', () => {
+    it('should make required z.enum() a required z.string()', () => {
       const shape = {
         language: z.enum(['javascript', 'python']).describe('The language'),
       };
       const permissive = toPermissiveShape(shape);
 
-      // The permissive shape should accept any string, not just enum values
       const schema = z.object(permissive as Record<string, z.ZodTypeAny>);
+      // Should accept any string
       expect(schema.safeParse({ language: 'rust' }).success).toBe(true);
       expect(schema.safeParse({ language: 'javascript' }).success).toBe(true);
+      // Still required — missing field should fail
+      expect(schema.safeParse({}).success).toBe(false);
     });
 
     it('should preserve descriptions on enum fields', () => {
@@ -1522,7 +1528,6 @@ describe('Workflow Prompts', () => {
       const original = z.string().describe('A path');
       const shape = { queryPath: original };
       const permissive = toPermissiveShape(shape);
-      // Non-enum types should be the same object reference
       expect(permissive.queryPath).toBe(original);
     });
 
@@ -1653,9 +1658,14 @@ describe('Workflow Prompts', () => {
         messages: [{ role: 'user', content: { type: 'text', text: 'ok' } }],
       });
 
+      // Use a schema where all fields are optional
+      const allOptionalSchema = z.object({
+        name: z.string().optional(),
+      });
+
       const safe = createSafePromptHandler(
-        'ql_tdd_basic',
-        qlTddBasicSchema,
+        'test_prompt',
+        allOptionalSchema,
         innerHandler,
       );
 
@@ -1739,6 +1749,7 @@ describe('Workflow Prompts', () => {
     it('explain_codeql_query handler should include warning for nonexistent queryPath', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
+        databasePath: '/db',
         language: 'javascript',
         queryPath: 'nonexistent/query.ql',
       });
