@@ -32,6 +32,42 @@ export const SUPPORTED_LANGUAGES = [
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Wrap a user-supplied string in a markdown inline code span using a
+ * CommonMark-compliant backtick fence long enough to contain any backtick
+ * runs inside the value.  All newline sequences (CR, LF, CRLF) are replaced
+ * with a single space so the returned span is always a single line.
+ *
+ * Examples:
+ *   markdownInlineCode('foo')        → "`foo`"
+ *   markdownInlineCode('a`b')        → "``a`b``"
+ *   markdownInlineCode('a``b')       → "```a``b```"
+ *   markdownInlineCode('a\r\nb')     → "`a b`"
+ */
+export function markdownInlineCode(value: string): string {
+  // Replace all newline sequences with a space — inline code spans cannot
+  // span lines, and keeping literal newlines would break surrounding markdown.
+  const normalized = value.replace(/\r\n|\r|\n/g, ' ');
+
+  // Find the longest consecutive run of backticks in the content.
+  let maxRun = 0;
+  let currentRun = 0;
+  for (const ch of normalized) {
+    if (ch === '`') {
+      currentRun += 1;
+      if (currentRun > maxRun) {
+        maxRun = currentRun;
+      }
+    } else {
+      currentRun = 0;
+    }
+  }
+
+  // The fence must be at least one backtick longer than any internal run.
+  const fence = '`'.repeat(maxRun + 1);
+  return `${fence}${normalized}${fence}`;
+}
+
+/**
  * Result of resolving a user-supplied file path in a prompt parameter.
  *
  * `resolvedPath` is set to the best-effort absolute path, or an empty
@@ -116,7 +152,7 @@ export async function resolvePromptFilePath(
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `⚠ **File path** \`${filePath}\` **does not exist.** Resolved to: \`${absolutePath}\``,
+      warning: `⚠ **File path** ${markdownInlineCode(filePath)} **does not exist.** Resolved to: ${markdownInlineCode(absolutePath)}`,
     };
   }
 
@@ -453,7 +489,7 @@ export function formatValidationError(
     if (issue.code === 'invalid_enum_value' && 'options' in issue) {
       const opts = (issue.options as string[]).join(', ');
       lines.push(
-        `- **\`${field}\`**: received \`${String(issue.received)}\` — ` +
+        `- **\`${field}\`**: received ${markdownInlineCode(String(issue.received))} — ` +
         `must be one of: ${opts}`,
       );
     } else if (issue.code === 'invalid_type') {

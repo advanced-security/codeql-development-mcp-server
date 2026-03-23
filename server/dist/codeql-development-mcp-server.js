@@ -64468,6 +64468,23 @@ var SUPPORTED_LANGUAGES = [
   "ruby",
   "swift"
 ];
+function markdownInlineCode(value) {
+  const normalized = value.replace(/\r\n|\r|\n/g, " ");
+  let maxRun = 0;
+  let currentRun = 0;
+  for (const ch of normalized) {
+    if (ch === "`") {
+      currentRun += 1;
+      if (currentRun > maxRun) {
+        maxRun = currentRun;
+      }
+    } else {
+      currentRun = 0;
+    }
+  }
+  const fence = "`".repeat(maxRun + 1);
+  return `${fence}${normalized}${fence}`;
+}
 async function resolvePromptFilePath(filePath, workspaceRoot) {
   if (!filePath || filePath.trim() === "") {
     return {
@@ -64503,7 +64520,7 @@ async function resolvePromptFilePath(filePath, workspaceRoot) {
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `\u26A0 **File path** \`${filePath}\` **does not exist.** Resolved to: \`${absolutePath}\``
+      warning: `\u26A0 **File path** ${markdownInlineCode(filePath)} **does not exist.** Resolved to: ${markdownInlineCode(absolutePath)}`
     };
   }
   return { resolvedPath: absolutePath };
@@ -64599,7 +64616,7 @@ function formatValidationError(promptName, error2) {
     if (issue2.code === "invalid_enum_value" && "options" in issue2) {
       const opts = issue2.options.join(", ");
       lines.push(
-        `- **\`${field}\`**: received \`${String(issue2.received)}\` \u2014 must be one of: ${opts}`
+        `- **\`${field}\`**: received ${markdownInlineCode(String(issue2.received))} \u2014 must be one of: ${opts}`
       );
     } else if (issue2.code === "invalid_type") {
       lines.push(

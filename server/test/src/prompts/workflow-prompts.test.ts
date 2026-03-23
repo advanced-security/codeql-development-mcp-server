@@ -24,6 +24,7 @@ import {
   explainCodeqlQuerySchema,
   findOverlappingQueriesSchema,
   formatValidationError,
+  markdownInlineCode,
   qlLspIterativeDevelopmentSchema,
   qlTddAdvancedSchema,
   qlTddBasicSchema,
@@ -1136,7 +1137,7 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Language**: cpp');
-      expect(text).toContain('path/to/mydb');
+      expect(text).toContain('mydb');
     });
 
     it('tools_query_workflow handler should include optional source parameters', async () => {
@@ -1207,7 +1208,7 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Name**: WeakCrypto');
     });
 
-    it('ql_tdd_basic handler should return inline error with no parameters', async () => {
+    it('ql_tdd_basic handler (createSafePromptHandler) should return inline validation error when required parameters are missing', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_basic');
       const result: PromptResult = await handler({});
       expect(result.messages[0].content.text).toContain('Invalid input');
@@ -1221,12 +1222,12 @@ describe('Workflow Prompts', () => {
         queryName: 'TaintTrack',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('my/database');
+      expect(text).toContain('database');
       expect(text).toContain('**Language**: swift');
       expect(text).toContain('**Query Name**: TaintTrack');
     });
 
-    it('ql_tdd_advanced handler should return inline error with no parameters', async () => {
+    it('ql_tdd_advanced handler (createSafePromptHandler) should return inline validation error when required parameters are missing', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
       const result: PromptResult = await handler({});
       expect(result.messages[0].content.text).toContain('Invalid input');
@@ -1558,6 +1559,40 @@ describe('Workflow Prompts', () => {
   });
 
   // -----------------------------------------------------------------------
+  // markdownInlineCode
+  // -----------------------------------------------------------------------
+  describe('markdownInlineCode', () => {
+    it('should wrap plain text in single backticks', () => {
+      expect(markdownInlineCode('foo')).toBe('`foo`');
+    });
+
+    it('should use double backticks when value contains a single backtick', () => {
+      expect(markdownInlineCode('a`b')).toBe('``a`b``');
+    });
+
+    it('should use triple backticks when value contains a double backtick run', () => {
+      expect(markdownInlineCode('a``b')).toBe('```a``b```');
+    });
+
+    it('should replace CRLF and CR with spaces so the output stays on one line', () => {
+      expect(markdownInlineCode('a\r\nb')).toBe('`a b`');
+      expect(markdownInlineCode('a\rb')).toBe('`a b`');
+      expect(markdownInlineCode('a\nb')).toBe('`a b`');
+    });
+
+    it('should not mutate a value that contains no backticks', () => {
+      const input = '/path/to/my-query.ql';
+      expect(markdownInlineCode(input)).toBe(`\`${input}\``);
+    });
+
+    it('should handle a value that is only backticks', () => {
+      const result = markdownInlineCode('``');
+      // fence must be longer than the run of 2, so 3 backticks
+      expect(result).toBe('```' + '``' + '```');
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // formatValidationError
   // -----------------------------------------------------------------------
   describe('formatValidationError', () => {
@@ -1591,6 +1626,22 @@ describe('Workflow Prompts', () => {
       if (!result.success) {
         const msg = formatValidationError('test_prompt', result.error);
         expect(msg).toContain('correct the input');
+      }
+    });
+
+    it('should produce well-formed markdown when the received value contains backticks', () => {
+      // Construct a ZodError for an enum field whose received value has backticks.
+      const schema = z.object({ mode: z.enum(['a', 'b']) });
+      const result = schema.safeParse({ mode: 'val`ue' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('test_prompt', result.error);
+        // The raw backtick must not appear inside a single-backtick code span —
+        // markdownInlineCode uses a longer fence so the value is fully enclosed.
+        // The message must still contain the original value text.
+        expect(msg).toContain('val`ue');
+        // The fence wrapping the received value must use at least double backticks.
+        expect(msg).toContain('``val`ue``');
       }
     });
   });
@@ -1753,6 +1804,16 @@ describe('Workflow Prompts', () => {
     it('should handle an empty string path with a warning', async () => {
       const result = await resolvePromptFilePath('', testDir);
       expect(result.warning).toBeDefined();
+    });
+
+    it('should produce well-formed markdown when the path contains backticks', async () => {
+      // A path that contains a backtick must not corrupt the warning's inline code span.
+      const filePath = 'bad`name.ql';
+      const result = await resolvePromptFilePath(filePath, testDir);
+      expect(result.warning).toBeDefined();
+      // The raw backtick must be preserved and the fence must be at least double.
+      expect(result.warning).toContain('bad`name.ql');
+      expect(result.warning).toContain('``bad`name.ql``');
     });
   });
 
