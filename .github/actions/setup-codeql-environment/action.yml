@@ -82,7 +82,7 @@ runs:
     - name: Cache `gh-codeql` extension and CodeQL packages (Unix)
       id: cache-codeql-unix
       if: runner.os != 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.local/share/gh-codeql
@@ -94,7 +94,7 @@ runs:
     - name: Cache `gh-codeql` extension and CodeQL packages (Windows)
       id: cache-codeql-windows
       if: runner.os == 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~\AppData\Local\GitHub\gh-codeql
@@ -330,7 +330,7 @@ runs:
     - name: Cache language runtimes
       id: cache-runtimes
       if: inputs.install-language-runtimes == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/go/pkg/mod
@@ -388,7 +388,7 @@ runs:
     - name: Cache .NET packages
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp')
       id: cache-dotnet-packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.nuget/packages
