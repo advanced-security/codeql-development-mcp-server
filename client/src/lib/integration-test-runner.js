@@ -246,11 +246,15 @@ export class IntegrationTestRunner {
         );
       }
 
-      return (
-        (totalIntegrationTests > 0 || workflowIntegrationSucceeded || promptIntegrationSucceeded) &&
-        workflowIntegrationSucceeded &&
-        promptIntegrationSucceeded
-      );
+      if (totalIntegrationTests === 0) {
+        this.logger.log(
+          "No integration tests were executed across tool, workflow, or prompt suites.",
+          "ERROR"
+        );
+        return false;
+      }
+
+      return workflowIntegrationSucceeded && promptIntegrationSucceeded;
     } catch (error) {
       this.logger.log(`Error running integration tests: ${error.message}`, "ERROR");
       return false;

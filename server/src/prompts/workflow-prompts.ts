@@ -8,7 +8,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
-import { existsSync } from 'fs';
+import { access } from 'fs/promises';
+import { fileURLToPath } from 'url';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
@@ -33,11 +34,14 @@ export const SUPPORTED_LANGUAGES = [
 /**
  * Result of resolving a user-supplied file path in a prompt parameter.
  *
- * `resolvedPath` is always set (to the best-effort absolute path).
- * `warning` is set only when the path is problematic — the caller should
+ * `resolvedPath` is set to the best-effort absolute path, or an empty
+ * string when the path is blocked (e.g. traversal outside workspace).
+ * `warning` is set when the path is problematic — the caller should
  * embed it in the prompt response so the user sees a clear message.
+ * `blocked` is `true` when the path must not be used (e.g. traversal).
  */
 export interface PromptFilePathResult {
+  blocked?: boolean;
   resolvedPath: string;
   warning?: string;
 }
@@ -45,19 +49,22 @@ export interface PromptFilePathResult {
 /**
  * Resolve a user-supplied file path for a prompt parameter.
  *
+ * Handles `file://` URIs (converted via `fileURLToPath`) and plain paths.
  * Relative paths are resolved against `workspaceRoot` (which defaults to
  * `getUserWorkspaceDir()`).  The function never throws — it returns a
- * `warning` string when the path is empty, contains traversal sequences, or
- * does not exist on disk.
+ * `warning` string when the path is empty, traverses outside the workspace,
+ * or does not exist on disk.  Path traversal attempts are treated as a hard
+ * failure: `blocked` is `true` and `resolvedPath` is empty so that the
+ * outside-root absolute path is never embedded in the prompt context.
  *
  * @param filePath      - The raw path value from the prompt parameter.
  * @param workspaceRoot - Directory to resolve relative paths against.
  * @returns An object with the resolved absolute path and an optional warning.
  */
-export function resolvePromptFilePath(
+export async function resolvePromptFilePath(
   filePath: string,
   workspaceRoot?: string,
-): PromptFilePathResult {
+): Promise<PromptFilePathResult> {
   if (!filePath || filePath.trim() === '') {
     return {
       resolvedPath: filePath ?? '',
@@ -65,10 +72,24 @@ export function resolvePromptFilePath(
     };
   }
 
+  // Convert file:// URIs to filesystem paths before resolution.
+  let effectivePath = filePath;
+  if (/^file:\/\//i.test(filePath.trim())) {
+    try {
+      effectivePath = fileURLToPath(filePath.trim());
+    } catch {
+      return {
+        resolvedPath: '',
+        blocked: true,
+        warning: `⚠ **File path** \`${filePath}\` **is not a valid file URI.**`,
+      };
+    }
+  }
+
   const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
 
   // Normalise first to collapse any . or .. segments.
-  const normalizedPath = normalize(filePath);
+  const normalizedPath = normalize(effectivePath);
 
   // Resolve to absolute path.
   const absolutePath = isAbsolute(normalizedPath)
@@ -81,15 +102,18 @@ export function resolvePromptFilePath(
   const rel = relative(effectiveRoot, absolutePath);
   if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
     return {
-      resolvedPath: absolutePath,
-      warning: `⚠ **File path** \`${filePath}\` **resolves outside the workspace root.** Resolved to: \`${absolutePath}\``,
+      blocked: true,
+      resolvedPath: '',
+      warning: '⚠ **File path resolves outside the workspace root.** The path has been blocked for security.',
     };
   }
 
   // Check existence on disk (advisory only — the resolved path is always
   // returned so that downstream tools can attempt the operation themselves
   // and surface their own errors).
-  if (!existsSync(absolutePath)) {
+  try {
+    await access(absolutePath);
+  } catch {
     return {
       resolvedPath: absolutePath,
       warning: `⚠ **File path** \`${filePath}\` **does not exist.** Resolved to: \`${absolutePath}\``,
@@ -571,7 +595,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('tools-query-workflow.prompt.md');
 
         const warnings: string[] = [];
-        const dbResult = resolvePromptFilePath(database);
+        const dbResult = await resolvePromptFilePath(database);
         const resolvedDatabase = dbResult.resolvedPath;
         if (dbResult.warning) warnings.push(dbResult.warning);
 
@@ -619,7 +643,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('workshop-creation-workflow.prompt.md');
 
         const warnings: string[] = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
@@ -704,7 +728,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const warnings: string[] = [];
         let resolvedDatabase = database;
         if (database) {
-          const dbResult = resolvePromptFilePath(database);
+          const dbResult = await resolvePromptFilePath(database);
           resolvedDatabase = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -750,7 +774,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('sarif-rank-false-positives.prompt.md');
 
         const warnings: string[] = [];
-        const spResult = resolvePromptFilePath(sarifPath);
+        const spResult = await resolvePromptFilePath(sarifPath);
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
 
@@ -792,7 +816,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('sarif-rank-true-positives.prompt.md');
 
         const warnings: string[] = [];
-        const spResult = resolvePromptFilePath(sarifPath);
+        const spResult = await resolvePromptFilePath(sarifPath);
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
 
@@ -834,7 +858,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('run-query-and-summarize-false-positives.prompt.md');
 
         const warnings: string[] = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
@@ -871,13 +895,13 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('explain-codeql-query.prompt.md');
 
         const warnings: string[] = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         let resolvedDatabasePath = databasePath;
         if (databasePath) {
-          const dbResult = resolvePromptFilePath(databasePath);
+          const dbResult = await resolvePromptFilePath(databasePath);
           resolvedDatabasePath = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -921,7 +945,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const template = loadPromptTemplate('document-codeql-query.prompt.md');
 
         const warnings: string[] = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
@@ -1025,22 +1049,15 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         const template = loadPromptTemplate('ql-lsp-iterative-development.prompt.md');
 
         const warnings: string[] = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
-          const trimmedWorkspaceUri = workspaceUri.trim();
-          // If the workspace value is already a URI (e.g., "file://..."), preserve it as-is.
-          // Only run filesystem path resolution for non-URI values.
-          if (/^file:\/\//i.test(trimmedWorkspaceUri)) {
-            resolvedWorkspaceUri = trimmedWorkspaceUri;
-          } else {
-            const wsResult = resolvePromptFilePath(workspaceUri);
-            resolvedWorkspaceUri = wsResult.resolvedPath;
-            if (wsResult.warning) warnings.push(wsResult.warning);
-          }
+          const wsResult = await resolvePromptFilePath(workspaceUri);
+          resolvedWorkspaceUri = wsResult.resolvedPath;
+          if (wsResult.warning) warnings.push(wsResult.warning);
         }
 
         let contextSection = '## Your Development Context\n\n';

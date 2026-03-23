@@ -1131,18 +1131,18 @@ describe('Workflow Prompts', () => {
     it('tools_query_workflow handler should include language and database', async () => {
       const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
       const result: PromptResult = await handler({
-        database: '/path/to/mydb',
+        database: 'path/to/mydb',
         language: 'cpp',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Language**: cpp');
-      expect(text).toContain('**Database**: /path/to/mydb');
+      expect(text).toContain('path/to/mydb');
     });
 
     it('tools_query_workflow handler should include optional source parameters', async () => {
       const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
       const result: PromptResult = await handler({
-        database: '/db',
+        database: 'db',
         language: 'javascript',
         sourceFiles: 'app.js,index.js',
         sourceFunction: 'handleRequest',
@@ -1158,7 +1158,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'python',
-        queryPath: '/path/to/SqlInjection.ql',
+        queryPath: 'path/to/SqlInjection.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Workshop Name**: sqlinjection');
@@ -1168,7 +1168,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'javascript',
-        queryPath: '/path/to/Xss.ql',
+        queryPath: 'path/to/Xss.ql',
         workshopName: 'custom-workshop',
       });
       const text = result.messages[0].content.text;
@@ -1179,7 +1179,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'go',
-        queryPath: '/q.ql',
+        queryPath: 'q.ql',
         numStages: 7,
       });
       const text = result.messages[0].content.text;
@@ -1190,7 +1190,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'ruby',
-        queryPath: '/q.ql',
+        queryPath: 'q.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('4-8 (auto-detect based on query complexity)');
@@ -1216,12 +1216,12 @@ describe('Workflow Prompts', () => {
     it('ql_tdd_advanced handler should include database in context', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
       const result: PromptResult = await handler({
-        database: '/my/database',
+        database: 'my/database',
         language: 'swift',
         queryName: 'TaintTrack',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Database**: /my/database');
+      expect(text).toContain('my/database');
       expect(text).toContain('**Language**: swift');
       expect(text).toContain('**Query Name**: TaintTrack');
     });
@@ -1236,22 +1236,22 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'sarif_rank_false_positives');
       const result: PromptResult = await handler({
         queryId: 'js/code-injection',
-        sarifPath: '/results/scan.sarif',
+        sarifPath: 'results/scan.sarif',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Query ID**: js/code-injection');
-      expect(text).toContain('**SARIF File**: /results/scan.sarif');
+      expect(text).toContain('results/scan.sarif');
     });
 
     it('sarif_rank_true_positives handler should include queryId and sarifPath', async () => {
       const handler = getRegisteredHandler(mockServer, 'sarif_rank_true_positives');
       const result: PromptResult = await handler({
         queryId: 'py/command-injection',
-        sarifPath: '/out.sarif',
+        sarifPath: 'out.sarif',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Query ID**: py/command-injection');
-      expect(text).toContain('**SARIF File**: /out.sarif');
+      expect(text).toContain('out.sarif');
     });
 
     it('sarif_rank handlers should return inline error with no parameters', async () => {
@@ -1265,10 +1265,10 @@ describe('Workflow Prompts', () => {
     it('run_query_and_summarize_false_positives handler should include queryPath', async () => {
       const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
       const result: PromptResult = await handler({
-        queryPath: '/queries/SqlInjection.ql',
+        queryPath: 'queries/SqlInjection.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Query Path**: /queries/SqlInjection.ql');
+      expect(text).toContain('queries/SqlInjection.ql');
     });
 
     it('run_query_and_summarize_false_positives handler should return inline error with no parameters', async () => {
@@ -1280,21 +1280,21 @@ describe('Workflow Prompts', () => {
     it('explain_codeql_query handler should include all params when provided', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
-        databasePath: '/db/path',
+        databasePath: 'db/path',
         language: 'python',
-        queryPath: '/queries/Xss.ql',
+        queryPath: 'queries/Xss.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Query Path**: /queries/Xss.ql');
+      expect(text).toContain('queries/Xss.ql');
       expect(text).toContain('**Language**: python');
-      expect(text).toContain('**Database Path**: /db/path');
+      expect(text).toContain('db/path');
     });
 
     it('explain_codeql_query handler should omit Database Path when not provided', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
         language: 'java',
-        queryPath: '/q.ql',
+        queryPath: 'q.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).not.toContain('**Database Path**');
@@ -1304,10 +1304,10 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
       const result: PromptResult = await handler({
         language: 'go',
-        queryPath: '/queries/SqlInjection.ql',
+        queryPath: 'queries/SqlInjection.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Query Path**: /queries/SqlInjection.ql');
+      expect(text).toContain('queries/SqlInjection.ql');
       expect(text).toContain('**Language**: go');
     });
 
@@ -1315,20 +1315,20 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
       const result: PromptResult = await handler({
         language: 'ruby',
-        queryPath: '/my/query.ql',
-        workspaceUri: '/pack/root',
+        queryPath: 'my/query.ql',
+        workspaceUri: 'pack/root',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Language**: ruby');
-      expect(text).toContain('**Query Path**: /my/query.ql');
-      expect(text).toContain('**Workspace URI**: /pack/root');
+      expect(text).toContain('my/query.ql');
+      expect(text).toContain('pack/root');
     });
 
     it('ql_lsp_iterative_development handler should omit workspaceUri when absent', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
       const result: PromptResult = await handler({
         language: 'ruby',
-        queryPath: '/q.ql',
+        queryPath: 'q.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Language**: ruby');
@@ -1701,55 +1701,57 @@ describe('Workflow Prompts', () => {
       cleanupTestTempDir(testDir);
     });
 
-    it('should resolve an existing absolute path and return it unchanged', () => {
+    it('should resolve an existing absolute path and return it unchanged', async () => {
       const filePath = join(testDir, 'query.ql');
       writeFileSync(filePath, 'select 1');
 
-      const result = resolvePromptFilePath(filePath);
+      const result = await resolvePromptFilePath(filePath);
       expect(result.resolvedPath).toBe(filePath);
       expect(result.warning).toBeUndefined();
     });
 
-    it('should resolve a relative path against the workspace root', () => {
+    it('should resolve a relative path against the workspace root', async () => {
       // Create a file relative to testDir
       const relPath = 'sub/query.ql';
       mkdirSync(join(testDir, 'sub'), { recursive: true });
       writeFileSync(join(testDir, 'sub', 'query.ql'), 'select 1');
 
-      const result = resolvePromptFilePath(relPath, testDir);
+      const result = await resolvePromptFilePath(relPath, testDir);
       expect(result.resolvedPath).toBe(join(testDir, 'sub', 'query.ql'));
       expect(result.warning).toBeUndefined();
     });
 
-    it('should return a warning when the resolved path does not exist', () => {
-      const result = resolvePromptFilePath('nonexistent/path/query.ql', testDir);
+    it('should return a warning when the resolved path does not exist', async () => {
+      const result = await resolvePromptFilePath('nonexistent/path/query.ql', testDir);
       expect(result.resolvedPath).toBe(join(testDir, 'nonexistent', 'path', 'query.ql'));
       expect(result.warning).toBeDefined();
       expect(result.warning).toContain('does not exist');
     });
 
-    it('should return a warning for path traversal attempts', () => {
-      const result = resolvePromptFilePath('../../../etc/passwd', testDir);
+    it('should return a warning and block path traversal attempts', async () => {
+      const result = await resolvePromptFilePath('../../../etc/passwd', testDir);
+      expect(result.blocked).toBe(true);
+      expect(result.resolvedPath).toBe('');
       expect(result.warning).toBeDefined();
       expect(result.warning).toContain('resolves outside the workspace root');
     });
 
-    it('should not flag filenames containing consecutive dots as traversal', () => {
+    it('should not flag filenames containing consecutive dots as traversal', async () => {
       const filePath = 'my..query.ql';
       writeFileSync(join(testDir, filePath), 'select 1');
 
-      const result = resolvePromptFilePath(filePath, testDir);
+      const result = await resolvePromptFilePath(filePath, testDir);
       expect(result.resolvedPath).toBe(join(testDir, filePath));
       expect(result.warning).toBeUndefined();
     });
 
-    it('should return the original path as resolvedPath even for invalid paths', () => {
-      const result = resolvePromptFilePath('nonexistent.ql', testDir);
+    it('should resolve invalid paths relative to the workspace root', async () => {
+      const result = await resolvePromptFilePath('nonexistent.ql', testDir);
       expect(result.resolvedPath).toBe(join(testDir, 'nonexistent.ql'));
     });
 
-    it('should handle an empty string path with a warning', () => {
-      const result = resolvePromptFilePath('', testDir);
+    it('should handle an empty string path with a warning', async () => {
+      const result = await resolvePromptFilePath('', testDir);
       expect(result.warning).toBeDefined();
     });
   });
@@ -1769,7 +1771,7 @@ describe('Workflow Prompts', () => {
     it('explain_codeql_query handler should include warning for nonexistent queryPath', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
-        databasePath: '/db',
+        databasePath: 'db',
         language: 'javascript',
         queryPath: 'nonexistent/query.ql',
       });

@@ -177,34 +177,26 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     this.timeout(15_000);
 
     // VS Code slash command might let a user type an invalid language value.
-    // The server should return a helpful error message rather than a raw
-    // MCP protocol error (-32602).
-    try {
-      const result = await client.getPrompt({
-        name: 'explain_codeql_query',
-        arguments: {
-          queryPath: '/some/query.ql',
-          language: 'rust',
-        },
-      });
+    // The server should return a helpful inline validation message rather than
+    // a raw MCP protocol error (-32602), and client.getPrompt() should not throw.
+    const result = await client.getPrompt({
+      name: 'explain_codeql_query',
+      arguments: {
+        queryPath: '/some/query.ql',
+        language: 'rust',
+      },
+    });
 
-      // If the server returns messages instead of throwing, the error info
-      // should be embedded in the response text.
-      const text = getFirstMessageText(result);
-      assert.ok(
-        text.includes('Invalid') || text.includes('invalid') || text.includes('not supported'),
-        `Response should indicate the language is invalid. Got:\n${text.slice(0, 500)}`,
-      );
-      console.log('[mcp-prompt-e2e] explain_codeql_query returned inline error for invalid language');
-    } catch (error: unknown) {
-      // If the SDK throws, verify the error message is user-friendly.
-      const msg = error instanceof Error ? error.message : String(error);
-      assert.ok(
-        msg.includes('Invalid') || msg.includes('invalid') || msg.includes('language'),
-        `Error should mention invalid argument. Got: ${msg.slice(0, 500)}`,
-      );
-      console.log(`[mcp-prompt-e2e] explain_codeql_query threw for invalid language: ${msg.slice(0, 200)}`);
-    }
+    const text = getFirstMessageText(result);
+
+    // The error info should be embedded in the response text, including clear
+    // indication that the input was invalid and what options are allowed.
+    assert.ok(
+      text.includes('Invalid input for') && text.includes('javascript'),
+      `Response should indicate the language is invalid and show allowed options. Got:\n${text.slice(0, 500)}`,
+    );
+
+    console.log('[mcp-prompt-e2e] explain_codeql_query returned inline validation error for invalid language');
   });
 
   // ─────────────────────────────────────────────────────────────────────

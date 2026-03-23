@@ -64379,7 +64379,8 @@ function registerLanguageResources(server) {
 
 // src/prompts/workflow-prompts.ts
 import { basename as basename7, isAbsolute as isAbsolute7, normalize, relative, resolve as resolve13, sep as sep2 } from "path";
-import { existsSync as existsSync12 } from "fs";
+import { access as access2 } from "fs/promises";
+import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/prompts/check-for-duplicated-code.prompt.md
 var check_for_duplicated_code_prompt_default = '---\nagent: agent\n---\n\n# Check for Duplicated Code\n\nUse the MCP server tools to identify classes, modules, and predicates defined in a\n`.ql` or `.qll` file and check for possible "duplicated code," where duplicated code\nis defined to be:\n\n- Reimplementing functionality that already exists in the standard library, or shared project `.qll` files, and\n- The local definition is identical, or semantically equivalent, or superior to the library definition, or\n- The local definition could be simplified by reusing the existing definition (e.g. a base class already exists that captures some of the shared logic)\n\nHere are some examples:\n\n```ql\nimport cpp\n\n// Duplicated: `StandardNamespace` already exists in the standard library and is identical\nclass NamespaceStd extends Namespace {\n  NamespaceStd() { this.getName() = "std" }\n}\n\n// Duplicated: class should extend `Operator`, not `Function`\nclass ThrowingOperator extends Function {\n  ThrowingOperator() {\n    // Duplicated: this check is implied by using base class `Operator`\n    this.getName().matches("%operator%") and\n    and exists(ThrowExpr te |\n      // Duplicated: this is equivalent to `te.getEnclosingFunction() = this`\n      te.getParent*() = this.getAChild()\n    )\n  }\n\n  // Duplicated: member predicate `getDeclaringType()` already does this.\n  Class getDefiningClass() { ... }\n}\n\n// Duplicated: `ControlFlowNode.getASuccessor()` already exists in `cpp` and is superior\npredicate getASuccessor(Stmt a, Stmt b) {\n  exists(Block b, int i | a = b.getChild(i) and b = b.getChild(i + 1))\n}\n\n// Duplicated: prefer to import `semmle.code.cpp.controlflow.Dominance`, defined in dependency pack `cpp-all`\npredicate dominates(Block a, Block b) { ... }\n```\n\nDuplicate code removal isn\'t done arbitrarily, but for several key reasons:\n\n- **Maintainability**: Duplicated code must be maintained separately, may diverge and have different bugs\n- **Simplicity**: Relying on existing definitions reduces the amount of code to read and understand\n- **Readability**: Existing definitions map wrap complex ideas into readable names\n- **Consistency**: A single source of truth makes for a more consistent user experience across queries\n- **Completeness/Correctness**: Recreating an already-existing definition can miss edge cases, resulting in false positives or false negatives\n\n## Use This Prompt When\n\n- A query file defines a class or predicate whose name sounds generic (e.g.\n  `StandardNamespace`, `Callable`, `SecurityFeature`)\n- Refactoring a query that was written before a relevant library predicate existed\n- Reviewing a shared `.qll` file to check whether its helpers have been upstreamed\n  into the standard library in a newer CodeQL version\n- Performing a code-quality audit across a suite of custom queries\n\n## Prerequisites\n\n1. The file path of the `.ql` or `.qll` file to audit for code duplication\n2. Understand which packs are imported by `qlpack.yml`\n3. Understand where the relevant language library packs are located (e.g. `~/.codeql`)\n4. Understand where project-specific library packs are located (e.g. `$LANGUAGE/lib` or `$LANGUAGE/common`)\n5. Understand where pack-specific shared `.qll` files are located (e.g. `$PACKROOT/common/*.qll`)\n\n## Overview of the Approach\n\nThe core idea is to enumerate every top-level name defined in the file under review.\nThen, find candidate `.qll` files, based on file name and path, that are available to\nthat `.ql` file in review. Then, enumerate the top-level names in each candidate\n`.qll` file, to find potential duplicates, dive further if necessary, and then report\nthe findings as code improvement recommendations to the user.\n\n1. **Read the file** to see its imports and top-level structure\n2. **Enumerate top-level definitions** with `codeql_lsp_document_symbols`\n3. **Find available .qll files** in the `.ql` file\'s pack, and its dependencies, including the standard library\n4. **Identify promising .qll file candidates** based on their file name and path\n5. **Enumerate top-level definitions in candidate `.qll` files** with `codeql_lsp_document_symbols`\n6. **Detect overlap, comparing definitions if unclear** (e.g. by using `find_predicate_position` and `find_class_position` tools)\n7. **Report findings** as a set of recommendations to the user about which definitions could be improved, by reusing which existing definitions\n\n## Step 1: Read the File and Note Its Imports\n\n```text\nTool: read_file\nParameters:\n  file_path: /path/to/query.ql\n  start_line: 1\n  end_line: 60   # enough to see all imports\n```\n\nRecord every `import` statement. These are the namespaces the standard library\nexposes; duplication is only meaningful for libraries that are already imported (or\neasily importable).\n\n## Step 2: Enumerate Top-Level Definitions\n\nUse `codeql_lsp_document_symbols` to retrieve every class, predicate, and module\ndefined at the top level of the file in a single call:\n\n```text\nTool: codeql_lsp_document_symbols\nParameters:\n  file_path: /path/to/query.ql\n  names_only: true                    # provides significantly smaller response payload\n  workspace_uri: /path/to/pack-root   # directory containing codeql-pack.yml\n```\n\nThe response contains a `symbols` array. Each entry has:\n\n- `name` \u2014 the identifier as written in source\n- `kind` \u2014 numeric SymbolKind (5 = Class, 12 = Function/predicate, 2 = Module, etc.)\n- `range` \u2014 the full definition range (0-based lines)\n- `selectionRange` \u2014 the range of just the name token\n- `children` \u2014 nested members (for classes and modules)\n\nTop-level symbols are the root nodes of the array; `children` hold member\npredicates and fields.\n\n## Step 3. Read the filesystem to find candidate library `.qll` files\n\nRun the tool `codeql_resolve_library-path` with the given ql query file to find where\nthe available library sources live.\n\nFor each source root, run `find $ROOT -name "*.qll"` to find all `.qll` files\navailable in that pack. Do not preemptively filter this list of qll files. The names\nof the files may be broad or nondescriptive. Read all file names for each project to\nunderstand its structure and responsibilities before proceeding to step 3d.\n\nChoose promising candidate `.qll` files you found in the previous step. Pick\ncandidates that may potentially define behavior relevant to the current query and its\nenumerated definitions, based on the candidate filename, path, and priority.\n\nPrioritize as follows:\n\n- `.qll` files in the same directory as the query file have the absolute highest priority\n- `.qll` files in the same pack have the next extremely high priority\n- `.qll` files in project-specific library packs have the very high priority\n- `.qll` files in downloaded direct dependencies have standard priority\n- `.qll` files in transitive dependencies have the least priority.\n\n## Step 4: Identify candidate terms in the candidate library `.qll` files\n\nEnumerate the top-level definitions for each candidate `.qll` file using the tool\n`codeql_lsp_document_symbols` again. Some top levels may clearly match the name or\npurpose of a definition in the query file, while others may only appear as possibly\nrelated.\n\n```text\nTool: codeql_lsp_document_symbols\nParameters:\n  file_path: /path/to/library/file.qll\n  workspace_uri: /path/to/pack-root\n```\n\n## Step 5: Perform final overlap analysis\n\nFor each promising candidate, identify the predicate or class definitions that may overlap. One definition will be in the query file (`.ql`) and the other will be in the library file (`.qll`).\n\nUsing the tools `find_predicate_position` and `find_class_position`, you can retrieve the full definition of each predicate or class, and compare them to determine whether they are identical, equivalent, overlapping, or if one is a superior implementation that could be reused by the query file.\n\nDutifully analyze whether the shared library file definition would reduce code duplication in the categories identified before: maintenance, simplicity, readability, consistency, and completeness/correctness. Consider contextual factors such as comments explaining why the local definition differs from the library one, or whether the local definition is a thin wrapper around the library definition that adds value (e.g. by improving naming or adding extra checks).\n\nDo not go on a wild goose chase trying to find every possible overlap. Consider the likelihood of overlap based on the broadness of functionality, and the value that would be brought be reuse. Do not waste significant time on unimportant or unlikely overlaps.\n\n## Step 6: Report Findings\n\nFor each duplicate found, report:\n\n| Local name          | Local file    | import path                      | Notes      |\n| ------------------- | ------------- | -------------------------------- | ---------- |\n| `StandardNamespace` | `query.ql:42` | already imported in `import cpp` | Identical  |\n| `myHelper`          | `query.ql:80` | `import myproject.Helpers`       | Equivalent |\n| `myHelper`          | `query.ql:80` | `import myproject.Helpers`       | Equivalent |\n\nRecommend one of:\n\n- **Replace**: remove the local definition and use the standard definition directly instead\n- **Integrate**: refactor and simplify the local definition by making use of the standard definition\n- **Annotate**: add comments to the local definition to explain how it differs from the standard definition and why the duplication is necessary\n\nAdditionally, report if any issues came up in using the tools, or finding the qll files.\n\nFor each concept for which no duplicate was found, provide at most a **brief** description of what the concept is. Do not provide a long detailed explanation of a non-finding.\n\n# Conclusion\n\nDo **not** perform any updates to any code during this analysis.\n\nAs you work through completing this task, ask yourself:\n\n- Have I changed any code, even though that was not my task, or am I about to? Stop, do not change any code!\n- Did I sufficiently analyze the definitions such that I likely found most overlapping definitions?\n- Will my suggestions improve the maintainability, simplicity, readability, consistency, or completeness/correctness of the codebase?\n- Did I report my findings clearly?\n- Did I use the suggested LLM tools to their fullest extent?\n- Did I follow the steps in the recommended order, and not skip any steps?\n- Did I report any issues I had in finding the relevant `.qll` files, or using the tools to analyze definitions?\n';
@@ -64467,24 +64468,39 @@ var SUPPORTED_LANGUAGES = [
   "ruby",
   "swift"
 ];
-function resolvePromptFilePath(filePath, workspaceRoot) {
+async function resolvePromptFilePath(filePath, workspaceRoot) {
   if (!filePath || filePath.trim() === "") {
     return {
       resolvedPath: filePath ?? "",
       warning: "\u26A0 **File path is empty.** Please provide a valid file path."
     };
   }
+  let effectivePath = filePath;
+  if (/^file:\/\//i.test(filePath.trim())) {
+    try {
+      effectivePath = fileURLToPath3(filePath.trim());
+    } catch {
+      return {
+        resolvedPath: "",
+        blocked: true,
+        warning: `\u26A0 **File path** \`${filePath}\` **is not a valid file URI.**`
+      };
+    }
+  }
   const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
-  const normalizedPath = normalize(filePath);
+  const normalizedPath = normalize(effectivePath);
   const absolutePath = isAbsolute7(normalizedPath) ? normalizedPath : resolve13(effectiveRoot, normalizedPath);
   const rel = relative(effectiveRoot, absolutePath);
   if (rel === ".." || rel.startsWith(`..${sep2}`) || isAbsolute7(rel)) {
     return {
-      resolvedPath: absolutePath,
-      warning: `\u26A0 **File path** \`${filePath}\` **resolves outside the workspace root.** Resolved to: \`${absolutePath}\``
+      blocked: true,
+      resolvedPath: "",
+      warning: "\u26A0 **File path resolves outside the workspace root.** The path has been blocked for security."
     };
   }
-  if (!existsSync12(absolutePath)) {
+  try {
+    await access2(absolutePath);
+  } catch {
     return {
       resolvedPath: absolutePath,
       warning: `\u26A0 **File path** \`${filePath}\` **does not exist.** Resolved to: \`${absolutePath}\``
@@ -64689,7 +64705,7 @@ ${content}`
       async ({ language, database, sourceFiles, sourceFunction, targetFunction }) => {
         const template = loadPromptTemplate("tools-query-workflow.prompt.md");
         const warnings = [];
-        const dbResult = resolvePromptFilePath(database);
+        const dbResult = await resolvePromptFilePath(database);
         const resolvedDatabase = dbResult.resolvedPath;
         if (dbResult.warning) warnings.push(dbResult.warning);
         const content = processPromptTemplate(template, {
@@ -64728,7 +64744,7 @@ ${content}`
       async ({ queryPath, language, workshopName, numStages }) => {
         const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
         const warnings = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         const derivedName = workshopName || basename7(resolvedQueryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
@@ -64796,7 +64812,7 @@ ${content}`
         const warnings = [];
         let resolvedDatabase = database;
         if (database) {
-          const dbResult = resolvePromptFilePath(database);
+          const dbResult = await resolvePromptFilePath(database);
           resolvedDatabase = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -64837,7 +64853,7 @@ ${content}`
       async ({ queryId, sarifPath }) => {
         const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
         const warnings = [];
-        const spResult = resolvePromptFilePath(sarifPath);
+        const spResult = await resolvePromptFilePath(sarifPath);
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
         let contextSection = "## Analysis Context\n\n";
@@ -64873,7 +64889,7 @@ ${content}`
       async ({ queryId, sarifPath }) => {
         const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
         const warnings = [];
-        const spResult = resolvePromptFilePath(sarifPath);
+        const spResult = await resolvePromptFilePath(sarifPath);
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
         let contextSection = "## Analysis Context\n\n";
@@ -64909,7 +64925,7 @@ ${content}`
       async ({ queryPath }) => {
         const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
         const warnings = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         const contextSection = `## Analysis Context
@@ -64942,12 +64958,12 @@ ${content}`
       async ({ queryPath, language, databasePath }) => {
         const template = loadPromptTemplate("explain-codeql-query.prompt.md");
         const warnings = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         let resolvedDatabasePath = databasePath;
         if (databasePath) {
-          const dbResult = resolvePromptFilePath(databasePath);
+          const dbResult = await resolvePromptFilePath(databasePath);
           resolvedDatabasePath = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -64986,7 +65002,7 @@ ${content}`
       async ({ queryPath, language }) => {
         const template = loadPromptTemplate("document-codeql-query.prompt.md");
         const warnings = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         const contextSection = `## Query to Document
@@ -65070,19 +65086,14 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
       async ({ language, queryPath, workspaceUri }) => {
         const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
         const warnings = [];
-        const qpResult = resolvePromptFilePath(queryPath);
+        const qpResult = await resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
-          const trimmedWorkspaceUri = workspaceUri.trim();
-          if (/^file:\/\//i.test(trimmedWorkspaceUri)) {
-            resolvedWorkspaceUri = trimmedWorkspaceUri;
-          } else {
-            const wsResult = resolvePromptFilePath(workspaceUri);
-            resolvedWorkspaceUri = wsResult.resolvedPath;
-            if (wsResult.warning) warnings.push(wsResult.warning);
-          }
+          const wsResult = await resolvePromptFilePath(workspaceUri);
+          resolvedWorkspaceUri = wsResult.resolvedPath;
+          if (wsResult.warning) warnings.push(wsResult.warning);
         }
         let contextSection = "## Your Development Context\n\n";
         contextSection += `- **Language**: ${language}
