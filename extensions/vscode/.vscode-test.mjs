@@ -14,12 +14,21 @@
  */
 
 import { defineConfig } from '@vscode/test-cli';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+
+// Use a workspace-local .tmp path for user-data-dir to keep test artifacts
+// within the project. On macOS with deep workspace paths this may emit an
+// IPC socket length warning (>103 chars) — this is benign and non-blocking.
+const extensionRoot = fileURLToPath(new URL('.', import.meta.url));
+const userDataDir = join(extensionRoot, '.tmp', 'vsc-ud');
 
 export default defineConfig([
   {
     label: 'noWorkspace',
     files: 'dist/test/suite/*.test.cjs',
     version: 'stable',
+    launchArgs: ['--user-data-dir', userDataDir],
     mocha: {
       ui: 'tdd',
       color: true,
@@ -31,6 +40,7 @@ export default defineConfig([
     files: 'dist/test/suite/*.test.cjs',
     version: 'stable',
     workspaceFolder: './test/fixtures/single-folder-workspace',
+    launchArgs: ['--user-data-dir', userDataDir],
     mocha: {
       ui: 'tdd',
       color: true,
@@ -42,6 +52,7 @@ export default defineConfig([
     files: 'dist/test/suite/*.test.cjs',
     version: 'stable',
     workspaceFolder: './test/fixtures/multi-root-workspace/test.code-workspace',
+    launchArgs: ['--user-data-dir', userDataDir],
     mocha: {
       ui: 'tdd',
       color: true,
