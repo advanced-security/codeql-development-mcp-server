@@ -1777,7 +1777,7 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('does not exist');
-      // Verify the warning contains the resolved absolute path
+      // Verify the warning mentions the provided queryPath value
       expect(text).toContain('nonexistent/query.ql');
     });
 

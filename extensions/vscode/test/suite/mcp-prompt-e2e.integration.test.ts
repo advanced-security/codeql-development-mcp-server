@@ -71,8 +71,12 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
 
     const serverPath = resolveServerPath();
 
+    const workspaceDir =
+      vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ext.extensionUri.fsPath;
+
     const env: Record<string, string> = {
       ...process.env as Record<string, string>,
+      CODEQL_MCP_WORKSPACE: workspaceDir,
       TRANSPORT_MODE: 'stdio',
     };
 
