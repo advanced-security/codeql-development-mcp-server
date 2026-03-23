@@ -227,12 +227,32 @@ export class IntegrationTestRunner {
       this.logger.log(`Completed ${totalIntegrationTests} tool-specific integration tests`);
 
       // Also run workflow integration tests
-      await this.runWorkflowIntegrationTests(baseDir);
+      const workflowIntegrationSucceeded = await this.runWorkflowIntegrationTests(baseDir);
+      if (!workflowIntegrationSucceeded) {
+        this.logger.logTest(
+          "Workflow integration tests",
+          false,
+          new Error("Workflow integration tests did not complete successfully")
+        );
+      }
 
       // Also run prompt integration tests
-      await this.runPromptIntegrationTests(baseDir);
+      const promptIntegrationSucceeded = await this.runPromptIntegrationTests(baseDir);
+      if (!promptIntegrationSucceeded) {
+        this.logger.logTest(
+          "Prompt integration tests",
+          false,
+          new Error("Prompt integration tests did not complete successfully")
+        );
+      }
 
-      return totalIntegrationTests > 0;
+      return (
+        (totalIntegrationTests > 0 ||
+          workflowIntegrationSucceeded ||
+          promptIntegrationSucceeded) &&
+        workflowIntegrationSucceeded &&
+        promptIntegrationSucceeded
+      );
     } catch (error) {
       this.logger.log(`Error running integration tests: ${error.message}`, "ERROR");
       return false;

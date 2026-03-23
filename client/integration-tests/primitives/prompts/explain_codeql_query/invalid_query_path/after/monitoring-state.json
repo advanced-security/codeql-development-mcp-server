@@ -1,3 +1,9 @@
 {
-  "sessions": []
+  "sessions": [
+    {
+      "expectedContentPatterns": [
+        "does not exist"
+      ]
+    }
+  ]
 }

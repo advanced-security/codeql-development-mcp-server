@@ -1031,9 +1031,16 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
 
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
-          const wsResult = resolvePromptFilePath(workspaceUri);
-          resolvedWorkspaceUri = wsResult.resolvedPath;
-          if (wsResult.warning) warnings.push(wsResult.warning);
+          const trimmedWorkspaceUri = workspaceUri.trim();
+          // If the workspace value is already a URI (e.g., "file://..."), preserve it as-is.
+          // Only run filesystem path resolution for non-URI values.
+          if (/^file:\/\//i.test(trimmedWorkspaceUri)) {
+            resolvedWorkspaceUri = trimmedWorkspaceUri;
+          } else {
+            const wsResult = resolvePromptFilePath(workspaceUri);
+            resolvedWorkspaceUri = wsResult.resolvedPath;
+            if (wsResult.warning) warnings.push(wsResult.warning);
+          }
         }
 
         let contextSection = '## Your Development Context\n\n';
