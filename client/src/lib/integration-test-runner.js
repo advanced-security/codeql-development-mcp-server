@@ -225,6 +225,7 @@ export class IntegrationTestRunner {
       }
 
       this.logger.log(`Completed ${totalIntegrationTests} tool-specific integration tests`);
+      const toolIntegrationSucceeded = totalIntegrationTests > 0;
 
       // Also run workflow integration tests
       const workflowIntegrationSucceeded = await this.runWorkflowIntegrationTests(baseDir);
@@ -246,15 +247,18 @@ export class IntegrationTestRunner {
         );
       }
 
-      if (totalIntegrationTests === 0) {
+      const anyTestsExecuted =
+        toolIntegrationSucceeded || workflowIntegrationSucceeded || promptIntegrationSucceeded;
+
+      if (!anyTestsExecuted) {
         this.logger.log(
-          "No integration tests were executed across tool, workflow, or prompt suites.",
+          "No integration tests completed successfully across tool, workflow, or prompt suites.",
           "ERROR"
         );
         return false;
       }
 
-      return workflowIntegrationSucceeded && promptIntegrationSucceeded;
+      return toolIntegrationSucceeded && workflowIntegrationSucceeded && promptIntegrationSucceeded;
     } catch (error) {
       this.logger.log(`Error running integration tests: ${error.message}`, "ERROR");
       return false;

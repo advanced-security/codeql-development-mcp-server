@@ -1208,7 +1208,7 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Name**: WeakCrypto');
     });
 
-    it('ql_tdd_basic handler (createSafePromptHandler) should return inline validation error when required parameters are missing', async () => {
+    it('ql_tdd_basic handler (createSafePromptHandler) should return inline validation error when called directly with missing parameters (defense-in-depth; SDK validates required fields before handler in real MCP usage)', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_basic');
       const result: PromptResult = await handler({});
       expect(result.messages[0].content.text).toContain('Invalid input');
@@ -1227,7 +1227,7 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Name**: TaintTrack');
     });
 
-    it('ql_tdd_advanced handler (createSafePromptHandler) should return inline validation error when required parameters are missing', async () => {
+    it('ql_tdd_advanced handler (createSafePromptHandler) should return inline validation error when called directly with missing parameters (defense-in-depth; SDK validates required fields before handler in real MCP usage)', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
       const result: PromptResult = await handler({});
       expect(result.messages[0].content.text).toContain('Invalid input');
@@ -1255,7 +1255,7 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('out.sarif');
     });
 
-    it('sarif_rank handlers should return inline error with no parameters', async () => {
+    it('sarif_rank handlers (createSafePromptHandler) should return inline error when called directly with no parameters (defense-in-depth; SDK validates required sarifPath before handler in real MCP usage)', async () => {
       for (const name of ['sarif_rank_false_positives', 'sarif_rank_true_positives']) {
         const handler = getRegisteredHandler(mockServer, name);
         const result: PromptResult = await handler({});
@@ -1272,7 +1272,7 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('queries/SqlInjection.ql');
     });
 
-    it('run_query_and_summarize_false_positives handler should return inline error with no parameters', async () => {
+    it('run_query_and_summarize_false_positives handler (createSafePromptHandler) should return inline error when called directly with no parameters (defense-in-depth; SDK validates required queryPath before handler in real MCP usage)', async () => {
       const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
       const result: PromptResult = await handler({});
       expect(result.messages[0].content.text).toContain('Invalid input');

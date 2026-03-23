@@ -7,8 +7,8 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { access } from 'fs/promises';
+import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';

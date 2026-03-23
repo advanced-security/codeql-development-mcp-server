@@ -31,7 +31,10 @@ const version = process.argv[2] || getEnginesVscodeVersion();
 console.log(`Downloading VS Code (${version}) for integration tests...`);
 
 try {
-  const vscodeExecutablePath = await downloadAndUnzipVSCode(version);
+  const vscodeExecutablePath = await downloadAndUnzipVSCode({
+    version,
+    timeout: 120_000,
+  });
   console.log(`✅ VS Code downloaded to: ${vscodeExecutablePath}`);
 } catch (error) {
   console.error(

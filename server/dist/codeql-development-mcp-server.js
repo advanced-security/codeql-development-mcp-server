@@ -64378,8 +64378,8 @@ function registerLanguageResources(server) {
 }
 
 // src/prompts/workflow-prompts.ts
-import { basename as basename7, isAbsolute as isAbsolute7, normalize, relative, resolve as resolve13, sep as sep2 } from "path";
 import { access as access2 } from "fs/promises";
+import { basename as basename7, isAbsolute as isAbsolute7, normalize, relative, resolve as resolve13, sep as sep2 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/prompts/check-for-duplicated-code.prompt.md
