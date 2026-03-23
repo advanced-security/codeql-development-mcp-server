@@ -70,21 +70,14 @@ export function resolvePromptFilePath(
   // Normalise first to collapse any . or .. segments.
   const normalizedPath = normalize(filePath);
 
-  // Detect path traversal attempts.
-  if (normalizedPath.includes('..')) {
-    return {
-      resolvedPath: filePath,
-      warning: `⚠ **Invalid file path** — path traversal detected in \`${filePath}\`. Please provide a path within your workspace.`,
-    };
-  }
-
   // Resolve to absolute path.
   const absolutePath = isAbsolute(normalizedPath)
     ? normalizedPath
     : resolve(effectiveRoot, normalizedPath);
 
-  // If a workspace root was given (or inferred), verify the resolved path
-  // stays within it.
+  // Verify the resolved path stays within the workspace root.
+  // This catches path traversal (e.g. "../../etc/passwd") after full
+  // resolution rather than relying on a fragile substring check.
   const rel = relative(effectiveRoot, absolutePath);
   if (rel.startsWith('..') || isAbsolute(rel)) {
     return {
@@ -253,12 +246,13 @@ export const describeFalsePositivesSchema = z.object({
 /**
  * Schema for explain_codeql_query prompt parameters.
  *
- * All three parameters are **required** – the prompt needs a query, its
- * language, and a database to produce meaningful profiling output.
+ * - `queryPath` and `language` are **required**.
+ * - `databasePath` is optional – a database may also be derived from tests.
  */
 export const explainCodeqlQuerySchema = z.object({
   databasePath: z
     .string()
+    .optional()
     .describe('Path to a CodeQL database for profiling'),
   language: z
     .enum(SUPPORTED_LANGUAGES)
@@ -881,14 +875,19 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
-        const dbResult = resolvePromptFilePath(databasePath);
-        const resolvedDatabasePath = dbResult.resolvedPath;
-        if (dbResult.warning) warnings.push(dbResult.warning);
+        let resolvedDatabasePath = databasePath;
+        if (databasePath) {
+          const dbResult = resolvePromptFilePath(databasePath);
+          resolvedDatabasePath = dbResult.resolvedPath;
+          if (dbResult.warning) warnings.push(dbResult.warning);
+        }
 
         let contextSection = '## Query to Explain\n\n';
         contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
         contextSection += `- **Language**: ${language}\n`;
-        contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
+        if (resolvedDatabasePath) {
+          contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
+        }
         contextSection += '\n';
 
         const warningSection = warnings.length > 0

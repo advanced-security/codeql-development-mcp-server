@@ -126,7 +126,6 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     const result = await client.getPrompt({
       name: 'explain_codeql_query',
       arguments: {
-        databasePath: 'nonexistent/database',
         queryPath: 'nonexistent/path/to/query.ql',
         language: 'javascript',
       },
@@ -154,7 +153,6 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
     const result = await client.getPrompt({
       name: 'explain_codeql_query',
       arguments: {
-        databasePath: existingFile,
         queryPath: existingFile,
         language: 'javascript',
       },
@@ -185,7 +183,6 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
       const result = await client.getPrompt({
         name: 'explain_codeql_query',
         arguments: {
-          databasePath: '/some/db',
           queryPath: '/some/query.ql',
           language: 'rust',
         },
@@ -247,7 +244,7 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
 
     const text = getFirstMessageText(result);
     assert.ok(
-      text.includes('path traversal') || text.includes('Invalid file path'),
+      text.includes('resolves outside the workspace root') || text.includes('does not exist'),
       `Response should warn about path traversal. Got:\n${text.slice(0, 500)}`,
     );
 

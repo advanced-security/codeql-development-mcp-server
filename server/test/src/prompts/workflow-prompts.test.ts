@@ -12,7 +12,7 @@
  * 7. All SUPPORTED_LANGUAGES are accepted by every schema with a language field.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   buildToolsQueryContext,
@@ -526,24 +526,37 @@ describe('Workflow Prompts', () => {
 
     it('should accept required queryPath and language', () => {
       const result = explainCodeqlQuerySchema.safeParse({
-        databasePath: '/db',
         language: 'javascript',
         queryPath: '/q.ql',
       });
       expect(result.success).toBe(true);
     });
 
-    it('should reject missing databasePath', () => {
+    it('should accept optional databasePath', () => {
       const result = explainCodeqlQuerySchema.safeParse({
+        databasePath: '/db',
         language: 'python',
         queryPath: '/q.ql',
       });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.databasePath).toBe('/db');
+      }
+    });
+
+    it('should leave databasePath as undefined when omitted', () => {
+      const result = explainCodeqlQuerySchema.safeParse({
+        language: 'go',
+        queryPath: '/q.ql',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.databasePath).toBeUndefined();
+      }
     });
 
     it('should reject missing queryPath', () => {
       const result = explainCodeqlQuerySchema.safeParse({
-        databasePath: '/db',
         language: 'java',
       });
       expect(result.success).toBe(false);
@@ -551,20 +564,18 @@ describe('Workflow Prompts', () => {
 
     it('should reject missing language', () => {
       const result = explainCodeqlQuerySchema.safeParse({
-        databasePath: '/db',
         queryPath: '/q.ql',
       });
       expect(result.success).toBe(false);
     });
 
-    it('should reject empty object (all three fields required)', () => {
+    it('should reject empty object (both required fields missing)', () => {
       const result = explainCodeqlQuerySchema.safeParse({});
       expect(result.success).toBe(false);
     });
 
     it.each([...SUPPORTED_LANGUAGES])('should accept language "%s"', (lang) => {
       const result = explainCodeqlQuerySchema.safeParse({
-        databasePath: '/db',
         language: lang,
         queryPath: '/q.ql',
       });
@@ -820,8 +831,8 @@ describe('Workflow Prompts', () => {
       {
         name: 'explainCodeqlQuerySchema',
         schema: explainCodeqlQuerySchema,
-        required: ['databasePath', 'language', 'queryPath'],
-        optional: [],
+        required: ['language', 'queryPath'],
+        optional: ['databasePath'],
       },
       {
         name: 'documentCodeqlQuerySchema',
@@ -1054,7 +1065,7 @@ describe('Workflow Prompts', () => {
       const minimalArgs: Record<string, Record<string, string>> = {
         check_for_duplicated_code: { queryPath: '/q.ql' },
         document_codeql_query: { language: 'java', queryPath: '/q.ql' },
-        explain_codeql_query: { databasePath: '/db', language: 'java', queryPath: '/q.ql' },
+        explain_codeql_query: { language: 'java', queryPath: '/q.ql' },
         find_overlapping_queries: { language: 'cpp', queryDescription: 'detect placement-new on non-trivial types' },
         ql_lsp_iterative_development: { language: 'ruby', queryPath: '/q.ql' },
         ql_tdd_advanced: { language: 'javascript' },
@@ -1266,7 +1277,7 @@ describe('Workflow Prompts', () => {
       expect(result.messages[0].content.text).toContain('Invalid input');
     });
 
-    it('explain_codeql_query handler should include all required params', async () => {
+    it('explain_codeql_query handler should include all params when provided', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
         databasePath: '/db/path',
@@ -1279,14 +1290,14 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Database Path**: /db/path');
     });
 
-    it('explain_codeql_query handler should return inline error when databasePath missing', async () => {
+    it('explain_codeql_query handler should omit Database Path when not provided', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
         language: 'java',
         queryPath: '/q.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('Invalid input');
+      expect(text).not.toContain('**Database Path**');
     });
 
     it('document_codeql_query handler should include queryPath and language', async () => {
@@ -1720,7 +1731,7 @@ describe('Workflow Prompts', () => {
     it('should return a warning for path traversal attempts', () => {
       const result = resolvePromptFilePath('../../../etc/passwd', testDir);
       expect(result.warning).toBeDefined();
-      expect(result.warning).toContain('path traversal');
+      expect(result.warning).toContain('resolves outside the workspace root');
     });
 
     it('should return the original path as resolvedPath even for invalid paths', () => {
