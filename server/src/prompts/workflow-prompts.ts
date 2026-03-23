@@ -32,13 +32,37 @@ export const SUPPORTED_LANGUAGES = [
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sanitise a user-supplied string for safe embedding inside a markdown inline
- * code span (surrounded by single backticks).  Backtick characters in the
- * value would prematurely close the span, and newlines would break the line;
- * both are replaced with innocuous substitutes.
+ * Wrap a user-supplied string in a markdown inline code span using a
+ * CommonMark-compliant backtick fence long enough to contain any backtick
+ * runs inside the value.  Carriage-return line endings are normalised to LF
+ * so the value can be embedded on a single logical line.
+ *
+ * Examples:
+ *   markdownInlineCode('foo')        → "`foo`"
+ *   markdownInlineCode('a`b')        → "``a`b``"
+ *   markdownInlineCode('a``b')       → "```a``b```"
  */
-function sanitizeForInlineCode(value: string): string {
-  return value.replace(/`/g, "'").replace(/\r?\n|\r/g, ' ');
+export function markdownInlineCode(value: string): string {
+  // Normalise newlines — inline code spans cannot span lines.
+  const normalized = value.replace(/\r\n?/g, '\n');
+
+  // Find the longest consecutive run of backticks in the content.
+  let maxRun = 0;
+  let currentRun = 0;
+  for (const ch of normalized) {
+    if (ch === '`') {
+      currentRun += 1;
+      if (currentRun > maxRun) {
+        maxRun = currentRun;
+      }
+    } else {
+      currentRun = 0;
+    }
+  }
+
+  // The fence must be at least one backtick longer than any internal run.
+  const fence = '`'.repeat(maxRun + 1);
+  return `${fence}${normalized}${fence}`;
 }
 
 /**
@@ -126,7 +150,7 @@ export async function resolvePromptFilePath(
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `⚠ **File path** \`${sanitizeForInlineCode(filePath)}\` **does not exist.** Resolved to: \`${sanitizeForInlineCode(absolutePath)}\``,
+      warning: `⚠ **File path** ${markdownInlineCode(filePath)} **does not exist.** Resolved to: ${markdownInlineCode(absolutePath)}`,
     };
   }
 
@@ -463,7 +487,7 @@ export function formatValidationError(
     if (issue.code === 'invalid_enum_value' && 'options' in issue) {
       const opts = (issue.options as string[]).join(', ');
       lines.push(
-        `- **\`${field}\`**: received \`${sanitizeForInlineCode(String(issue.received))}\` — ` +
+        `- **\`${field}\`**: received ${markdownInlineCode(String(issue.received))} — ` +
         `must be one of: ${opts}`,
       );
     } else if (issue.code === 'invalid_type') {
