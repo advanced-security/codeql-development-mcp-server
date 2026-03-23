@@ -8,38 +8,35 @@
  *
  * Usage: node scripts/download-vscode.js [version]
  *
- * The version defaults to the minimum VS Code version from engines.vscode in
- * package.json (e.g. "^1.110.0" -> "1.110.0"). Pass "stable" or an explicit
- * version to override.
+ * The version defaults to 'stable' to match the .vscode-test.mjs configuration.
+ * Pass an explicit version (e.g. "1.110.0") to override.
  */
 
-import { readFileSync } from 'node:fs';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 
-function getEnginesVscodeVersion() {
-  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
-  const range = pkg.engines?.vscode;
-  if (range) {
-    const match = range.match(/(\d+\.\d+\.\d+)/);
-    if (match) return match[1];
-  }
-  return 'stable';
-}
-
-const version = process.argv[2] || getEnginesVscodeVersion();
+const MAX_RETRIES = 3;
+const version = process.argv[2] || 'stable';
 
 console.log(`Downloading VS Code (${version}) for integration tests...`);
 
-try {
-  const vscodeExecutablePath = await downloadAndUnzipVSCode({
-    version,
-    timeout: 120_000,
-  });
-  console.log(`✅ VS Code downloaded to: ${vscodeExecutablePath}`);
-} catch (error) {
-  console.error(
-    '❌ Failed to download VS Code:',
-    error instanceof Error ? error.message : String(error),
-  );
-  process.exit(1);
+for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  try {
+    const vscodeExecutablePath = await downloadAndUnzipVSCode({
+      version,
+      timeout: 120_000,
+    });
+    console.log(`✅ VS Code downloaded to: ${vscodeExecutablePath}`);
+    process.exit(0);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Attempt ${attempt}/${MAX_RETRIES} failed: ${message}`);
+    if (attempt < MAX_RETRIES) {
+      const delayMs = attempt * 5_000;
+      console.log(`   Retrying in ${delayMs / 1_000}s...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    } else {
+      console.error('❌ All download attempts failed.');
+      process.exit(1);
+    }
+  }
 }
