@@ -63,6 +63,16 @@ jobs:
           add-to-path: 'true'
           install-language-runtimes: 'false'
 
+      - name: Cache VS Code for integration tests
+        uses: actions/cache@v5
+        with:
+          key: vscode-test-${{ runner.os }}-stable
+          path: extensions/vscode/.vscode-test
+
+      - name: Download VS Code for integration tests
+        working-directory: extensions/vscode
+        run: npm run download:vscode
+
       - name: Run Extension Host integration tests
         working-directory: extensions/vscode
         run: xvfb-run -a npm run test:integration
