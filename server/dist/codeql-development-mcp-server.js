@@ -64469,7 +64469,7 @@ var SUPPORTED_LANGUAGES = [
   "swift"
 ];
 function markdownInlineCode(value) {
-  const normalized = value.replace(/\r\n?/g, "\n");
+  const normalized = value.replace(/\r\n|\r|\n/g, " ");
   let maxRun = 0;
   let currentRun = 0;
   for (const ch of normalized) {

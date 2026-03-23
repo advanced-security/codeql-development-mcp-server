@@ -34,17 +34,19 @@ export const SUPPORTED_LANGUAGES = [
 /**
  * Wrap a user-supplied string in a markdown inline code span using a
  * CommonMark-compliant backtick fence long enough to contain any backtick
- * runs inside the value.  Carriage-return line endings are normalised to LF
- * so the value can be embedded on a single logical line.
+ * runs inside the value.  All newline sequences (CR, LF, CRLF) are replaced
+ * with a single space so the returned span is always a single line.
  *
  * Examples:
  *   markdownInlineCode('foo')        → "`foo`"
  *   markdownInlineCode('a`b')        → "``a`b``"
  *   markdownInlineCode('a``b')       → "```a``b```"
+ *   markdownInlineCode('a\r\nb')     → "`a b`"
  */
 export function markdownInlineCode(value: string): string {
-  // Normalise newlines — inline code spans cannot span lines.
-  const normalized = value.replace(/\r\n?/g, '\n');
+  // Replace all newline sequences with a space — inline code spans cannot
+  // span lines, and keeping literal newlines would break surrounding markdown.
+  const normalized = value.replace(/\r\n|\r|\n/g, ' ');
 
   // Find the longest consecutive run of backticks in the content.
   let maxRun = 0;

@@ -1574,9 +1574,10 @@ describe('Workflow Prompts', () => {
       expect(markdownInlineCode('a``b')).toBe('```a``b```');
     });
 
-    it('should normalise CRLF and CR to LF so the output stays on one line', () => {
-      expect(markdownInlineCode('a\r\nb')).toBe('`a\nb`');
-      expect(markdownInlineCode('a\rb')).toBe('`a\nb`');
+    it('should replace CRLF and CR with spaces so the output stays on one line', () => {
+      expect(markdownInlineCode('a\r\nb')).toBe('`a b`');
+      expect(markdownInlineCode('a\rb')).toBe('`a b`');
+      expect(markdownInlineCode('a\nb')).toBe('`a b`');
     });
 
     it('should not mutate a value that contains no backticks', () => {
