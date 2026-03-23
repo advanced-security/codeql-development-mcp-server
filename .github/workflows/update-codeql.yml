@@ -2,6 +2,11 @@ name: Update CodeQL CLI Dependencies
 
 on:
   workflow_dispatch:
+    inputs:
+      target_version:
+        description: 'Target CodeQL CLI version (e.g. vX.Y.Z). Leave empty to use the latest available CodeQL CLI release.'
+        required: false
+        type: string
   # Nightly check for new CodeQL CLI releases
   schedule:
     - cron: '30 5 * * *'
@@ -35,6 +40,7 @@ jobs:
         id: check-version
         env:
           GH_TOKEN: ${{ github.token }}
+          TARGET_VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_version || '' }}
         run: |
           echo "Checking latest CodeQL CLI version..."
 
@@ -42,25 +48,35 @@ jobs:
           current_version_raw=$(cat .codeql-version | tr -d '[:space:]')
           current_version="${current_version_raw#v}"
 
-          # Get latest release from codeql-cli-binaries
-          latest_tag=$(gh release list --repo github/codeql-cli-binaries --json 'tagName,isLatest' --jq '.[] | select(.isLatest == true) | .tagName')
+          # Trim whitespace from target version input
+          TARGET_VERSION=$(echo "${TARGET_VERSION}" | tr -d '[:space:]')
 
-          # Validate that we found a latest release
-          if [ -z "${latest_tag}" ]; then
-            echo "❌ Error: Could not determine latest CodeQL CLI version from github/codeql-cli-binaries" >&2
-            echo "No release marked as 'latest' was found. This may indicate an API issue or repository change." >&2
-            exit 1
+          if [ -n "${TARGET_VERSION}" ]; then
+            # Use the manually specified target version
+            latest_clean="${TARGET_VERSION#v}"
+            echo "Using manually specified target version: ${latest_clean}"
+
+            # Validate the target version exists as a release
+            if ! gh release view "v${latest_clean}" --repo github/codeql-cli-binaries --json tagName > /dev/null 2>&1; then
+              echo "❌ Error: Target version v${latest_clean} does not exist in github/codeql-cli-binaries releases" >&2
+              exit 1
+            fi
+          else
+            # Get latest release from codeql-cli-binaries
+            latest_tag=$(gh release list --repo github/codeql-cli-binaries --json 'tagName,isLatest' --jq '.[] | select(.isLatest == true) | .tagName')
+
+            # Validate that we found a latest release
+            if [ -z "${latest_tag}" ]; then
+              echo "❌ Error: Could not determine latest CodeQL CLI version from github/codeql-cli-binaries" >&2
+              echo "No release marked as 'latest' was found. This may indicate an API issue or repository change." >&2
+              exit 1
+            fi
+
+            latest_clean="${latest_tag#v}"
           fi
 
-          latest_clean="${latest_tag#v}"
-
-          if [ -z "${latest_tag}" ]; then
-            echo "❌ ERROR: Failed to determine latest CodeQL CLI release. 'gh release list' returned no results or no release is marked as latest." >&2
-            echo "update_needed=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
           echo "Current CodeQL CLI version: ${current_version}"
-          echo "Latest CodeQL CLI version: ${latest_clean}"
+          echo "Target CodeQL CLI version: ${latest_clean}"
 
           if [ "${latest_clean}" != "${current_version}" ]; then
             echo "✅ Update available: ${current_version} → ${latest_clean}"
