@@ -229,6 +229,9 @@ export class IntegrationTestRunner {
       // Also run workflow integration tests
       await this.runWorkflowIntegrationTests(baseDir);
 
+      // Also run prompt integration tests
+      await this.runPromptIntegrationTests(baseDir);
+
       return totalIntegrationTests > 0;
     } catch (error) {
       this.logger.log(`Error running integration tests: ${error.message}`, "ERROR");
@@ -1093,6 +1096,141 @@ export class IntegrationTestRunner {
     }
 
     return params;
+  }
+
+  /**
+   * Run prompt-level integration tests.
+   * Discovers test fixtures under `integration-tests/primitives/prompts/`
+   * and calls `client.getPrompt()` for each, validating the response.
+   */
+  async runPromptIntegrationTests(baseDir) {
+    try {
+      this.logger.log("Discovering and running prompt integration tests...");
+
+      const promptTestsDir = path.join(baseDir, "..", "integration-tests", "primitives", "prompts");
+
+      if (!fs.existsSync(promptTestsDir)) {
+        this.logger.log("No prompt integration tests directory found", "INFO");
+        return true;
+      }
+
+      // Get list of available prompts from the server
+      const response = await this.client.listPrompts();
+      const prompts = response.prompts || [];
+      const promptNames = prompts.map((p) => p.name);
+
+      this.logger.log(`Found ${promptNames.length} prompts available on server`);
+
+      // Discover prompt test directories (each subdirectory = one prompt name)
+      const promptDirs = fs
+        .readdirSync(promptTestsDir, { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name);
+
+      this.logger.log(
+        `Found ${promptDirs.length} prompt test directories: ${promptDirs.join(", ")}`
+      );
+
+      let totalPromptTests = 0;
+      for (const promptName of promptDirs) {
+        if (!promptNames.includes(promptName)) {
+          this.logger.log(`Skipping ${promptName} - prompt not found on server`, "WARN");
+          continue;
+        }
+
+        const promptDir = path.join(promptTestsDir, promptName);
+        const testCases = fs
+          .readdirSync(promptDir, { withFileTypes: true })
+          .filter((dirent) => dirent.isDirectory())
+          .map((dirent) => dirent.name);
+
+        this.logger.log(`Running ${testCases.length} test case(s) for prompt ${promptName}`);
+
+        for (const testCase of testCases) {
+          await this.runSinglePromptIntegrationTest(promptName, testCase, promptDir);
+          totalPromptTests++;
+        }
+      }
+
+      this.logger.log(`Total prompt integration tests executed: ${totalPromptTests}`);
+      return true;
+    } catch (error) {
+      this.logger.log(`Error running prompt integration tests: ${error.message}`, "ERROR");
+      return false;
+    }
+  }
+
+  /**
+   * Run a single prompt integration test.
+   *
+   * Reads parameters from `before/monitoring-state.json`, calls `getPrompt()`,
+   * and validates that the response contains messages (no protocol-level error).
+   */
+  async runSinglePromptIntegrationTest(promptName, testCase, promptDir) {
+    const testName = `prompt:${promptName}/${testCase}`;
+    this.logger.log(`\nRunning prompt integration test: ${testName}`);
+
+    try {
+      const testCaseDir = path.join(promptDir, testCase);
+      const beforeDir = path.join(testCaseDir, "before");
+      const afterDir = path.join(testCaseDir, "after");
+
+      // Validate test structure
+      if (!fs.existsSync(beforeDir)) {
+        this.logger.logTest(testName, false, "Missing before directory");
+        return;
+      }
+
+      if (!fs.existsSync(afterDir)) {
+        this.logger.logTest(testName, false, "Missing after directory");
+        return;
+      }
+
+      // Load parameters from before/monitoring-state.json
+      const monitoringStatePath = path.join(beforeDir, "monitoring-state.json");
+      if (!fs.existsSync(monitoringStatePath)) {
+        this.logger.logTest(testName, false, "Missing before/monitoring-state.json");
+        return;
+      }
+
+      const monitoringState = JSON.parse(fs.readFileSync(monitoringStatePath, "utf8"));
+      const params = monitoringState.parameters || {};
+      resolvePathPlaceholders(params, this.logger);
+
+      // Call the prompt
+      this.logger.log(`Calling prompt ${promptName} with params: ${JSON.stringify(params)}`);
+
+      const result = await this.client.getPrompt({
+        name: promptName,
+        arguments: params
+      });
+
+      // Validate that the response contains messages (no raw protocol error)
+      const hasMessages = result.messages && result.messages.length > 0;
+      if (!hasMessages) {
+        this.logger.logTest(testName, false, "Expected messages in prompt response");
+        return;
+      }
+
+      // If the after/monitoring-state.json has expected content checks, validate
+      const afterMonitoringPath = path.join(afterDir, "monitoring-state.json");
+      if (fs.existsSync(afterMonitoringPath)) {
+        const afterState = JSON.parse(fs.readFileSync(afterMonitoringPath, "utf8"));
+        if (afterState.expectedContentPatterns) {
+          const text = result.messages[0]?.content?.text || "";
+          for (const pattern of afterState.expectedContentPatterns) {
+            if (!text.includes(pattern)) {
+              this.logger.logTest(testName, false, `Expected response to contain "${pattern}"`);
+              return;
+            }
+          }
+        }
+      }
+
+      this.logger.logTest(testName, true, `Prompt returned ${result.messages.length} message(s)`);
+    } catch (error) {
+      this.logger.logTest(testName, false, `Error: ${error.message}`);
+    }
   }
 
   /**

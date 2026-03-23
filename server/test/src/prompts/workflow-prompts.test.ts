@@ -1734,6 +1734,15 @@ describe('Workflow Prompts', () => {
       expect(result.warning).toContain('resolves outside the workspace root');
     });
 
+    it('should not flag filenames containing consecutive dots as traversal', () => {
+      const filePath = 'my..query.ql';
+      writeFileSync(join(testDir, filePath), 'select 1');
+
+      const result = resolvePromptFilePath(filePath, testDir);
+      expect(result.resolvedPath).toBe(join(testDir, filePath));
+      expect(result.warning).toBeUndefined();
+    });
+
     it('should return the original path as resolvedPath even for invalid paths', () => {
       const result = resolvePromptFilePath('nonexistent.ql', testDir);
       expect(result.resolvedPath).toBe(join(testDir, 'nonexistent.ql'));
