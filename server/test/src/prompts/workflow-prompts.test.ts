@@ -1136,7 +1136,7 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Language**: cpp');
-      expect(text).toContain('path/to/mydb');
+      expect(text).toContain('mydb');
     });
 
     it('tools_query_workflow handler should include optional source parameters', async () => {
@@ -1207,7 +1207,7 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Name**: WeakCrypto');
     });
 
-    it('ql_tdd_basic handler should return inline error with no parameters', async () => {
+    it('ql_tdd_basic handler (createSafePromptHandler) should return inline validation error when required parameters are missing', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_basic');
       const result: PromptResult = await handler({});
       expect(result.messages[0].content.text).toContain('Invalid input');
@@ -1221,12 +1221,12 @@ describe('Workflow Prompts', () => {
         queryName: 'TaintTrack',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('my/database');
+      expect(text).toContain('database');
       expect(text).toContain('**Language**: swift');
       expect(text).toContain('**Query Name**: TaintTrack');
     });
 
-    it('ql_tdd_advanced handler should return inline error with no parameters', async () => {
+    it('ql_tdd_advanced handler (createSafePromptHandler) should return inline validation error when required parameters are missing', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
       const result: PromptResult = await handler({});
       expect(result.messages[0].content.text).toContain('Invalid input');

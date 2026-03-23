@@ -32,6 +32,16 @@ export const SUPPORTED_LANGUAGES = [
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Sanitise a user-supplied string for safe embedding inside a markdown inline
+ * code span (surrounded by single backticks).  Backtick characters in the
+ * value would prematurely close the span, and newlines would break the line;
+ * both are replaced with innocuous substitutes.
+ */
+function sanitizeForInlineCode(value: string): string {
+  return value.replace(/`/g, "'").replace(/\r?\n|\r/g, ' ');
+}
+
+/**
  * Result of resolving a user-supplied file path in a prompt parameter.
  *
  * `resolvedPath` is set to the best-effort absolute path, or an empty
@@ -116,7 +126,7 @@ export async function resolvePromptFilePath(
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `⚠ **File path** \`${filePath}\` **does not exist.** Resolved to: \`${absolutePath}\``,
+      warning: `⚠ **File path** \`${sanitizeForInlineCode(filePath)}\` **does not exist.** Resolved to: \`${sanitizeForInlineCode(absolutePath)}\``,
     };
   }
 
@@ -453,7 +463,7 @@ export function formatValidationError(
     if (issue.code === 'invalid_enum_value' && 'options' in issue) {
       const opts = (issue.options as string[]).join(', ');
       lines.push(
-        `- **\`${field}\`**: received \`${String(issue.received)}\` — ` +
+        `- **\`${field}\`**: received \`${sanitizeForInlineCode(String(issue.received))}\` — ` +
         `must be one of: ${opts}`,
       );
     } else if (issue.code === 'invalid_type') {
