@@ -239,6 +239,25 @@ CompilationUnit
 
 Use `PrintAST` on your test code to see the exact hierarchy for your specific source patterns.
 
+## Control Flow Graph
+
+The Java `ControlFlowGraph` module provides CFG analysis via the `ControlFlowNode` class
+(imported from `semmle.code.java.ControlFlowGraph`). Key types and predicates:
+
+- **`ControlFlowNode`** - A node in the control flow graph (replaces the removed `ControlFlow::Node` type)
+  - `getASuccessor()` - Gets a successor node in the CFG
+  - `getASuccessor(SuccessorType t)` - Gets a successor of a specific type
+  - `asExpr()` - Gets the expression this node represents
+  - `asStmt()` - Gets the statement this node represents
+  - `toString()` - String representation of the CFG node
+- **`ConditionNode`** - A CFG node that branches on a boolean condition
+  - `getATrueSuccessor()` - Gets a true-branch successor
+  - `getAFalseSuccessor()` - Gets a false-branch successor
+
+**Note**: The `ControlFlow` module (with `ControlFlow::Node`) was removed in `codeql/java-all@9.0.0`.
+Use `ControlFlowNode` directly instead. The CFG now includes richer node types such as
+`Entry`, `Before ...`, `After ...`, and `[LoopHeader]` nodes for more precise flow analysis.
+
 ## Expected test results for local `PrintAst.ql` query
 
 This repo contains a variant of the open-source `PrintAst.ql` query for `java` language, with modifications for local testing:

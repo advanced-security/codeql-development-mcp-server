@@ -1,17 +1,30 @@
 Example1.java:
-#    3| { ... }
-#-----|  -> super(...)
+#    3| Entry
+#-----|  -> { ... }
 
-#    3| super(...)
+#    5| Entry
+#-----|  -> { ... }
+
+#   18| Entry
+#-----|  -> { ... }
+
+#    3| { ... }
+#-----|  -> Before super(...)
+
+#    3| Before super(...)
+#-----|  -> super(...)
 
 #    5| { ... }
 #-----|  -> if (...)
 
 #    6| if (...)
-#-----|  -> x
+#-----|  -> Before ... > ...
 
 #   12| for (...;...;...)
-#-----|  -> 0
+#-----|  -> Before i
+
+#    6| Before ... > ...
+#-----|  -> x
 
 #    6| { ... }
 #-----|  -> <Expr>;
@@ -19,68 +32,17 @@ Example1.java:
 #    8| { ... }
 #-----|  -> <Expr>;
 
-#    7| <Expr>;
-#-----|  -> System.out
-
-#    9| <Expr>;
-#-----|  -> System.out
-
-#   12| { ... }
-#-----|  -> <Expr>;
-
-#   13| <Expr>;
-#-----|  -> System.out
-
-#   18| { ... }
-#-----|  -> if (...)
-
-#   19| if (...)
-#-----|  -> value
-
-#   23| while (...)
-#-----|  -> value
-
-#   27| switch (...)
-#-----|  -> value
-
-#   19| { ... }
-#-----|  -> 1
-
-#   20| return ...
-
-#   23| { ... }
-#-----|  -> <Expr>;
-
-#   24| <Expr>;
-#-----|  -> value
-
-#   28| case ...
-#-----|  -> 0
-
-#   29| return ...
-
-#   30| case ...
-#-----|  -> 1
-
-#   31| return ...
-
-#   32| default
-#-----|  -> value
-
-#   33| return ...
-
-#    6| ... > ...
-#-----|  -> { ... }
-#-----|  -> { ... }
-
 #    6| x
 #-----|  -> 0
 
 #    6| 0
 #-----|  -> ... > ...
 
-#    7| println(...)
-#-----|  -> for (...;...;...)
+#    7| <Expr>;
+#-----|  -> Before println(...)
+
+#    7| Before println(...)
+#-----|  -> System.out
 
 #    7| System.out
 #-----|  -> "Positive"
@@ -88,8 +50,11 @@ Example1.java:
 #    7| "Positive"
 #-----|  -> println(...)
 
-#    9| println(...)
-#-----|  -> for (...;...;...)
+#    9| <Expr>;
+#-----|  -> Before println(...)
+
+#    9| Before println(...)
+#-----|  -> System.out
 
 #    9| System.out
 #-----|  -> "Non-positive"
@@ -97,17 +62,20 @@ Example1.java:
 #    9| "Non-positive"
 #-----|  -> println(...)
 
-#   12| i
-#-----|  -> i
+#   12| Before i
+#-----|  -> 0
 
 #   12| 0
 #-----|  -> i
 
-#   12| ... < ...
-#-----|  -> { ... }
-
-#   12| ...++
+#   12| Before ... < ...
 #-----|  -> i
+
+#   12| Before ...++
+#-----|  -> i
+
+#   12| { ... }
+#-----|  -> <Expr>;
 
 #   12| i
 #-----|  -> 3
@@ -118,8 +86,11 @@ Example1.java:
 #   12| i
 #-----|  -> ...++
 
-#   13| println(...)
-#-----|  -> i
+#   13| <Expr>;
+#-----|  -> Before println(...)
+
+#   13| Before println(...)
+#-----|  -> System.out
 
 #   13| System.out
 #-----|  -> i
@@ -127,9 +98,23 @@ Example1.java:
 #   13| i
 #-----|  -> println(...)
 
-#   19| ... < ...
-#-----|  -> while (...)
-#-----|  -> { ... }
+#   18| { ... }
+#-----|  -> if (...)
+
+#   19| if (...)
+#-----|  -> Before ... < ...
+
+#   23| while (...)
+#-----|  -> [LoopHeader] while (...)
+
+#   27| switch (...)
+#-----|  -> value
+
+#   19| Before ... < ...
+#-----|  -> value
+
+#   19| { ... }
+#-----|  -> Before return ...
 
 #   19| value
 #-----|  -> 0
@@ -137,15 +122,20 @@ Example1.java:
 #   19| 0
 #-----|  -> ... < ...
 
-#   20| -...
-#-----|  -> return ...
+#   20| Before return ...
+#-----|  -> Before -...
+
+#   20| Before -...
+#-----|  -> 1
 
 #   20| 1
 #-----|  -> -...
 
-#   23| ... > ...
-#-----|  -> switch (...)
-#-----|  -> { ... }
+#   23| Before ... > ...
+#-----|  -> value
+
+#   23| { ... }
+#-----|  -> <Expr>;
 
 #   23| value
 #-----|  -> 10
@@ -153,11 +143,17 @@ Example1.java:
 #   23| 10
 #-----|  -> ... > ...
 
-#   24| ...=...
+#   24| <Expr>;
+#-----|  -> Before ...=...
+
+#   24| Before ...=...
 #-----|  -> value
 
-#   24| ... / ...
-#-----|  -> ...=...
+#   24| value
+#-----|  -> Before ... / ...
+
+#   24| Before ... / ...
+#-----|  -> value
 
 #   24| value
 #-----|  -> 2
@@ -167,20 +163,213 @@ Example1.java:
 
 #   27| value
 #-----|  -> case ...
-#-----|  -> case ...
-#-----|  -> default
+
+#   28| case ...
+#-----|  -> After case ... [no-match]
+#-----|  -> After case ... [match]
+
+#   29| Before return ...
+#-----|  -> 0
+
+#   30| case ...
+#-----|  -> After case ... [no-match]
+#-----|  -> After case ... [match]
+
+#   31| Before return ...
+#-----|  -> 1
+
+#   32| default
+#-----|  -> After default [match]
+
+#   33| Before return ...
+#-----|  -> Before ... * ...
+
+#   28| 0
+#-----|  -> Before return ...
 
 #   29| 0
 #-----|  -> return ...
 
+#   30| 1
+#-----|  -> Before return ...
+
 #   31| 1
 #-----|  -> return ...
 
-#   33| ... * ...
-#-----|  -> return ...
+#   33| Before ... * ...
+#-----|  -> value
 
 #   33| value
 #-----|  -> 2
 
 #   33| 2
 #-----|  -> ... * ...
+
+#    6| After ... > ... [false]
+#-----|  -> { ... }
+
+#    6| After ... > ... [true]
+#-----|  -> { ... }
+
+#   12| After ... < ... [false]
+#-----|  -> After for (...;...;...)
+
+#   12| After ... < ... [true]
+#-----|  -> { ... }
+
+#   19| After ... < ... [false]
+#-----|  -> After if (...)
+
+#   19| After ... < ... [true]
+#-----|  -> { ... }
+
+#   23| After ... > ... [false]
+#-----|  -> After while (...)
+
+#   23| After ... > ... [true]
+#-----|  -> { ... }
+
+#   28| After case ... [no-match]
+#-----|  -> case ...
+
+#   28| After case ... [match]
+#-----|  -> 0
+
+#   30| After case ... [no-match]
+#-----|  -> default
+
+#   30| After case ... [match]
+#-----|  -> 1
+
+#   32| After default [match]
+#-----|  -> Before return ...
+
+#    3| After { ... }
+
+#    3| After super(...)
+#-----|  -> After { ... }
+
+#    5| After { ... }
+
+#    6| After if (...)
+#-----|  -> for (...;...;...)
+
+#   12| After for (...;...;...)
+#-----|  -> After { ... }
+
+#    6| After { ... }
+#-----|  -> After if (...)
+
+#    8| After { ... }
+#-----|  -> After if (...)
+
+#    7| After <Expr>;
+#-----|  -> After { ... }
+
+#    7| After println(...)
+#-----|  -> After <Expr>;
+
+#    9| After <Expr>;
+#-----|  -> After { ... }
+
+#    9| After println(...)
+#-----|  -> After <Expr>;
+
+#   12| After i
+#-----|  -> Before ... < ...
+
+#   12| After ...++
+#-----|  -> Before ... < ...
+
+#   12| After { ... }
+#-----|  -> [LoopHeader] for (...;...;...)
+
+#   13| After <Expr>;
+#-----|  -> After { ... }
+
+#   13| After println(...)
+#-----|  -> After <Expr>;
+
+#   19| After if (...)
+#-----|  -> while (...)
+
+#   23| After while (...)
+#-----|  -> switch (...)
+
+#   20| After -...
+#-----|  -> return ...
+
+#   23| After { ... }
+#-----|  -> [LoopHeader] while (...)
+
+#   24| After <Expr>;
+#-----|  -> After { ... }
+
+#   24| After ...=...
+#-----|  -> After <Expr>;
+
+#   24| After ... / ...
+#-----|  -> ...=...
+
+#   33| After ... * ...
+#-----|  -> return ...
+
+#   12| [LoopHeader] for (...;...;...)
+#-----|  -> Before ...++
+
+#   23| [LoopHeader] while (...)
+#-----|  -> Before ... > ...
+
+#    3| super(...)
+#-----|  -> After super(...)
+
+#    6| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#    7| println(...)
+#-----|  -> After println(...)
+
+#    9| println(...)
+#-----|  -> After println(...)
+
+#   12| i
+#-----|  -> After i
+
+#   12| ... < ...
+#-----|  -> After ... < ... [false]
+#-----|  -> After ... < ... [true]
+
+#   12| ...++
+#-----|  -> After ...++
+
+#   13| println(...)
+#-----|  -> After println(...)
+
+#   19| ... < ...
+#-----|  -> After ... < ... [false]
+#-----|  -> After ... < ... [true]
+
+#   20| return ...
+
+#   20| -...
+#-----|  -> After -...
+
+#   23| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#   24| ...=...
+#-----|  -> After ...=...
+
+#   24| ... / ...
+#-----|  -> After ... / ...
+
+#   29| return ...
+
+#   31| return ...
+
+#   33| return ...
+
+#   33| ... * ...
+#-----|  -> After ... * ...
