@@ -148,6 +148,7 @@ export class MCPTestSuite {
       const result = await this.client.getPrompt({
         name: "explain_codeql_query",
         arguments: {
+          databasePath: "nonexistent/path/to/database",
           queryPath: "nonexistent/path/to/query.ql",
           language: "javascript"
         }

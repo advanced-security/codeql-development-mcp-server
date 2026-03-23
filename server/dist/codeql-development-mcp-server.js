@@ -64476,12 +64476,6 @@ function resolvePromptFilePath(filePath, workspaceRoot) {
   }
   const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
   const normalizedPath = normalize(filePath);
-  if (normalizedPath.includes("..")) {
-    return {
-      resolvedPath: filePath,
-      warning: `\u26A0 **Invalid file path** \u2014 path traversal detected in \`${filePath}\`. Please provide a path within your workspace.`
-    };
-  }
   const absolutePath = isAbsolute7(normalizedPath) ? normalizedPath : resolve13(effectiveRoot, normalizedPath);
   const rel = relative(effectiveRoot, absolutePath);
   if (rel.startsWith("..") || isAbsolute7(rel)) {
@@ -64532,7 +64526,7 @@ var describeFalsePositivesSchema = external_exports.object({
   queryPath: external_exports.string().describe("Path to the CodeQL query file")
 });
 var explainCodeqlQuerySchema = external_exports.object({
-  databasePath: external_exports.string().describe("Path to a CodeQL database for profiling"),
+  databasePath: external_exports.string().optional().describe("Path to a CodeQL database for profiling"),
   language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
   queryPath: external_exports.string().describe("Path to the CodeQL query file (.ql or .qlref)")
 });
@@ -64951,16 +64945,21 @@ ${content}`
         const qpResult = resolvePromptFilePath(queryPath);
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
-        const dbResult = resolvePromptFilePath(databasePath);
-        const resolvedDatabasePath = dbResult.resolvedPath;
-        if (dbResult.warning) warnings.push(dbResult.warning);
+        let resolvedDatabasePath = databasePath;
+        if (databasePath) {
+          const dbResult = resolvePromptFilePath(databasePath);
+          resolvedDatabasePath = dbResult.resolvedPath;
+          if (dbResult.warning) warnings.push(dbResult.warning);
+        }
         let contextSection = "## Query to Explain\n\n";
         contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
         contextSection += `- **Language**: ${language}
 `;
-        contextSection += `- **Database Path**: ${resolvedDatabasePath}
+        if (resolvedDatabasePath) {
+          contextSection += `- **Database Path**: ${resolvedDatabasePath}
 `;
+        }
         contextSection += "\n";
         const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
         return {
