@@ -1787,6 +1787,14 @@ describe('Workflow Prompts', () => {
       expect(result.warning).toContain('resolves outside the workspace root');
     });
 
+    it('should allow absolute paths outside the workspace root', async () => {
+      const result = await resolvePromptFilePath('/tmp/external-db', testDir);
+      expect(result.blocked).toBeUndefined();
+      expect(result.resolvedPath).toBe('/tmp/external-db');
+      // The file likely does not exist, so a warning is expected.
+      expect(result.warning).toContain('does not exist');
+    });
+
     it('should not flag filenames containing consecutive dots as traversal', async () => {
       const filePath = 'my..query.ql';
       writeFileSync(join(testDir, filePath), 'select 1');

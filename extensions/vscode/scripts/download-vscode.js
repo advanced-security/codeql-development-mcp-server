@@ -14,6 +14,7 @@
 
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 
 const MAX_RETRIES = 3;
@@ -34,7 +35,7 @@ process.on('unhandledRejection', (reason) => {
  * fresh instead of hitting a checksum mismatch on a truncated archive.
  */
 function cleanPartialDownload() {
-  const cacheDir = join(new URL('..', import.meta.url).pathname, '.vscode-test');
+  const cacheDir = join(fileURLToPath(new URL('..', import.meta.url)), '.vscode-test');
   if (existsSync(cacheDir)) {
     console.log('   Cleaning .vscode-test/ to remove partial downloads...');
     rmSync(cacheDir, { recursive: true, force: true });

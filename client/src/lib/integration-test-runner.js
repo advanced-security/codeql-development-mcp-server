@@ -225,11 +225,17 @@ export class IntegrationTestRunner {
       }
 
       this.logger.log(`Completed ${totalIntegrationTests} tool-specific integration tests`);
-      const toolIntegrationSucceeded = totalIntegrationTests > 0;
+
+      // Track execution counts and pass/fail separately.
+      // *Count* tracks whether the suite discovered & ran tests.
+      // *Succeeded* tracks whether those tests passed.
+      const toolTestsExecuted = totalIntegrationTests;
+      const toolTestsPassed = totalIntegrationTests > 0;
 
       // Also run workflow integration tests
-      const workflowIntegrationSucceeded = await this.runWorkflowIntegrationTests(baseDir);
-      if (!workflowIntegrationSucceeded) {
+      const { executed: workflowTestsExecuted, passed: workflowTestsPassed } =
+        await this.runWorkflowIntegrationTests(baseDir);
+      if (!workflowTestsPassed) {
         this.logger.logTest(
           "Workflow integration tests",
           false,
@@ -238,8 +244,9 @@ export class IntegrationTestRunner {
       }
 
       // Also run prompt integration tests
-      const promptIntegrationSucceeded = await this.runPromptIntegrationTests(baseDir);
-      if (!promptIntegrationSucceeded) {
+      const { executed: promptTestsExecuted, passed: promptTestsPassed } =
+        await this.runPromptIntegrationTests(baseDir);
+      if (!promptTestsPassed) {
         this.logger.logTest(
           "Prompt integration tests",
           false,
@@ -247,18 +254,17 @@ export class IntegrationTestRunner {
         );
       }
 
-      const anyTestsExecuted =
-        toolIntegrationSucceeded || workflowIntegrationSucceeded || promptIntegrationSucceeded;
+      const totalTestsExecuted = toolTestsExecuted + workflowTestsExecuted + promptTestsExecuted;
 
-      if (!anyTestsExecuted) {
+      if (totalTestsExecuted === 0) {
         this.logger.log(
-          "No integration tests completed successfully across tool, workflow, or prompt suites.",
+          "No integration tests were executed across tool, workflow, or prompt suites.",
           "ERROR"
         );
         return false;
       }
 
-      return toolIntegrationSucceeded && workflowIntegrationSucceeded && promptIntegrationSucceeded;
+      return toolTestsPassed && workflowTestsPassed && promptTestsPassed;
     } catch (error) {
       this.logger.log(`Error running integration tests: ${error.message}`, "ERROR");
       return false;
@@ -1183,10 +1189,13 @@ export class IntegrationTestRunner {
       }
 
       this.logger.log(`Total prompt integration tests executed: ${totalPromptTests}`);
-      return totalPromptTests > 0 ? allPromptTestsPassed : true;
+      return {
+        executed: totalPromptTests,
+        passed: totalPromptTests > 0 ? allPromptTestsPassed : true
+      };
     } catch (error) {
       this.logger.log(`Error running prompt integration tests: ${error.message}`, "ERROR");
-      return false;
+      return { executed: 0, passed: false };
     }
   }
 
@@ -1285,7 +1294,7 @@ export class IntegrationTestRunner {
 
       if (!fs.existsSync(workflowTestsDir)) {
         this.logger.log("No workflow integration tests directory found", "INFO");
-        return true;
+        return { executed: 0, passed: true };
       }
 
       // Discover workflow test directories
@@ -1296,7 +1305,7 @@ export class IntegrationTestRunner {
 
       if (workflowDirs.length === 0) {
         this.logger.log("No workflow test directories found", "INFO");
-        return true;
+        return { executed: 0, passed: true };
       }
 
       this.logger.log(`Found ${workflowDirs.length} workflow test(s): ${workflowDirs.join(", ")}`);
@@ -1309,10 +1318,10 @@ export class IntegrationTestRunner {
       }
 
       this.logger.log(`Total workflow integration tests executed: ${totalWorkflowTests}`);
-      return true;
+      return { executed: totalWorkflowTests, passed: true };
     } catch (error) {
       this.logger.log(`Error running workflow integration tests: ${error.message}`, "ERROR");
-      return false;
+      return { executed: 0, passed: false };
     }
   }
 

@@ -128,20 +128,23 @@ export async function resolvePromptFilePath(
   const normalizedPath = normalize(effectivePath);
 
   // Resolve to absolute path.
-  const absolutePath = isAbsolute(normalizedPath)
+  const inputWasAbsolute = isAbsolute(normalizedPath);
+  const absolutePath = inputWasAbsolute
     ? normalizedPath
     : resolve(effectiveRoot, normalizedPath);
 
-  // Verify the resolved path stays within the workspace root.
-  // This catches path traversal (e.g. "../../etc/passwd") after full
-  // resolution rather than relying on a fragile substring check.
-  const rel = relative(effectiveRoot, absolutePath);
-  if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
-    return {
-      blocked: true,
-      resolvedPath: '',
-      warning: '⚠ **File path resolves outside the workspace root.** The path has been blocked for security.',
-    };
+  // Only enforce the workspace-root boundary for relative inputs.
+  // Absolute paths are allowed through — users legitimately reference
+  // databases, queries, and pack roots outside the workspace.
+  if (!inputWasAbsolute) {
+    const rel = relative(effectiveRoot, absolutePath);
+    if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+      return {
+        blocked: true,
+        resolvedPath: '',
+        warning: '⚠ **File path resolves outside the workspace root.** The path has been blocked for security.',
+      };
+    }
   }
 
   // Check existence on disk (advisory only — the resolved path is always

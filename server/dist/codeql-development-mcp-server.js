@@ -64506,14 +64506,17 @@ async function resolvePromptFilePath(filePath, workspaceRoot) {
   }
   const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
   const normalizedPath = normalize(effectivePath);
-  const absolutePath = isAbsolute7(normalizedPath) ? normalizedPath : resolve13(effectiveRoot, normalizedPath);
-  const rel = relative(effectiveRoot, absolutePath);
-  if (rel === ".." || rel.startsWith(`..${sep2}`) || isAbsolute7(rel)) {
-    return {
-      blocked: true,
-      resolvedPath: "",
-      warning: "\u26A0 **File path resolves outside the workspace root.** The path has been blocked for security."
-    };
+  const inputWasAbsolute = isAbsolute7(normalizedPath);
+  const absolutePath = inputWasAbsolute ? normalizedPath : resolve13(effectiveRoot, normalizedPath);
+  if (!inputWasAbsolute) {
+    const rel = relative(effectiveRoot, absolutePath);
+    if (rel === ".." || rel.startsWith(`..${sep2}`) || isAbsolute7(rel)) {
+      return {
+        blocked: true,
+        resolvedPath: "",
+        warning: "\u26A0 **File path resolves outside the workspace root.** The path has been blocked for security."
+      };
+    }
   }
   try {
     await access2(absolutePath);
