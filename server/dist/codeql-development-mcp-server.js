@@ -34972,7 +34972,7 @@ var require_send = __commonJS({
     var join19 = path4.join;
     var normalize2 = path4.normalize;
     var resolve15 = path4.resolve;
-    var sep2 = path4.sep;
+    var sep3 = path4.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
@@ -35133,14 +35133,14 @@ var require_send = __commonJS({
       var parts;
       if (root !== null) {
         if (path5) {
-          path5 = normalize2("." + sep2 + path5);
+          path5 = normalize2("." + sep3 + path5);
         }
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
           this.error(403);
           return res;
         }
-        parts = path5.split(sep2);
+        parts = path5.split(sep3);
         path5 = normalize2(join19(root, path5));
       } else {
         if (UP_PATH_REGEXP.test(path5)) {
@@ -35148,7 +35148,7 @@ var require_send = __commonJS({
           this.error(403);
           return res;
         }
-        parts = normalize2(path5).split(sep2);
+        parts = normalize2(path5).split(sep3);
         path5 = resolve15(path5);
       }
       if (containsDotFile(parts)) {
@@ -35242,7 +35242,7 @@ var require_send = __commonJS({
       var self = this;
       debug('stat "%s"', path5);
       fs3.stat(path5, function onstat(err, stat) {
-        var pathEndsWithSep = path5[path5.length - 1] === sep2;
+        var pathEndsWithSep = path5[path5.length - 1] === sep3;
         if (err && err.code === "ENOENT" && !extname3(path5) && !pathEndsWithSep) {
           return next(err);
         }
@@ -40549,8 +40549,8 @@ var require_adm_zip = __commonJS({
         return null;
       }
       function fixPath(zipPath) {
-        const { join: join19, normalize: normalize2, sep: sep2 } = pth.posix;
-        return join19(".", normalize2(sep2 + zipPath.split("\\").join(sep2) + sep2));
+        const { join: join19, normalize: normalize2, sep: sep3 } = pth.posix;
+        return join19(".", normalize2(sep3 + zipPath.split("\\").join(sep3) + sep3));
       }
       function filenameFilter(filterfn) {
         if (filterfn instanceof RegExp) {
@@ -64378,7 +64378,7 @@ function registerLanguageResources(server) {
 }
 
 // src/prompts/workflow-prompts.ts
-import { basename as basename7, isAbsolute as isAbsolute7, normalize, relative, resolve as resolve13 } from "path";
+import { basename as basename7, isAbsolute as isAbsolute7, normalize, relative, resolve as resolve13, sep as sep2 } from "path";
 import { existsSync as existsSync12 } from "fs";
 
 // src/prompts/check-for-duplicated-code.prompt.md
@@ -64478,7 +64478,7 @@ function resolvePromptFilePath(filePath, workspaceRoot) {
   const normalizedPath = normalize(filePath);
   const absolutePath = isAbsolute7(normalizedPath) ? normalizedPath : resolve13(effectiveRoot, normalizedPath);
   const rel = relative(effectiveRoot, absolutePath);
-  if (rel.startsWith("..") || isAbsolute7(rel)) {
+  if (rel === ".." || rel.startsWith(`..${sep2}`) || isAbsolute7(rel)) {
     return {
       resolvedPath: absolutePath,
       warning: `\u26A0 **File path** \`${filePath}\` **resolves outside the workspace root.** Resolved to: \`${absolutePath}\``

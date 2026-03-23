@@ -15,7 +15,8 @@ when the user provides a `queryPath` that does not exist on disk.
 
 ## Parameters
 
-| Parameter   | Value                          | Notes              |
-| ----------- | ------------------------------ | ------------------ |
-| `queryPath` | `nonexistent/path/to/query.ql` | Does **not** exist |
-| `language`  | `javascript`                   | Valid language     |
+| Parameter      | Value                          | Notes              |
+| -------------- | ------------------------------ | ------------------ |
+| `databasePath` | `nonexistent/path/to/database` | Does **not** exist |
+| `queryPath`    | `nonexistent/path/to/query.ql` | Does **not** exist |
+| `language`     | `javascript`                   | Valid language     |

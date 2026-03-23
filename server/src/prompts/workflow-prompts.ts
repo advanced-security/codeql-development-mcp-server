@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { basename, isAbsolute, normalize, relative, resolve } from 'path';
+import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { existsSync } from 'fs';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
@@ -79,7 +79,7 @@ export function resolvePromptFilePath(
   // This catches path traversal (e.g. "../../etc/passwd") after full
   // resolution rather than relying on a fragile substring check.
   const rel = relative(effectiveRoot, absolutePath);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
+  if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
     return {
       resolvedPath: absolutePath,
       warning: `⚠ **File path** \`${filePath}\` **resolves outside the workspace root.** Resolved to: \`${absolutePath}\``,

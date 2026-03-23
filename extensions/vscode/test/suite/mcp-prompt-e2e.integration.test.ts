@@ -300,7 +300,7 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────
-  // sarif_rank_false_positives — optional sarifPath handling
+  // sarif_rank_false_positives — sarifPath validation
   // ─────────────────────────────────────────────────────────────────────
 
   test('sarif_rank_false_positives with nonexistent sarifPath should return warning', async function () {
