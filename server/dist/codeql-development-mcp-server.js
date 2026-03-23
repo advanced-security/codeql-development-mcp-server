@@ -64485,6 +64485,22 @@ function markdownInlineCode(value) {
   const fence = "`".repeat(maxRun + 1);
   return `${fence}${normalized}${fence}`;
 }
+function blockedPathError(result, paramName) {
+  const message = result.warning ?? `The provided ${paramName} could not be resolved safely and cannot be used.`;
+  return {
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `${message}
+
+The workflow cannot proceed because the ${paramName} is not allowed.`
+        }
+      }
+    ]
+  };
+}
 async function resolvePromptFilePath(filePath, workspaceRoot) {
   if (!filePath || filePath.trim() === "") {
     return {
@@ -64523,7 +64539,7 @@ async function resolvePromptFilePath(filePath, workspaceRoot) {
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `\u26A0 **File path** ${markdownInlineCode(filePath)} **does not exist.** Resolved to: ${markdownInlineCode(absolutePath)}`
+      warning: `\u26A0 **File path** ${markdownInlineCode(filePath)} **does not exist.**`
     };
   }
   return { resolvedPath: absolutePath };
@@ -64726,6 +64742,7 @@ ${content}`
         const template = loadPromptTemplate("tools-query-workflow.prompt.md");
         const warnings = [];
         const dbResult = await resolvePromptFilePath(database);
+        if (dbResult.blocked) return blockedPathError(dbResult, "database path");
         const resolvedDatabase = dbResult.resolvedPath;
         if (dbResult.warning) warnings.push(dbResult.warning);
         const content = processPromptTemplate(template, {
@@ -64765,6 +64782,7 @@ ${content}`
         const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
         const warnings = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         const derivedName = workshopName || basename7(resolvedQueryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
@@ -64833,6 +64851,7 @@ ${content}`
         let resolvedDatabase = database;
         if (database) {
           const dbResult = await resolvePromptFilePath(database);
+          if (dbResult.blocked) return blockedPathError(dbResult, "database path");
           resolvedDatabase = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -64874,6 +64893,7 @@ ${content}`
         const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
         const warnings = [];
         const spResult = await resolvePromptFilePath(sarifPath);
+        if (spResult.blocked) return blockedPathError(spResult, "SARIF path");
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
         let contextSection = "## Analysis Context\n\n";
@@ -64910,6 +64930,7 @@ ${content}`
         const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
         const warnings = [];
         const spResult = await resolvePromptFilePath(sarifPath);
+        if (spResult.blocked) return blockedPathError(spResult, "SARIF path");
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
         let contextSection = "## Analysis Context\n\n";
@@ -64946,6 +64967,7 @@ ${content}`
         const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
         const warnings = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         const contextSection = `## Analysis Context
@@ -64979,11 +65001,13 @@ ${content}`
         const template = loadPromptTemplate("explain-codeql-query.prompt.md");
         const warnings = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         let resolvedDatabasePath = databasePath;
         if (databasePath) {
           const dbResult = await resolvePromptFilePath(databasePath);
+          if (dbResult.blocked) return blockedPathError(dbResult, "database path");
           resolvedDatabasePath = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -65023,6 +65047,7 @@ ${content}`
         const template = loadPromptTemplate("document-codeql-query.prompt.md");
         const warnings = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         const contextSection = `## Query to Document
@@ -65107,11 +65132,13 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
         const warnings = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
           const wsResult = await resolvePromptFilePath(workspaceUri);
+          if (wsResult.blocked) return blockedPathError(wsResult, "workspace URI");
           resolvedWorkspaceUri = wsResult.resolvedPath;
           if (wsResult.warning) warnings.push(wsResult.warning);
         }

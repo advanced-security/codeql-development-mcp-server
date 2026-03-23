@@ -83,6 +83,29 @@ export interface PromptFilePathResult {
 }
 
 /**
+ * Return an inline error response for a blocked file path.
+ *
+ * Prompt handlers call this when `resolvePromptFilePath` sets `blocked: true`
+ * so that the workflow short-circuits with a clear user-facing message instead
+ * of silently proceeding with an empty path.
+ */
+function blockedPathError(result: PromptFilePathResult, paramName: string): PromptResult {
+  const message = result.warning
+    ?? `The provided ${paramName} could not be resolved safely and cannot be used.`;
+  return {
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `${message}\n\nThe workflow cannot proceed because the ${paramName} is not allowed.`,
+        },
+      },
+    ],
+  };
+}
+
+/**
  * Resolve a user-supplied file path for a prompt parameter.
  *
  * Handles `file://` URIs (converted via `fileURLToPath`) and plain paths.
@@ -155,7 +178,7 @@ export async function resolvePromptFilePath(
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `⚠ **File path** ${markdownInlineCode(filePath)} **does not exist.** Resolved to: ${markdownInlineCode(absolutePath)}`,
+      warning: `⚠ **File path** ${markdownInlineCode(filePath)} **does not exist.**`,
     };
   }
 
@@ -635,6 +658,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const warnings: string[] = [];
         const dbResult = await resolvePromptFilePath(database);
+        if (dbResult.blocked) return blockedPathError(dbResult, 'database path');
         const resolvedDatabase = dbResult.resolvedPath;
         if (dbResult.warning) warnings.push(dbResult.warning);
 
@@ -683,6 +707,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const warnings: string[] = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, 'query path');
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
@@ -768,6 +793,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
         let resolvedDatabase = database;
         if (database) {
           const dbResult = await resolvePromptFilePath(database);
+          if (dbResult.blocked) return blockedPathError(dbResult, 'database path');
           resolvedDatabase = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -814,6 +840,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const warnings: string[] = [];
         const spResult = await resolvePromptFilePath(sarifPath);
+        if (spResult.blocked) return blockedPathError(spResult, 'SARIF path');
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
 
@@ -856,6 +883,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const warnings: string[] = [];
         const spResult = await resolvePromptFilePath(sarifPath);
+        if (spResult.blocked) return blockedPathError(spResult, 'SARIF path');
         const resolvedSarifPath = spResult.resolvedPath;
         if (spResult.warning) warnings.push(spResult.warning);
 
@@ -898,6 +926,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const warnings: string[] = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, 'query path');
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
@@ -935,12 +964,14 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const warnings: string[] = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, 'query path');
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         let resolvedDatabasePath = databasePath;
         if (databasePath) {
           const dbResult = await resolvePromptFilePath(databasePath);
+          if (dbResult.blocked) return blockedPathError(dbResult, 'database path');
           resolvedDatabasePath = dbResult.resolvedPath;
           if (dbResult.warning) warnings.push(dbResult.warning);
         }
@@ -985,6 +1016,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const warnings: string[] = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, 'query path');
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
@@ -1089,12 +1121,14 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
 
         const warnings: string[] = [];
         const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, 'query path');
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
           const wsResult = await resolvePromptFilePath(workspaceUri);
+          if (wsResult.blocked) return blockedPathError(wsResult, 'workspace URI');
           resolvedWorkspaceUri = wsResult.resolvedPath;
           if (wsResult.warning) warnings.push(wsResult.warning);
         }

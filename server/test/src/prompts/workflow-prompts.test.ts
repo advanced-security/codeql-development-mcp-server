@@ -1779,6 +1779,12 @@ describe('Workflow Prompts', () => {
       expect(result.warning).toContain('does not exist');
     });
 
+    it('should not include absolute path in "does not exist" warning', async () => {
+      const result = await resolvePromptFilePath('nonexistent/query.ql', testDir);
+      expect(result.warning).toContain('does not exist');
+      expect(result.warning).not.toContain('Resolved to');
+    });
+
     it('should return a warning and block path traversal attempts', async () => {
       const result = await resolvePromptFilePath('../../../etc/passwd', testDir);
       expect(result.blocked).toBe(true);
@@ -1890,6 +1896,43 @@ describe('Workflow Prompts', () => {
       const text = result.messages[0].content.text;
       expect(text).toContain('does not exist');
       expect(text).toContain('nonexistent/db');
+    });
+
+    // -----------------------------------------------------------------
+    // Blocked path handling: traversal attempts return inline errors
+    // -----------------------------------------------------------------
+    it('tools_query_workflow handler should return inline error for traversal database path', async () => {
+      const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        database: '../../../etc/passwd',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('blocked');
+      expect(text).toContain('cannot proceed');
+    });
+
+    it('explain_codeql_query handler should return inline error for traversal queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        queryPath: '../../../etc/passwd',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('blocked');
+      expect(text).toContain('cannot proceed');
+    });
+
+    it('explain_codeql_query handler should return inline error for traversal databasePath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        queryPath: '/valid/query.ql',
+        databasePath: '../../../etc/passwd',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('blocked');
+      expect(text).toContain('cannot proceed');
     });
 
     // -----------------------------------------------------------------
