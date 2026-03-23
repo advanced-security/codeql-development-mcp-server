@@ -247,9 +247,7 @@ export class IntegrationTestRunner {
       }
 
       return (
-        (totalIntegrationTests > 0 ||
-          workflowIntegrationSucceeded ||
-          promptIntegrationSucceeded) &&
+        (totalIntegrationTests > 0 || workflowIntegrationSucceeded || promptIntegrationSucceeded) &&
         workflowIntegrationSucceeded &&
         promptIntegrationSucceeded
       );
