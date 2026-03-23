@@ -1788,11 +1788,18 @@ describe('Workflow Prompts', () => {
     });
 
     it('should allow absolute paths outside the workspace root', async () => {
-      const result = await resolvePromptFilePath('/tmp/external-db', testDir);
-      expect(result.blocked).toBeUndefined();
-      expect(result.resolvedPath).toBe('/tmp/external-db');
-      // The file likely does not exist, so a warning is expected.
-      expect(result.warning).toContain('does not exist');
+      const externalWorkspace = createTestTempDir('resolvePromptFilePath-external-workspace');
+      const externalPath = join(externalWorkspace, 'external-db');
+
+      try {
+        const result = await resolvePromptFilePath(externalPath, testDir);
+        expect(result.blocked).toBeUndefined();
+        expect(result.resolvedPath).toBe(externalPath);
+        // The file does not exist, so a warning is expected.
+        expect(result.warning).toContain('does not exist');
+      } finally {
+        cleanupTestTempDir(externalWorkspace);
+      }
     });
 
     it('should not flag filenames containing consecutive dots as traversal', async () => {

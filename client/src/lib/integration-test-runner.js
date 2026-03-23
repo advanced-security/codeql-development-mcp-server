@@ -1143,7 +1143,10 @@ export class IntegrationTestRunner {
 
       if (!fs.existsSync(promptTestsDir)) {
         this.logger.log("No prompt integration tests directory found", "INFO");
-        return true;
+        return {
+          executed: 0,
+          passed: true
+        };
       }
 
       // Get list of available prompts from the server
