@@ -1154,6 +1154,7 @@ export class IntegrationTestRunner {
       );
 
       let totalPromptTests = 0;
+      let allPromptTestsPassed = true;
       for (const promptName of promptDirs) {
         if (!promptNames.includes(promptName)) {
           this.logger.log(`Skipping ${promptName} - prompt not found on server`, "WARN");
@@ -1169,13 +1170,16 @@ export class IntegrationTestRunner {
         this.logger.log(`Running ${testCases.length} test case(s) for prompt ${promptName}`);
 
         for (const testCase of testCases) {
-          await this.runSinglePromptIntegrationTest(promptName, testCase, promptDir);
+          const passed = await this.runSinglePromptIntegrationTest(promptName, testCase, promptDir);
           totalPromptTests++;
+          if (!passed) {
+            allPromptTestsPassed = false;
+          }
         }
       }
 
       this.logger.log(`Total prompt integration tests executed: ${totalPromptTests}`);
-      return true;
+      return totalPromptTests > 0 ? allPromptTestsPassed : true;
     } catch (error) {
       this.logger.log(`Error running prompt integration tests: ${error.message}`, "ERROR");
       return false;
@@ -1200,19 +1204,19 @@ export class IntegrationTestRunner {
       // Validate test structure
       if (!fs.existsSync(beforeDir)) {
         this.logger.logTest(testName, false, "Missing before directory");
-        return;
+        return false;
       }
 
       if (!fs.existsSync(afterDir)) {
         this.logger.logTest(testName, false, "Missing after directory");
-        return;
+        return false;
       }
 
       // Load parameters from before/monitoring-state.json
       const monitoringStatePath = path.join(beforeDir, "monitoring-state.json");
       if (!fs.existsSync(monitoringStatePath)) {
         this.logger.logTest(testName, false, "Missing before/monitoring-state.json");
-        return;
+        return false;
       }
 
       const monitoringState = JSON.parse(fs.readFileSync(monitoringStatePath, "utf8"));
@@ -1231,27 +1235,37 @@ export class IntegrationTestRunner {
       const hasMessages = result.messages && result.messages.length > 0;
       if (!hasMessages) {
         this.logger.logTest(testName, false, "Expected messages in prompt response");
-        return;
+        return false;
       }
 
       // If the after/monitoring-state.json has expected content checks, validate
       const afterMonitoringPath = path.join(afterDir, "monitoring-state.json");
       if (fs.existsSync(afterMonitoringPath)) {
         const afterState = JSON.parse(fs.readFileSync(afterMonitoringPath, "utf8"));
-        if (afterState.expectedContentPatterns) {
+
+        // Support both top-level expectedContentPatterns and sessions[].expectedContentPatterns
+        const sessions = afterState.sessions || [];
+        const topLevelPatterns = afterState.expectedContentPatterns || [];
+        const sessionPatterns =
+          sessions.length > 0 ? sessions[0].expectedContentPatterns || [] : [];
+        const expectedPatterns = topLevelPatterns.length > 0 ? topLevelPatterns : sessionPatterns;
+
+        if (expectedPatterns.length > 0) {
           const text = result.messages[0]?.content?.text || "";
-          for (const pattern of afterState.expectedContentPatterns) {
+          for (const pattern of expectedPatterns) {
             if (!text.includes(pattern)) {
               this.logger.logTest(testName, false, `Expected response to contain "${pattern}"`);
-              return;
+              return false;
             }
           }
         }
       }
 
       this.logger.logTest(testName, true, `Prompt returned ${result.messages.length} message(s)`);
+      return true;
     } catch (error) {
       this.logger.logTest(testName, false, `Error: ${error.message}`);
+      return false;
     }
   }
 
