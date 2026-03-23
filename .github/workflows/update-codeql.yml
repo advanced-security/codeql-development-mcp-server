@@ -40,13 +40,16 @@ jobs:
         id: check-version
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET_VERSION: ${{ inputs.target_version }}
+          TARGET_VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_version || '' }}
         run: |
           echo "Checking latest CodeQL CLI version..."
 
           # Read current version from .codeql-version (stores vX.Y.Z)
           current_version_raw=$(cat .codeql-version | tr -d '[:space:]')
           current_version="${current_version_raw#v}"
+
+          # Trim whitespace from target version input
+          TARGET_VERSION=$(echo "${TARGET_VERSION}" | tr -d '[:space:]')
 
           if [ -n "${TARGET_VERSION}" ]; then
             # Use the manually specified target version
