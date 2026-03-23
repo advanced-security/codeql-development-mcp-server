@@ -10,7 +10,7 @@ describe('SessionDataManager', () => {
   let sessionManager: SessionDataManager;
   const testStorageDir = '.ql-mcp-tracking-test';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clean up any existing test storage
     if (existsSync(testStorageDir)) {
       rmSync(testStorageDir, { recursive: true, force: true });
@@ -20,6 +20,7 @@ describe('SessionDataManager', () => {
       storageLocation: testStorageDir,
       autoTrackSessions: true,
     });
+    await sessionManager.initialize();
   });
 
   afterEach(() => {

@@ -67,6 +67,7 @@ describe('Monitoring Tools', () => {
           archiveCompletedSessions: true,
           enableRecommendations: true,
           enableMonitoringTools: true, // Opt-in enabled
+          enableAnnotationTools: false,
         });
 
         registerMonitoringTools(mockServer);
@@ -90,6 +91,7 @@ describe('Monitoring Tools', () => {
         archiveCompletedSessions: true,
         enableRecommendations: true,
         enableMonitoringTools: true, // Opt-in enabled for these tests
+        enableAnnotationTools: false,
       });
     });
 
@@ -218,7 +220,10 @@ describe('Monitoring Tools', () => {
   });
 
   describe('Tool Handler Functions', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
+      // Initialize the sqlite store (required for sql.js WASM backend)
+      await sessionDataManager.initialize();
+
       // Enable monitoring tools for these tests
       vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
         storageLocation: testStorageDir,
@@ -231,6 +236,7 @@ describe('Monitoring Tools', () => {
         archiveCompletedSessions: true,
         enableRecommendations: true,
         enableMonitoringTools: true,
+        enableAnnotationTools: false,
       });
     });
 

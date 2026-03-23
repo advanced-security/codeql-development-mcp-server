@@ -255,4 +255,159 @@ suite('MCP Server Tool Integration Tests', () => {
 
     console.log(`[mcp-tool-e2e] list_mrva_run_results result:\n${text}`);
   });
+
+  test('Annotation and audit tools should NOT appear by default', async function () {
+    this.timeout(15_000);
+
+    const response = await client.listTools();
+    const toolNames = response.tools.map(t => t.name);
+
+    assert.ok(!toolNames.includes('annotation_create'), 'annotation_create should NOT be registered by default');
+    assert.ok(!toolNames.includes('audit_store_findings'), 'audit_store_findings should NOT be registered by default');
+
+    console.log('[mcp-tool-e2e] Confirmed annotation/audit tools are not registered by default');
+  });
+});
+
+/**
+ * Integration tests for annotation and audit tools.
+ * These tests spawn a separate server instance with ENABLE_ANNOTATION_TOOLS=true
+ * to validate opt-in annotation and MRVA audit tool functionality.
+ */
+suite('MCP Annotation & Audit Tool Integration Tests', () => {
+  let client: Client;
+  let transport: StdioClientTransport;
+  let fixtureStorage: string | undefined;
+
+  suiteSetup(async function () {
+    this.timeout(30_000);
+
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
+    assert.ok(ext, `Extension ${EXTENSION_ID} not found`);
+    if (!ext.isActive) await ext.activate();
+
+    fixtureStorage = resolveFixtureStoragePath();
+    assert.ok(fixtureStorage, 'Fixture codeql-storage directory not found');
+
+    const serverPath = resolveServerPath();
+
+    const env: Record<string, string> = {
+      ...process.env as Record<string, string>,
+      TRANSPORT_MODE: 'stdio',
+      ENABLE_ANNOTATION_TOOLS: 'true',
+      CODEQL_DATABASES_BASE_DIRS: path.join(fixtureStorage, 'databases'),
+      CODEQL_QUERY_RUN_RESULTS_DIRS: path.join(fixtureStorage, 'queries'),
+      CODEQL_MRVA_RUN_RESULTS_DIRS: path.join(fixtureStorage, 'variant-analyses'),
+    };
+
+    transport = new StdioClientTransport({
+      command: 'node',
+      args: [serverPath],
+      env,
+      stderr: 'pipe',
+    });
+
+    client = new Client({ name: 'annotation-test', version: '1.0.0' });
+    await client.connect(transport);
+    console.log('[mcp-annotation-e2e] Connected to MCP server with annotation tools enabled');
+  });
+
+  suiteTeardown(async function () {
+    this.timeout(10_000);
+    try { if (client) await client.close(); } catch { /* best-effort */ }
+    try { if (transport) await transport.close(); } catch { /* best-effort */ }
+  });
+
+  test('Annotation tools should be available when ENABLE_ANNOTATION_TOOLS=true', async function () {
+    this.timeout(15_000);
+
+    const response = await client.listTools();
+    const toolNames = response.tools.map(t => t.name);
+
+    // Layer 1: annotation tools
+    assert.ok(toolNames.includes('annotation_create'), 'Should include annotation_create');
+    assert.ok(toolNames.includes('annotation_get'), 'Should include annotation_get');
+    assert.ok(toolNames.includes('annotation_list'), 'Should include annotation_list');
+    assert.ok(toolNames.includes('annotation_update'), 'Should include annotation_update');
+    assert.ok(toolNames.includes('annotation_delete'), 'Should include annotation_delete');
+    assert.ok(toolNames.includes('annotation_search'), 'Should include annotation_search');
+
+    // Layer 2: audit tools (gated by same flag)
+    assert.ok(toolNames.includes('audit_store_findings'), 'Should include audit_store_findings');
+    assert.ok(toolNames.includes('audit_list_findings'), 'Should include audit_list_findings');
+    assert.ok(toolNames.includes('audit_add_notes'), 'Should include audit_add_notes');
+    assert.ok(toolNames.includes('audit_clear_repo'), 'Should include audit_clear_repo');
+
+    console.log(`[mcp-annotation-e2e] All 10 annotation/audit tools registered`);
+  });
+
+  test('MRVA + Annotation workflow: store and retrieve findings', async function () {
+    this.timeout(30_000);
+
+    // Step 1: Discover MRVA runs (from fixture)
+    const mrvaResult = await client.callTool({
+      name: 'list_mrva_run_results',
+      arguments: {},
+    });
+    assert.ok(!mrvaResult.isError, 'list_mrva_run_results should succeed');
+    const mrvaText = (mrvaResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(mrvaText.includes('10001'), 'Should find fixture MRVA run 10001');
+
+    // Step 2: Store findings for a repository
+    const storeResult = await client.callTool({
+      name: 'audit_store_findings',
+      arguments: {
+        owner: 'arduino',
+        repo: 'Arduino',
+        findings: [
+          { sourceLocation: 'src/main.cpp', line: 42, sourceType: 'RemoteFlowSource', description: 'Test finding' },
+        ],
+      },
+    });
+    assert.ok(!storeResult.isError, 'audit_store_findings should succeed');
+    const storeText = (storeResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(storeText.includes('Stored 1'), `Should store 1 finding. Got: ${storeText}`);
+
+    // Step 3: List findings for the repo
+    const listResult = await client.callTool({
+      name: 'audit_list_findings',
+      arguments: { owner: 'arduino', repo: 'Arduino' },
+    });
+    assert.ok(!listResult.isError, 'audit_list_findings should succeed');
+    const listText = (listResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(listText.includes('src/main.cpp'), `Should include finding location. Got: ${listText}`);
+
+    // Step 4: Add triage notes
+    const notesResult = await client.callTool({
+      name: 'audit_add_notes',
+      arguments: {
+        owner: 'arduino',
+        repo: 'Arduino',
+        sourceLocation: 'src/main.cpp',
+        line: 42,
+        notes: 'False positive: validated input',
+      },
+    });
+    assert.ok(!notesResult.isError, 'audit_add_notes should succeed');
+
+    // Step 5: Search for annotated findings
+    const searchResult = await client.callTool({
+      name: 'annotation_search',
+      arguments: { query: 'false positive' },
+    });
+    assert.ok(!searchResult.isError, 'annotation_search should succeed');
+    const searchText = (searchResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(searchText.includes('validated input'), `Should find triage note. Got: ${searchText}`);
+
+    // Step 6: Clear repo
+    const clearResult = await client.callTool({
+      name: 'audit_clear_repo',
+      arguments: { owner: 'arduino', repo: 'Arduino' },
+    });
+    assert.ok(!clearResult.isError, 'audit_clear_repo should succeed');
+    const clearText = (clearResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(clearText.includes('Cleared'), `Should confirm clearing. Got: ${clearText}`);
+
+    console.log('[mcp-annotation-e2e] MRVA + Annotation workflow test passed');
+  });
 });

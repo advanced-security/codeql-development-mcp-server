@@ -1,0 +1,23 @@
+{
+  "toolName": "audit_store_findings",
+  "parameters": {
+    "owner": "arduino",
+    "repo": "Arduino",
+    "findings": [
+      {
+        "sourceLocation": "app/src/main.cpp",
+        "line": 42,
+        "sourceType": "RemoteFlowSource",
+        "description": "User input from serial read flows to command execution"
+      },
+      {
+        "sourceLocation": "app/src/network.cpp",
+        "line": 108,
+        "sourceType": "RemoteFlowSource",
+        "description": "HTTP request parameter flows to file path"
+      }
+    ]
+  },
+  "success": true,
+  "description": "Successfully stored MRVA findings for arduino/Arduino repository"
+}

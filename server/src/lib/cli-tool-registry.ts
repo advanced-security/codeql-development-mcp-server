@@ -379,6 +379,48 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               
               logger.info(`Created external predicate CSV at ${csvPath} for functions: ${functionNames.join(', ')}`);
             }
+
+            // Handle external predicates for CallGraphFromTo queries (needs both source and target)
+            if (queryName === 'CallGraphFromTo') {
+              if (sourceFunction) {
+                const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim());
+                let tempDir: string;
+                let csvPath: string;
+                try {
+                  tempDir = createProjectTempDir('codeql-external-');
+                  tempDirsToCleanup.push(tempDir);
+                  csvPath = join(tempDir, 'sourceFunction.csv');
+                  writeFileSync(csvPath, functionNames.join('\n') + '\n', 'utf8');
+                } catch (err) {
+                  logger.error(`Failed to create external predicate CSV for CallGraphFromTo sourceFunction at path ${csvPath || '[unknown]'}: ${err instanceof Error ? err.message : String(err)}`);
+                  throw err;
+                }
+                const currentExternal = options.external || [];
+                const externalArray = Array.isArray(currentExternal) ? currentExternal : [currentExternal];
+                externalArray.push(`sourceFunction=${csvPath}`);
+                options.external = externalArray;
+                logger.info(`Created sourceFunction CSV at ${csvPath} for CallGraphFromTo: ${functionNames.join(', ')}`);
+              }
+              if (targetFunction) {
+                const functionNames = (targetFunction as string).split(',').map((f: string) => f.trim());
+                let tempDir: string;
+                let csvPath: string;
+                try {
+                  tempDir = createProjectTempDir('codeql-external-');
+                  tempDirsToCleanup.push(tempDir);
+                  csvPath = join(tempDir, 'targetFunction.csv');
+                  writeFileSync(csvPath, functionNames.join('\n') + '\n', 'utf8');
+                } catch (err) {
+                  logger.error(`Failed to create external predicate CSV for CallGraphFromTo targetFunction at path ${csvPath || '[unknown]'}: ${err instanceof Error ? err.message : String(err)}`);
+                  throw err;
+                }
+                const currentExternal = options.external || [];
+                const externalArray = Array.isArray(currentExternal) ? currentExternal : [currentExternal];
+                externalArray.push(`targetFunction=${csvPath}`);
+                options.external = externalArray;
+                logger.info(`Created targetFunction CSV at ${csvPath} for CallGraphFromTo: ${functionNames.join(', ')}`);
+              }
+            }
             break;
           }
             
