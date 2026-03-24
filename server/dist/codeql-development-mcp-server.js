@@ -2242,8 +2242,8 @@ var require_resolve = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize) {
-      if (normalize !== false)
+    function getFullPath(resolver, id = "", normalize2) {
+      if (normalize2 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -2991,7 +2991,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve14.call(this, root, ref);
+      let _sch = resolve15.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -3018,7 +3018,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve14(root, ref) {
+    function resolve15(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3583,7 +3583,7 @@ var require_fast_uri = __commonJS({
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizeComponentEncoding, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
-    function normalize(uri, options) {
+    function normalize2(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
         serialize(parse4(uri, options), options);
@@ -3593,55 +3593,55 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve14(baseURI, relativeURI, options) {
+    function resolve15(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse4(baseURI, schemelessOptions), parse4(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative, options, skipNormalization) {
+    function resolveComponent(base, relative2, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse4(serialize(base, options), options);
-        relative = parse4(serialize(relative, options), options);
+        relative2 = parse4(serialize(relative2, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative.scheme) {
-        target.scheme = relative.scheme;
-        target.userinfo = relative.userinfo;
-        target.host = relative.host;
-        target.port = relative.port;
-        target.path = removeDotSegments(relative.path || "");
-        target.query = relative.query;
+      if (!options.tolerant && relative2.scheme) {
+        target.scheme = relative2.scheme;
+        target.userinfo = relative2.userinfo;
+        target.host = relative2.host;
+        target.port = relative2.port;
+        target.path = removeDotSegments(relative2.path || "");
+        target.query = relative2.query;
       } else {
-        if (relative.userinfo !== void 0 || relative.host !== void 0 || relative.port !== void 0) {
-          target.userinfo = relative.userinfo;
-          target.host = relative.host;
-          target.port = relative.port;
-          target.path = removeDotSegments(relative.path || "");
-          target.query = relative.query;
+        if (relative2.userinfo !== void 0 || relative2.host !== void 0 || relative2.port !== void 0) {
+          target.userinfo = relative2.userinfo;
+          target.host = relative2.host;
+          target.port = relative2.port;
+          target.path = removeDotSegments(relative2.path || "");
+          target.query = relative2.query;
         } else {
-          if (!relative.path) {
+          if (!relative2.path) {
             target.path = base.path;
-            if (relative.query !== void 0) {
-              target.query = relative.query;
+            if (relative2.query !== void 0) {
+              target.query = relative2.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative.path[0] === "/") {
-              target.path = removeDotSegments(relative.path);
+            if (relative2.path[0] === "/") {
+              target.path = removeDotSegments(relative2.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative.path;
+                target.path = "/" + relative2.path;
               } else if (!base.path) {
-                target.path = relative.path;
+                target.path = relative2.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative2.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative.query;
+            target.query = relative2.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -3649,7 +3649,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative.fragment;
+      target.fragment = relative2.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -3819,8 +3819,8 @@ var require_fast_uri = __commonJS({
     }
     var fastUri = {
       SCHEMES,
-      normalize,
-      resolve: resolve14,
+      normalize: normalize2,
+      resolve: resolve15,
       resolveComponent,
       equal,
       serialize,
@@ -8862,8 +8862,8 @@ var require_resolve2 = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize) {
-      if (normalize !== false)
+    function getFullPath(resolver, id = "", normalize2) {
+      if (normalize2 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -9611,7 +9611,7 @@ var require_compile2 = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve14.call(this, root, ref);
+      let _sch = resolve15.call(this, root, ref);
       if (_sch === void 0) {
         const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -9638,7 +9638,7 @@ var require_compile2 = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve14(root, ref) {
+    function resolve15(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -13270,7 +13270,7 @@ var require_src = __commonJS({
 // ../node_modules/depd/index.js
 var require_depd = __commonJS({
   "../node_modules/depd/index.js"(exports, module) {
-    var relative = __require("path").relative;
+    var relative2 = __require("path").relative;
     module.exports = depd;
     var basePath = process.cwd();
     function containsNamespace(str2, namespace) {
@@ -13462,7 +13462,7 @@ var require_depd = __commonJS({
       return formatted;
     }
     function formatLocation(callSite) {
-      return relative(basePath, callSite[0]) + ":" + callSite[1] + ":" + callSite[2];
+      return relative2(basePath, callSite[0]) + ":" + callSite[1] + ":" + callSite[2];
     }
     function getStack() {
       var limit = Error.stackTraceLimit;
@@ -17919,10 +17919,10 @@ var require_raw_body = __commonJS({
       if (done) {
         return readStream(stream, encoding, length, limit, wrap(done));
       }
-      return new Promise(function executor(resolve14, reject) {
+      return new Promise(function executor(resolve15, reject) {
         readStream(stream, encoding, length, limit, function onRead(err, buf) {
           if (err) return reject(err);
-          resolve14(buf);
+          resolve15(buf);
         });
       });
     }
@@ -27905,7 +27905,7 @@ var require_type_is = __commonJS({
     module.exports = typeofrequest;
     module.exports.is = typeis;
     module.exports.hasBody = hasbody;
-    module.exports.normalize = normalize;
+    module.exports.normalize = normalize2;
     module.exports.match = mimeMatch;
     function typeis(value, types_) {
       var i;
@@ -27925,7 +27925,7 @@ var require_type_is = __commonJS({
       }
       var type2;
       for (i = 0; i < types.length; i++) {
-        if (mimeMatch(normalize(type2 = types[i]), val)) {
+        if (mimeMatch(normalize2(type2 = types[i]), val)) {
           return type2[0] === "+" || type2.indexOf("*") !== -1 ? val : type2;
         }
       }
@@ -27940,7 +27940,7 @@ var require_type_is = __commonJS({
       var value = req.headers["content-type"];
       return typeis(value, types);
     }
-    function normalize(type2) {
+    function normalize2(type2) {
       if (typeof type2 !== "string") {
         return false;
       }
@@ -31258,7 +31258,7 @@ var require_view = __commonJS({
     var basename8 = path4.basename;
     var extname3 = path4.extname;
     var join19 = path4.join;
-    var resolve14 = path4.resolve;
+    var resolve15 = path4.resolve;
     module.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -31292,7 +31292,7 @@ var require_view = __commonJS({
       debug('lookup "%s"', name);
       for (var i = 0; i < roots.length && !path5; i++) {
         var root = roots[i];
-        var loc = resolve14(root, name);
+        var loc = resolve15(root, name);
         var dir = dirname8(loc);
         var file = basename8(loc);
         path5 = this.resolve(dir, file);
@@ -31317,7 +31317,7 @@ var require_view = __commonJS({
       });
       sync = false;
     };
-    View.prototype.resolve = function resolve15(dir, file) {
+    View.prototype.resolve = function resolve16(dir, file) {
       var ext = this.ext;
       var path5 = join19(dir, file);
       var stat = tryStat(path5);
@@ -33458,7 +33458,7 @@ var require_application = __commonJS({
     var compileETag = require_utils4().compileETag;
     var compileQueryParser = require_utils4().compileQueryParser;
     var compileTrust = require_utils4().compileTrust;
-    var resolve14 = __require("node:path").resolve;
+    var resolve15 = __require("node:path").resolve;
     var once = require_once();
     var Router = require_router();
     var slice = Array.prototype.slice;
@@ -33512,7 +33512,7 @@ var require_application = __commonJS({
       this.mountpath = "/";
       this.locals.settings = this.settings;
       this.set("view", View);
-      this.set("views", resolve14("views"));
+      this.set("views", resolve15("views"));
       this.set("jsonp callback name", "callback");
       if (env === "production") {
         this.enable("view cache");
@@ -34970,9 +34970,9 @@ var require_send = __commonJS({
     var util2 = __require("util");
     var extname3 = path4.extname;
     var join19 = path4.join;
-    var normalize = path4.normalize;
-    var resolve14 = path4.resolve;
-    var sep2 = path4.sep;
+    var normalize2 = path4.normalize;
+    var resolve15 = path4.resolve;
+    var sep3 = path4.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
@@ -35000,7 +35000,7 @@ var require_send = __commonJS({
       this._maxage = opts.maxAge || opts.maxage;
       this._maxage = typeof this._maxage === "string" ? ms(this._maxage) : Number(this._maxage);
       this._maxage = !isNaN(this._maxage) ? Math.min(Math.max(0, this._maxage), MAX_MAXAGE) : 0;
-      this._root = opts.root ? resolve14(opts.root) : null;
+      this._root = opts.root ? resolve15(opts.root) : null;
     }
     util2.inherits(SendStream, Stream);
     SendStream.prototype.error = function error2(status, err) {
@@ -35133,23 +35133,23 @@ var require_send = __commonJS({
       var parts;
       if (root !== null) {
         if (path5) {
-          path5 = normalize("." + sep2 + path5);
+          path5 = normalize2("." + sep3 + path5);
         }
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
           this.error(403);
           return res;
         }
-        parts = path5.split(sep2);
-        path5 = normalize(join19(root, path5));
+        parts = path5.split(sep3);
+        path5 = normalize2(join19(root, path5));
       } else {
         if (UP_PATH_REGEXP.test(path5)) {
           debug('malicious path "%s"', path5);
           this.error(403);
           return res;
         }
-        parts = normalize(path5).split(sep2);
-        path5 = resolve14(path5);
+        parts = normalize2(path5).split(sep3);
+        path5 = resolve15(path5);
       }
       if (containsDotFile(parts)) {
         debug('%s dotfile "%s"', this._dotfiles, path5);
@@ -35242,7 +35242,7 @@ var require_send = __commonJS({
       var self = this;
       debug('stat "%s"', path5);
       fs3.stat(path5, function onstat(err, stat) {
-        var pathEndsWithSep = path5[path5.length - 1] === sep2;
+        var pathEndsWithSep = path5[path5.length - 1] === sep3;
         if (err && err.code === "ENOENT" && !extname3(path5) && !pathEndsWithSep) {
           return next(err);
         }
@@ -35527,7 +35527,7 @@ var require_response = __commonJS({
     var cookie = require_cookie();
     var send = require_send();
     var extname3 = path4.extname;
-    var resolve14 = path4.resolve;
+    var resolve15 = path4.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = __require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -35733,7 +35733,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve14(path5) : path5;
+      var fullPath = !opts.root ? resolve15(path5) : path5;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type2) {
@@ -35982,7 +35982,7 @@ var require_serve_static = __commonJS({
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
     var parseUrl = require_parseurl();
-    var resolve14 = __require("path").resolve;
+    var resolve15 = __require("path").resolve;
     var send = require_send();
     var url = __require("url");
     module.exports = serveStatic;
@@ -36001,7 +36001,7 @@ var require_serve_static = __commonJS({
         throw new TypeError("option setHeaders must be function");
       }
       opts.maxage = opts.maxage || opts.maxAge || 0;
-      opts.root = resolve14(root);
+      opts.root = resolve15(root);
       var onDirectory = redirect ? createRedirectDirectoryListener() : createNotFoundDirectoryListener();
       return function serveStatic2(req, res, next) {
         if (req.method !== "GET" && req.method !== "HEAD") {
@@ -36695,8 +36695,8 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative = path4.relative(process.cwd(), filePath);
-            shortPaths.push(relative);
+            const relative2 = path4.relative(process.cwd(), filePath);
+            shortPaths.push(relative2);
           } catch (e) {
             if (debug) {
               _debug(`Failed to load ${filePath} ${e.message}`);
@@ -36992,7 +36992,7 @@ var init_temp_dir = __esm({
 import { clearTimeout as clearTimeout2, setTimeout as setTimeout2 } from "timers";
 function waitForProcessReady(child, name, opts) {
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
-  return new Promise((resolve14, reject) => {
+  return new Promise((resolve15, reject) => {
     let settled = false;
     const cleanup = () => {
       settled = true;
@@ -37006,13 +37006,13 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.debug(`${name}: ready (stderr output detected)`);
       cleanup();
-      resolve14();
+      resolve15();
     };
     const onStdout = () => {
       if (settled) return;
       logger.debug(`${name}: ready (stdout output detected)`);
       cleanup();
-      resolve14();
+      resolve15();
     };
     const onError = (error2) => {
       if (settled) return;
@@ -37028,7 +37028,7 @@ function waitForProcessReady(child, name, opts) {
       if (settled) return;
       logger.warn(`${name}: readiness timeout (${timeoutMs} ms) \u2014 proceeding anyway`);
       cleanup();
-      resolve14();
+      resolve15();
     }, timeoutMs);
     child.stderr?.on("data", onStderr);
     child.stdout?.on("data", onStdout);
@@ -37196,7 +37196,7 @@ var init_language_server = __esm({
           method,
           params
         };
-        return new Promise((resolve14, reject) => {
+        return new Promise((resolve15, reject) => {
           const timer = setTimeout3(() => {
             if (this.pendingResponses.has(id)) {
               this.pendingResponses.delete(id);
@@ -37210,7 +37210,7 @@ var init_language_server = __esm({
             },
             resolve: (val) => {
               clearTimeout3(timer);
-              resolve14(val);
+              resolve15(val);
             }
           });
           this.sendMessage(message);
@@ -37299,7 +37299,7 @@ var init_language_server = __esm({
           throw new Error("Language server is not initialized");
         }
         const documentUri = uri || pathToFileURL(join2(getProjectTmpDir("lsp-eval"), "eval.ql")).href;
-        return new Promise((resolve14, reject) => {
+        return new Promise((resolve15, reject) => {
           let diagnosticsReceived = false;
           const timeout = setTimeout3(() => {
             if (!diagnosticsReceived) {
@@ -37315,7 +37315,7 @@ var init_language_server = __esm({
               this.sendNotification("textDocument/didClose", {
                 textDocument: { uri: documentUri }
               });
-              resolve14(params.diagnostics);
+              resolve15(params.diagnostics);
             }
           };
           this.on("diagnostics", diagnosticsHandler);
@@ -37452,22 +37452,22 @@ var init_language_server = __esm({
         } catch (error2) {
           logger.warn("Error during graceful shutdown:", error2);
         }
-        await new Promise((resolve14) => {
+        await new Promise((resolve15) => {
           const timer = setTimeout3(() => {
             if (this.server) {
               this.server.kill("SIGTERM");
             }
-            resolve14();
+            resolve15();
           }, 1e3);
           if (this.server) {
             this.server.once("exit", () => {
               clearTimeout3(timer);
               this.server = null;
-              resolve14();
+              resolve15();
             });
           } else {
             clearTimeout3(timer);
-            resolve14();
+            resolve15();
           }
         });
         this.isInitialized = false;
@@ -37557,8 +37557,8 @@ var init_query_server = __esm({
           method,
           params
         };
-        return new Promise((resolve14, reject) => {
-          this.pendingRequests.set(id, { reject, resolve: resolve14 });
+        return new Promise((resolve15, reject) => {
+          this.pendingRequests.set(id, { reject, resolve: resolve15 });
           try {
             this.sendRaw(message);
           } catch (error2) {
@@ -37572,7 +37572,7 @@ var init_query_server = __esm({
               reject(new Error(`Query server request timeout for method: ${method}`));
             }
           }, timeoutMs);
-          const originalResolve = resolve14;
+          const originalResolve = resolve15;
           const originalReject = reject;
           const wrapped = {
             reject: (err) => {
@@ -37600,23 +37600,23 @@ var init_query_server = __esm({
         } catch (error2) {
           logger.warn("Error during query server graceful shutdown:", error2);
         }
-        await new Promise((resolve14) => {
+        await new Promise((resolve15) => {
           const timer = setTimeout4(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve14();
+            resolve15();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout4(timer);
               this.process = null;
-              resolve14();
+              resolve15();
             });
           } else {
             clearTimeout4(timer);
-            resolve14();
+            resolve15();
           }
         });
       }
@@ -37777,9 +37777,9 @@ var init_cli_server = __esm({
        * @returns The stdout output from the command.
        */
       runCommand(args) {
-        return new Promise((resolve14, reject) => {
+        return new Promise((resolve15, reject) => {
           const execute = () => {
-            this.executeCommand({ args, reject, resolve: resolve14 });
+            this.executeCommand({ args, reject, resolve: resolve15 });
           };
           if (this.commandInProgress) {
             this.commandQueue.push(execute);
@@ -37802,23 +37802,23 @@ var init_cli_server = __esm({
         } catch (error2) {
           logger.warn("Error during CLI server shutdown request:", error2);
         }
-        await new Promise((resolve14) => {
+        await new Promise((resolve15) => {
           const timer = setTimeout5(() => {
             if (this.process) {
               this.process.kill("SIGTERM");
               this.process = null;
             }
-            resolve14();
+            resolve15();
           }, 2e3);
           if (this.process) {
             this.process.once("exit", () => {
               clearTimeout5(timer);
               this.process = null;
-              resolve14();
+              resolve15();
             });
           } else {
             clearTimeout5(timer);
-            resolve14();
+            resolve15();
           }
         });
         this.commandInProgress = false;
@@ -38063,11 +38063,11 @@ var init_server_manager = __esm({
       async warmUpLanguageServer() {
         try {
           const { packageRootDir: packageRootDir2 } = await Promise.resolve().then(() => (init_package_paths(), package_paths_exports));
-          const { resolve: resolve14 } = await import("path");
+          const { resolve: resolve15 } = await import("path");
           const config2 = {
             checkErrors: "ON_CHANGE",
             loglevel: "WARN",
-            searchPath: resolve14(packageRootDir2, "ql")
+            searchPath: resolve15(packageRootDir2, "ql")
           };
           logger.info("Warming up language server (background JVM start)...");
           await this.getLanguageServer(config2);
@@ -40549,8 +40549,8 @@ var require_adm_zip = __commonJS({
         return null;
       }
       function fixPath(zipPath) {
-        const { join: join19, normalize, sep: sep2 } = pth.posix;
-        return join19(".", normalize(sep2 + zipPath.split("\\").join(sep2) + sep2));
+        const { join: join19, normalize: normalize2, sep: sep3 } = pth.posix;
+        return join19(".", normalize2(sep3 + zipPath.split("\\").join(sep3) + sep3));
       }
       function filenameFilter(filterfn) {
         if (filterfn instanceof RegExp) {
@@ -40945,10 +40945,10 @@ var require_adm_zip = __commonJS({
          * @param {function|string} [props.namefix] - optional function to help fix filename
          */
         addLocalFolderPromise: function(localPath2, props) {
-          return new Promise((resolve14, reject) => {
+          return new Promise((resolve15, reject) => {
             this.addLocalFolderAsync2(Object.assign({ localPath: localPath2 }, props), (err, done) => {
               if (err) reject(err);
-              if (done) resolve14(this);
+              if (done) resolve15(this);
             });
           });
         },
@@ -41135,12 +41135,12 @@ var require_adm_zip = __commonJS({
           keepOriginalPermission = get_Bool(false, keepOriginalPermission);
           overwrite = get_Bool(false, overwrite);
           if (!callback) {
-            return new Promise((resolve14, reject) => {
+            return new Promise((resolve15, reject) => {
               this.extractAllToAsync(targetPath, overwrite, keepOriginalPermission, function(err) {
                 if (err) {
                   reject(err);
                 } else {
-                  resolve14(this);
+                  resolve15(this);
                 }
               });
             });
@@ -41238,11 +41238,11 @@ var require_adm_zip = __commonJS({
                  */
         writeZipPromise: function(targetFileName, props) {
           const { overwrite, perm } = Object.assign({ overwrite: true }, props);
-          return new Promise((resolve14, reject) => {
+          return new Promise((resolve15, reject) => {
             if (!targetFileName && opts.filename) targetFileName = opts.filename;
             if (!targetFileName) reject("ADM-ZIP: ZIP File Name Missing");
             this.toBufferPromise().then((zipData) => {
-              const ret = (done) => done ? resolve14(done) : reject("ADM-ZIP: Wasn't able to write zip file");
+              const ret = (done) => done ? resolve15(done) : reject("ADM-ZIP: Wasn't able to write zip file");
               filetools.writeFileToAsync(targetFileName, zipData, overwrite, perm, ret);
             }, reject);
           });
@@ -41251,8 +41251,8 @@ var require_adm_zip = __commonJS({
          * @returns {Promise<Buffer>} A promise to the Buffer.
          */
         toBufferPromise: function() {
-          return new Promise((resolve14, reject) => {
-            _zip.toAsyncBuffer(resolve14, reject);
+          return new Promise((resolve15, reject) => {
+            _zip.toAsyncBuffer(resolve15, reject);
           });
         },
         /**
@@ -53350,7 +53350,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve14) => setTimeout(resolve14, pollInterval));
+        await new Promise((resolve15) => setTimeout(resolve15, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -53367,7 +53367,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve14, reject) => {
+    return new Promise((resolve15, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -53445,7 +53445,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve14(parseResult.data);
+            resolve15(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -53706,12 +53706,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve14, reject) => {
+    return new Promise((resolve15, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve14, interval);
+      const timeoutId = setTimeout(resolve15, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -54811,7 +54811,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve14) => setTimeout(resolve14, pollInterval));
+      await new Promise((resolve15) => setTimeout(resolve15, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -55454,12 +55454,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve14) => {
+    return new Promise((resolve15) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve14();
+        resolve15();
       } else {
-        this._stdout.once("drain", resolve14);
+        this._stdout.once("drain", resolve15);
       }
     });
   }
@@ -55892,7 +55892,7 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
         });
         if (!chunk) {
           if (i === 1) {
-            await new Promise((resolve14) => setTimeout(resolve14));
+            await new Promise((resolve15) => setTimeout(resolve15));
             maxReadCount = 3;
             continue;
           }
@@ -56388,9 +56388,9 @@ data:
       const initRequest = messages.find((m) => isInitializeRequest(m));
       const clientProtocolVersion = initRequest ? initRequest.params.protocolVersion : req.headers.get("mcp-protocol-version") ?? DEFAULT_NEGOTIATED_PROTOCOL_VERSION;
       if (this._enableJsonResponse) {
-        return new Promise((resolve14) => {
+        return new Promise((resolve15) => {
           this._streamMapping.set(streamId, {
-            resolveJson: resolve14,
+            resolveJson: resolve15,
             cleanup: () => {
               this._streamMapping.delete(streamId);
             }
@@ -56725,7 +56725,7 @@ var import_express = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 import { realpathSync as realpathSync2 } from "fs";
-import { resolve as resolve13 } from "path";
+import { resolve as resolve14 } from "path";
 import { pathToFileURL as pathToFileURL5 } from "url";
 
 // src/lib/cli-tool-registry.ts
@@ -64378,7 +64378,9 @@ function registerLanguageResources(server) {
 }
 
 // src/prompts/workflow-prompts.ts
-import { basename as basename7 } from "path";
+import { access as access2 } from "fs/promises";
+import { basename as basename7, isAbsolute as isAbsolute7, normalize, relative, resolve as resolve13, sep as sep2 } from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/prompts/check-for-duplicated-code.prompt.md
 var check_for_duplicated_code_prompt_default = '---\nagent: agent\n---\n\n# Check for Duplicated Code\n\nUse the MCP server tools to identify classes, modules, and predicates defined in a\n`.ql` or `.qll` file and check for possible "duplicated code," where duplicated code\nis defined to be:\n\n- Reimplementing functionality that already exists in the standard library, or shared project `.qll` files, and\n- The local definition is identical, or semantically equivalent, or superior to the library definition, or\n- The local definition could be simplified by reusing the existing definition (e.g. a base class already exists that captures some of the shared logic)\n\nHere are some examples:\n\n```ql\nimport cpp\n\n// Duplicated: `StandardNamespace` already exists in the standard library and is identical\nclass NamespaceStd extends Namespace {\n  NamespaceStd() { this.getName() = "std" }\n}\n\n// Duplicated: class should extend `Operator`, not `Function`\nclass ThrowingOperator extends Function {\n  ThrowingOperator() {\n    // Duplicated: this check is implied by using base class `Operator`\n    this.getName().matches("%operator%") and\n    and exists(ThrowExpr te |\n      // Duplicated: this is equivalent to `te.getEnclosingFunction() = this`\n      te.getParent*() = this.getAChild()\n    )\n  }\n\n  // Duplicated: member predicate `getDeclaringType()` already does this.\n  Class getDefiningClass() { ... }\n}\n\n// Duplicated: `ControlFlowNode.getASuccessor()` already exists in `cpp` and is superior\npredicate getASuccessor(Stmt a, Stmt b) {\n  exists(Block b, int i | a = b.getChild(i) and b = b.getChild(i + 1))\n}\n\n// Duplicated: prefer to import `semmle.code.cpp.controlflow.Dominance`, defined in dependency pack `cpp-all`\npredicate dominates(Block a, Block b) { ... }\n```\n\nDuplicate code removal isn\'t done arbitrarily, but for several key reasons:\n\n- **Maintainability**: Duplicated code must be maintained separately, may diverge and have different bugs\n- **Simplicity**: Relying on existing definitions reduces the amount of code to read and understand\n- **Readability**: Existing definitions map wrap complex ideas into readable names\n- **Consistency**: A single source of truth makes for a more consistent user experience across queries\n- **Completeness/Correctness**: Recreating an already-existing definition can miss edge cases, resulting in false positives or false negatives\n\n## Use This Prompt When\n\n- A query file defines a class or predicate whose name sounds generic (e.g.\n  `StandardNamespace`, `Callable`, `SecurityFeature`)\n- Refactoring a query that was written before a relevant library predicate existed\n- Reviewing a shared `.qll` file to check whether its helpers have been upstreamed\n  into the standard library in a newer CodeQL version\n- Performing a code-quality audit across a suite of custom queries\n\n## Prerequisites\n\n1. The file path of the `.ql` or `.qll` file to audit for code duplication\n2. Understand which packs are imported by `qlpack.yml`\n3. Understand where the relevant language library packs are located (e.g. `~/.codeql`)\n4. Understand where project-specific library packs are located (e.g. `$LANGUAGE/lib` or `$LANGUAGE/common`)\n5. Understand where pack-specific shared `.qll` files are located (e.g. `$PACKROOT/common/*.qll`)\n\n## Overview of the Approach\n\nThe core idea is to enumerate every top-level name defined in the file under review.\nThen, find candidate `.qll` files, based on file name and path, that are available to\nthat `.ql` file in review. Then, enumerate the top-level names in each candidate\n`.qll` file, to find potential duplicates, dive further if necessary, and then report\nthe findings as code improvement recommendations to the user.\n\n1. **Read the file** to see its imports and top-level structure\n2. **Enumerate top-level definitions** with `codeql_lsp_document_symbols`\n3. **Find available .qll files** in the `.ql` file\'s pack, and its dependencies, including the standard library\n4. **Identify promising .qll file candidates** based on their file name and path\n5. **Enumerate top-level definitions in candidate `.qll` files** with `codeql_lsp_document_symbols`\n6. **Detect overlap, comparing definitions if unclear** (e.g. by using `find_predicate_position` and `find_class_position` tools)\n7. **Report findings** as a set of recommendations to the user about which definitions could be improved, by reusing which existing definitions\n\n## Step 1: Read the File and Note Its Imports\n\n```text\nTool: read_file\nParameters:\n  file_path: /path/to/query.ql\n  start_line: 1\n  end_line: 60   # enough to see all imports\n```\n\nRecord every `import` statement. These are the namespaces the standard library\nexposes; duplication is only meaningful for libraries that are already imported (or\neasily importable).\n\n## Step 2: Enumerate Top-Level Definitions\n\nUse `codeql_lsp_document_symbols` to retrieve every class, predicate, and module\ndefined at the top level of the file in a single call:\n\n```text\nTool: codeql_lsp_document_symbols\nParameters:\n  file_path: /path/to/query.ql\n  names_only: true                    # provides significantly smaller response payload\n  workspace_uri: /path/to/pack-root   # directory containing codeql-pack.yml\n```\n\nThe response contains a `symbols` array. Each entry has:\n\n- `name` \u2014 the identifier as written in source\n- `kind` \u2014 numeric SymbolKind (5 = Class, 12 = Function/predicate, 2 = Module, etc.)\n- `range` \u2014 the full definition range (0-based lines)\n- `selectionRange` \u2014 the range of just the name token\n- `children` \u2014 nested members (for classes and modules)\n\nTop-level symbols are the root nodes of the array; `children` hold member\npredicates and fields.\n\n## Step 3. Read the filesystem to find candidate library `.qll` files\n\nRun the tool `codeql_resolve_library-path` with the given ql query file to find where\nthe available library sources live.\n\nFor each source root, run `find $ROOT -name "*.qll"` to find all `.qll` files\navailable in that pack. Do not preemptively filter this list of qll files. The names\nof the files may be broad or nondescriptive. Read all file names for each project to\nunderstand its structure and responsibilities before proceeding to step 3d.\n\nChoose promising candidate `.qll` files you found in the previous step. Pick\ncandidates that may potentially define behavior relevant to the current query and its\nenumerated definitions, based on the candidate filename, path, and priority.\n\nPrioritize as follows:\n\n- `.qll` files in the same directory as the query file have the absolute highest priority\n- `.qll` files in the same pack have the next extremely high priority\n- `.qll` files in project-specific library packs have the very high priority\n- `.qll` files in downloaded direct dependencies have standard priority\n- `.qll` files in transitive dependencies have the least priority.\n\n## Step 4: Identify candidate terms in the candidate library `.qll` files\n\nEnumerate the top-level definitions for each candidate `.qll` file using the tool\n`codeql_lsp_document_symbols` again. Some top levels may clearly match the name or\npurpose of a definition in the query file, while others may only appear as possibly\nrelated.\n\n```text\nTool: codeql_lsp_document_symbols\nParameters:\n  file_path: /path/to/library/file.qll\n  workspace_uri: /path/to/pack-root\n```\n\n## Step 5: Perform final overlap analysis\n\nFor each promising candidate, identify the predicate or class definitions that may overlap. One definition will be in the query file (`.ql`) and the other will be in the library file (`.qll`).\n\nUsing the tools `find_predicate_position` and `find_class_position`, you can retrieve the full definition of each predicate or class, and compare them to determine whether they are identical, equivalent, overlapping, or if one is a superior implementation that could be reused by the query file.\n\nDutifully analyze whether the shared library file definition would reduce code duplication in the categories identified before: maintenance, simplicity, readability, consistency, and completeness/correctness. Consider contextual factors such as comments explaining why the local definition differs from the library one, or whether the local definition is a thin wrapper around the library definition that adds value (e.g. by improving naming or adding extra checks).\n\nDo not go on a wild goose chase trying to find every possible overlap. Consider the likelihood of overlap based on the broadness of functionality, and the value that would be brought be reuse. Do not waste significant time on unimportant or unlikely overlaps.\n\n## Step 6: Report Findings\n\nFor each duplicate found, report:\n\n| Local name          | Local file    | import path                      | Notes      |\n| ------------------- | ------------- | -------------------------------- | ---------- |\n| `StandardNamespace` | `query.ql:42` | already imported in `import cpp` | Identical  |\n| `myHelper`          | `query.ql:80` | `import myproject.Helpers`       | Equivalent |\n| `myHelper`          | `query.ql:80` | `import myproject.Helpers`       | Equivalent |\n\nRecommend one of:\n\n- **Replace**: remove the local definition and use the standard definition directly instead\n- **Integrate**: refactor and simplify the local definition by making use of the standard definition\n- **Annotate**: add comments to the local definition to explain how it differs from the standard definition and why the duplication is necessary\n\nAdditionally, report if any issues came up in using the tools, or finding the qll files.\n\nFor each concept for which no duplicate was found, provide at most a **brief** description of what the concept is. Do not provide a long detailed explanation of a non-finding.\n\n# Conclusion\n\nDo **not** perform any updates to any code during this analysis.\n\nAs you work through completing this task, ask yourself:\n\n- Have I changed any code, even though that was not my task, or am I about to? Stop, do not change any code!\n- Did I sufficiently analyze the definitions such that I likely found most overlapping definitions?\n- Will my suggestions improve the maintainability, simplicity, readability, consistency, or completeness/correctness of the codebase?\n- Did I report my findings clearly?\n- Did I use the suggested LLM tools to their fullest extent?\n- Did I follow the steps in the recommended order, and not skip any steps?\n- Did I report any issues I had in finding the relevant `.qll` files, or using the tools to analyze definitions?\n';
@@ -64453,6 +64455,7 @@ function processPromptTemplate(template, variables) {
 }
 
 // src/prompts/workflow-prompts.ts
+init_package_paths();
 init_logger();
 var SUPPORTED_LANGUAGES = [
   "actions",
@@ -64465,6 +64468,82 @@ var SUPPORTED_LANGUAGES = [
   "ruby",
   "swift"
 ];
+function markdownInlineCode(value) {
+  const normalized = value.replace(/\r\n|\r|\n/g, " ");
+  let maxRun = 0;
+  let currentRun = 0;
+  for (const ch of normalized) {
+    if (ch === "`") {
+      currentRun += 1;
+      if (currentRun > maxRun) {
+        maxRun = currentRun;
+      }
+    } else {
+      currentRun = 0;
+    }
+  }
+  const fence = "`".repeat(maxRun + 1);
+  return `${fence}${normalized}${fence}`;
+}
+function blockedPathError(result, paramName) {
+  const message = result.warning ?? `The provided ${paramName} could not be resolved safely and cannot be used.`;
+  return {
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `${message}
+
+The workflow cannot proceed because the ${paramName} is not allowed.`
+        }
+      }
+    ]
+  };
+}
+async function resolvePromptFilePath(filePath, workspaceRoot) {
+  if (!filePath || filePath.trim() === "") {
+    return {
+      resolvedPath: filePath ?? "",
+      warning: "\u26A0 **File path is empty.** Please provide a valid file path."
+    };
+  }
+  let effectivePath = filePath;
+  if (/^file:\/\//i.test(filePath.trim())) {
+    try {
+      effectivePath = fileURLToPath3(filePath.trim());
+    } catch {
+      return {
+        resolvedPath: "",
+        blocked: true,
+        warning: `\u26A0 **File path** \`${filePath}\` **is not a valid file URI.**`
+      };
+    }
+  }
+  const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
+  const normalizedPath = normalize(effectivePath);
+  const inputWasAbsolute = isAbsolute7(normalizedPath);
+  const absolutePath = inputWasAbsolute ? normalizedPath : resolve13(effectiveRoot, normalizedPath);
+  if (!inputWasAbsolute) {
+    const rel = relative(effectiveRoot, absolutePath);
+    if (rel === ".." || rel.startsWith(`..${sep2}`) || isAbsolute7(rel)) {
+      return {
+        blocked: true,
+        resolvedPath: "",
+        warning: "\u26A0 **File path resolves outside the workspace root.** The path has been blocked for security."
+      };
+    }
+  }
+  try {
+    await access2(absolutePath);
+  } catch {
+    return {
+      resolvedPath: absolutePath,
+      warning: `\u26A0 **File path** ${markdownInlineCode(filePath)} **does not exist.**`
+    };
+  }
+  return { resolvedPath: absolutePath };
+}
 var testDrivenDevelopmentSchema = external_exports.object({
   language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
   queryName: external_exports.string().optional().describe("Name of the query to develop")
@@ -64483,23 +64562,23 @@ var workshopCreationWorkflowSchema = external_exports.object({
   numStages: external_exports.coerce.number().optional().describe("Number of incremental stages (default: 4-8)")
 });
 var qlTddBasicSchema = external_exports.object({
-  language: external_exports.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
   queryName: external_exports.string().optional().describe("Name of the query to develop")
 });
 var qlTddAdvancedSchema = external_exports.object({
   database: external_exports.string().optional().describe("Path to the CodeQL database for analysis"),
-  language: external_exports.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query (optional)"),
+  language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
   queryName: external_exports.string().optional().describe("Name of the query to develop")
 });
 var sarifRankSchema = external_exports.object({
   queryId: external_exports.string().optional().describe("CodeQL query/rule identifier"),
-  sarifPath: external_exports.string().optional().describe("Path to the SARIF file to analyze")
+  sarifPath: external_exports.string().describe("Path to the SARIF file to analyze")
 });
 var describeFalsePositivesSchema = external_exports.object({
-  queryPath: external_exports.string().optional().describe("Path to the CodeQL query file")
+  queryPath: external_exports.string().describe("Path to the CodeQL query file")
 });
 var explainCodeqlQuerySchema = external_exports.object({
-  databasePath: external_exports.string().optional().describe("Optional path to a real CodeQL database for profiling"),
+  databasePath: external_exports.string().optional().describe("Path to a CodeQL database for profiling"),
   language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language of the query"),
   queryPath: external_exports.string().describe("Path to the CodeQL query file (.ql or .qlref)")
 });
@@ -64519,10 +64598,91 @@ var findOverlappingQueriesSchema = external_exports.object({
   packRoot: external_exports.string().optional().describe("Directory containing codeql-pack.yml for the pack that will own the new query")
 });
 var qlLspIterativeDevelopmentSchema = external_exports.object({
-  language: external_exports.enum(SUPPORTED_LANGUAGES).optional().describe("Programming language for the query"),
-  queryPath: external_exports.string().optional().describe("Path to the query file being developed"),
+  language: external_exports.enum(SUPPORTED_LANGUAGES).describe("Programming language for the query"),
+  queryPath: external_exports.string().describe("Path to the query file being developed"),
   workspaceUri: external_exports.string().optional().describe("Workspace URI for LSP dependency resolution")
 });
+function toPermissiveShape(shape) {
+  const permissive = {};
+  for (const [key, zodType] of Object.entries(shape)) {
+    permissive[key] = widenZodType(zodType);
+  }
+  return permissive;
+}
+function widenZodType(zodType) {
+  if (zodType instanceof external_exports.ZodOptional) {
+    const inner = zodType.unwrap();
+    const widenedInner = widenZodType(inner);
+    if (widenedInner === inner) return zodType;
+    const result = widenedInner.optional();
+    const desc = zodType.description;
+    return desc ? result.describe(desc) : result;
+  }
+  if (zodType instanceof external_exports.ZodEnum) {
+    const desc = zodType.description;
+    const replacement = external_exports.string();
+    return desc ? replacement.describe(desc) : replacement;
+  }
+  return zodType;
+}
+function formatValidationError(promptName, error2) {
+  const lines = [
+    `\u26A0 **Invalid input for \`${promptName}\`**`,
+    ""
+  ];
+  for (const issue2 of error2.issues) {
+    const field = issue2.path.length > 0 ? issue2.path.join(".") : "input";
+    if (issue2.code === "invalid_enum_value" && "options" in issue2) {
+      const opts = issue2.options.join(", ");
+      lines.push(
+        `- **\`${field}\`**: received ${markdownInlineCode(String(issue2.received))} \u2014 must be one of: ${opts}`
+      );
+    } else if (issue2.code === "invalid_type") {
+      lines.push(
+        `- **\`${field}\`**: expected ${issue2.expected}, received ${issue2.received}`
+      );
+    } else {
+      lines.push(`- **\`${field}\`**: ${issue2.message}`);
+    }
+  }
+  lines.push(
+    "",
+    "Please correct the input and try again."
+  );
+  return lines.join("\n");
+}
+function createSafePromptHandler(promptName, strictSchema, handler) {
+  return async (rawArgs) => {
+    const parseResult = strictSchema.safeParse(rawArgs);
+    if (!parseResult.success) {
+      const errorText = formatValidationError(promptName, parseResult.error);
+      logger.warn(`Prompt ${promptName} validation failed: ${parseResult.error.message}`);
+      return {
+        messages: [{
+          role: "user",
+          content: { type: "text", text: errorText }
+        }]
+      };
+    }
+    try {
+      return await handler(parseResult.data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`Prompt ${promptName} handler error: ${msg}`);
+      return {
+        messages: [{
+          role: "user",
+          content: {
+            type: "text",
+            text: `\u26A0 **Error in \`${promptName}\`**: ${msg}
+
+Please check your inputs and try again.`
+          }
+        }]
+      };
+    }
+  };
+}
 var WORKFLOW_PROMPT_NAMES = [
   "check_for_duplicated_code",
   "document_codeql_query",
@@ -64542,299 +64702,374 @@ function registerWorkflowPrompts(server) {
   server.prompt(
     "test_driven_development",
     "Test-driven development workflow for CodeQL queries using MCP tools",
-    testDrivenDevelopmentSchema.shape,
-    async ({ language, queryName }) => {
-      const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
-      const content = processPromptTemplate(template, {
-        language,
-        queryName: queryName || "[QueryName]"
-      });
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `## Context
+    toPermissiveShape(testDrivenDevelopmentSchema.shape),
+    createSafePromptHandler(
+      "test_driven_development",
+      testDrivenDevelopmentSchema,
+      async ({ language, queryName }) => {
+        const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
+        const content = processPromptTemplate(template, {
+          language,
+          queryName: queryName || "[QueryName]"
+        });
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `## Context
 
 - **Language**: ${language}
 ${queryName ? `- **Query Name**: ${queryName}
 ` : ""}
 ${content}`
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "tools_query_workflow",
     "Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure",
-    toolsQueryWorkflowSchema.shape,
-    async ({
-      language,
-      database,
-      sourceFiles,
-      sourceFunction,
-      targetFunction
-    }) => {
-      const template = loadPromptTemplate("tools-query-workflow.prompt.md");
-      const content = processPromptTemplate(template, {
-        language,
-        database
-      });
-      const contextSection = buildToolsQueryContext(
-        language,
-        database,
-        sourceFiles,
-        sourceFunction,
-        targetFunction
-      );
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + content
+    toPermissiveShape(toolsQueryWorkflowSchema.shape),
+    createSafePromptHandler(
+      "tools_query_workflow",
+      toolsQueryWorkflowSchema,
+      async ({ language, database, sourceFiles, sourceFunction, targetFunction }) => {
+        const template = loadPromptTemplate("tools-query-workflow.prompt.md");
+        const warnings = [];
+        const dbResult = await resolvePromptFilePath(database);
+        if (dbResult.blocked) return blockedPathError(dbResult, "database path");
+        const resolvedDatabase = dbResult.resolvedPath;
+        if (dbResult.warning) warnings.push(dbResult.warning);
+        const content = processPromptTemplate(template, {
+          language,
+          database: resolvedDatabase
+        });
+        const contextSection = buildToolsQueryContext(
+          language,
+          resolvedDatabase,
+          sourceFiles,
+          sourceFunction,
+          targetFunction
+        );
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + content
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "workshop_creation_workflow",
     "Guide for creating CodeQL query development workshops from production-grade queries",
-    workshopCreationWorkflowSchema.shape,
-    async ({ queryPath, language, workshopName, numStages }) => {
-      const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
-      const derivedName = workshopName || basename7(queryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
-      const contextSection = buildWorkshopContext(
-        queryPath,
-        language,
-        derivedName,
-        numStages
-      );
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+    toPermissiveShape(workshopCreationWorkflowSchema.shape),
+    createSafePromptHandler(
+      "workshop_creation_workflow",
+      workshopCreationWorkflowSchema,
+      async ({ queryPath, language, workshopName, numStages }) => {
+        const template = loadPromptTemplate("workshop-creation-workflow.prompt.md");
+        const warnings = [];
+        const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+        const derivedName = workshopName || basename7(resolvedQueryPath).replace(/\.(ql|qlref)$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "codeql-workshop";
+        const contextSection = buildWorkshopContext(
+          resolvedQueryPath,
+          language,
+          derivedName,
+          numStages
+        );
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "ql_tdd_basic",
     "Test-driven CodeQL query development checklist - write tests first, implement query, iterate until tests pass",
-    qlTddBasicSchema.shape,
-    async ({ language, queryName }) => {
-      const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
-      let contextSection = "## Your Development Context\n\n";
-      if (language) {
+    toPermissiveShape(qlTddBasicSchema.shape),
+    createSafePromptHandler(
+      "ql_tdd_basic",
+      qlTddBasicSchema,
+      async ({ language, queryName }) => {
+        const template = loadPromptTemplate("ql-tdd-basic.prompt.md");
+        let contextSection = "## Your Development Context\n\n";
         contextSection += `- **Language**: ${language}
 `;
-      }
-      if (queryName) {
-        contextSection += `- **Query Name**: ${queryName}
+        if (queryName) {
+          contextSection += `- **Query Name**: ${queryName}
 `;
-      }
-      if (language || queryName) {
+        }
         contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "ql_tdd_advanced",
     "Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis",
-    qlTddAdvancedSchema.shape,
-    async ({ language, queryName, database }) => {
-      const template = loadPromptTemplate("ql-tdd-advanced.prompt.md");
-      let contextSection = "## Your Development Context\n\n";
-      if (language) {
+    toPermissiveShape(qlTddAdvancedSchema.shape),
+    createSafePromptHandler(
+      "ql_tdd_advanced",
+      qlTddAdvancedSchema,
+      async ({ language, queryName, database }) => {
+        const template = loadPromptTemplate("ql-tdd-advanced.prompt.md");
+        const warnings = [];
+        let resolvedDatabase = database;
+        if (database) {
+          const dbResult = await resolvePromptFilePath(database);
+          if (dbResult.blocked) return blockedPathError(dbResult, "database path");
+          resolvedDatabase = dbResult.resolvedPath;
+          if (dbResult.warning) warnings.push(dbResult.warning);
+        }
+        let contextSection = "## Your Development Context\n\n";
         contextSection += `- **Language**: ${language}
 `;
-      }
-      if (queryName) {
-        contextSection += `- **Query Name**: ${queryName}
+        if (queryName) {
+          contextSection += `- **Query Name**: ${queryName}
 `;
-      }
-      if (database) {
-        contextSection += `- **Database**: ${database}
+        }
+        if (resolvedDatabase) {
+          contextSection += `- **Database**: ${resolvedDatabase}
 `;
-      }
-      if (language || queryName || database) {
+        }
         contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "sarif_rank_false_positives",
     "Analyze SARIF results to identify likely false positives in CodeQL query results",
-    sarifRankSchema.shape,
-    async ({ queryId, sarifPath }) => {
-      const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
-      let contextSection = "## Analysis Context\n\n";
-      if (queryId) {
-        contextSection += `- **Query ID**: ${queryId}
+    toPermissiveShape(sarifRankSchema.shape),
+    createSafePromptHandler(
+      "sarif_rank_false_positives",
+      sarifRankSchema,
+      async ({ queryId, sarifPath }) => {
+        const template = loadPromptTemplate("sarif-rank-false-positives.prompt.md");
+        const warnings = [];
+        const spResult = await resolvePromptFilePath(sarifPath);
+        if (spResult.blocked) return blockedPathError(spResult, "SARIF path");
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
+        let contextSection = "## Analysis Context\n\n";
+        if (queryId) {
+          contextSection += `- **Query ID**: ${queryId}
 `;
-      }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}
+        }
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}
 `;
-      }
-      if (queryId || sarifPath) {
         contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "sarif_rank_true_positives",
     "Analyze SARIF results to identify likely true positives in CodeQL query results",
-    sarifRankSchema.shape,
-    async ({ queryId, sarifPath }) => {
-      const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
-      let contextSection = "## Analysis Context\n\n";
-      if (queryId) {
-        contextSection += `- **Query ID**: ${queryId}
+    toPermissiveShape(sarifRankSchema.shape),
+    createSafePromptHandler(
+      "sarif_rank_true_positives",
+      sarifRankSchema,
+      async ({ queryId, sarifPath }) => {
+        const template = loadPromptTemplate("sarif-rank-true-positives.prompt.md");
+        const warnings = [];
+        const spResult = await resolvePromptFilePath(sarifPath);
+        if (spResult.blocked) return blockedPathError(spResult, "SARIF path");
+        const resolvedSarifPath = spResult.resolvedPath;
+        if (spResult.warning) warnings.push(spResult.warning);
+        let contextSection = "## Analysis Context\n\n";
+        if (queryId) {
+          contextSection += `- **Query ID**: ${queryId}
 `;
-      }
-      if (sarifPath) {
-        contextSection += `- **SARIF File**: ${sarifPath}
+        }
+        contextSection += `- **SARIF File**: ${resolvedSarifPath}
 `;
-      }
-      if (queryId || sarifPath) {
         contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "run_query_and_summarize_false_positives",
     "Help a user figure out where their query may need improvement to have a lower false positive rate",
-    describeFalsePositivesSchema.shape,
-    async ({ queryPath }) => {
-      const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
-      let contextSection = "## Analysis Context\n\n";
-      if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}
+    toPermissiveShape(describeFalsePositivesSchema.shape),
+    createSafePromptHandler(
+      "run_query_and_summarize_false_positives",
+      describeFalsePositivesSchema,
+      async ({ queryPath }) => {
+        const template = loadPromptTemplate("run-query-and-summarize-false-positives.prompt.md");
+        const warnings = [];
+        const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+        const contextSection = `## Analysis Context
+
+- **Query Path**: ${resolvedQueryPath}
+
 `;
-      }
-      contextSection += "\n";
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "explain_codeql_query",
     "Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams",
-    explainCodeqlQuerySchema.shape,
-    async ({ queryPath, language, databasePath }) => {
-      const template = loadPromptTemplate("explain-codeql-query.prompt.md");
-      let contextSection = "## Query to Explain\n\n";
-      contextSection += `- **Query Path**: ${queryPath}
+    toPermissiveShape(explainCodeqlQuerySchema.shape),
+    createSafePromptHandler(
+      "explain_codeql_query",
+      explainCodeqlQuerySchema,
+      async ({ queryPath, language, databasePath }) => {
+        const template = loadPromptTemplate("explain-codeql-query.prompt.md");
+        const warnings = [];
+        const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+        let resolvedDatabasePath = databasePath;
+        if (databasePath) {
+          const dbResult = await resolvePromptFilePath(databasePath);
+          if (dbResult.blocked) return blockedPathError(dbResult, "database path");
+          resolvedDatabasePath = dbResult.resolvedPath;
+          if (dbResult.warning) warnings.push(dbResult.warning);
+        }
+        let contextSection = "## Query to Explain\n\n";
+        contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
-      contextSection += `- **Language**: ${language}
+        contextSection += `- **Language**: ${language}
 `;
-      if (databasePath) {
-        contextSection += `- **Database Path**: ${databasePath}
+        if (resolvedDatabasePath) {
+          contextSection += `- **Database Path**: ${resolvedDatabasePath}
 `;
-      }
-      contextSection += "\n";
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        }
+        contextSection += "\n";
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "document_codeql_query",
     "Create or update documentation for a CodeQL query - generates standardized markdown documentation as a sibling file to the query",
-    documentCodeqlQuerySchema.shape,
-    async ({ queryPath, language }) => {
-      const template = loadPromptTemplate("document-codeql-query.prompt.md");
-      const contextSection = `## Query to Document
+    toPermissiveShape(documentCodeqlQuerySchema.shape),
+    createSafePromptHandler(
+      "document_codeql_query",
+      documentCodeqlQuerySchema,
+      async ({ queryPath, language }) => {
+        const template = loadPromptTemplate("document-codeql-query.prompt.md");
+        const warnings = [];
+        const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+        const contextSection = `## Query to Document
 
-- **Query Path**: ${queryPath}
+- **Query Path**: ${resolvedQueryPath}
 - **Language**: ${language}
 
 `;
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   server.prompt(
     "check_for_duplicated_code",
@@ -64889,37 +65124,48 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
   server.prompt(
     "ql_lsp_iterative_development",
     "Iterative CodeQL query development using LSP tools for completion, navigation, and validation",
-    qlLspIterativeDevelopmentSchema.shape,
-    async ({ language, queryPath, workspaceUri }) => {
-      const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
-      let contextSection = "## Your Development Context\n\n";
-      if (language) {
+    toPermissiveShape(qlLspIterativeDevelopmentSchema.shape),
+    createSafePromptHandler(
+      "ql_lsp_iterative_development",
+      qlLspIterativeDevelopmentSchema,
+      async ({ language, queryPath, workspaceUri }) => {
+        const template = loadPromptTemplate("ql-lsp-iterative-development.prompt.md");
+        const warnings = [];
+        const qpResult = await resolvePromptFilePath(queryPath);
+        if (qpResult.blocked) return blockedPathError(qpResult, "query path");
+        const resolvedQueryPath = qpResult.resolvedPath;
+        if (qpResult.warning) warnings.push(qpResult.warning);
+        let resolvedWorkspaceUri = workspaceUri;
+        if (workspaceUri) {
+          const wsResult = await resolvePromptFilePath(workspaceUri);
+          if (wsResult.blocked) return blockedPathError(wsResult, "workspace URI");
+          resolvedWorkspaceUri = wsResult.resolvedPath;
+          if (wsResult.warning) warnings.push(wsResult.warning);
+        }
+        let contextSection = "## Your Development Context\n\n";
         contextSection += `- **Language**: ${language}
 `;
-      }
-      if (queryPath) {
-        contextSection += `- **Query Path**: ${queryPath}
+        contextSection += `- **Query Path**: ${resolvedQueryPath}
 `;
-      }
-      if (workspaceUri) {
-        contextSection += `- **Workspace URI**: ${workspaceUri}
+        if (resolvedWorkspaceUri) {
+          contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}
 `;
-      }
-      if (language || queryPath || workspaceUri) {
+        }
         contextSection += "\n";
-      }
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: contextSection + template
+        const warningSection = warnings.length > 0 ? warnings.join("\n") + "\n\n" : "";
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: warningSection + contextSection + template
+              }
             }
-          }
-        ]
-      };
-    }
+          ]
+        };
+      }
+    )
   );
   logger.info(`Registered ${WORKFLOW_PROMPT_NAMES.length} workflow prompts`);
 }
@@ -66378,7 +66624,7 @@ init_cli_executor();
 init_server_manager();
 init_package_paths();
 init_logger();
-import_dotenv.default.config({ path: resolve13(packageRootDir, ".env"), quiet: true });
+import_dotenv.default.config({ path: resolve14(packageRootDir, ".env"), quiet: true });
 var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.24.3";
 async function startServer(mode = "stdio") {
@@ -66434,10 +66680,10 @@ async function startServer(mode = "stdio") {
     });
     const host = process.env.HTTP_HOST || "localhost";
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
-    return new Promise((resolve14, reject) => {
+    return new Promise((resolve15, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve14();
+        resolve15();
       });
       httpServer.on("error", (error2) => {
         logger.error("HTTP server error:", error2);
@@ -66474,7 +66720,7 @@ async function main() {
     process.exit(1);
   }
 }
-var scriptPath = process.argv[1] ? realpathSync2(resolve13(process.argv[1])) : void 0;
+var scriptPath = process.argv[1] ? realpathSync2(resolve14(process.argv[1])) : void 0;
 if (scriptPath && import.meta.url === pathToFileURL5(scriptPath).href) {
   main();
 }

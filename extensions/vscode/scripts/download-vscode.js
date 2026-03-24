@@ -8,35 +8,62 @@
  *
  * Usage: node scripts/download-vscode.js [version]
  *
- * The version defaults to the minimum VS Code version from engines.vscode in
- * package.json (e.g. "^1.110.0" -> "1.110.0"). Pass "stable" or an explicit
- * version to override.
+ * The version defaults to 'stable' to match the .vscode-test.mjs configuration.
+ * Pass an explicit version (e.g. "1.110.0") to override.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 
-function getEnginesVscodeVersion() {
-  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
-  const range = pkg.engines?.vscode;
-  if (range) {
-    const match = range.match(/(\d+\.\d+\.\d+)/);
-    if (match) return match[1];
-  }
-  return 'stable';
-}
+const MAX_RETRIES = 3;
+const version = process.argv[2] || 'stable';
 
-const version = process.argv[2] || getEnginesVscodeVersion();
+// @vscode/test-electron can emit unhandled rejections from internal stream
+// errors (e.g. ECONNRESET). Suppress them here so the retry loop can handle
+// the failure via the caught exception from the await.
+let suppressedError = null;
+process.on('unhandledRejection', (reason) => {
+  suppressedError = reason;
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  console.error(`   (suppressed unhandled rejection: ${msg})`);
+});
+
+/**
+ * Remove partially-downloaded VS Code artifacts so the next attempt starts
+ * fresh instead of hitting a checksum mismatch on a truncated archive.
+ */
+function cleanPartialDownload() {
+  const cacheDir = join(fileURLToPath(new URL('..', import.meta.url)), '.vscode-test');
+  if (existsSync(cacheDir)) {
+    console.log('   Cleaning .vscode-test/ to remove partial downloads...');
+    rmSync(cacheDir, { recursive: true, force: true });
+  }
+}
 
 console.log(`Downloading VS Code (${version}) for integration tests...`);
 
-try {
-  const vscodeExecutablePath = await downloadAndUnzipVSCode(version);
-  console.log(`✅ VS Code downloaded to: ${vscodeExecutablePath}`);
-} catch (error) {
-  console.error(
-    '❌ Failed to download VS Code:',
-    error instanceof Error ? error.message : String(error),
-  );
-  process.exit(1);
+for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  suppressedError = null;
+  try {
+    const vscodeExecutablePath = await downloadAndUnzipVSCode({
+      version,
+      timeout: 120_000,
+    });
+    console.log(`✅ VS Code downloaded to: ${vscodeExecutablePath}`);
+    process.exit(0);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Attempt ${attempt}/${MAX_RETRIES} failed: ${message}`);
+    if (attempt < MAX_RETRIES) {
+      cleanPartialDownload();
+      const delayMs = attempt * 5_000;
+      console.log(`   Retrying in ${delayMs / 1_000}s...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    } else {
+      console.error('❌ All download attempts failed.');
+      process.exit(1);
+    }
+  }
 }

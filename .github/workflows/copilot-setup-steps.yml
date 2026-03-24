@@ -77,6 +77,12 @@ jobs:
           npm run bundle
           npm run bundle:server
 
+      - name: Copilot Setup - Cache VS Code for integration tests
+        uses: actions/cache@v5
+        with:
+          key: vscode-test-${{ runner.os }}-stable
+          path: extensions/vscode/.vscode-test
+
       - name: Copilot Setup - Download VS Code for integration tests
         working-directory: extensions/vscode
         run: npm run download:vscode

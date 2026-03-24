@@ -1,0 +1,8 @@
+{
+  "sessions": [],
+  "parameters": {
+    "databasePath": "nonexistent/path/to/database",
+    "queryPath": "nonexistent/path/to/query.ql",
+    "language": "javascript"
+  }
+}

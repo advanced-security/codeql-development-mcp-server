@@ -226,10 +226,45 @@ export class IntegrationTestRunner {
 
       this.logger.log(`Completed ${totalIntegrationTests} tool-specific integration tests`);
 
-      // Also run workflow integration tests
-      await this.runWorkflowIntegrationTests(baseDir);
+      // Track execution counts and pass/fail separately.
+      // *Count* tracks whether the suite discovered & ran tests.
+      // *Succeeded* tracks whether those tests passed.
+      const toolTestsExecuted = totalIntegrationTests;
+      const toolTestsPassed = totalIntegrationTests > 0;
 
-      return totalIntegrationTests > 0;
+      // Also run workflow integration tests
+      const { executed: workflowTestsExecuted, passed: workflowTestsPassed } =
+        await this.runWorkflowIntegrationTests(baseDir);
+      if (!workflowTestsPassed) {
+        this.logger.logTest(
+          "Workflow integration tests",
+          false,
+          new Error("Workflow integration tests did not complete successfully")
+        );
+      }
+
+      // Also run prompt integration tests
+      const { executed: promptTestsExecuted, passed: promptTestsPassed } =
+        await this.runPromptIntegrationTests(baseDir);
+      if (!promptTestsPassed) {
+        this.logger.logTest(
+          "Prompt integration tests",
+          false,
+          new Error("Prompt integration tests did not complete successfully")
+        );
+      }
+
+      const totalTestsExecuted = toolTestsExecuted + workflowTestsExecuted + promptTestsExecuted;
+
+      if (totalTestsExecuted === 0) {
+        this.logger.log(
+          "No integration tests were executed across tool, workflow, or prompt suites.",
+          "ERROR"
+        );
+        return false;
+      }
+
+      return toolTestsPassed && workflowTestsPassed && promptTestsPassed;
     } catch (error) {
       this.logger.log(`Error running integration tests: ${error.message}`, "ERROR");
       return false;
@@ -1096,6 +1131,161 @@ export class IntegrationTestRunner {
   }
 
   /**
+   * Run prompt-level integration tests.
+   * Discovers test fixtures under `integration-tests/primitives/prompts/`
+   * and calls `client.getPrompt()` for each, validating the response.
+   */
+  async runPromptIntegrationTests(baseDir) {
+    try {
+      this.logger.log("Discovering and running prompt integration tests...");
+
+      const promptTestsDir = path.join(baseDir, "..", "integration-tests", "primitives", "prompts");
+
+      if (!fs.existsSync(promptTestsDir)) {
+        this.logger.log("No prompt integration tests directory found", "INFO");
+        return {
+          executed: 0,
+          passed: true
+        };
+      }
+
+      // Get list of available prompts from the server
+      const response = await this.client.listPrompts();
+      const prompts = response.prompts || [];
+      const promptNames = prompts.map((p) => p.name);
+
+      this.logger.log(`Found ${promptNames.length} prompts available on server`);
+
+      // Discover prompt test directories (each subdirectory = one prompt name)
+      const promptDirs = fs
+        .readdirSync(promptTestsDir, { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name);
+
+      this.logger.log(
+        `Found ${promptDirs.length} prompt test directories: ${promptDirs.join(", ")}`
+      );
+
+      let totalPromptTests = 0;
+      let allPromptTestsPassed = true;
+      for (const promptName of promptDirs) {
+        if (!promptNames.includes(promptName)) {
+          this.logger.log(`Skipping ${promptName} - prompt not found on server`, "WARN");
+          continue;
+        }
+
+        const promptDir = path.join(promptTestsDir, promptName);
+        const testCases = fs
+          .readdirSync(promptDir, { withFileTypes: true })
+          .filter((dirent) => dirent.isDirectory())
+          .map((dirent) => dirent.name);
+
+        this.logger.log(`Running ${testCases.length} test case(s) for prompt ${promptName}`);
+
+        for (const testCase of testCases) {
+          const passed = await this.runSinglePromptIntegrationTest(promptName, testCase, promptDir);
+          totalPromptTests++;
+          if (!passed) {
+            allPromptTestsPassed = false;
+          }
+        }
+      }
+
+      this.logger.log(`Total prompt integration tests executed: ${totalPromptTests}`);
+      return {
+        executed: totalPromptTests,
+        passed: totalPromptTests > 0 ? allPromptTestsPassed : true
+      };
+    } catch (error) {
+      this.logger.log(`Error running prompt integration tests: ${error.message}`, "ERROR");
+      return { executed: 0, passed: false };
+    }
+  }
+
+  /**
+   * Run a single prompt integration test.
+   *
+   * Reads parameters from `before/monitoring-state.json`, calls `getPrompt()`,
+   * and validates that the response contains messages (no protocol-level error).
+   */
+  async runSinglePromptIntegrationTest(promptName, testCase, promptDir) {
+    const testName = `prompt:${promptName}/${testCase}`;
+    this.logger.log(`\nRunning prompt integration test: ${testName}`);
+
+    try {
+      const testCaseDir = path.join(promptDir, testCase);
+      const beforeDir = path.join(testCaseDir, "before");
+      const afterDir = path.join(testCaseDir, "after");
+
+      // Validate test structure
+      if (!fs.existsSync(beforeDir)) {
+        this.logger.logTest(testName, false, "Missing before directory");
+        return false;
+      }
+
+      if (!fs.existsSync(afterDir)) {
+        this.logger.logTest(testName, false, "Missing after directory");
+        return false;
+      }
+
+      // Load parameters from before/monitoring-state.json
+      const monitoringStatePath = path.join(beforeDir, "monitoring-state.json");
+      if (!fs.existsSync(monitoringStatePath)) {
+        this.logger.logTest(testName, false, "Missing before/monitoring-state.json");
+        return false;
+      }
+
+      const monitoringState = JSON.parse(fs.readFileSync(monitoringStatePath, "utf8"));
+      const params = monitoringState.parameters || {};
+      resolvePathPlaceholders(params, this.logger);
+
+      // Call the prompt
+      this.logger.log(`Calling prompt ${promptName} with params: ${JSON.stringify(params)}`);
+
+      const result = await this.client.getPrompt({
+        name: promptName,
+        arguments: params
+      });
+
+      // Validate that the response contains messages (no raw protocol error)
+      const hasMessages = result.messages && result.messages.length > 0;
+      if (!hasMessages) {
+        this.logger.logTest(testName, false, "Expected messages in prompt response");
+        return false;
+      }
+
+      // If the after/monitoring-state.json has expected content checks, validate
+      const afterMonitoringPath = path.join(afterDir, "monitoring-state.json");
+      if (fs.existsSync(afterMonitoringPath)) {
+        const afterState = JSON.parse(fs.readFileSync(afterMonitoringPath, "utf8"));
+
+        // Support both top-level expectedContentPatterns and sessions[].expectedContentPatterns
+        const sessions = afterState.sessions || [];
+        const topLevelPatterns = afterState.expectedContentPatterns || [];
+        const sessionPatterns =
+          sessions.length > 0 ? sessions[0].expectedContentPatterns || [] : [];
+        const expectedPatterns = topLevelPatterns.length > 0 ? topLevelPatterns : sessionPatterns;
+
+        if (expectedPatterns.length > 0) {
+          const text = result.messages[0]?.content?.text || "";
+          for (const pattern of expectedPatterns) {
+            if (!text.includes(pattern)) {
+              this.logger.logTest(testName, false, `Expected response to contain "${pattern}"`);
+              return false;
+            }
+          }
+        }
+      }
+
+      this.logger.logTest(testName, true, `Prompt returned ${result.messages.length} message(s)`);
+      return true;
+    } catch (error) {
+      this.logger.logTest(testName, false, `Error: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * Run workflow-level integration tests
    * These tests validate complete workflows rather than individual tools
    */
@@ -1107,7 +1297,7 @@ export class IntegrationTestRunner {
 
       if (!fs.existsSync(workflowTestsDir)) {
         this.logger.log("No workflow integration tests directory found", "INFO");
-        return true;
+        return { executed: 0, passed: true };
       }
 
       // Discover workflow test directories
@@ -1118,7 +1308,7 @@ export class IntegrationTestRunner {
 
       if (workflowDirs.length === 0) {
         this.logger.log("No workflow test directories found", "INFO");
-        return true;
+        return { executed: 0, passed: true };
       }
 
       this.logger.log(`Found ${workflowDirs.length} workflow test(s): ${workflowDirs.join(", ")}`);
@@ -1131,10 +1321,10 @@ export class IntegrationTestRunner {
       }
 
       this.logger.log(`Total workflow integration tests executed: ${totalWorkflowTests}`);
-      return true;
+      return { executed: totalWorkflowTests, passed: true };
     } catch (error) {
       this.logger.log(`Error running workflow integration tests: ${error.message}`, "ERROR");
-      return false;
+      return { executed: 0, passed: false };
     }
   }
 

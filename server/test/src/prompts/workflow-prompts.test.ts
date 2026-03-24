@@ -12,27 +12,36 @@
  * 7. All SUPPORTED_LANGUAGES are accepted by every schema with a language field.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   buildToolsQueryContext,
   buildWorkshopContext,
   checkForDuplicatedCodeSchema,
+  createSafePromptHandler,
   describeFalsePositivesSchema,
   documentCodeqlQuerySchema,
   explainCodeqlQuerySchema,
   findOverlappingQueriesSchema,
+  formatValidationError,
+  markdownInlineCode,
   qlLspIterativeDevelopmentSchema,
   qlTddAdvancedSchema,
   qlTddBasicSchema,
   registerWorkflowPrompts,
+  resolvePromptFilePath,
   sarifRankSchema,
   SUPPORTED_LANGUAGES,
   testDrivenDevelopmentSchema,
+  toPermissiveShape,
   toolsQueryWorkflowSchema,
   WORKFLOW_PROMPT_NAMES,
   workshopCreationWorkflowSchema,
 } from '../../../src/prompts/workflow-prompts';
+import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
 // Mock prompt-loader so tests never read .prompt.md files from disk.
@@ -373,26 +382,30 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = qlTddBasicSchema.safeParse({});
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept language only', () => {
+    it('should accept required language', () => {
       const result = qlTddBasicSchema.safeParse({ language: 'java' });
       expect(result.success).toBe(true);
     });
 
-    it('should accept queryName only', () => {
-      const result = qlTddBasicSchema.safeParse({ queryName: 'TestQ' });
+    it('should reject empty object (language is required)', () => {
+      const result = qlTddBasicSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept language with optional queryName', () => {
+      const result = qlTddBasicSchema.safeParse({ language: 'java', queryName: 'TestQ' });
       expect(result.success).toBe(true);
     });
 
-    it('should leave both fields as undefined when omitted', () => {
-      const result = qlTddBasicSchema.safeParse({});
+    it('should reject queryName without language', () => {
+      const result = qlTddBasicSchema.safeParse({ queryName: 'TestQ' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should leave queryName as undefined when omitted', () => {
+      const result = qlTddBasicSchema.safeParse({ language: 'java' });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.language).toBeUndefined();
         expect(result.data.queryName).toBeUndefined();
       }
     });
@@ -418,9 +431,14 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = qlTddAdvancedSchema.safeParse({});
+    it('should accept required language', () => {
+      const result = qlTddAdvancedSchema.safeParse({ language: 'swift' });
       expect(result.success).toBe(true);
+    });
+
+    it('should reject empty object (language is required)', () => {
+      const result = qlTddAdvancedSchema.safeParse({});
+      expect(result.success).toBe(false);
     });
 
     it('should accept all parameters', () => {
@@ -435,12 +453,11 @@ describe('Workflow Prompts', () => {
       }
     });
 
-    it('should leave all fields as undefined when omitted', () => {
-      const result = qlTddAdvancedSchema.safeParse({});
+    it('should leave optional fields as undefined when omitted', () => {
+      const result = qlTddAdvancedSchema.safeParse({ language: 'swift' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.database).toBeUndefined();
-        expect(result.data.language).toBeUndefined();
         expect(result.data.queryName).toBeUndefined();
       }
     });
@@ -466,22 +483,19 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = sarifRankSchema.safeParse({});
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept queryId only', () => {
-      const result = sarifRankSchema.safeParse({ queryId: 'js/xss' });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.queryId).toBe('js/xss');
-      }
-    });
-
-    it('should accept sarifPath only', () => {
+    it('should accept required sarifPath', () => {
       const result = sarifRankSchema.safeParse({ sarifPath: '/results.sarif' });
       expect(result.success).toBe(true);
+    });
+
+    it('should reject empty object (sarifPath is required)', () => {
+      const result = sarifRankSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject queryId alone (sarifPath is required)', () => {
+      const result = sarifRankSchema.safeParse({ queryId: 'js/xss' });
+      expect(result.success).toBe(false);
     });
 
     it('should accept both parameters', () => {
@@ -492,12 +506,11 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should leave both fields as undefined when omitted', () => {
-      const result = sarifRankSchema.safeParse({});
+    it('should leave queryId as undefined when omitted', () => {
+      const result = sarifRankSchema.safeParse({ sarifPath: '/path.sarif' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.queryId).toBeUndefined();
-        expect(result.data.sarifPath).toBeUndefined();
       }
     });
   });
@@ -544,12 +557,16 @@ describe('Workflow Prompts', () => {
     });
 
     it('should reject missing queryPath', () => {
-      const result = explainCodeqlQuerySchema.safeParse({ language: 'java' });
+      const result = explainCodeqlQuerySchema.safeParse({
+        language: 'java',
+      });
       expect(result.success).toBe(false);
     });
 
     it('should reject missing language', () => {
-      const result = explainCodeqlQuerySchema.safeParse({ queryPath: '/q.ql' });
+      const result = explainCodeqlQuerySchema.safeParse({
+        queryPath: '/q.ql',
+      });
       expect(result.success).toBe(false);
     });
 
@@ -577,12 +594,7 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = describeFalsePositivesSchema.safeParse({});
-      expect(result.success).toBe(true);
-    });
-
-    it('should accept queryPath', () => {
+    it('should accept required queryPath', () => {
       const result = describeFalsePositivesSchema.safeParse({
         queryPath: '/path/to/query.ql',
       });
@@ -592,12 +604,9 @@ describe('Workflow Prompts', () => {
       }
     });
 
-    it('should leave queryPath as undefined when omitted', () => {
+    it('should reject empty object (queryPath is required)', () => {
       const result = describeFalsePositivesSchema.safeParse({});
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.queryPath).toBeUndefined();
-      }
+      expect(result.success).toBe(false);
     });
   });
 
@@ -653,31 +662,50 @@ describe('Workflow Prompts', () => {
       );
     });
 
-    it('should accept empty object (all optional)', () => {
-      const result = qlLspIterativeDevelopmentSchema.safeParse({});
+    it('should accept required language and queryPath', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({
+        language: 'ruby',
+        queryPath: '/q.ql',
+      });
       expect(result.success).toBe(true);
+    });
+
+    it('should reject empty object (language and queryPath required)', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({});
+      expect(result.success).toBe(false);
     });
 
     it('should accept all parameters', () => {
       const result = qlLspIterativeDevelopmentSchema.safeParse({
         language: 'ruby',
         queryPath: '/q.ql',
-        workspaceUri: 'file:///ws',
+        workspaceUri: '/ws',
       });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.workspaceUri).toBe('file:///ws');
+        expect(result.data.workspaceUri).toBe('/ws');
       }
     });
 
-    it('should leave all fields as undefined when omitted', () => {
-      const result = qlLspIterativeDevelopmentSchema.safeParse({});
+    it('should leave workspaceUri as undefined when omitted', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({
+        language: 'ruby',
+        queryPath: '/q.ql',
+      });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.language).toBeUndefined();
-        expect(result.data.queryPath).toBeUndefined();
         expect(result.data.workspaceUri).toBeUndefined();
       }
+    });
+
+    it('should reject missing language', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({ queryPath: '/q.ql' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject missing queryPath', () => {
+      const result = qlLspIterativeDevelopmentSchema.safeParse({ language: 'ruby' });
+      expect(result.success).toBe(false);
     });
 
     it('should reject invalid language', () => {
@@ -686,7 +714,7 @@ describe('Workflow Prompts', () => {
     });
 
     it.each([...SUPPORTED_LANGUAGES])('should accept language "%s"', (lang) => {
-      const result = qlLspIterativeDevelopmentSchema.safeParse({ language: lang });
+      const result = qlLspIterativeDevelopmentSchema.safeParse({ language: lang, queryPath: '/q.ql' });
       expect(result.success).toBe(true);
     });
   });
@@ -786,20 +814,20 @@ describe('Workflow Prompts', () => {
       {
         name: 'qlTddBasicSchema',
         schema: qlTddBasicSchema,
-        required: [],
-        optional: ['language', 'queryName'],
+        required: ['language'],
+        optional: ['queryName'],
       },
       {
         name: 'qlTddAdvancedSchema',
         schema: qlTddAdvancedSchema,
-        required: [],
-        optional: ['database', 'language', 'queryName'],
+        required: ['language'],
+        optional: ['database', 'queryName'],
       },
       {
         name: 'sarifRankSchema',
         schema: sarifRankSchema,
-        required: [],
-        optional: ['queryId', 'sarifPath'],
+        required: ['sarifPath'],
+        optional: ['queryId'],
       },
       {
         name: 'explainCodeqlQuerySchema',
@@ -816,8 +844,8 @@ describe('Workflow Prompts', () => {
       {
         name: 'qlLspIterativeDevelopmentSchema',
         schema: qlLspIterativeDevelopmentSchema,
-        required: [],
-        optional: ['language', 'queryPath', 'workspaceUri'],
+        required: ['language', 'queryPath'],
+        optional: ['workspaceUri'],
       },
       {
         name: 'checkForDuplicatedCodeSchema',
@@ -990,10 +1018,10 @@ describe('Workflow Prompts', () => {
     });
 
     // -------------------------------------------------------------------
-    // Schema-to-registration consistency: exported schema === registered
+    // Schema-to-registration consistency: permissive shape keys match
     // -------------------------------------------------------------------
     describe('schema-to-registration consistency', () => {
-      /** Map prompt name → exported schema .shape */
+      /** Map prompt name → exported strict schema .shape */
       const expectedSchemaShapes: Record<string, Record<string, unknown>> = {
         check_for_duplicated_code: checkForDuplicatedCodeSchema.shape,
         document_codeql_query: documentCodeqlQuerySchema.shape,
@@ -1011,7 +1039,7 @@ describe('Workflow Prompts', () => {
       };
 
       it.each(Object.entries(expectedSchemaShapes))(
-        'prompt "%s" should register the exported schema',
+        'prompt "%s" should register a permissive schema with matching keys',
         (promptName, expectedShape) => {
           registerWorkflowPrompts(mockServer);
 
@@ -1020,14 +1048,10 @@ describe('Workflow Prompts', () => {
           expect(match).toBeDefined();
 
           const registeredSchema = match![2] as Record<string, unknown>;
+          // The permissive shape must have the same parameter keys
           expect(Object.keys(registeredSchema).sort()).toEqual(
             Object.keys(expectedShape).sort()
           );
-
-          // Verify the Zod types are the same object references
-          for (const key of Object.keys(expectedShape)) {
-            expect(registeredSchema[key]).toBe(expectedShape[key]);
-          }
         }
       );
     });
@@ -1044,12 +1068,12 @@ describe('Workflow Prompts', () => {
         document_codeql_query: { language: 'java', queryPath: '/q.ql' },
         explain_codeql_query: { language: 'java', queryPath: '/q.ql' },
         find_overlapping_queries: { language: 'cpp', queryDescription: 'detect placement-new on non-trivial types' },
-        ql_lsp_iterative_development: {},
-        ql_tdd_advanced: {},
-        ql_tdd_basic: {},
-        run_query_and_summarize_false_positives: {},
-        sarif_rank_false_positives: {},
-        sarif_rank_true_positives: {},
+        ql_lsp_iterative_development: { language: 'ruby', queryPath: '/q.ql' },
+        ql_tdd_advanced: { language: 'javascript' },
+        ql_tdd_basic: { language: 'javascript' },
+        run_query_and_summarize_false_positives: { queryPath: '/q.ql' },
+        sarif_rank_false_positives: { sarifPath: '/results.sarif' },
+        sarif_rank_true_positives: { sarifPath: '/results.sarif' },
         test_driven_development: { language: 'javascript' },
         tools_query_workflow: { database: '/db', language: 'javascript' },
         workshop_creation_workflow: { language: 'javascript', queryPath: '/q.ql' },
@@ -1108,18 +1132,18 @@ describe('Workflow Prompts', () => {
     it('tools_query_workflow handler should include language and database', async () => {
       const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
       const result: PromptResult = await handler({
-        database: '/path/to/mydb',
+        database: 'path/to/mydb',
         language: 'cpp',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Language**: cpp');
-      expect(text).toContain('**Database**: /path/to/mydb');
+      expect(text).toContain('mydb');
     });
 
     it('tools_query_workflow handler should include optional source parameters', async () => {
       const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
       const result: PromptResult = await handler({
-        database: '/db',
+        database: 'db',
         language: 'javascript',
         sourceFiles: 'app.js,index.js',
         sourceFunction: 'handleRequest',
@@ -1135,7 +1159,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'python',
-        queryPath: '/path/to/SqlInjection.ql',
+        queryPath: 'path/to/SqlInjection.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Workshop Name**: sqlinjection');
@@ -1145,7 +1169,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'javascript',
-        queryPath: '/path/to/Xss.ql',
+        queryPath: 'path/to/Xss.ql',
         workshopName: 'custom-workshop',
       });
       const text = result.messages[0].content.text;
@@ -1156,7 +1180,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'go',
-        queryPath: '/q.ql',
+        queryPath: 'q.ql',
         numStages: 7,
       });
       const text = result.messages[0].content.text;
@@ -1167,7 +1191,7 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
       const result: PromptResult = await handler({
         language: 'ruby',
-        queryPath: '/q.ql',
+        queryPath: 'q.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('4-8 (auto-detect based on query complexity)');
@@ -1184,101 +1208,94 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('**Query Name**: WeakCrypto');
     });
 
-    it('ql_tdd_basic handler should still return content with no parameters', async () => {
+    it('ql_tdd_basic handler (createSafePromptHandler) should return inline validation error when called directly with missing parameters (defense-in-depth; SDK validates required fields before handler in real MCP usage)', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_basic');
       const result: PromptResult = await handler({});
-      expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+      expect(result.messages[0].content.text).toContain('Invalid input');
     });
 
     it('ql_tdd_advanced handler should include database in context', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
       const result: PromptResult = await handler({
-        database: '/my/database',
+        database: 'my/database',
         language: 'swift',
         queryName: 'TaintTrack',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Database**: /my/database');
+      expect(text).toContain('database');
       expect(text).toContain('**Language**: swift');
       expect(text).toContain('**Query Name**: TaintTrack');
     });
 
-    it('ql_tdd_advanced handler should still return content with no parameters', async () => {
+    it('ql_tdd_advanced handler (createSafePromptHandler) should return inline validation error when called directly with missing parameters (defense-in-depth; SDK validates required fields before handler in real MCP usage)', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_tdd_advanced');
       const result: PromptResult = await handler({});
-      expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+      expect(result.messages[0].content.text).toContain('Invalid input');
     });
 
     it('sarif_rank_false_positives handler should include queryId and sarifPath', async () => {
       const handler = getRegisteredHandler(mockServer, 'sarif_rank_false_positives');
       const result: PromptResult = await handler({
         queryId: 'js/code-injection',
-        sarifPath: '/results/scan.sarif',
+        sarifPath: 'results/scan.sarif',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Query ID**: js/code-injection');
-      expect(text).toContain('**SARIF File**: /results/scan.sarif');
+      expect(text).toContain('results/scan.sarif');
     });
 
     it('sarif_rank_true_positives handler should include queryId and sarifPath', async () => {
       const handler = getRegisteredHandler(mockServer, 'sarif_rank_true_positives');
       const result: PromptResult = await handler({
         queryId: 'py/command-injection',
-        sarifPath: '/out.sarif',
+        sarifPath: 'out.sarif',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Query ID**: py/command-injection');
-      expect(text).toContain('**SARIF File**: /out.sarif');
+      expect(text).toContain('out.sarif');
     });
 
-    it('sarif_rank handlers should return content with no parameters', async () => {
+    it('sarif_rank handlers (createSafePromptHandler) should return inline error when called directly with no parameters (defense-in-depth; SDK validates required sarifPath before handler in real MCP usage)', async () => {
       for (const name of ['sarif_rank_false_positives', 'sarif_rank_true_positives']) {
         const handler = getRegisteredHandler(mockServer, name);
         const result: PromptResult = await handler({});
-        expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+        expect(result.messages[0].content.text).toContain('Invalid input');
       }
     });
 
     it('run_query_and_summarize_false_positives handler should include queryPath', async () => {
       const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
       const result: PromptResult = await handler({
-        queryPath: '/queries/SqlInjection.ql',
+        queryPath: 'queries/SqlInjection.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Query Path**: /queries/SqlInjection.ql');
+      expect(text).toContain('queries/SqlInjection.ql');
     });
 
-    it('run_query_and_summarize_false_positives handler should return content with no parameters', async () => {
+    it('run_query_and_summarize_false_positives handler (createSafePromptHandler) should return inline error when called directly with no parameters (defense-in-depth; SDK validates required queryPath before handler in real MCP usage)', async () => {
       const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
       const result: PromptResult = await handler({});
-      expect(result.messages[0].content.text.length).toBeGreaterThan(0);
+      expect(result.messages[0].content.text).toContain('Invalid input');
     });
 
-    it('run_query_and_summarize_false_positives handler should omit Query Path when not provided', async () => {
-      const handler = getRegisteredHandler(mockServer, 'run_query_and_summarize_false_positives');
-      const result: PromptResult = await handler({});
-      const text = result.messages[0].content.text;
-      expect(text).not.toContain('**Query Path**');
-    });
-
-    it('explain_codeql_query handler should include required and optional params', async () => {
+    it('explain_codeql_query handler should include all params when provided', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
-        databasePath: '/db/path',
+        databasePath: 'db/path',
         language: 'python',
-        queryPath: '/queries/Xss.ql',
+        queryPath: 'queries/Xss.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Query Path**: /queries/Xss.ql');
+      expect(text).toContain('queries/Xss.ql');
       expect(text).toContain('**Language**: python');
-      expect(text).toContain('**Database Path**: /db/path');
+      expect(text).toContain('db/path');
     });
 
     it('explain_codeql_query handler should omit Database Path when not provided', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
         language: 'java',
-        queryPath: '/q.ql',
+        queryPath: 'q.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).not.toContain('**Database Path**');
@@ -1288,32 +1305,35 @@ describe('Workflow Prompts', () => {
       const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
       const result: PromptResult = await handler({
         language: 'go',
-        queryPath: '/queries/SqlInjection.ql',
+        queryPath: 'queries/SqlInjection.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('**Query Path**: /queries/SqlInjection.ql');
+      expect(text).toContain('queries/SqlInjection.ql');
       expect(text).toContain('**Language**: go');
     });
 
-    it('ql_lsp_iterative_development handler should include all optional params', async () => {
+    it('ql_lsp_iterative_development handler should include all params', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
       const result: PromptResult = await handler({
         language: 'ruby',
-        queryPath: '/my/query.ql',
-        workspaceUri: '/pack/root',
+        queryPath: 'my/query.ql',
+        workspaceUri: 'pack/root',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('**Language**: ruby');
-      expect(text).toContain('**Query Path**: /my/query.ql');
-      expect(text).toContain('**Workspace URI**: /pack/root');
+      expect(text).toContain('my/query.ql');
+      expect(text).toContain('pack/root');
     });
 
-    it('ql_lsp_iterative_development handler should omit absent optional params', async () => {
+    it('ql_lsp_iterative_development handler should omit workspaceUri when absent', async () => {
       const handler = getRegisteredHandler(mockServer, 'ql_lsp_iterative_development');
-      const result: PromptResult = await handler({});
+      const result: PromptResult = await handler({
+        language: 'ruby',
+        queryPath: 'q.ql',
+      });
       const text = result.messages[0].content.text;
-      expect(text).not.toContain('**Language**');
-      expect(text).not.toContain('**Query Path**');
+      expect(text).toContain('**Language**: ruby');
+      expect(text).toContain('**Query Path**');
       expect(text).not.toContain('**Workspace URI**');
     });
   });
@@ -1474,6 +1494,479 @@ describe('Workflow Prompts', () => {
       );
 
       expect(result).toContain('language="swift"');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // toPermissiveShape
+  // -----------------------------------------------------------------------
+  describe('toPermissiveShape', () => {
+    it('should make required z.enum() a required z.string()', () => {
+      const shape = {
+        language: z.enum(['javascript', 'python']).describe('The language'),
+      };
+      const permissive = toPermissiveShape(shape);
+
+      const schema = z.object(permissive as Record<string, z.ZodTypeAny>);
+      // Should accept any string
+      expect(schema.safeParse({ language: 'rust' }).success).toBe(true);
+      expect(schema.safeParse({ language: 'javascript' }).success).toBe(true);
+      // Still required — missing field should fail
+      expect(schema.safeParse({}).success).toBe(false);
+    });
+
+    it('should preserve descriptions on enum fields', () => {
+      const shape = {
+        language: z.enum(['javascript']).describe('My description'),
+      };
+      const permissive = toPermissiveShape(shape);
+      expect(permissive.language.description).toBe('My description');
+    });
+
+    it('should replace optional z.enum() with optional z.string()', () => {
+      const shape = {
+        language: z.enum(['javascript', 'python']).optional().describe('desc'),
+      };
+      const permissive = toPermissiveShape(shape);
+
+      const schema = z.object(permissive as Record<string, z.ZodTypeAny>);
+      // Should accept any string
+      expect(schema.safeParse({ language: 'rust' }).success).toBe(true);
+      // Should accept missing field
+      expect(schema.safeParse({}).success).toBe(true);
+    });
+
+    it('should pass through non-enum types unchanged', () => {
+      const original = z.string().describe('A path');
+      const shape = { queryPath: original };
+      const permissive = toPermissiveShape(shape);
+      expect(permissive.queryPath).toBe(original);
+    });
+
+    it('should pass through z.coerce.number() unchanged', () => {
+      const original = z.coerce.number().optional().describe('Stages');
+      const shape = { numStages: original };
+      const permissive = toPermissiveShape(shape);
+      expect(permissive.numStages).toBe(original);
+    });
+
+    it('should preserve all keys from the original shape', () => {
+      const permissive = toPermissiveShape(explainCodeqlQuerySchema.shape);
+      expect(Object.keys(permissive).sort()).toEqual(
+        Object.keys(explainCodeqlQuerySchema.shape).sort()
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // markdownInlineCode
+  // -----------------------------------------------------------------------
+  describe('markdownInlineCode', () => {
+    it('should wrap plain text in single backticks', () => {
+      expect(markdownInlineCode('foo')).toBe('`foo`');
+    });
+
+    it('should use double backticks when value contains a single backtick', () => {
+      expect(markdownInlineCode('a`b')).toBe('``a`b``');
+    });
+
+    it('should use triple backticks when value contains a double backtick run', () => {
+      expect(markdownInlineCode('a``b')).toBe('```a``b```');
+    });
+
+    it('should replace CRLF and CR with spaces so the output stays on one line', () => {
+      expect(markdownInlineCode('a\r\nb')).toBe('`a b`');
+      expect(markdownInlineCode('a\rb')).toBe('`a b`');
+      expect(markdownInlineCode('a\nb')).toBe('`a b`');
+    });
+
+    it('should not mutate a value that contains no backticks', () => {
+      const input = '/path/to/my-query.ql';
+      expect(markdownInlineCode(input)).toBe(`\`${input}\``);
+    });
+
+    it('should handle a value that is only backticks', () => {
+      const result = markdownInlineCode('``');
+      // fence must be longer than the run of 2, so 3 backticks
+      expect(result).toBe('```' + '``' + '```');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // formatValidationError
+  // -----------------------------------------------------------------------
+  describe('formatValidationError', () => {
+    it('should format invalid_enum_value with available options', () => {
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'rust' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('test_driven_development', result.error);
+        expect(msg).toContain('Invalid input');
+        expect(msg).toContain('test_driven_development');
+        expect(msg).toContain('`language`');
+        expect(msg).toContain('rust');
+        expect(msg).toContain('javascript');
+        expect(msg).toContain('try again');
+      }
+    });
+
+    it('should format missing required field errors', () => {
+      const result = explainCodeqlQuerySchema.safeParse({});
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('explain_codeql_query', result.error);
+        expect(msg).toContain('Invalid input');
+        expect(msg).toContain('explain_codeql_query');
+      }
+    });
+
+    it('should include corrective guidance', () => {
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'invalid' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('test_prompt', result.error);
+        expect(msg).toContain('correct the input');
+      }
+    });
+
+    it('should produce well-formed markdown when the received value contains backticks', () => {
+      // Construct a ZodError for an enum field whose received value has backticks.
+      const schema = z.object({ mode: z.enum(['a', 'b']) });
+      const result = schema.safeParse({ mode: 'val`ue' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = formatValidationError('test_prompt', result.error);
+        // The raw backtick must not appear inside a single-backtick code span —
+        // markdownInlineCode uses a longer fence so the value is fully enclosed.
+        // The message must still contain the original value text.
+        expect(msg).toContain('val`ue');
+        // The fence wrapping the received value must use at least double backticks.
+        expect(msg).toContain('``val`ue``');
+      }
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // createSafePromptHandler
+  // -----------------------------------------------------------------------
+  describe('createSafePromptHandler', () => {
+    it('should call the inner handler when validation passes', async () => {
+      const innerHandler = vi.fn().mockResolvedValue({
+        messages: [{ role: 'user', content: { type: 'text', text: 'ok' } }],
+      });
+
+      const safe = createSafePromptHandler(
+        'test_driven_development',
+        testDrivenDevelopmentSchema,
+        innerHandler,
+      );
+
+      const result = await safe({ language: 'javascript' });
+      expect(innerHandler).toHaveBeenCalledWith({ language: 'javascript' });
+      expect(result.messages[0].content.text).toBe('ok');
+    });
+
+    it('should return inline error when validation fails (invalid enum)', async () => {
+      const innerHandler = vi.fn();
+
+      const safe = createSafePromptHandler(
+        'test_driven_development',
+        testDrivenDevelopmentSchema,
+        innerHandler,
+      );
+
+      const result = await safe({ language: 'rust' });
+      // Handler should NOT be called
+      expect(innerHandler).not.toHaveBeenCalled();
+      // Should return a message, not throw
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].content.text).toContain('Invalid input');
+      expect(result.messages[0].content.text).toContain('rust');
+    });
+
+    it('should return inline error when required fields are missing', async () => {
+      const innerHandler = vi.fn();
+
+      const safe = createSafePromptHandler(
+        'explain_codeql_query',
+        explainCodeqlQuerySchema,
+        innerHandler,
+      );
+
+      const result = await safe({});
+      expect(innerHandler).not.toHaveBeenCalled();
+      expect(result.messages[0].content.text).toContain('Invalid input');
+    });
+
+    it('should catch handler exceptions and return inline error', async () => {
+      const innerHandler = vi.fn().mockRejectedValue(
+        new Error('Template not found'),
+      );
+
+      const safe = createSafePromptHandler(
+        'test_driven_development',
+        testDrivenDevelopmentSchema,
+        innerHandler,
+      );
+
+      const result = await safe({ language: 'javascript' });
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].content.text).toContain('Error');
+      expect(result.messages[0].content.text).toContain('Template not found');
+    });
+
+    it('should accept valid optional fields', async () => {
+      const innerHandler = vi.fn().mockResolvedValue({
+        messages: [{ role: 'user', content: { type: 'text', text: 'ok' } }],
+      });
+
+      // Use a schema where all fields are optional
+      const allOptionalSchema = z.object({
+        name: z.string().optional(),
+      });
+
+      const safe = createSafePromptHandler(
+        'test_prompt',
+        allOptionalSchema,
+        innerHandler,
+      );
+
+      // All optional — empty args should pass
+      const result = await safe({});
+      expect(innerHandler).toHaveBeenCalled();
+      expect(result.messages[0].content.text).toBe('ok');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // resolvePromptFilePath
+  // -----------------------------------------------------------------------
+  describe('resolvePromptFilePath', () => {
+    let testDir: string;
+
+    beforeEach(() => {
+      testDir = createTestTempDir('prompt-path-test');
+    });
+
+    afterEach(() => {
+      cleanupTestTempDir(testDir);
+    });
+
+    it('should resolve an existing absolute path and return it unchanged', async () => {
+      const filePath = join(testDir, 'query.ql');
+      writeFileSync(filePath, 'select 1');
+
+      const result = await resolvePromptFilePath(filePath);
+      expect(result.resolvedPath).toBe(filePath);
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('should resolve a relative path against the workspace root', async () => {
+      // Create a file relative to testDir
+      const relPath = 'sub/query.ql';
+      mkdirSync(join(testDir, 'sub'), { recursive: true });
+      writeFileSync(join(testDir, 'sub', 'query.ql'), 'select 1');
+
+      const result = await resolvePromptFilePath(relPath, testDir);
+      expect(result.resolvedPath).toBe(join(testDir, 'sub', 'query.ql'));
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('should return a warning when the resolved path does not exist', async () => {
+      const result = await resolvePromptFilePath('nonexistent/path/query.ql', testDir);
+      expect(result.resolvedPath).toBe(join(testDir, 'nonexistent', 'path', 'query.ql'));
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain('does not exist');
+    });
+
+    it('should not include absolute path in "does not exist" warning', async () => {
+      const result = await resolvePromptFilePath('nonexistent/query.ql', testDir);
+      expect(result.warning).toContain('does not exist');
+      expect(result.warning).not.toContain('Resolved to');
+    });
+
+    it('should return a warning and block path traversal attempts', async () => {
+      const result = await resolvePromptFilePath('../../../etc/passwd', testDir);
+      expect(result.blocked).toBe(true);
+      expect(result.resolvedPath).toBe('');
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain('resolves outside the workspace root');
+    });
+
+    it('should allow absolute paths outside the workspace root', async () => {
+      const externalWorkspace = createTestTempDir('resolvePromptFilePath-external-workspace');
+      const externalPath = join(externalWorkspace, 'external-db');
+
+      try {
+        const result = await resolvePromptFilePath(externalPath, testDir);
+        expect(result.blocked).toBeUndefined();
+        expect(result.resolvedPath).toBe(externalPath);
+        // The file does not exist, so a warning is expected.
+        expect(result.warning).toContain('does not exist');
+      } finally {
+        cleanupTestTempDir(externalWorkspace);
+      }
+    });
+
+    it('should not flag filenames containing consecutive dots as traversal', async () => {
+      const filePath = 'my..query.ql';
+      writeFileSync(join(testDir, filePath), 'select 1');
+
+      const result = await resolvePromptFilePath(filePath, testDir);
+      expect(result.resolvedPath).toBe(join(testDir, filePath));
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('should resolve invalid paths relative to the workspace root', async () => {
+      const result = await resolvePromptFilePath('nonexistent.ql', testDir);
+      expect(result.resolvedPath).toBe(join(testDir, 'nonexistent.ql'));
+    });
+
+    it('should handle an empty string path with a warning', async () => {
+      const result = await resolvePromptFilePath('', testDir);
+      expect(result.warning).toBeDefined();
+    });
+
+    it('should produce well-formed markdown when the path contains backticks', async () => {
+      // A path that contains a backtick must not corrupt the warning's inline code span.
+      const filePath = 'bad`name.ql';
+      const result = await resolvePromptFilePath(filePath, testDir);
+      expect(result.warning).toBeDefined();
+      // The raw backtick must be preserved and the fence must be at least double.
+      expect(result.warning).toContain('bad`name.ql');
+      expect(result.warning).toContain('``bad`name.ql``');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Handler path resolution: resolved paths appear in handler output
+  // -----------------------------------------------------------------------
+  describe('Handler path resolution and error handling', () => {
+    let mockServer: McpServer;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockServer = { prompt: vi.fn() } as unknown as McpServer;
+      registerWorkflowPrompts(mockServer);
+    });
+
+    it('explain_codeql_query handler should include warning for nonexistent queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        databasePath: 'db',
+        language: 'javascript',
+        queryPath: 'nonexistent/query.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
+      // Verify the warning mentions the provided queryPath value
+      expect(text).toContain('nonexistent/query.ql');
+    });
+
+    it('document_codeql_query handler should include warning for nonexistent queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'java',
+        queryPath: 'nonexistent/nowhere/query.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
+      expect(text).toContain('nonexistent/nowhere/query.ql');
+    });
+
+    it('workshop_creation_workflow handler should include warning for nonexistent queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'workshop_creation_workflow');
+      const result: PromptResult = await handler({
+        language: 'python',
+        queryPath: 'missing/Workshop.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
+      expect(text).toContain('missing/Workshop.ql');
+    });
+
+    // Only the `database` parameter is a file path — sourceFiles, sourceFunction,
+    // and targetFunction are plain string identifiers (not paths on disk).
+    it('tools_query_workflow handler should include warning for nonexistent database path', async () => {
+      const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
+      const result: PromptResult = await handler({
+        language: 'go',
+        database: 'nonexistent/db',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('does not exist');
+      expect(text).toContain('nonexistent/db');
+    });
+
+    // -----------------------------------------------------------------
+    // Blocked path handling: traversal attempts return inline errors
+    // -----------------------------------------------------------------
+    it('tools_query_workflow handler should return inline error for traversal database path', async () => {
+      const handler = getRegisteredHandler(mockServer, 'tools_query_workflow');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        database: '../../../etc/passwd',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('blocked');
+      expect(text).toContain('cannot proceed');
+    });
+
+    it('explain_codeql_query handler should return inline error for traversal queryPath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        queryPath: '../../../etc/passwd',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('blocked');
+      expect(text).toContain('cannot proceed');
+    });
+
+    it('explain_codeql_query handler should return inline error for traversal databasePath', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'javascript',
+        queryPath: '/valid/query.ql',
+        databasePath: '../../../etc/passwd',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('blocked');
+      expect(text).toContain('cannot proceed');
+    });
+
+    // -----------------------------------------------------------------
+    // Invalid argument handling (issue #143): inline errors, not throws
+    // -----------------------------------------------------------------
+    it('explain_codeql_query handler should return inline error for invalid language', async () => {
+      const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
+      const result: PromptResult = await handler({
+        language: 'rust',
+        queryPath: '/q.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('Invalid input');
+      expect(text).toContain('rust');
+      expect(text).toContain('javascript');
+    });
+
+    it('test_driven_development handler should return inline error for invalid language', async () => {
+      const handler = getRegisteredHandler(mockServer, 'test_driven_development');
+      const result: PromptResult = await handler({
+        language: 'PYTHON',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('Invalid input');
+      expect(text).toContain('PYTHON');
+    });
+
+    it('document_codeql_query handler should return inline error when language is missing', async () => {
+      const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
+      const result: PromptResult = await handler({
+        queryPath: '/q.ql',
+      });
+      const text = result.messages[0].content.text;
+      expect(text).toContain('Invalid input');
     });
   });
 });
