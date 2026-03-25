@@ -7,19 +7,21 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerMonitoringTools } from '../../../src/tools/monitoring-tools';
 import { sessionDataManager } from '../../../src/lib/session-data-manager';
 import { existsSync, rmSync } from 'fs';
-import { createProjectTempDir } from '../../../src/utils/temp-dir';
 
 describe('Monitoring Tools', () => {
   let mockServer: McpServer;
-  let testStorageDir: string;
+  const testStorageDir = '.ql-mcp-tracking-test';
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockServer = {
       tool: vi.fn()
     } as unknown as McpServer;
-
-    testStorageDir = createProjectTempDir('monitoring-tools-test-');
+    
+    // Clean up any existing test storage
+    if (existsSync(testStorageDir)) {
+      rmSync(testStorageDir, { recursive: true, force: true });
+    }
   });
 
   afterEach(() => {
@@ -43,7 +45,6 @@ describe('Monitoring Tools', () => {
           maxActiveSessionsPerQuery: 3,
           scoringFrequency: 'per_call',
           archiveCompletedSessions: true,
-          enableAnnotationTools: false,
           enableRecommendations: true,
           enableMonitoringTools: false, // Default - tools disabled
         });
@@ -220,7 +221,10 @@ describe('Monitoring Tools', () => {
 
   describe('Tool Handler Functions', () => {
     beforeEach(async () => {
-      // Mock config BEFORE initializing so the store uses the test directory
+      // Initialize the sqlite store (required for sql.js WASM backend)
+      await sessionDataManager.initialize();
+
+      // Enable monitoring tools for these tests
       vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
         storageLocation: testStorageDir,
         autoTrackSessions: true,
@@ -234,15 +238,6 @@ describe('Monitoring Tools', () => {
         enableMonitoringTools: true,
         enableAnnotationTools: false,
       });
-
-      // Initialize the sqlite store after mocking config
-      await sessionDataManager.initialize();
-    });
-
-    afterEach(() => {
-      // Close the store so debounce timers are cancelled and the db handle
-      // is released before the test directory is removed.
-      sessionDataManager.getStore().close();
     });
 
     it('should call session_end handler and return not found for invalid session', async () => {

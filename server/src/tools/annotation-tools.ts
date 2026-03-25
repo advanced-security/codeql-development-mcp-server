@@ -67,7 +67,7 @@ function registerAnnotationGetTool(server: McpServer): void {
     'annotation_get',
     'Retrieve a single annotation by its numeric ID.',
     {
-      id: z.number().int().positive().describe('The annotation ID (positive integer primary key).'),
+      id: z.number().describe('The annotation ID.'),
     },
     async ({ id }) => {
       const store = sessionDataManager.getStore();
@@ -92,8 +92,8 @@ function registerAnnotationListTool(server: McpServer): void {
       category: z.string().optional().describe('Filter by annotation category.'),
       entityKey: z.string().optional().describe('Filter by exact entity key.'),
       entityKeyPrefix: z.string().optional().describe('Filter by entity key prefix (e.g. "repo:owner/name").'),
-      limit: z.number().int().positive().optional().describe('Maximum number of results (default: 100).'),
-      offset: z.number().int().nonnegative().optional().describe('Number of results to skip.'),
+      limit: z.number().optional().describe('Maximum number of results (default: 100).'),
+      offset: z.number().optional().describe('Number of results to skip.'),
     },
     async ({ category, entityKey, entityKeyPrefix, limit, offset }) => {
       const store = sessionDataManager.getStore();
@@ -118,7 +118,7 @@ function registerAnnotationUpdateTool(server: McpServer): void {
     'annotation_update',
     'Update the content, label, or metadata of an existing annotation.',
     {
-      id: z.number().int().positive().describe('The annotation ID to update (positive integer primary key).'),
+      id: z.number().describe('The annotation ID to update.'),
       content: z.string().optional().describe('New content (replaces existing).'),
       label: z.string().optional().describe('New label (replaces existing).'),
       metadata: z.string().optional().describe('New JSON-encoded metadata (replaces existing).'),
@@ -166,16 +166,16 @@ function registerAnnotationDeleteTool(server: McpServer): void {
 function registerAnnotationSearchTool(server: McpServer): void {
   server.tool(
     'annotation_search',
-    'Full-text search across annotation content, metadata, and labels using SQLite FTS (token-based MATCH; use * suffix for prefix matching, e.g. "vulnerab*").',
+    'Full-text search across annotation content, metadata, and labels.',
     {
-      search: z.string().describe('Full-text search query matched against annotation content, metadata, and label (SQLite FTS MATCH syntax; use * for prefix matching).'),
+      query: z.string().describe('Search term (matched against content, metadata, and label).'),
       category: z.string().optional().describe('Restrict search to a specific category.'),
-      limit: z.number().int().positive().optional().describe('Maximum number of results (default: 50).'),
+      limit: z.number().optional().describe('Maximum number of results (default: 50).'),
     },
-    async ({ search, category, limit }) => {
+    async ({ query, category, limit }) => {
       const store = sessionDataManager.getStore();
       const results = store.listAnnotations({
-        search,
+        search: query,
         category,
         limit: limit ?? 50,
       });

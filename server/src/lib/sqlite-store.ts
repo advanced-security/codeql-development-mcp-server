@@ -13,7 +13,7 @@
 
 import initSqlJs from 'sql.js/dist/sql-asm.js';
 import type { Database as SqlJsDatabase } from 'sql.js';
-import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { logger } from '../utils/logger';
 
@@ -54,9 +54,6 @@ export class SqliteStore {
   private dbPath: string;
   private storageDir: string;
   private dirty = false;
-  private flushTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
-  /** Debounce interval (ms) for automatic disk writes after mutations. */
-  private static readonly FLUSH_DEBOUNCE_MS = 200;
 
   constructor(storageDir: string) {
     this.storageDir = storageDir;
@@ -65,22 +62,21 @@ export class SqliteStore {
 
   /**
    * Initialize the database. Must be called (and awaited) before any other method.
-   * Safe to call more than once — an already-open database is closed first.
    */
   async initialize(): Promise<void> {
-    if (this.db) {
-      this.close();
-    }
-
     mkdirSync(this.storageDir, { recursive: true });
 
     const SQL = await initSqlJs();
 
-    try {
-      const fileBuffer = readFileSync(this.dbPath);
-      this.db = new SQL.Database(fileBuffer);
-    } catch {
-      // File doesn't exist or is unreadable — start with a fresh database.
+    if (existsSync(this.dbPath)) {
+      try {
+        const fileBuffer = readFileSync(this.dbPath);
+        this.db = new SQL.Database(fileBuffer);
+      } catch {
+        logger.warn('Failed to read existing database, creating new one');
+        this.db = new SQL.Database();
+      }
+    } else {
       this.db = new SQL.Database();
     }
 
@@ -128,41 +124,6 @@ export class SqliteStore {
       CREATE INDEX IF NOT EXISTS idx_annotations_category_entity
         ON annotations (category, entity_key);
     `);
-
-    // FTS4 virtual table for full-text search over annotation text fields.
-    // The unicode61 tokenizer provides case-insensitive, accent-insensitive matching.
-    this.exec(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS annotations_fts
-        USING fts4(tokenize=unicode61, content, label, metadata);
-    `);
-
-    // Triggers keep the FTS index in sync with the annotations table.
-    this.exec(`
-      CREATE TRIGGER IF NOT EXISTS annotations_ai
-        AFTER INSERT ON annotations BEGIN
-          INSERT INTO annotations_fts(rowid, content, label, metadata)
-            VALUES (new.id, new.content, new.label, new.metadata);
-        END;
-    `);
-
-    this.exec(`
-      CREATE TRIGGER IF NOT EXISTS annotations_ad
-        AFTER DELETE ON annotations BEGIN
-          DELETE FROM annotations_fts WHERE rowid = old.id;
-        END;
-    `);
-
-    this.exec(`
-      CREATE TRIGGER IF NOT EXISTS annotations_au
-        AFTER UPDATE ON annotations BEGIN
-          DELETE FROM annotations_fts WHERE rowid = old.id;
-          INSERT INTO annotations_fts(rowid, content, label, metadata)
-            VALUES (new.id, new.content, new.label, new.metadata);
-        END;
-    `);
-
-    // Migration: backfill FTS for any existing rows that pre-date the FTS table.
-    this.backfillAnnotationsFts();
 
     this.exec(`
       CREATE TABLE IF NOT EXISTS query_result_cache (
@@ -220,27 +181,6 @@ export class SqliteStore {
   }
 
   /**
-   * Backfill the FTS index for any annotations rows that were inserted before
-   * the FTS table existed (schema migration).  Compares row counts and rebuilds
-   * the entire FTS index when there is a mismatch.
-   */
-  private backfillAnnotationsFts(): void {
-    const db = this.ensureDb();
-    const ftsCountResult = db.exec('SELECT COUNT(*) FROM annotations_fts');
-    const annCountResult = db.exec('SELECT COUNT(*) FROM annotations');
-    const ftsCount = (ftsCountResult[0]?.values[0][0] as number) ?? 0;
-    const annCount = (annCountResult[0]?.values[0][0] as number) ?? 0;
-
-    if (ftsCount < annCount) {
-      // Clear and fully rebuild to avoid duplicate entries.
-      db.run('DELETE FROM annotations_fts');
-      db.run(
-        'INSERT INTO annotations_fts(rowid, content, label, metadata) SELECT id, content, label, metadata FROM annotations',
-      );
-    }
-  }
-
-  /**
    * Get the number of rows modified by the last INSERT/UPDATE/DELETE.
    */
   private getRowsModified(): number {
@@ -251,46 +191,13 @@ export class SqliteStore {
 
   /**
    * Write the in-memory database to disk.
-   *
-   * On platforms where `renameSync` can atomically replace the destination
-   * (for example, POSIX filesystems and Windows when the target is not
-   * locked), this uses a write-to-temp + atomic rename pattern so a crash
-   * mid-write cannot corrupt the existing database file. On some Windows
-   * configurations where `renameSync` fails because the destination is
-   * locked, we fall back to a direct overwrite, which is best-effort only
-   * and not fully crash-safe.
    */
   flush(): void {
-    if (this.flushTimer) {
-      globalThis.clearTimeout(this.flushTimer);
-      this.flushTimer = null;
-    }
     if (!this.db) return;
     const data = this.db.export();
     const buffer = Buffer.from(data);
-    const tmpPath = this.dbPath + '.tmp';
-    writeFileSync(tmpPath, buffer);
-    try {
-      renameSync(tmpPath, this.dbPath);
-    } catch {
-      // On some Windows configurations renameSync can fail if the destination
-      // is locked; fall back to a direct overwrite and clean up the temp file.
-      writeFileSync(this.dbPath, buffer);
-      try { unlinkSync(tmpPath); } catch { /* ignore cleanup failure */ }
-    }
+    writeFileSync(this.dbPath, buffer);
     this.dirty = false;
-  }
-
-  /**
-   * Schedule a debounced flush.  Multiple rapid writes are coalesced into
-   * a single disk write after `FLUSH_DEBOUNCE_MS` of inactivity.
-   */
-  private scheduleFlush(): void {
-    if (this.flushTimer) globalThis.clearTimeout(this.flushTimer);
-    this.flushTimer = globalThis.setTimeout(() => {
-      this.flushTimer = null;
-      this.flushIfDirty();
-    }, SqliteStore.FLUSH_DEBOUNCE_MS);
   }
 
   /**
@@ -304,10 +211,6 @@ export class SqliteStore {
    * Close the database (and flush remaining changes).
    */
   close(): void {
-    if (this.flushTimer) {
-      globalThis.clearTimeout(this.flushTimer);
-      this.flushTimer = null;
-    }
     this.flushIfDirty();
     this.db?.close();
     this.db = null;
@@ -328,7 +231,7 @@ export class SqliteStore {
       { $id: sessionId, $data: json },
     );
     this.dirty = true;
-    this.scheduleFlush();
+    this.flush();
   }
 
   /**
@@ -367,7 +270,7 @@ export class SqliteStore {
    */
   deleteSession(sessionId: string): void {
     this.exec('DELETE FROM sessions WHERE session_id = $id', { $id: sessionId });
-    this.scheduleFlush();
+    this.flush();
   }
 
   /**
@@ -397,15 +300,18 @@ export class SqliteStore {
     metadata?: string | null,
   ): number {
     const db = this.ensureDb();
+    const now = new Date().toISOString();
     db.run(
       `INSERT INTO annotations (category, entity_key, label, content, metadata, created_at, updated_at)
-       VALUES ($category, $entity_key, $label, $content, $metadata, datetime('now'), datetime('now'))`,
+       VALUES ($category, $entity_key, $label, $content, $metadata, $created_at, $updated_at)`,
       {
         $category: category,
         $entity_key: entityKey,
         $label: label ?? null,
         $content: content ?? null,
         $metadata: metadata ?? null,
+        $created_at: now,
+        $updated_at: now,
       },
     );
     this.dirty = true;
@@ -414,7 +320,7 @@ export class SqliteStore {
     const result = db.exec('SELECT last_insert_rowid() as id');
     const id = result.length > 0 ? (result[0].values[0][0] as number) : 0;
 
-    this.scheduleFlush();
+    this.flush();
     return id;
   }
 
@@ -455,10 +361,8 @@ export class SqliteStore {
       params.$entity_key_prefix = filter.entityKeyPrefix + '%';
     }
     if (filter?.search) {
-      // Use the FTS4 index for efficient, case-insensitive full-text search
-      // across content, label, and metadata fields.
-      conditions.push('id IN (SELECT rowid FROM annotations_fts WHERE annotations_fts MATCH $search)');
-      params.$search = filter.search;
+      conditions.push('(content LIKE $search OR metadata LIKE $search OR label LIKE $search)');
+      params.$search = '%' + filter.search + '%';
     }
 
     let sql = 'SELECT * FROM annotations';
@@ -467,38 +371,24 @@ export class SqliteStore {
     }
     sql += ' ORDER BY updated_at DESC';
 
-    if (filter?.limit !== undefined) {
+    if (filter?.limit) {
       sql += ' LIMIT $limit';
       params.$limit = filter.limit;
     }
-    if (filter?.offset !== undefined) {
-      if (filter?.limit === undefined) {
-        // SQLite requires LIMIT when OFFSET is used; -1 means unlimited.
-        sql += ' LIMIT -1';
-      }
+    if (filter?.offset) {
       sql += ' OFFSET $offset';
       params.$offset = filter.offset;
     }
 
     const stmt = db.prepare(sql);
-    try {
-      stmt.bind(params);
-      const results: Annotation[] = [];
-      while (stmt.step()) {
-        results.push(stmt.getAsObject() as unknown as Annotation);
-      }
-      return results;
-    } catch (err) {
-      if (filter?.search) {
-        // Invalid FTS MATCH syntax (e.g. trailing operator) — return an empty
-        // result set rather than propagating the parse error to callers.
-        logger.warn('FTS MATCH query failed (invalid syntax?); returning empty results:', err);
-        return [];
-      }
-      throw err;
-    } finally {
-      stmt.free();
+    stmt.bind(params);
+
+    const results: Annotation[] = [];
+    while (stmt.step()) {
+      results.push(stmt.getAsObject() as unknown as Annotation);
     }
+    stmt.free();
+    return results;
   }
 
   /**
@@ -535,7 +425,7 @@ export class SqliteStore {
     );
     const changed = this.getRowsModified();
     this.dirty = true;
-    this.scheduleFlush();
+    this.flush();
 
     return changed > 0;
   }
@@ -573,7 +463,7 @@ export class SqliteStore {
     );
     const deleted = this.getRowsModified();
     this.dirty = true;
-    this.scheduleFlush();
+    this.flush();
 
     return deleted;
   }
@@ -627,7 +517,7 @@ export class SqliteStore {
       },
     );
     this.dirty = true;
-    this.scheduleFlush();
+    this.flush();
   }
 
   /**
@@ -685,12 +575,13 @@ export class SqliteStore {
   }
 
   /**
-   * Retrieve a subset of cached result content via line range or maxLines.
+   * Retrieve a subset of cached result content via line range, grep, or maxLines.
    */
   getCacheContentSubset(
     cacheKey: string,
     options: {
       lineRange?: [number, number];
+      grep?: string;
       maxLines?: number;
     },
   ): { content: string; totalLines: number; returnedLines: number; truncated: boolean } | null {
@@ -707,6 +598,11 @@ export class SqliteStore {
       const startIdx = Math.max(0, start - 1);
       const endIdx = Math.min(totalLines, end);
       selectedLines = selectedLines.slice(startIdx, endIdx);
+    }
+
+    if (options.grep) {
+      const term = options.grep.toLowerCase();
+      selectedLines = selectedLines.filter(line => line.toLowerCase().includes(term));
     }
 
     const truncated = selectedLines.length > maxLines;
@@ -754,16 +650,8 @@ export class SqliteStore {
       }
 
       if (options.resultIndices) {
-        const [rawStart, rawEnd] = options.resultIndices;
-        const total = selected.length;
-        if (Number.isFinite(rawStart) && Number.isFinite(rawEnd) && total > 0) {
-          const start = Math.max(0, Math.min(total - 1, Math.floor(rawStart)));
-          const end = Math.max(0, Math.min(total - 1, Math.floor(rawEnd)));
-          // resultIndices is treated as an inclusive [start, end] range
-          selected = end >= start ? selected.slice(start, end + 1) : [];
-        } else {
-          selected = [];
-        }
+        const [start, end] = options.resultIndices;
+        selected = selected.slice(start, end);
       }
 
       const truncated = selected.length > maxResults;
@@ -786,15 +674,12 @@ export class SqliteStore {
         truncated,
       };
     } catch {
-      // Cached content is not valid SARIF JSON; fall back to line-oriented
-      // retrieval with a dedicated line limit.
-      const FALLBACK_MAX_LINES = 500;
-      const fallback = this.getCacheContentSubset(cacheKey, { maxLines: FALLBACK_MAX_LINES });
+      const fallback = this.getCacheContentSubset(cacheKey, { maxLines: options.maxResults ?? 100 });
       if (!fallback) return null;
       return {
         content: fallback.content,
-        totalResults: 0,
-        returnedResults: 0,
+        totalResults: fallback.totalLines,
+        returnedResults: fallback.returnedLines,
         truncated: fallback.truncated,
       };
     }
@@ -807,7 +692,6 @@ export class SqliteStore {
     queryName?: string;
     databasePath?: string;
     language?: string;
-    limit?: number;
   }): Array<{
     cacheKey: string;
     queryName: string;
@@ -820,7 +704,7 @@ export class SqliteStore {
   }> {
     const db = this.ensureDb();
     const conditions: string[] = [];
-    const params: Record<string, string | number> = {};
+    const params: Record<string, string> = {};
 
     if (filter?.queryName) {
       conditions.push('query_name = $query_name');
@@ -842,11 +726,6 @@ export class SqliteStore {
       sql += ' WHERE ' + conditions.join(' AND ');
     }
     sql += ' ORDER BY created_at DESC';
-
-    if (filter?.limit !== undefined) {
-      sql += ' LIMIT $limit';
-      params.$limit = filter.limit;
-    }
 
     const stmt = db.prepare(sql);
     stmt.bind(params);
@@ -890,7 +769,7 @@ export class SqliteStore {
     if (filter?.all) {
       this.exec('DELETE FROM query_result_cache');
       const deleted = this.getRowsModified();
-      this.scheduleFlush();
+      this.flush();
       return deleted;
     }
 
@@ -919,7 +798,7 @@ export class SqliteStore {
     );
     const deleted = this.getRowsModified();
     this.dirty = true;
-    this.scheduleFlush();
+    this.flush();
     return deleted;
   }
 }

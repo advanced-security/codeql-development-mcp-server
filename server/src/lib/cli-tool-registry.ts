@@ -12,8 +12,7 @@ import { resolveQueryPath } from './query-resolver';
 import { processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
 import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
-import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
-import * as yaml from 'js-yaml';
+import { dirname, isAbsolute, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
@@ -251,102 +250,134 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               positionalArgs = [...positionalArgs, query as string];
             }
             
-            // Handle extensible predicates for tool queries via data extensions.
-            // Instead of CSV files + --external flags, we create a temporary
-            // extension pack with a codeql-pack.yml and data extension YAML that
-            // injects values into the src pack's extensible predicates.
-            const extensiblePredicates: Record<string, string[]> = {};
-            
-            if ((queryName === 'PrintAST' || queryName === 'PrintCFG') && sourceFiles) {
-              const filePaths = (sourceFiles as string).split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
-              if (filePaths.length > 0) {
-                extensiblePredicates['selectedSourceFiles'] = filePaths;
-              }
-            }
+            // Handle external predicates for tool queries
+            if (queryName === 'PrintAST' && sourceFiles) {
+              // Create a CSV file with the source file paths for the external predicate
+              // The external predicate expects a CSV file with one column containing file paths
+              const filePaths = (sourceFiles as string).split(',').map((f: string) => f.trim());
+              let tempDir: string;
+              let csvPath: string;
+              try {
+                tempDir = createProjectTempDir('codeql-external-');
+                tempDirsToCleanup.push(tempDir); // Track for cleanup
+                csvPath = join(tempDir, 'selectedSourceFiles.csv');
 
-            if (sourceFunction) {
-              const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
-              if (functionNames.length > 0) {
-                extensiblePredicates['sourceFunction'] = functionNames;
-              }
-            }
+                // Create CSV content
+                const csvContent = filePaths.join('\n') + '\n';
 
-            if (targetFunction) {
-              const functionNames = (targetFunction as string).split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
-              if (functionNames.length > 0) {
-                extensiblePredicates['targetFunction'] = functionNames;
-              }
-            }
-            
-            if (Object.keys(extensiblePredicates).length > 0) {
-              // Derive the target pack name from queryLanguage or query path
-              let targetPackName: string | undefined;
-              if (_queryLanguage) {
-                targetPackName = `advanced-security/ql-mcp-${_queryLanguage}-tools-src`;
-              } else if (query && typeof query === 'string') {
-                // Extract language from query path: .../ql/{lang}/tools/src/...
-                // Normalize backslashes for Windows compatibility
-                const normalizedQuery = (query as string).replace(/\\/g, '/');
-                const match = normalizedQuery.match(/\/ql\/([^/]+)\/tools\/src\//);
-                if (match) {
-                  targetPackName = `advanced-security/ql-mcp-${match[1]}-tools-src`;
-                }
+                writeFileSync(csvPath, csvContent, 'utf8');
+              } catch (err) {
+                logger.error(`Failed to create external predicate CSV for PrintAST query at path ${csvPath || '[unknown]'}: ${err instanceof Error ? err.message : String(err)}`);
+                throw err;
               }
               
-              if (targetPackName) {
+              // Add the external predicate with the CSV file path
+              const currentExternal = options.external || [];
+              const externalArray = Array.isArray(currentExternal) ? currentExternal : [currentExternal];
+              externalArray.push(`selectedSourceFiles=${csvPath}`);
+              options.external = externalArray;
+              
+              logger.info(`Created external predicate CSV at ${csvPath} for files: ${filePaths.join(', ')}`);
+            }
+            
+            // Handle external predicates for CallGraphFrom queries
+            // Trigger on queryName match OR when sourceFunction is specified without targetFunction
+            if ((queryName === 'CallGraphFrom' || (!queryName && sourceFunction && !targetFunction)) && sourceFunction) {
+              const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim());
+              let tempDir: string;
+              let csvPath: string;
+              try {
+                tempDir = createProjectTempDir('codeql-external-');
+                tempDirsToCleanup.push(tempDir);
+                csvPath = join(tempDir, 'sourceFunction.csv');
+
+                // Create CSV content
+                const csvContent = functionNames.join('\n') + '\n';
+
+                writeFileSync(csvPath, csvContent, 'utf8');
+              } catch (err) {
+                logger.error(`Failed to create external predicate CSV for CallGraphFrom query at path ${csvPath || '[unknown]'}: ${err instanceof Error ? err.message : String(err)}`);
+                throw err;
+              }
+              
+              // Add the external predicate with the CSV file path
+              const currentExternal = options.external || [];
+              const externalArray = Array.isArray(currentExternal) ? currentExternal : [currentExternal];
+              externalArray.push(`sourceFunction=${csvPath}`);
+              options.external = externalArray;
+              
+              logger.info(`Created external predicate CSV at ${csvPath} for functions: ${functionNames.join(', ')}`);
+            }
+            
+            // Handle external predicates for CallGraphTo queries
+            // Trigger on queryName match OR when targetFunction is specified without sourceFunction
+            if ((queryName === 'CallGraphTo' || (!queryName && targetFunction && !sourceFunction)) && targetFunction) {
+              const functionNames = (targetFunction as string).split(',').map((f: string) => f.trim());
+              let tempDir: string;
+              let csvPath: string;
+              try {
+                tempDir = createProjectTempDir('codeql-external-');
+                tempDirsToCleanup.push(tempDir);
+                csvPath = join(tempDir, 'targetFunction.csv');
+
+                // Create CSV content
+                const csvContent = functionNames.join('\n') + '\n';
+
+                writeFileSync(csvPath, csvContent, 'utf8');
+              } catch (err) {
+                logger.error(`Failed to create external predicate CSV for CallGraphTo query at path ${csvPath || '[unknown]'}: ${err instanceof Error ? err.message : String(err)}`);
+                throw err;
+              }
+              
+              // Add the external predicate with the CSV file path
+              const currentExternal = options.external || [];
+              const externalArray = Array.isArray(currentExternal) ? currentExternal : [currentExternal];
+              externalArray.push(`targetFunction=${csvPath}`);
+              options.external = externalArray;
+              
+              logger.info(`Created external predicate CSV at ${csvPath} for functions: ${functionNames.join(', ')}`);
+            }
+
+            // Handle external predicates for CallGraphFromTo queries (needs both source and target)
+            // Trigger on queryName match OR when both sourceFunction and targetFunction are specified
+            if (queryName === 'CallGraphFromTo' || (!queryName && sourceFunction && targetFunction)) {
+              if (sourceFunction) {
+                const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim());
+                let tempDir: string;
+                let csvPath: string;
                 try {
-                  const extPackDir = createProjectTempDir('codeql-ext-pack-');
-                  tempDirsToCleanup.push(extPackDir);
-                  
-                  // Create codeql-pack.yml for the temporary extension pack
-                  const qlpackContent = [
-                    'library: true',
-                    'name: advanced-security/ql-mcp-runtime-extensions',
-                    'version: 0.0.0',
-                    'extensionTargets:',
-                    `  ${targetPackName}: "*"`,
-                    'dataExtensions:',
-                    '  - "ext/*.model.yml"',
-                    '',
-                  ].join('\n');
-                  writeFileSync(join(extPackDir, 'codeql-pack.yml'), qlpackContent, 'utf8');
-                  
-                  // Create ext/ directory and data extension YAML
-                  const extDir = join(extPackDir, 'ext');
-                  mkdirSync(extDir, { recursive: true });
-                  
-                  // Build the YAML data extensions content using js-yaml for safe serialization
-                  const extensionsData = {
-                    extensions: Object.entries(extensiblePredicates).map(([predName, values]) => ({
-                      addsTo: {
-                        pack: targetPackName,
-                        extensible: predName,
-                      },
-                      data: values.map((val) => [val]),
-                    })),
-                  };
-                  
-                  writeFileSync(join(extDir, 'runtime.model.yml'), yaml.dump(extensionsData, { lineWidth: -1, flowLevel: 4 }), 'utf8');
-                  
-                  // Add the extension pack directory to --additional-packs so it can be resolved
-                  const existingPacks = options['additional-packs'] as string | undefined;
-                  options['additional-packs'] = existingPacks
-                    ? `${existingPacks}${delimiter}${extPackDir}`
-                    : extPackDir;
-                  
-                  // Use --model-packs to activate the extension pack for extensible predicates
-                  const modelPacks = options['model-packs'] as string[] | undefined;
-                  const modelPacksArray = Array.isArray(modelPacks) ? modelPacks : [];
-                  modelPacksArray.push('advanced-security/ql-mcp-runtime-extensions@0.0.0');
-                  options['model-packs'] = modelPacksArray;
-                  
-                  logger.info(`Created runtime extension pack at ${extPackDir} targeting ${targetPackName} with predicates: ${Object.keys(extensiblePredicates).join(', ')}`);
+                  tempDir = createProjectTempDir('codeql-external-');
+                  tempDirsToCleanup.push(tempDir);
+                  csvPath = join(tempDir, 'sourceFunction.csv');
+                  writeFileSync(csvPath, functionNames.join('\n') + '\n', 'utf8');
                 } catch (err) {
-                  logger.error(`Failed to create runtime extension pack: ${err instanceof Error ? err.message : String(err)}`);
+                  logger.error(`Failed to create external predicate CSV for CallGraphFromTo sourceFunction at path ${csvPath || '[unknown]'}: ${err instanceof Error ? err.message : String(err)}`);
                   throw err;
                 }
-              } else {
-                logger.warn('Could not determine target pack name for extensible predicates — queryLanguage not set and query path does not match expected pattern');
+                const currentExternal = options.external || [];
+                const externalArray = Array.isArray(currentExternal) ? currentExternal : [currentExternal];
+                externalArray.push(`sourceFunction=${csvPath}`);
+                options.external = externalArray;
+                logger.info(`Created sourceFunction CSV at ${csvPath} for CallGraphFromTo: ${functionNames.join(', ')}`);
+              }
+              if (targetFunction) {
+                const functionNames = (targetFunction as string).split(',').map((f: string) => f.trim());
+                let tempDir: string;
+                let csvPath: string;
+                try {
+                  tempDir = createProjectTempDir('codeql-external-');
+                  tempDirsToCleanup.push(tempDir);
+                  csvPath = join(tempDir, 'targetFunction.csv');
+                  writeFileSync(csvPath, functionNames.join('\n') + '\n', 'utf8');
+                } catch (err) {
+                  logger.error(`Failed to create external predicate CSV for CallGraphFromTo targetFunction at path ${csvPath || '[unknown]'}: ${err instanceof Error ? err.message : String(err)}`);
+                  throw err;
+                }
+                const currentExternal = options.external || [];
+                const externalArray = Array.isArray(currentExternal) ? currentExternal : [currentExternal];
+                externalArray.push(`targetFunction=${csvPath}`);
+                options.external = externalArray;
+                logger.info(`Created targetFunction CSV at ${csvPath} for CallGraphFromTo: ${functionNames.join(', ')}`);
               }
             }
             break;
@@ -430,62 +461,6 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
-        // Extract additionalArgs from options so they are passed as raw CLI
-        // arguments instead of being transformed into --additionalArgs=value
-        // by buildCodeQLArgs.
-        const rawAdditionalArgs = Array.isArray(options.additionalArgs)
-          ? options.additionalArgs as string[]
-          : [];
-        delete options.additionalArgs;
-
-        // For tools with post-execution processing (query run, test run,
-        // database analyze), certain CLI flags are set internally and their
-        // values are read back after execution (e.g. --evaluator-log for log
-        // summary generation, --output for SARIF interpretation).  If a user
-        // passes these flags via additionalArgs the CLI would receive
-        // conflicting duplicates and the post-processing would use stale
-        // values from the options object.  Filter them out and log a warning
-        // directing the user to the corresponding named parameter instead.
-        const managedFlagNames = new Set([
-          'evaluator-log',
-          'logdir',
-          'output',
-          'tuple-counting',
-          'verbosity',
-        ]);
-        const userAdditionalArgs = queryLogDir
-          ? (() => {
-              const filteredAdditionalArgs: string[] = [];
-
-              for (let i = 0; i < rawAdditionalArgs.length; i += 1) {
-                const arg = rawAdditionalArgs[i];
-                const m = arg.match(/^--(?:no-)?([^=]+)(?:=.*)?$/);
-
-                if (m && managedFlagNames.has(m[1])) {
-                  logger.warn(
-                    `Ignoring "${arg}" from additionalArgs for ${name}: ` +
-                    'this flag is managed internally. Use the corresponding named parameter instead.'
-                  );
-
-                  // Always skip the managed flag itself. If it is provided in
-                  // space-separated form (e.g. ["--output", "file.sarif"]),
-                  // also skip the following token as its value so it does not
-                  // become a stray positional argument.
-                  const hasInlineValue = arg.includes('=');
-                  if (!hasInlineValue && i + 1 < rawAdditionalArgs.length) {
-                    i += 1;
-                  }
-
-                  continue;
-                }
-
-                filteredAdditionalArgs.push(arg);
-              }
-
-              return filteredAdditionalArgs;
-            })()
-          : rawAdditionalArgs;
-
         let result: CLIExecutionResult;
         
         if (command === 'codeql') {
@@ -508,10 +483,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS
             || (existsSync(defaultExamplesPath) ? defaultExamplesPath : undefined);
           if (additionalPacksPath && (name === 'codeql_test_run' || name === 'codeql_query_run' || name === 'codeql_query_compile' || name === 'codeql_database_analyze')) {
-            const existingAdditionalPacks = options['additional-packs'] as string | undefined;
-            options['additional-packs'] = existingAdditionalPacks
-              ? `${existingAdditionalPacks}${delimiter}${additionalPacksPath}`
-              : additionalPacksPath;
+            options['additional-packs'] = additionalPacksPath;
           }
           
           // Keep test databases for codeql_test_run to allow subsequent query runs
@@ -519,9 +491,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             options['keep-databases'] = true;
           }
           
-          result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
+          result = await executeCodeQLCommand(subcommand, options, positionalArgs, cwd);
         } else if (command === 'qlt') {
-          result = await executeQLTCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs]);
+          result = await executeQLTCommand(subcommand, options, positionalArgs);
         } else {
           throw new Error(`Unsupported command: ${command}`);
         }

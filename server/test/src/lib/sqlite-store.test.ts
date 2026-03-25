@@ -2,17 +2,18 @@
  * Tests for SqliteStore — the unified sql.js persistence backend.
  */
 
-import { existsSync, rmSync } from 'fs';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SqliteStore } from '../../../src/lib/sqlite-store';
-import { createProjectTempDir } from '../../../src/utils/temp-dir';
+import { existsSync, rmSync } from 'fs';
 
 describe('SqliteStore', () => {
   let store: SqliteStore;
-  let testDir: string;
+  const testDir = '.ql-mcp-sqlite-test';
 
   beforeEach(async () => {
-    testDir = createProjectTempDir('sqlite-store-test-');
+    if (existsSync(testDir)) {
+      rmSync(testDir, { recursive: true, force: true });
+    }
     store = new SqliteStore(testDir);
     await store.initialize();
   });
@@ -118,25 +119,13 @@ describe('SqliteStore', () => {
       expect(results[0].content).toBe('yes');
     });
 
-    it('should full-text search annotations across content, label, and metadata', () => {
+    it('should search annotations by content', () => {
       store.createAnnotation('note', 'a', 'Found a vulnerability in auth');
       store.createAnnotation('note', 'b', 'No issues here');
       store.createAnnotation('note', 'c', null, null, '{"detail":"vulnerability in parser"}');
 
       const results = store.listAnnotations({ search: 'vulnerability' });
       expect(results).toHaveLength(2);
-    });
-
-    it('should perform case-insensitive full-text search', () => {
-      store.createAnnotation('note', 'x', 'SQL injection risk');
-      store.createAnnotation('note', 'y', 'No problems');
-
-      const lower = store.listAnnotations({ search: 'sql' });
-      const upper = store.listAnnotations({ search: 'SQL' });
-      const mixed = store.listAnnotations({ search: 'Sql' });
-      expect(lower).toHaveLength(1);
-      expect(upper).toHaveLength(1);
-      expect(mixed).toHaveLength(1);
     });
 
     it('should support limit and offset', () => {
@@ -196,23 +185,6 @@ describe('SqliteStore', () => {
 
     it('should throw when deleting without a filter', () => {
       expect(() => store.deleteAnnotations({})).toThrow('at least one filter');
-    });
-
-    it('should return empty results for invalid FTS MATCH syntax', () => {
-      store.createAnnotation('note', 'key', 'hello world');
-      // Trailing operator is invalid FTS syntax and would normally throw.
-      // listAnnotations should catch it and return [] instead.
-      const results = store.listAnnotations({ search: 'hello AND' });
-      expect(results).toEqual([]);
-    });
-
-    it('should support offset without explicit limit', () => {
-      for (let i = 0; i < 5; i++) {
-        store.createAnnotation('note', `key-${i}`, `content ${i}`);
-      }
-      // Offset only — previously would cause a SQLite syntax error.
-      const results = store.listAnnotations({ offset: 2 });
-      expect(results).toHaveLength(3);
     });
   });
 
@@ -308,9 +280,9 @@ describe('SqliteStore', () => {
       expect(subset!.totalLines).toBe(6); // 5 lines + trailing newline
     });
 
-    it('should retrieve subset by maxLines without lineRange', () => {
+    it('should retrieve subset by grep', () => {
       store.putCacheEntry({
-        cacheKey: 'nolimit',
+        cacheKey: 'grep',
         queryName: 'PrintAST',
         queryPath: '/p.ql',
         databasePath: '/db',
@@ -320,11 +292,11 @@ describe('SqliteStore', () => {
         resultContent: 'Function foo\n  Param x\nFunction bar\n  Param y\n',
       });
 
-      const subset = store.getCacheContentSubset('nolimit', { maxLines: 2 });
+      const subset = store.getCacheContentSubset('grep', { grep: 'Function' });
       expect(subset).not.toBeNull();
       expect(subset!.returnedLines).toBe(2);
-      expect(subset!.truncated).toBe(true);
-      expect(subset!.content).toBe('Function foo\n  Param x');
+      expect(subset!.content).toContain('Function foo');
+      expect(subset!.content).toContain('Function bar');
     });
 
     it('should enforce maxLines cap', () => {
@@ -369,8 +341,7 @@ describe('SqliteStore', () => {
         resultCount: 3,
       });
 
-      // resultIndices is inclusive: [0, 1] returns indices 0 and 1 (2 results)
-      const subset = store.getCacheSarifSubset('sarif1', { resultIndices: [0, 1] });
+      const subset = store.getCacheSarifSubset('sarif1', { resultIndices: [0, 2] });
       expect(subset).not.toBeNull();
       expect(subset!.totalResults).toBe(3);
       expect(subset!.returnedResults).toBe(2);
@@ -429,18 +400,6 @@ describe('SqliteStore', () => {
       expect(store.listCacheEntries({ language: 'java' })).toHaveLength(1);
     });
 
-    it('should limit cache entries returned when limit filter is set', () => {
-      for (let i = 0; i < 5; i++) {
-        store.putCacheEntry({
-          cacheKey: `k${i}`, queryName: 'Q', queryPath: '/q.ql',
-          databasePath: '/db', language: 'cpp', codeqlVersion: '2.25.0',
-          outputFormat: 'csv', resultContent: `c${i}`,
-        });
-      }
-      const limited = store.listCacheEntries({ limit: 3 });
-      expect(limited).toHaveLength(3);
-    });
-
     it('should clear cache entries by filter', () => {
       store.putCacheEntry({
         cacheKey: 'x', queryName: 'Q', queryPath: '/q.ql',
@@ -473,28 +432,6 @@ describe('SqliteStore', () => {
       const cleared = store.clearCacheEntries({ all: true });
       expect(cleared).toBe(2);
       expect(store.listCacheEntries()).toHaveLength(0);
-    });
-
-    it('should fall back to line-based retrieval for non-JSON SARIF content', () => {
-      const nonJsonContent = 'This is not valid JSON\nLine 2\nLine 3\nLine 4\nLine 5';
-      store.putCacheEntry({
-        cacheKey: 'bad-sarif',
-        queryName: 'Q',
-        queryPath: '/q.ql',
-        databasePath: '/db',
-        language: 'javascript',
-        codeqlVersion: '2.25.0',
-        outputFormat: 'sarif-latest',
-        resultContent: nonJsonContent,
-      });
-
-      const subset = store.getCacheSarifSubset('bad-sarif', {});
-      expect(subset).not.toBeNull();
-      // Fallback should report 0 for result counts since it's not valid SARIF
-      expect(subset!.totalResults).toBe(0);
-      expect(subset!.returnedResults).toBe(0);
-      // Content should still be returned (line-based fallback)
-      expect(subset!.content).toContain('This is not valid JSON');
     });
   });
 });

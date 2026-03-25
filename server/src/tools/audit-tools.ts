@@ -5,8 +5,8 @@
  * findings with notes, mirroring the seclab codeql_python MCP server's
  * SQLite-backed source tracking — but now backed by the shared SqliteStore.
  *
- * Enabled when ENABLE_ANNOTATION_TOOLS=true (disabled by default when annotation tools are off).
- * Audit tools are layered on annotations; there is no separate ENABLE_AUDIT_TOOLS flag.
+ * Opt-in via ENABLE_AUDIT_TOOLS=true (disabled by default).
+ * Requires ENABLE_ANNOTATION_TOOLS=true (audit tools are layered on annotations).
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -57,7 +57,7 @@ function registerAuditStoreFindingsTool(server: McpServer): void {
       repo: z.string().describe('Repository name.'),
       findings: z.array(z.object({
         sourceLocation: z.string().describe('File path of the finding.'),
-        line: z.number().int().min(1).describe('Line number of the finding (integer >= 1).'),
+        line: z.number().describe('Line number of the finding.'),
         sourceType: z.string().describe('Type of the source (e.g. "RemoteFlowSource").'),
         description: z.string().optional().describe('Human-readable description.'),
       })).describe('Array of findings to store.'),
@@ -109,7 +109,7 @@ function registerAuditListFindingsTool(server: McpServer): void {
     {
       owner: z.string().describe('Repository owner.'),
       repo: z.string().describe('Repository name.'),
-      limit: z.number().int().positive().max(1000).optional().describe('Maximum number of results (1–1000).'),
+      limit: z.number().optional().describe('Maximum number of results.'),
     },
     async ({ owner, repo, limit }) => {
       const store = sessionDataManager.getStore();
@@ -152,7 +152,7 @@ function registerAuditAddNotesTool(server: McpServer): void {
       owner: z.string().describe('Repository owner.'),
       repo: z.string().describe('Repository name.'),
       sourceLocation: z.string().describe('File path of the finding.'),
-      line: z.number().int().min(1).describe('Line number of the finding (integer >= 1).'),
+      line: z.number().describe('Line number of the finding.'),
       notes: z.string().describe('Notes to append.'),
     },
     async ({ owner, repo, sourceLocation, line, notes }) => {

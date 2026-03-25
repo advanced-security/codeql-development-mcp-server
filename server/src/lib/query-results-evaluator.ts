@@ -4,8 +4,9 @@
 
 import { executeCodeQLCommand } from './cli-executor';
 import { logger } from '../utils/logger';
-import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'fs';
+import { writeFileSync, readFileSync, statSync } from 'fs';
 import { dirname, isAbsolute } from 'path';
+import { mkdirSync } from 'fs';
 
 export interface QueryEvaluationResult {
   success: boolean;
@@ -36,11 +37,7 @@ export type BuiltInEvaluator = keyof typeof BUILT_IN_EVALUATORS;
 /**
  * In-memory cache for extracted query metadata, keyed by file path.
  * Stores the file modification time to invalidate when the file changes.
- * Bounded to {@link METADATA_CACHE_MAX} entries; least-recently-used entries
- * (by access) are evicted when the limit is reached. Entries are refreshed
- * on cache hits via delete+set, so Map iteration order reflects LRU state.
  */
-const METADATA_CACHE_MAX = 256;
 const metadataCache = new Map<string, { mtime: number; metadata: QueryMetadata }>();
 
 /**
@@ -49,23 +46,15 @@ const metadataCache = new Map<string, { mtime: number; metadata: QueryMetadata }
  */
 export async function extractQueryMetadata(queryPath: string): Promise<QueryMetadata> {
   try {
-    // Open once, then fstat + read via the fd to avoid TOCTOU race (CWE-367).
-    const fd = openSync(queryPath, 'r');
-    let queryContent: string;
-    let mtime: number;
-    try {
-      mtime = fstatSync(fd).mtimeMs;
-      const cached = metadataCache.get(queryPath);
-      if (cached && cached.mtime === mtime) {
-        // Refresh position in Map to implement true LRU behavior.
-        metadataCache.delete(queryPath);
-        metadataCache.set(queryPath, cached);
-        return cached.metadata;
-      }
-      queryContent = readFileSync(fd, 'utf-8');
-    } finally {
-      closeSync(fd);
+    // Check cache with mtime validation
+    const stat = statSync(queryPath);
+    const mtime = stat.mtimeMs;
+    const cached = metadataCache.get(queryPath);
+    if (cached && cached.mtime === mtime) {
+      return cached.metadata;
     }
+
+    const queryContent = readFileSync(queryPath, 'utf-8');
     const metadata: QueryMetadata = {};
 
     // Extract metadata from comments using regex patterns
@@ -86,11 +75,6 @@ export async function extractQueryMetadata(queryPath: string): Promise<QueryMeta
       metadata.tags = tagsMatch[1].split(/\s+/).filter(t => t.length > 0);
     }
 
-    // Evict oldest entries when the cache exceeds the size limit.
-    if (metadataCache.size >= METADATA_CACHE_MAX) {
-      const firstKey = metadataCache.keys().next().value;
-      if (firstKey !== undefined) metadataCache.delete(firstKey);
-    }
     metadataCache.set(queryPath, { mtime, metadata });
     return metadata;
   } catch (error) {
