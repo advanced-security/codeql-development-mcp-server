@@ -8,7 +8,10 @@ import { basename, delimiter, dirname, isAbsolute, join } from 'path';
 import { homedir } from 'os';
 import { promisify } from 'util';
 import { logger } from '../utils/logger';
-import { workspaceRootDir, packageRootDir as pkgRootDir } from '../utils/package-paths';
+import { setActualCodeqlVersion, warnOnVersionMismatch } from './codeql-version';
+
+// Re-export version functions so existing callers don't break
+export { getActualCodeqlVersion, getTargetCodeqlVersion } from './codeql-version';
 
 const execFileAsync = promisify(execFile);
 
@@ -368,57 +371,12 @@ export function resetResolvedCodeQLBinary(): void {
 }
 
 /**
- * The actual CodeQL CLI version string (set after startup validation).
- * Use this for cache keys — it reflects what actually ran the query.
- */
-let actualCodeqlVersion: string | undefined;
-
-/**
- * The target CodeQL CLI version the MCP server was built against
- * (read from .codeql-version at the repo root).
- */
-let targetCodeqlVersion: string | undefined;
-
-/**
- * Get the actual CodeQL CLI version detected at startup.
- * Returns 'unknown' if not yet validated.
- */
-export function getActualCodeqlVersion(): string {
-  return actualCodeqlVersion ?? 'unknown';
-}
-
-/**
- * Get the target CodeQL CLI version from .codeql-version.
- * Returns 'unknown' if the file is missing.
- */
-export function getTargetCodeqlVersion(): string {
-  if (targetCodeqlVersion !== undefined) return targetCodeqlVersion;
-  try {
-    for (const root of [workspaceRootDir, pkgRootDir]) {
-      const versionFile = join(root, '.codeql-version');
-      if (existsSync(versionFile)) {
-        targetCodeqlVersion = readFileSync(versionFile, 'utf8').trim();
-        return targetCodeqlVersion;
-      }
-    }
-  } catch {
-    // Fall through
-  }
-  targetCodeqlVersion = 'unknown';
-  return targetCodeqlVersion;
-}
-
-/**
  * Validate that the resolved CodeQL binary is actually callable.
  *
  * Runs `codeql version --format=terse` and verifies the process exits
- * successfully. This catches the case where `CODEQL_PATH` is unset and
- * `codeql` is not on PATH — the server would otherwise start normally
- * but every tool invocation would fail.
- *
- * Stores the actual version for later retrieval via getActualCodeqlVersion().
- * Warns (but does not fail) if the actual version differs from the target
- * version in .codeql-version.
+ * successfully. Stores the actual version for later retrieval via
+ * getActualCodeqlVersion(). Warns (but does not fail) if the actual
+ * version differs from the target version in .codeql-version.
  *
  * @returns The version string reported by the CodeQL CLI.
  * @throws Error if the binary is not reachable or returns a non-zero exit code.
@@ -438,16 +396,10 @@ export async function validateCodeQLBinaryReachable(): Promise<string> {
     const version = stdout.trim();
 
     // Store the actual CLI version for cache keys and diagnostics
-    actualCodeqlVersion = version;
+    setActualCodeqlVersion(version);
 
     // Compare with target version and warn on mismatch
-    const target = getTargetCodeqlVersion();
-    if (target !== 'unknown' && version !== target && `v${version}` !== target && version !== `v${target}`) {
-      logger.warn(
-        `CodeQL CLI version mismatch: detected ${version}, MCP server targets ${target}. ` +
-        `The server will continue, but query results may differ from expected behavior.`
-      );
-    }
+    warnOnVersionMismatch(version);
 
     return version;
   } catch (err: unknown) {
