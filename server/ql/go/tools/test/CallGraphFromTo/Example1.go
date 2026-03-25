@@ -1,7 +1,6 @@
 package main
 
 func unrelated() {
-	// No calls
 }
 
 func target() {
@@ -14,4 +13,8 @@ func intermediate() {
 
 func source() {
 	intermediate()
+}
+
+func main() {
+	source()
 }

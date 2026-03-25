@@ -27,8 +27,8 @@ where
     // Use external predicate if available
     source.getName() = getSourceFunctionName()
     or
-    // Fallback for unit tests: include test files
+    // Fallback for unit tests: include calls from the example test file
     not exists(getSourceFunctionName()) and
-    source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
+    source.getFile().getBaseName() = "Example1.go"
   )
 select call, "Call from `" + source.getName() + "` to `" + call.getTarget().getName() + "`"

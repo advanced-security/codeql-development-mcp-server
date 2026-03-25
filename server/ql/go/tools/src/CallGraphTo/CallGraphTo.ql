@@ -35,8 +35,8 @@ where
     // Use external predicate if available
     call.getTarget().getName() = getTargetFunctionName()
     or
-    // Fallback for unit tests: include test files
+    // Fallback for unit tests: include calls from the example test file
     not exists(getTargetFunctionName()) and
-    call.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
+    call.getFile().getBaseName() = "Example1.go"
   )
 select call, "Call to `" + call.getTarget().getName() + "` from `" + getCallerName(call) + "`"

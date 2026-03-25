@@ -56,10 +56,10 @@ where
       )
     )
     or
-    // Fallback for unit tests: include test files
+    // Fallback for unit tests: include calls from the example test file
     not exists(getSourceFunctionName()) and
     not exists(getTargetFunctionName()) and
-    caller.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
+    caller.getFile().getBaseName() = "Example1.go"
   )
 select call,
   "Reachable call from `" + caller.getName() + "` to `" + call.getTarget().getName() + "`"
