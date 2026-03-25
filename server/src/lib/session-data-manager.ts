@@ -1,14 +1,13 @@
 /**
  * Session Data Management
- * Provides unified JSON storage and session lifecycle management using lowdb
+ * Provides session lifecycle management backed by SqliteStore (sql.js WASM)
  */
 
-import { Low } from 'lowdb';
-import { JSONFileSync } from 'lowdb/node';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { getProjectTmpBase } from '../utils/temp-dir';
+import { SqliteStore } from './sqlite-store';
 import {
   QueryDevelopmentSession,
   QueryState,
@@ -22,17 +21,13 @@ import {
 import { logger } from '../utils/logger';
 
 /**
- * Database schema for lowdb - sessions only
- */
-interface SessionDatabase {
-  sessions: QueryDevelopmentSession[];
-}
-
-/**
- * Session Data Manager - handles all session persistence and lifecycle
+ * Session Data Manager - handles all session persistence and lifecycle.
+ *
+ * Sessions are stored as JSON blobs keyed by session_id in the shared
+ * SqliteStore, replacing the previous lowdb JSON-file backend.
  */
 export class SessionDataManager {
-  private db: Low<SessionDatabase>;
+  private store: SqliteStore;
   private config: MonitoringConfig;
   private storageDir: string;
 
@@ -45,33 +40,29 @@ export class SessionDataManager {
     this.storageDir = this.config.storageLocation;
     this.ensureStorageDirectory();
 
-    const adapter = new JSONFileSync<SessionDatabase>(join(this.storageDir, 'sessions.json'));
-    this.db = new Low(adapter, {
-      sessions: [],
-    });
-
-    this.initializeDatabase();
+    this.store = new SqliteStore(this.storageDir);
   }
 
   /**
-   * Initialize the database and ensure it's properly set up
+   * Initialize the database and ensure it's properly set up.
+   * Must be awaited before any session operations (sql.js WASM init is async).
    */
   async initialize(): Promise<void> {
-    await this.initializeDatabase();
-  }
-
-  /**
-   * Initialize the database and ensure it's properly set up
-   */
-  private async initializeDatabase(): Promise<void> {
     try {
-      await this.db.read();
-      
-      logger.info(`Session data manager initialized with ${this.db.data.sessions.length} sessions`);
+      await this.store.initialize();
+      const count = this.store.countSessions();
+      logger.info(`Session data manager initialized with ${count} sessions`);
     } catch (error) {
       logger.error('Failed to initialize session database:', error);
       throw error;
     }
+  }
+
+  /**
+   * Get the underlying SqliteStore (used by annotation and audit tools).
+   */
+  getStore(): SqliteStore {
+    return this.store;
   }
 
   /**
@@ -138,9 +129,7 @@ export class SessionDataManager {
       recommendations: [],
     };
 
-    await this.db.read();
-    this.db.data.sessions.push(session);
-    await this.db.write();
+    this.store.putSession(sessionId, session);
 
     logger.info(`Started new session: ${sessionId} for query: ${queryPath}`);
     return sessionId;
@@ -153,9 +142,7 @@ export class SessionDataManager {
     sessionId: string,
     status: 'completed' | 'failed' | 'abandoned'
   ): Promise<QueryDevelopmentSession | null> {
-    await this.db.read();
-    
-    const session = this.db.data.sessions.find(s => s.sessionId === sessionId);
+    const session = this.store.getSession(sessionId) as QueryDevelopmentSession | null;
     if (!session) {
       logger.warn(`Session not found: ${sessionId}`);
       return null;
@@ -165,7 +152,7 @@ export class SessionDataManager {
     session.endTime = new Date().toISOString();
     session.currentState.lastActivity = session.endTime;
 
-    await this.db.write();
+    this.store.putSession(sessionId, session);
 
     // Archive completed session if enabled
     if (this.config.archiveCompletedSessions && status === 'completed') {
@@ -180,8 +167,7 @@ export class SessionDataManager {
    * Get a specific session by ID
    */
   async getSession(sessionId: string): Promise<QueryDevelopmentSession | null> {
-    await this.db.read();
-    const session = this.db.data.sessions.find(s => s.sessionId === sessionId);
+    const session = this.store.getSession(sessionId) as QueryDevelopmentSession | null;
     return session || null;
   }
 
@@ -189,8 +175,7 @@ export class SessionDataManager {
    * List sessions with optional filtering
    */
   async listSessions(filters?: SessionFilter): Promise<QueryDevelopmentSession[]> {
-    await this.db.read();
-    let sessions = [...this.db.data.sessions];
+    let sessions = this.store.getAllSessions() as QueryDevelopmentSession[];
 
     if (filters) {
       if (filters.queryPath) {
@@ -223,9 +208,7 @@ export class SessionDataManager {
     sessionId: string,
     stateUpdate: Partial<QueryState>
   ): Promise<QueryDevelopmentSession | null> {
-    await this.db.read();
-    
-    const session = this.db.data.sessions.find(s => s.sessionId === sessionId);
+    const session = this.store.getSession(sessionId) as QueryDevelopmentSession | null;
     if (!session) {
       logger.warn(`Session not found: ${sessionId}`);
       return null;
@@ -237,7 +220,7 @@ export class SessionDataManager {
       lastActivity: new Date().toISOString(),
     };
 
-    await this.db.write();
+    this.store.putSession(sessionId, session);
     return session;
   }
 
@@ -245,9 +228,7 @@ export class SessionDataManager {
    * Add MCP call record to session
    */
   async addMCPCall(sessionId: string, callRecord: MCPCallRecord): Promise<void> {
-    await this.db.read();
-    
-    const session = this.db.data.sessions.find(s => s.sessionId === sessionId);
+    const session = this.store.getSession(sessionId) as QueryDevelopmentSession | null;
     if (!session) {
       logger.warn(`Session not found for MCP call: ${sessionId}`);
       return;
@@ -261,16 +242,14 @@ export class SessionDataManager {
       session.nextSuggestedTool = callRecord.nextSuggestedTool;
     }
 
-    await this.db.write();
+    this.store.putSession(sessionId, session);
   }
 
   /**
    * Add test execution record to session
    */
   async addTestExecution(sessionId: string, testRecord: TestExecutionRecord): Promise<void> {
-    await this.db.read();
-    
-    const session = this.db.data.sessions.find(s => s.sessionId === sessionId);
+    const session = this.store.getSession(sessionId) as QueryDevelopmentSession | null;
     if (!session) {
       logger.warn(`Session not found for test execution: ${sessionId}`);
       return;
@@ -286,16 +265,14 @@ export class SessionDataManager {
       session.currentState.testStatus = testRecord.success ? 'passing' : 'failing';
     }
 
-    await this.db.write();
+    this.store.putSession(sessionId, session);
   }
 
   /**
    * Add quality score record to session
    */
   async addQualityScore(sessionId: string, scoreRecord: QualityScoreRecord): Promise<void> {
-    await this.db.read();
-    
-    const session = this.db.data.sessions.find(s => s.sessionId === sessionId);
+    const session = this.store.getSession(sessionId) as QueryDevelopmentSession | null;
     if (!session) {
       logger.warn(`Session not found for quality score: ${sessionId}`);
       return;
@@ -305,7 +282,7 @@ export class SessionDataManager {
     session.currentState.lastActivity = scoreRecord.timestamp;
     session.recommendations = scoreRecord.recommendations;
 
-    await this.db.write();
+    this.store.putSession(sessionId, session);
   }
 
   /**
@@ -313,7 +290,7 @@ export class SessionDataManager {
    */
   private async archiveSession(sessionId: string): Promise<void> {
     try {
-      const session = await this.getSession(sessionId);
+      const session = this.store.getSession(sessionId) as QueryDevelopmentSession | null;
       if (!session) return;
 
       const date = new Date(session.endTime || session.startTime);
@@ -326,9 +303,7 @@ export class SessionDataManager {
       writeFileSync(archiveFile, JSON.stringify(session, null, 2));
 
       // Remove from active sessions
-      await this.db.read();
-      this.db.data.sessions = this.db.data.sessions.filter(s => s.sessionId !== sessionId);
-      await this.db.write();
+      this.store.deleteSession(sessionId);
 
       logger.info(`Archived session: ${sessionId} to ${archiveFile}`);
     } catch (error) {
@@ -340,8 +315,8 @@ export class SessionDataManager {
    * Get active sessions for a specific query path
    */
   async getActiveSessionsForQuery(queryPath: string): Promise<QueryDevelopmentSession[]> {
-    await this.db.read();
-    return this.db.data.sessions.filter(s => 
+    const sessions = this.store.getAllSessions() as QueryDevelopmentSession[];
+    return sessions.filter(s =>
       s.queryPath === queryPath && s.status === 'active'
     );
   }
@@ -354,17 +329,16 @@ export class SessionDataManager {
     cutoffDate.setDate(cutoffDate.getDate() - this.config.retentionDays);
     const cutoffTimestamp = cutoffDate.toISOString();
 
-    await this.db.read();
-    const sessionsToRemove = this.db.data.sessions.filter(s => 
+    const sessions = this.store.getAllSessions() as QueryDevelopmentSession[];
+    const sessionsToRemove = sessions.filter(s =>
       s.endTime && s.endTime < cutoffTimestamp
     );
 
-    if (sessionsToRemove.length > 0) {
-      this.db.data.sessions = this.db.data.sessions.filter(s => 
-        !s.endTime || s.endTime >= cutoffTimestamp
-      );
-      await this.db.write();
+    for (const session of sessionsToRemove) {
+      this.store.deleteSession(session.sessionId);
+    }
 
+    if (sessionsToRemove.length > 0) {
       logger.info(`Cleaned up ${sessionsToRemove.length} old sessions`);
     }
   }
@@ -405,4 +379,5 @@ function parseBoolEnv(envVar: string | undefined, defaultValue: boolean): boolea
 export const sessionDataManager = new SessionDataManager({
   storageLocation: process.env.MONITORING_STORAGE_LOCATION || join(getProjectTmpBase(), '.ql-mcp-tracking'),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false),
+  enableAnnotationTools: parseBoolEnv(process.env.ENABLE_ANNOTATION_TOOLS, false),
 });
