@@ -264,8 +264,9 @@ suite('MCP Server Tool Integration Tests', () => {
 
     assert.ok(!toolNames.includes('annotation_create'), 'annotation_create should NOT be registered by default');
     assert.ok(!toolNames.includes('audit_store_findings'), 'audit_store_findings should NOT be registered by default');
+    assert.ok(!toolNames.includes('query_results_cache_lookup'), 'query_results_cache_lookup should NOT be registered by default');
 
-    console.log('[mcp-tool-e2e] Confirmed annotation/audit tools are not registered by default');
+    console.log('[mcp-tool-e2e] Confirmed annotation/audit/cache tools are not registered by default');
   });
 });
 
@@ -338,7 +339,13 @@ suite('MCP Annotation & Audit Tool Integration Tests', () => {
     assert.ok(toolNames.includes('audit_add_notes'), 'Should include audit_add_notes');
     assert.ok(toolNames.includes('audit_clear_repo'), 'Should include audit_clear_repo');
 
-    console.log(`[mcp-annotation-e2e] All 10 annotation/audit tools registered`);
+    // Layer 3: query results cache tools (gated by same flag)
+    assert.ok(toolNames.includes('query_results_cache_lookup'), 'Should include query_results_cache_lookup');
+    assert.ok(toolNames.includes('query_results_cache_retrieve'), 'Should include query_results_cache_retrieve');
+    assert.ok(toolNames.includes('query_results_cache_clear'), 'Should include query_results_cache_clear');
+    assert.ok(toolNames.includes('query_results_cache_compare'), 'Should include query_results_cache_compare');
+
+    console.log(`[mcp-annotation-e2e] All 14 annotation/audit/cache tools registered`);
   });
 
   test('MRVA + Annotation workflow: store and retrieve findings', async function () {
@@ -409,5 +416,48 @@ suite('MCP Annotation & Audit Tool Integration Tests', () => {
     assert.ok(clearText.includes('Cleared'), `Should confirm clearing. Got: ${clearText}`);
 
     console.log('[mcp-annotation-e2e] MRVA + Annotation workflow test passed');
+  });
+
+  test('Query results cache: lookup, clear, and compare', async function () {
+    this.timeout(15_000);
+
+    // Step 1: Lookup should return cached:false for a query not yet run
+    const lookupResult = await client.callTool({
+      name: 'query_results_cache_lookup',
+      arguments: { queryName: 'PrintAST', language: 'javascript' },
+    });
+    assert.ok(!lookupResult.isError, 'query_results_cache_lookup should succeed');
+    const lookupText = (lookupResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    // May be cached:false or cached:true depending on prior test runs — just verify it doesn't error
+    assert.ok(lookupText.includes('cached'), `Should contain cached field. Got: ${lookupText}`);
+
+    // Step 2: Compare should work even with empty cache
+    const compareResult = await client.callTool({
+      name: 'query_results_cache_compare',
+      arguments: { queryName: 'NonExistentQuery' },
+    });
+    assert.ok(!compareResult.isError, 'query_results_cache_compare should succeed');
+    const compareText = (compareResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(compareText.includes('No cached results') || compareText.includes('databases'), `Should handle empty compare. Got: ${compareText}`);
+
+    // Step 3: Clear all — should not error even on empty cache
+    const clearResult = await client.callTool({
+      name: 'query_results_cache_clear',
+      arguments: { all: true },
+    });
+    assert.ok(!clearResult.isError, 'query_results_cache_clear should succeed');
+    const clearText = (clearResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(clearText.includes('Cleared'), `Should confirm clearing. Got: ${clearText}`);
+
+    // Step 4: Retrieve should handle missing key gracefully
+    const retrieveResult = await client.callTool({
+      name: 'query_results_cache_retrieve',
+      arguments: { cacheKey: 'nonexistent-test-key', maxLines: 10 },
+    });
+    assert.ok(!retrieveResult.isError, 'query_results_cache_retrieve should succeed');
+    const retrieveText = (retrieveResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    assert.ok(retrieveText.includes('No cached result'), `Should handle missing key. Got: ${retrieveText}`);
+
+    console.log('[mcp-annotation-e2e] Query results cache test passed');
   });
 });

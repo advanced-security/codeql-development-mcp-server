@@ -207,4 +207,231 @@ describe('SqliteStore', () => {
       store2.close();
     });
   });
+
+  describe('Query Result Cache', () => {
+    it('should store and retrieve a cache entry', () => {
+      store.putCacheEntry({
+        cacheKey: 'abc123',
+        queryName: 'PrintAST',
+        queryPath: '/path/to/PrintAST.ql',
+        databasePath: '/path/to/db',
+        language: 'cpp',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'graphtext',
+        resultContent: 'node1\n  edge1\nnode2\n  edge2\n',
+        resultCount: 2,
+      });
+
+      const meta = store.getCacheEntryMeta('abc123');
+      expect(meta).not.toBeNull();
+      expect(meta!.queryName).toBe('PrintAST');
+      expect(meta!.language).toBe('cpp');
+      expect(meta!.resultCount).toBe(2);
+
+      const content = store.getCacheContent('abc123');
+      expect(content).toBe('node1\n  edge1\nnode2\n  edge2\n');
+    });
+
+    it('should return null for non-existent cache key', () => {
+      expect(store.getCacheEntryMeta('missing')).toBeNull();
+      expect(store.getCacheContent('missing')).toBeNull();
+    });
+
+    it('should overwrite existing cache entry with same key', () => {
+      store.putCacheEntry({
+        cacheKey: 'dup',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'java',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'csv',
+        resultContent: 'old',
+      });
+      store.putCacheEntry({
+        cacheKey: 'dup',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'java',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'csv',
+        resultContent: 'new',
+      });
+      expect(store.getCacheContent('dup')).toBe('new');
+    });
+
+    it('should retrieve subset by line range', () => {
+      store.putCacheEntry({
+        cacheKey: 'lines',
+        queryName: 'PrintCFG',
+        queryPath: '/p.ql',
+        databasePath: '/db',
+        language: 'cpp',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'graphtext',
+        resultContent: 'line1\nline2\nline3\nline4\nline5\n',
+      });
+
+      const subset = store.getCacheContentSubset('lines', { lineRange: [2, 4] });
+      expect(subset).not.toBeNull();
+      expect(subset!.returnedLines).toBe(3);
+      expect(subset!.content).toBe('line2\nline3\nline4');
+      expect(subset!.totalLines).toBe(6); // 5 lines + trailing newline
+    });
+
+    it('should retrieve subset by grep', () => {
+      store.putCacheEntry({
+        cacheKey: 'grep',
+        queryName: 'PrintAST',
+        queryPath: '/p.ql',
+        databasePath: '/db',
+        language: 'cpp',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'graphtext',
+        resultContent: 'Function foo\n  Param x\nFunction bar\n  Param y\n',
+      });
+
+      const subset = store.getCacheContentSubset('grep', { grep: 'Function' });
+      expect(subset).not.toBeNull();
+      expect(subset!.returnedLines).toBe(2);
+      expect(subset!.content).toContain('Function foo');
+      expect(subset!.content).toContain('Function bar');
+    });
+
+    it('should enforce maxLines cap', () => {
+      const lines = Array.from({ length: 100 }, (_, i) => `line${i}`).join('\n');
+      store.putCacheEntry({
+        cacheKey: 'big',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'python',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'csv',
+        resultContent: lines,
+      });
+
+      const subset = store.getCacheContentSubset('big', { maxLines: 10 });
+      expect(subset!.returnedLines).toBe(10);
+      expect(subset!.truncated).toBe(true);
+    });
+
+    it('should retrieve SARIF subset by resultIndices', () => {
+      const sarif = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'codeql' } },
+          results: [
+            { ruleId: 'r1', message: { text: 'msg1' }, locations: [] },
+            { ruleId: 'r2', message: { text: 'msg2' }, locations: [] },
+            { ruleId: 'r3', message: { text: 'msg3' }, locations: [] },
+          ],
+        }],
+      };
+      store.putCacheEntry({
+        cacheKey: 'sarif1',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'javascript',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest',
+        resultContent: JSON.stringify(sarif),
+        resultCount: 3,
+      });
+
+      const subset = store.getCacheSarifSubset('sarif1', { resultIndices: [0, 2] });
+      expect(subset).not.toBeNull();
+      expect(subset!.totalResults).toBe(3);
+      expect(subset!.returnedResults).toBe(2);
+      const parsed = JSON.parse(subset!.content);
+      expect(parsed.runs[0].results).toHaveLength(2);
+    });
+
+    it('should retrieve SARIF subset by fileFilter', () => {
+      const sarif = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'codeql' } },
+          results: [
+            { ruleId: 'r1', message: { text: 'in handler' }, locations: [{ physicalLocation: { artifactLocation: { uri: 'src/handler.ts' } } }] },
+            { ruleId: 'r2', message: { text: 'in db' }, locations: [{ physicalLocation: { artifactLocation: { uri: 'src/db.ts' } } }] },
+            { ruleId: 'r3', message: { text: 'in handler too' }, locations: [{ physicalLocation: { artifactLocation: { uri: 'src/handler.ts' } } }] },
+          ],
+        }],
+      };
+      store.putCacheEntry({
+        cacheKey: 'sarif2',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'javascript',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest',
+        resultContent: JSON.stringify(sarif),
+        resultCount: 3,
+      });
+
+      const subset = store.getCacheSarifSubset('sarif2', { fileFilter: 'handler.ts' });
+      expect(subset).not.toBeNull();
+      expect(subset!.returnedResults).toBe(2);
+    });
+
+    it('should list cache entries with filters', () => {
+      store.putCacheEntry({
+        cacheKey: 'a', queryName: 'PrintAST', queryPath: '/a.ql',
+        databasePath: '/db1', language: 'cpp', codeqlVersion: '2.25.0',
+        outputFormat: 'graphtext', resultContent: 'a',
+      });
+      store.putCacheEntry({
+        cacheKey: 'b', queryName: 'CallGraphFrom', queryPath: '/b.ql',
+        databasePath: '/db1', language: 'cpp', codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest', resultContent: 'b',
+      });
+      store.putCacheEntry({
+        cacheKey: 'c', queryName: 'PrintAST', queryPath: '/c.ql',
+        databasePath: '/db2', language: 'java', codeqlVersion: '2.25.0',
+        outputFormat: 'graphtext', resultContent: 'c',
+      });
+
+      expect(store.listCacheEntries({ queryName: 'PrintAST' })).toHaveLength(2);
+      expect(store.listCacheEntries({ databasePath: '/db1' })).toHaveLength(2);
+      expect(store.listCacheEntries({ language: 'java' })).toHaveLength(1);
+    });
+
+    it('should clear cache entries by filter', () => {
+      store.putCacheEntry({
+        cacheKey: 'x', queryName: 'Q', queryPath: '/q.ql',
+        databasePath: '/db1', language: 'cpp', codeqlVersion: '2.25.0',
+        outputFormat: 'csv', resultContent: 'x',
+      });
+      store.putCacheEntry({
+        cacheKey: 'y', queryName: 'Q', queryPath: '/q.ql',
+        databasePath: '/db2', language: 'cpp', codeqlVersion: '2.25.0',
+        outputFormat: 'csv', resultContent: 'y',
+      });
+
+      const cleared = store.clearCacheEntries({ databasePath: '/db1' });
+      expect(cleared).toBe(1);
+      expect(store.listCacheEntries()).toHaveLength(1);
+    });
+
+    it('should clear all cache entries', () => {
+      store.putCacheEntry({
+        cacheKey: 'p', queryName: 'Q', queryPath: '/q.ql',
+        databasePath: '/db', language: 'cpp', codeqlVersion: '2.25.0',
+        outputFormat: 'csv', resultContent: 'p',
+      });
+      store.putCacheEntry({
+        cacheKey: 'q', queryName: 'Q', queryPath: '/q.ql',
+        databasePath: '/db', language: 'cpp', codeqlVersion: '2.25.0',
+        outputFormat: 'csv', resultContent: 'q',
+      });
+
+      const cleared = store.clearCacheEntries({ all: true });
+      expect(cleared).toBe(2);
+      expect(store.listCacheEntries()).toHaveLength(0);
+    });
+  });
 });

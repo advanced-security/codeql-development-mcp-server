@@ -1,0 +1,8 @@
+{
+  "toolName": "query_results_cache_compare",
+  "parameters": {
+    "queryName": "CallGraphFrom"
+  },
+  "expectedSuccess": true,
+  "description": "Test query_results_cache_compare compares cached results for a query across databases"
+}

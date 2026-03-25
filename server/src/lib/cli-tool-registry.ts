@@ -5,15 +5,45 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { executeCodeQLCommand, executeQLTCommand, CLIExecutionResult } from './cli-executor';
+import { getActualCodeqlVersion } from './cli-executor';
 import { logger } from '../utils/logger';
 import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { getUserWorkspaceDir, packageRootDir, resolveToolQueryPackPath } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { writeFileSync, readFileSync, rmSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'path';
 import { createProjectTempDir } from '../utils/temp-dir';
+import { createHash } from 'crypto';
+import { sessionDataManager } from './session-data-manager';
 
 export type { CLIExecutionResult } from './cli-executor';
+
+/**
+ * Compute a deterministic cache key for a query execution.
+ */
+function computeQueryCacheKey(params: {
+  queryPath: string;
+  databasePath: string;
+  codeqlVersion: string;
+  externalPredicates?: Record<string, string>;
+  outputFormat: string;
+}): string {
+  const input = JSON.stringify({
+    d: params.databasePath,
+    e: params.externalPredicates ?? {},
+    f: params.outputFormat,
+    q: params.queryPath,
+    v: params.codeqlVersion,
+  });
+  return createHash('sha256').update(input).digest('hex').substring(0, 16);
+}
+
+/**
+ * In-memory cache for resolved database paths.
+ * Avoids redundant filesystem scans when the same database is referenced
+ * multiple times during a query execution.
+ */
+const databasePathCache = new Map<string, string>();
 
 /**
  * Resolve a database path that may point to a multi-language database root
@@ -26,7 +56,11 @@ export type { CLIExecutionResult } from './cli-executor';
  * the ambiguity so the caller can pick the right one explicitly.
  */
 function resolveDatabasePath(dbPath: string): string {
+  const cached = databasePathCache.get(dbPath);
+  if (cached !== undefined) return cached;
+
   if (existsSync(join(dbPath, 'codeql-database.yml'))) {
+    databasePathCache.set(dbPath, dbPath);
     return dbPath;
   }
   try {
@@ -45,6 +79,7 @@ function resolveDatabasePath(dbPath: string): string {
     }
     if (candidates.length === 1) {
       logger.info(`Resolved database directory: ${dbPath} -> ${candidates[0]}`);
+      databasePathCache.set(dbPath, candidates[0]);
       return candidates[0];
     }
     if (candidates.length > 1) {
@@ -61,6 +96,7 @@ function resolveDatabasePath(dbPath: string): string {
     }
     // Parent directory not readable — return original path
   }
+  databasePathCache.set(dbPath, dbPath);
   return dbPath;
 }
 
@@ -290,6 +326,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             const resolvedQuery = await resolveQueryPath(params, logger);
             if (resolvedQuery) {
               positionalArgs = [...positionalArgs, resolvedQuery];
+              // Store the resolved path so processQueryRunResults can reuse it
+              // without calling resolveQueryPath a second time
+              params._resolvedQueryPath = resolvedQuery;
             } else if (query) {
               positionalArgs = [...positionalArgs, query as string];
             }
@@ -919,7 +958,7 @@ async function processQueryRunResults(
   logger: { info: (_message: string, ..._args: unknown[]) => void; error: (_message: string, ..._args: unknown[]) => void }
 ): Promise<CLIExecutionResult> {
   try {
-    const { format, interpretedOutput, evaluationFunction, evaluationOutput, output, query, queryName, queryLanguage } = params;
+    const { format, interpretedOutput, evaluationFunction, evaluationOutput, output, query, queryName, queryLanguage, _resolvedQueryPath } = params;
     
     // If no format or evaluationFunction specified, return as-is
     if (!format && !evaluationFunction) {
@@ -933,13 +972,13 @@ async function processQueryRunResults(
     
     const bqrsPath = output as string;
     
-    // Determine the query path for metadata extraction
-    let queryPath: string | null = null;
+    // Determine the query path for metadata extraction.
+    // Prefer the pre-resolved path (avoids redundant CLI call to resolveQueryPath).
+    let queryPath: string | null = _resolvedQueryPath as string | null ?? null;
     
-    if (query) {
+    if (!queryPath && query) {
       queryPath = query as string;
-    } else if (queryName && queryLanguage) {
-      // Try to resolve the query path again for evaluation
+    } else if (!queryPath && queryName && queryLanguage) {
       queryPath = await resolveQueryPath(params, logger);
     }
     
@@ -977,7 +1016,49 @@ async function processQueryRunResults(
         let enhancedOutput = result.stdout;
         enhancedOutput += `\n\nQuery results interpreted successfully with format: ${outputFormat}`;
         enhancedOutput += `\nInterpreted output saved to: ${outputFilePath}`;
-        
+
+        // Auto-cache the interpreted results if annotation tools are enabled
+        try {
+          const config = sessionDataManager.getConfig();
+          if (config.enableAnnotationTools && outputFilePath && queryPath) {
+            const resultContent = readFileSync(outputFilePath, 'utf8');
+            const codeqlVersion = getActualCodeqlVersion();
+            const dbPath = (params.database as string) || '';
+            const lang = (queryLanguage as string) || 'unknown';
+            const extPreds: Record<string, string> = {};
+            if (params.sourceFunction) extPreds.sourceFunction = params.sourceFunction as string;
+            if (params.targetFunction) extPreds.targetFunction = params.targetFunction as string;
+            if (params.sourceFiles) extPreds.sourceFiles = params.sourceFiles as string;
+
+            const cacheKey = computeQueryCacheKey({
+              queryPath,
+              databasePath: dbPath,
+              codeqlVersion,
+              externalPredicates: Object.keys(extPreds).length > 0 ? extPreds : undefined,
+              outputFormat,
+            });
+
+            const store = sessionDataManager.getStore();
+            store.putCacheEntry({
+              cacheKey,
+              queryName: (queryName as string) || basename(queryPath, '.ql'),
+              queryPath,
+              databasePath: dbPath,
+              language: lang,
+              codeqlVersion,
+              externalPredicates: Object.keys(extPreds).length > 0 ? JSON.stringify(extPreds) : null,
+              outputFormat,
+              resultContent,
+              bqrsPath,
+              interpretedPath: outputFilePath,
+            });
+            enhancedOutput += `\nResults cached with key: ${cacheKey}`;
+            logger.info(`Cached query results with key: ${cacheKey}`);
+          }
+        } catch (cacheErr) {
+          logger.error('Failed to cache query results:', cacheErr);
+        }
+
         return {
           ...result,
           stdout: enhancedOutput

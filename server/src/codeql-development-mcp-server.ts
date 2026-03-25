@@ -19,6 +19,7 @@ import { registerWorkflowPrompts } from './prompts/workflow-prompts';
 import { registerMonitoringTools } from './tools/monitoring-tools';
 import { registerAnnotationTools } from './tools/annotation-tools';
 import { registerAuditTools } from './tools/audit-tools';
+import { registerCacheTools } from './tools/cache-tools';
 import { sessionDataManager } from './lib/session-data-manager';
 import { resolveCodeQLBinary, validateCodeQLBinaryReachable } from './lib/cli-executor';
 import { initServerManager, shutdownServerManager } from './lib/server-manager';
@@ -81,6 +82,9 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
 
   // Register audit tools (security audit state tracking)
   registerAuditTools(server);
+
+  // Register query results cache tools
+  registerCacheTools(server);
 
   // Initialize session data manager
   await sessionDataManager.initialize();
