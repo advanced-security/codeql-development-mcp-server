@@ -1,0 +1,9 @@
+{
+  "toolName": "annotation_search",
+  "parameters": {
+    "query": "SQL injection",
+    "limit": 20
+  },
+  "success": true,
+  "description": "Successfully searched annotations by content text"
+}

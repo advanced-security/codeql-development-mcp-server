@@ -1,0 +1,12 @@
+{
+  "toolName": "audit_add_notes",
+  "parameters": {
+    "owner": "arduino",
+    "repo": "Arduino",
+    "sourceLocation": "app/src/main.cpp",
+    "line": 42,
+    "notes": "False positive: serial input is sanitized by validate_command() at line 38 before reaching exec()."
+  },
+  "success": true,
+  "description": "Successfully appended triage notes to MRVA finding at app/src/main.cpp:42"
+}

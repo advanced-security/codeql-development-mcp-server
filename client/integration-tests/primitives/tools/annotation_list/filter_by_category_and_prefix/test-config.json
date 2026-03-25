@@ -1,0 +1,8 @@
+{
+  "toolName": "annotation_list",
+  "arguments": {
+    "category": "note",
+    "entityKeyPrefix": "file:test/",
+    "limit": 10
+  }
+}

@@ -42,20 +42,30 @@ export URL_SCHEME="${URL_SCHEME:-http}"
 # Otherwise, run both modes
 RUN_DEFAULT_MODE=true
 RUN_MONITORING_MODE=true
+RUN_ANNOTATION_MODE=true
 
 if [ -n "${ENABLE_MONITORING_TOOLS+x}" ]; then
     # Variable is explicitly set (even if empty)
     if [ "$ENABLE_MONITORING_TOOLS" = "true" ]; then
         RUN_DEFAULT_MODE=false
         RUN_MONITORING_MODE=true
+        RUN_ANNOTATION_MODE=false
         echo "🔧 Mode: Monitoring tools ONLY (ENABLE_MONITORING_TOOLS=true)"
     else
         RUN_DEFAULT_MODE=true
         RUN_MONITORING_MODE=false
+        RUN_ANNOTATION_MODE=false
         echo "🔧 Mode: Default mode ONLY (ENABLE_MONITORING_TOOLS=false)"
     fi
+elif [ -n "${ENABLE_ANNOTATION_TOOLS+x}" ]; then
+    if [ "$ENABLE_ANNOTATION_TOOLS" = "true" ]; then
+        RUN_DEFAULT_MODE=false
+        RUN_MONITORING_MODE=false
+        RUN_ANNOTATION_MODE=true
+        echo "🔧 Mode: Annotation tools ONLY (ENABLE_ANNOTATION_TOOLS=true)"
+    fi
 else
-    echo "🔧 Mode: Running BOTH default and monitoring modes"
+    echo "🔧 Mode: Running ALL modes (default + monitoring + annotation)"
 fi
 
 # Check if --no-install-packs was passed
@@ -150,6 +160,13 @@ fi
 
 if [ "$RUN_MONITORING_MODE" = true ]; then
     run_tests_in_mode "MONITORING MODE (session_* tools)" "true" "${EXTRA_ARGS[@]}"
+fi
+
+if [ "$RUN_ANNOTATION_MODE" = true ]; then
+    # Annotation mode enables annotation, audit, and cache tools
+    export ENABLE_ANNOTATION_TOOLS="true"
+    run_tests_in_mode "ANNOTATION MODE (annotation_*, audit_*, query_results_cache_* tools)" "false" "${EXTRA_ARGS[@]}"
+    unset ENABLE_ANNOTATION_TOOLS
 fi
 
 echo ""
