@@ -9,7 +9,7 @@ import { resolveDatabasePath } from './database-resolver';
 import { logger } from '../utils/logger';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { resolveQueryPath } from './query-resolver';
-import { interpretBQRSFile, processQueryRunResults } from './result-processor';
+import { processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
 import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
 import { dirname, isAbsolute, join, resolve } from 'path';
@@ -281,7 +281,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             }
             
             // Handle external predicates for CallGraphFrom queries
-            if (queryName === 'CallGraphFrom' && sourceFunction) {
+            // Trigger on queryName match OR when sourceFunction is specified without targetFunction
+            if ((queryName === 'CallGraphFrom' || (!queryName && sourceFunction && !targetFunction)) && sourceFunction) {
               const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim());
               let tempDir: string;
               let csvPath: string;
@@ -309,7 +310,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             }
             
             // Handle external predicates for CallGraphTo queries
-            if (queryName === 'CallGraphTo' && targetFunction) {
+            // Trigger on queryName match OR when targetFunction is specified without sourceFunction
+            if ((queryName === 'CallGraphTo' || (!queryName && targetFunction && !sourceFunction)) && targetFunction) {
               const functionNames = (targetFunction as string).split(',').map((f: string) => f.trim());
               let tempDir: string;
               let csvPath: string;
@@ -337,7 +339,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             }
 
             // Handle external predicates for CallGraphFromTo queries (needs both source and target)
-            if (queryName === 'CallGraphFromTo') {
+            // Trigger on queryName match OR when both sourceFunction and targetFunction are specified
+            if (queryName === 'CallGraphFromTo' || (!queryName && sourceFunction && targetFunction)) {
               if (sourceFunction) {
                 const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim());
                 let tempDir: string;
@@ -497,36 +500,11 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Post-execution processing for codeql_query_run
         if (name === 'codeql_query_run' && result.success && queryLogDir) {
-          // Generate SARIF interpretation if results.bqrs exists and query path is known
-          const bqrsPath = options.output as string;
-          const sarifPath = join(queryLogDir, 'results-interpreted.sarif');
-
-          // The query file path is the last positional argument (set during query resolution)
-          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : undefined;
-
-          if (existsSync(bqrsPath) && queryFilePath) {
-            try {
-              const sarifResult = await interpretBQRSFile(
-                bqrsPath,
-                queryFilePath,
-                'sarif-latest',
-                sarifPath,
-                logger
-              );
-
-              if (sarifResult.success) {
-                logger.info(`Generated SARIF interpretation at ${sarifPath}`);
-              } else {
-                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
-              }
-            } catch (error) {
-              logger.warn(`Failed to generate SARIF interpretation: ${error}`);
-            }
-          } else if (existsSync(bqrsPath) && !queryFilePath) {
-            logger.warn('Skipping SARIF interpretation: query file path not available');
+          // Ensure params has the output path (may have been auto-set in options)
+          if (!params.output && options.output) {
+            params.output = options.output;
           }
-
-          // Process evaluation results
+          // Process query results: interpretation (SARIF/graphtext/CSV) + auto-caching
           result = await processQueryRunResults(result, params, logger);
         }
 

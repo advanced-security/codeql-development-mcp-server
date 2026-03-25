@@ -46,9 +46,10 @@ export default [
       sourceType: 'module',
       parser: typescript.parser,
       globals: {
-        process: 'readonly',
-        console: 'readonly',
         Buffer: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
       },

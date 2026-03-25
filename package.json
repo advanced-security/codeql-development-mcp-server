@@ -46,6 +46,7 @@
     "test": "npm run test:server && npm run test:client && npm run test:vscode",
     "test:all": "npm run test:server && npm run test:client && npm run test:vscode",
     "test:client": "npm run test:integration:default -w client",
+    "test:extended": "npm run test:integration:extended -w extensions/vscode",
     "test:server": "npm run test -w server",
     "test:vscode": "npm run test -w extensions/vscode",
     "package:vsix": "npm run clean:test-dbs && npm run build -w server && npm run package -w extensions/vscode",
