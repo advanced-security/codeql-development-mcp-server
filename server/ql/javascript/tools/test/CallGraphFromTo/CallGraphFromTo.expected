@@ -1,0 +1,3 @@
+| Example1.js:6:5:6:15 | unrelated() | Reachable call from `target` to `unrelated` |
+| Example1.js:10:5:10:12 | target() | Reachable call from `intermediate` to `target` |
+| Example1.js:14:5:14:18 | intermediate() | Reachable call from `source` to `intermediate` |

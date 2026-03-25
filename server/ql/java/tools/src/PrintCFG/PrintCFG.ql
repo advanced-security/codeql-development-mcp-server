@@ -14,7 +14,7 @@ import semmle.code.java.ControlFlowGraph
  * These nodes are excluded from the output because their ordering
  * is non-deterministic across CodeQL CLI versions.
  */
-private predicate isExitNode(ControlFlow::Node node) {
+private predicate isExitNode(ControlFlowNode node) {
   node.toString().matches("%Exit")
 }
 
@@ -22,13 +22,13 @@ private predicate isExitNode(ControlFlow::Node node) {
  * Configuration for PrintCFG that outputs all CFG nodes and edges,
  * excluding exit nodes for deterministic output.
  */
-query predicate nodes(ControlFlow::Node node, string property, string value) {
+query predicate nodes(ControlFlowNode node, string property, string value) {
   property = "semmle.label" and
   value = node.toString() and
   not isExitNode(node)
 }
 
-query predicate edges(ControlFlow::Node pred, ControlFlow::Node succ) {
+query predicate edges(ControlFlowNode pred, ControlFlowNode succ) {
   pred.getASuccessor() = succ and
   not isExitNode(pred) and
   not isExitNode(succ)

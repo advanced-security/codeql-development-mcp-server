@@ -3,4 +3,4 @@ version: 2.25.0
 description: 'Queries for codeql-development-mcp-server tools for go language'
 library: false
 dependencies:
-  codeql/go-all: 6.0.1
+  codeql/go-all: 7.0.2

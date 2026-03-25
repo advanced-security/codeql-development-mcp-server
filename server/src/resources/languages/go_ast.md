@@ -244,6 +244,10 @@ select call
 - **`DocComment`** - Documentation comment group (typically for functions/types)
 - **`SlashSlashComment`** - Single-line comment (//) within comment groups
 
+**Note**: The bundled `PrintAST` query uses a standalone implementation that directly
+traverses the Go AST via `AstNode.getUniquelyNumberedChild()`, applying file filtering
+at the source level for efficiency. Comments are excluded from the output.
+
 ## Advanced Features
 
 ### Generics Support
@@ -287,6 +291,8 @@ This repo contains a variant of the open-source `PrintAst.ql` query for `go` lan
 
 - Use the `codeql_query_run` tool with `queryName="PrintAST"` and `language="go"` to run the bundled PrintAST query
 - Use the `codeql_test_run` tool to run the PrintAST test and compare against expected results
+- The bundled query implements its own AST traversal directly using the Go `AstNode` API
+- Comments are excluded from the output for deterministic results
 
 ## Expected test results for open-source `PrintAst.ql` query
 
