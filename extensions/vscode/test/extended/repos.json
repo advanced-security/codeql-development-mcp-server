@@ -1,0 +1,37 @@
+{
+  "description": "Repositories for extended MCP integration testing with CallGraphFromTo source/target function pairs.",
+  "repositories": [
+    {
+      "owner": "gin-gonic",
+      "repo": "gin",
+      "language": "go",
+      "callGraphFromTo": { "sourceFunction": "handleHTTPRequest", "targetFunction": "ServeHTTP" }
+    },
+    {
+      "owner": "expressjs",
+      "repo": "express",
+      "language": "javascript",
+      "callGraphFromTo": { "sourceFunction": "json", "targetFunction": "send" }
+    },
+    {
+      "owner": "checkstyle",
+      "repo": "checkstyle",
+      "language": "java",
+      "callGraphFromTo": { "sourceFunction": "process", "targetFunction": "log" }
+    },
+    {
+      "owner": "PyCQA",
+      "repo": "flake8",
+      "language": "python",
+      "callGraphFromTo": { "sourceFunction": "run", "targetFunction": "report" }
+    }
+  ],
+  "settings": {
+    "databaseDir": ".tmp/extended-test-databases",
+    "fixtureSearchDirs": [
+      "test/fixtures/single-folder-workspace/codeql-storage/databases",
+      "test/fixtures/multi-root-workspace/folder-a/codeql-storage/databases"
+    ],
+    "timeoutMs": 600000
+  }
+}

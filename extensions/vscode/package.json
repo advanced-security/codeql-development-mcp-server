@@ -155,6 +155,7 @@
     "test": "npm run test:coverage && npm run test:integration",
     "test:coverage": "vitest --run --coverage",
     "test:integration": "npm run download:vscode && vscode-test",
+    "test:integration:extended": "npm run bundle && node dist/test/extended/run-extended-tests.cjs",
     "test:integration:label": "vscode-test --label",
     "test:watch": "vitest --watch",
     "vscode:prepublish": "npm run clean && npm run lint && npm run bundle && npm run bundle:server",

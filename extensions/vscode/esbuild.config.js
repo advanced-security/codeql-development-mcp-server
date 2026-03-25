@@ -52,6 +52,22 @@ const testSuiteConfig = {
   },
 };
 
+// Extended integration tests — standalone (no vscode API dependency).
+// Built separately so they can run via `node` without the Extension Host.
+const extendedTestConfig = {
+  ...shared,
+  entryPoints: [
+    'test/extended/run-extended-tests.ts',
+  ],
+  outdir: 'dist/test/extended',
+  outfile: undefined,
+  outExtension: { '.js': '.cjs' },
+  external: [], // No externals — fully self-contained
+  logOverride: {
+    'require-resolve-not-external': 'silent',
+  },
+};
+
 const isWatch = process.argv.includes('--watch');
 
 if (isWatch) {
@@ -67,6 +83,10 @@ if (isWatch) {
     await build(testSuiteConfig);
     console.log('✅ Test suite build completed successfully');
     console.log(`📦 Generated: dist/test/suite/*.cjs`);
+
+    await build(extendedTestConfig);
+    console.log('✅ Extended test build completed successfully');
+    console.log(`📦 Generated: dist/test/extended/*.cjs`);
   } catch (error) {
     console.error('❌ Build failed:', error);
     process.exit(1);
