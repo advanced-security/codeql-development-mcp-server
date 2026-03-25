@@ -18,9 +18,7 @@ external string sourceFunction();
 /**
  * Gets a single source function name from the comma-separated list.
  */
-string getSourceFunctionName() {
-  result = sourceFunction().splitAt(",").trim()
-}
+string getSourceFunctionName() { result = sourceFunction().splitAt(",").trim() }
 
 from CallExpr call, FuncDecl source
 where
@@ -30,10 +28,7 @@ where
     source.getName() = getSourceFunctionName()
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getSourceFunctionName()) and
-      source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getSourceFunctionName()) and
+    source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
-select call,
-  "Call from `" + source.getName() + "` to `" + call.getTarget().getName() + "`"
+select call, "Call from `" + source.getName() + "` to `" + call.getTarget().getName() + "`"

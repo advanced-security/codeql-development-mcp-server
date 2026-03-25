@@ -18,17 +18,13 @@ external string targetFunction();
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() {
-  result = targetFunction().splitAt(",").trim()
-}
+string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
 
 /**
  * Gets the caller name for a call expression.
  */
 string getCallerName(CallNode call) {
-  if exists(call.getScope())
-  then result = call.getScope().getName()
-  else result = "Module"
+  if exists(call.getScope()) then result = call.getScope().getName() else result = "Module"
 }
 
 from CallNode call
@@ -38,10 +34,9 @@ where
     call.getNode().(Call).getFunc().(Name).getId() = getTargetFunctionName()
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getTargetFunctionName()) and
-      call.getLocation().getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getTargetFunctionName()) and
+    call.getLocation().getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
 select call.getNode(),
-  "Call to `" + call.getNode().(Call).getFunc().(Name).getId() + "` from `" + getCallerName(call) + "`"
+  "Call to `" + call.getNode().(Call).getFunc().(Name).getId() + "` from `" + getCallerName(call) +
+    "`"

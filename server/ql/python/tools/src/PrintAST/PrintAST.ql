@@ -17,9 +17,7 @@ external string selectedSourceFiles();
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() {
-  result = selectedSourceFiles().splitAt(",").trim()
-}
+string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -29,11 +27,14 @@ File getSelectedFile() {
     selectedFile = getSelectedSourceFile() and
     (
       // Match by exact relative path from source root
-      result.getRelativePath() = selectedFile or
+      result.getRelativePath() = selectedFile
+      or
       // Match by file name if no path separators
-      (not selectedFile.matches("%/%") and result.getBaseName() = selectedFile) or
+      not selectedFile.matches("%/%") and result.getBaseName() = selectedFile
+      or
       // Match by ending path component
-      result.getAbsolutePath().suffix(result.getAbsolutePath().length() - selectedFile.length()) = selectedFile
+      result.getAbsolutePath().suffix(result.getAbsolutePath().length() - selectedFile.length()) =
+        selectedFile
     )
   )
 }
@@ -50,10 +51,8 @@ class Cfg extends PrintAstConfiguration {
       l.getFile() = getSelectedFile()
       or
       // Fallback for unit tests: include test files
-      (
-        not exists(getSelectedFile()) and
-        l.getFile().getParent().getParent().getBaseName() = "test"
-      )
+      not exists(getSelectedFile()) and
+      l.getFile().getParent().getParent().getBaseName() = "test"
     ) and
     // Exclude the "Name" class so that results are deterministic
     // for a given source file, which is required for reproducible results

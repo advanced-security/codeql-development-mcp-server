@@ -18,9 +18,7 @@ external string targetFunction();
 /**
  * Gets a single target method name from the comma-separated list.
  */
-string getTargetFunctionName() {
-  result = targetFunction().splitAt(",").trim()
-}
+string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
 
 /**
  * Gets a method by matching against the selected target method names.
@@ -41,10 +39,7 @@ where
     target = getTargetFunction()
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getTargetFunction()) and
-      target.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getTargetFunction()) and
+    target.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
-select call,
-  "Call to `" + target.getName() + "` from `" + caller.getName() + "`"
+select call, "Call to `" + target.getName() + "` from `" + caller.getName() + "`"

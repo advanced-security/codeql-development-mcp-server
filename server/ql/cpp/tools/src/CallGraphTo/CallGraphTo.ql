@@ -18,9 +18,7 @@ external string targetFunction();
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() {
-  result = targetFunction().splitAt(",").trim()
-}
+string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
 
 /**
  * Gets a function by matching against the selected target function names.
@@ -30,7 +28,8 @@ Function getTargetFunction() {
     selectedFunc = getTargetFunctionName() and
     (
       // Match by exact function name
-      result.getName() = selectedFunc or
+      result.getName() = selectedFunc
+      or
       // Match by qualified name
       result.getQualifiedName() = selectedFunc
     )
@@ -46,10 +45,7 @@ where
     target = getTargetFunction()
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getTargetFunction()) and
-      target.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getTargetFunction()) and
+    target.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
-select call,
-  "Call to `" + target.getQualifiedName() + "` from `" + caller.getQualifiedName() + "`"
+select call, "Call to `" + target.getQualifiedName() + "` from `" + caller.getQualifiedName() + "`"

@@ -17,9 +17,7 @@ external string selectedSourceFiles();
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() {
-  result = selectedSourceFiles().splitAt(",").trim()
-}
+string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -29,9 +27,11 @@ File getSelectedFile() {
     selectedFile = getSelectedSourceFile() and
     (
       // Match by exact relative path from source root
-      result.getRelativePath() = selectedFile or
+      result.getRelativePath() = selectedFile
+      or
       // Match by file name if no path separators
-      (not selectedFile.matches("%/%") and result.getBaseName() = selectedFile) or
+      not selectedFile.matches("%/%") and result.getBaseName() = selectedFile
+      or
       // Match by ending path component
       result.getAbsolutePath().suffix(result.getAbsolutePath().length() - selectedFile.length()) =
         selectedFile
@@ -54,7 +54,6 @@ private predicate isSelectedFile(File file) {
 // This avoids extending the library's `PrintAstConfiguration` (which is inside
 // an `overlay[local]` module in `go-all`) by directly using the Go AST API.
 // File filtering is applied at the source level for efficiency.
-
 /** Gets the enclosing function declaration for `n`, if any. */
 private FuncDecl getEnclosingFunctionDecl(AstNode n) { result = n.getParent*() }
 
@@ -73,9 +72,7 @@ private predicate shouldPrint(AstNode ast) {
 }
 
 /** Gets the QL class label for an AST node. */
-private string qlClass(AstNode el) {
-  result = "[" + concat(el.getAPrimaryQlClass(), ", ") + "] "
-}
+private string qlClass(AstNode el) { result = "[" + concat(el.getAPrimaryQlClass(), ", ") + "] " }
 
 /** Gets the default string representation for an AST node. */
 private string nodeToString(AstNode ast) {
@@ -109,7 +106,7 @@ private AstNode getChild(AstNode ast, int childIndex) {
           )
       )
     )
-  else (
+  else
     result =
       rank[childIndex](AstNode node, int i |
         node = ast.getUniquelyNumberedChild(i) and
@@ -118,7 +115,6 @@ private AstNode getChild(AstNode ast, int childIndex) {
       |
         node order by i
       )
-  )
 }
 
 /** Gets the edge label from `ast` to its child at `childIndex`. */
@@ -150,7 +146,12 @@ query predicate nodes(AstNode node, string key, string value) {
     or
     node instanceof File and
     key = "semmle.order" and
-    value = any(int i | node = rank[i](File fn | isSelectedFile(fn) | fn order by fn.getRelativePath()) | i).toString()
+    value =
+      any(int i |
+        node = rank[i](File fn | isSelectedFile(fn) | fn order by fn.getRelativePath())
+      |
+        i
+      ).toString()
   )
 }
 

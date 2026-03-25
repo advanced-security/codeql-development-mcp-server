@@ -77,11 +77,8 @@ where
     )
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getSourceFunctionName()) and
-      not exists(getTargetFunctionName()) and
-      caller.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getSourceFunctionName()) and
+    not exists(getTargetFunctionName()) and
+    caller.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
-select call,
-  "Reachable call from `" + caller.getName() + "` to `" + call.getCalleeName() + "`"
+select call, "Reachable call from `" + caller.getName() + "` to `" + call.getCalleeName() + "`"

@@ -18,9 +18,7 @@ external string targetFunction();
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() {
-  result = targetFunction().splitAt(",").trim()
-}
+string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
 
 /**
  * Gets the caller name for a call expression.
@@ -38,10 +36,7 @@ where
     call.getCalleeName() = getTargetFunctionName()
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getTargetFunctionName()) and
-      call.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getTargetFunctionName()) and
+    call.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
-select call,
-  "Call to `" + call.getCalleeName() + "` from `" + getCallerName(call) + "`"
+select call, "Call to `" + call.getCalleeName() + "` from `" + getCallerName(call) + "`"

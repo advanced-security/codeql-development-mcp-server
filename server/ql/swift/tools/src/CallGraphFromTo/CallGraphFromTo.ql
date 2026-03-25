@@ -90,5 +90,4 @@ where
     not exists(getTargetFunctionName()) and
     caller.getFile().getBaseName() = "Example1.swift"
   )
-select call,
-  "Reachable call from `" + caller.getName() + "` to `" + getCalleeName(call) + "`"
+select call, "Reachable call from `" + caller.getName() + "` to `" + getCalleeName(call) + "`"

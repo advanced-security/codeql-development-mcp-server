@@ -1,4 +1,3 @@
-package callgraphfromto
 package main
 
 func unrelated() {

@@ -32,7 +32,7 @@ def source():
     intermediate()
 ```
 
-Running with `sourceFunction = "source"` and `targetFunction = "target"` produces results showing each call site on the path with the message pattern ``Reachable call from `source`to`intermediate```.
+Running with `sourceFunction = "source"` and `targetFunction = "target"` produces results showing each call site on the path with a message like: "Reachable call from `source` to `intermediate`".
 
 ## Output Format
 

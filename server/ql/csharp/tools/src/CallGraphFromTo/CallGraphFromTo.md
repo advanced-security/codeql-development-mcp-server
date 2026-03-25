@@ -1,4 +1,4 @@
-# CallGraphFromTo for `csharp` Source Files
+# CallGraphFromTo for C# Source Files
 
 Displays calls on reachable paths from a source method to a target method, showing transitive call graph connectivity.
 
@@ -35,7 +35,7 @@ class Example {
 }
 ```
 
-Running with `sourceFunction = "Source"` and `targetFunction = "Target"` produces results showing each call site on the path with the message pattern ``Reachable call from `Source`to`Intermediate```.
+Running with `sourceFunction = "Source"` and `targetFunction = "Target"` produces results showing each call site on the path with a message like: "Reachable call from `Source` to `Intermediate`".
 
 ## Output Format
 

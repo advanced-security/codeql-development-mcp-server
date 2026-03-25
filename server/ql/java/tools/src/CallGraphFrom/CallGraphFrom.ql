@@ -18,9 +18,7 @@ external string sourceFunction();
 /**
  * Gets a single source method name from the comma-separated list.
  */
-string getSourceFunctionName() {
-  result = sourceFunction().splitAt(",").trim()
-}
+string getSourceFunctionName() { result = sourceFunction().splitAt(",").trim() }
 
 /**
  * Gets a method by matching against the selected source method names.
@@ -41,10 +39,7 @@ where
     source = getSourceFunction()
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getSourceFunction()) and
-      source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getSourceFunction()) and
+    source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
-select call,
-  "Call from `" + source.getName() + "` to `" + callee.getName() + "`"
+select call, "Call from `" + source.getName() + "` to `" + callee.getName() + "`"

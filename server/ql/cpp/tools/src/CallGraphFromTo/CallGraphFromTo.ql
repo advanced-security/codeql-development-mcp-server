@@ -39,7 +39,8 @@ Function getSourceFunction() {
     selectedFunc = getSourceFunctionName() and
     (
       // Match by exact function name
-      result.getName() = selectedFunc or
+      result.getName() = selectedFunc
+      or
       // Match by qualified name
       result.getQualifiedName() = selectedFunc
     )
@@ -54,7 +55,8 @@ Function getTargetFunction() {
     selectedFunc = getTargetFunctionName() and
     (
       // Match by exact function name
-      result.getName() = selectedFunc or
+      result.getName() = selectedFunc
+      or
       // Match by qualified name
       result.getQualifiedName() = selectedFunc
     )
@@ -82,11 +84,9 @@ where
     )
     or
     // Fallback for unit tests: include test files
-    (
-      not exists(getSourceFunctionName()) and
-      not exists(getTargetFunctionName()) and
-      caller.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    not exists(getSourceFunctionName()) and
+    not exists(getTargetFunctionName()) and
+    caller.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
 select call,
   "Reachable call from `" + caller.getQualifiedName() + "` to `" + callee.getQualifiedName() + "`"
