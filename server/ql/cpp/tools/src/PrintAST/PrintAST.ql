@@ -8,17 +8,14 @@
 
 import cpp
 import semmle.code.cpp.PrintAST
-
-/**
- * Gets the source files to generate AST from.
- * Can be a single file path or comma-separated list of file paths.
- */
-external string selectedSourceFiles();
+import ExternalPredicates
 
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
+string getSelectedSourceFile() {
+  exists(string s | selectedSourceFiles(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -45,12 +42,5 @@ File getSelectedFile() {
  * Falls back to test directory structure when external predicates are not available.
  */
 class Cfg extends PrintAstConfiguration {
-  override predicate shouldPrintDeclaration(Declaration decl) {
-    // Use external predicate if available
-    decl.getFile() = getSelectedFile()
-    or
-    // Fallback for unit tests: include test files
-    not exists(getSelectedFile()) and
-    decl.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-  }
+  override predicate shouldPrintDeclaration(Declaration decl) { decl.getFile() = getSelectedFile() }
 }

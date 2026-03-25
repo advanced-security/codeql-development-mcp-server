@@ -8,28 +8,21 @@
  */
 
 import go
-
-/**
- * Gets the source function name for call graph reachability analysis.
- * Can be a single function name or comma-separated list of function names.
- */
-external string sourceFunction();
-
-/**
- * Gets the target function name for call graph reachability analysis.
- * Can be a single function name or comma-separated list of function names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single source function name from the comma-separated list.
  */
-string getSourceFunctionName() { result = sourceFunction().splitAt(",").trim() }
+string getSourceFunctionName() {
+  exists(string s | sourceFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Holds if function `caller` directly calls function `callee` by name.
@@ -44,22 +37,17 @@ predicate calls(FuncDecl caller_, FuncDecl callee_) {
 from CallExpr call, FuncDecl caller
 where
   call.getEnclosingFunction() = caller and
-  (
+  exists(
     // Use external predicates if available: show calls on paths from source to target
-    exists(FuncDecl source, FuncDecl target |
-      source.getName() = getSourceFunctionName() and
-      target.getName() = getTargetFunctionName() and
-      calls*(source, caller) and
-      exists(FuncDecl callee |
-        call.getTarget().getName() = callee.getName() and
-        calls*(callee, target)
-      )
+    FuncDecl source, FuncDecl target
+  |
+    source.getName() = getSourceFunctionName() and
+    target.getName() = getTargetFunctionName() and
+    calls*(source, caller) and
+    exists(FuncDecl callee |
+      call.getTarget().getName() = callee.getName() and
+      calls*(callee, target)
     )
-    or
-    // Fallback for unit tests: include calls from the example test file
-    not exists(getSourceFunctionName()) and
-    not exists(getTargetFunctionName()) and
-    caller.getFile().getBaseName() = "Example1.go"
   )
 select call,
   "Reachable call from `" + caller.getName() + "` to `" + call.getTarget().getName() + "`"

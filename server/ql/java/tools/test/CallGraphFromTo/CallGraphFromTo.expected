@@ -1,4 +1,2 @@
-| Example1.java:1:7:1:14 | super(...) | Reachable call from `Example1` to `Object` |
-| Example1.java:7:9:7:19 | unrelated(...) | Reachable call from `target` to `unrelated` |
 | Example1.java:11:9:11:16 | target(...) | Reachable call from `intermediate` to `target` |
 | Example1.java:15:9:15:22 | intermediate(...) | Reachable call from `source` to `intermediate` |

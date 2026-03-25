@@ -3,3 +3,5 @@ version: 2.25.0
 dependencies:
   advanced-security/ql-mcp-ruby-tools-src: ${workspace}
 extractor: ruby
+dataExtensions:
+  - 'ext/*.model.yml'

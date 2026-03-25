@@ -8,17 +8,14 @@
  */
 
 import javascript
-
-/**
- * Gets the target function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets the caller name for a call expression.
@@ -30,13 +27,5 @@ string getCallerName(CallExpr call) {
 }
 
 from CallExpr call
-where
-  (
-    // Use external predicate if available
-    call.getCalleeName() = getTargetFunctionName()
-    or
-    // Fallback for unit tests: include test files
-    not exists(getTargetFunctionName()) and
-    call.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-  )
+where call.getCalleeName() = getTargetFunctionName()
 select call, "Call to `" + call.getCalleeName() + "` from `" + getCallerName(call) + "`"

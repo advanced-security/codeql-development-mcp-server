@@ -3,3 +3,5 @@ version: 2.25.0
 dependencies:
   advanced-security/ql-mcp-go-tools-src: ${workspace}
 extractor: go
+dataExtensions:
+  - 'ext/*.model.yml'

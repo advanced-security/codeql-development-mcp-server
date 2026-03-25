@@ -8,28 +8,21 @@
  */
 
 import javascript
-
-/**
- * Gets the source function name for call graph reachability analysis.
- * Can be a single function name or comma-separated list of function names.
- */
-external string sourceFunction();
-
-/**
- * Gets the target function name for call graph reachability analysis.
- * Can be a single function name or comma-separated list of function names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single source function name from the comma-separated list.
  */
-string getSourceFunctionName() { result = sourceFunction().splitAt(",").trim() }
+string getSourceFunctionName() {
+  exists(string s | sourceFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a function by matching against the selected source function names.
@@ -64,21 +57,13 @@ predicate calls(Function caller_, Function callee_) {
 from CallExpr call, Function caller
 where
   call.getEnclosingFunction() = caller and
-  (
-    // Use external predicates if available: show calls on paths from source to target
-    exists(Function source, Function target |
-      source = getSourceFunction() and
-      target = getTargetFunction() and
-      calls*(source, caller) and
-      exists(Function callee |
-        call.getCalleeName() = callee.getName() and
-        calls*(callee, target)
-      )
+  exists(Function source, Function target |
+    source = getSourceFunction() and
+    target = getTargetFunction() and
+    calls*(source, caller) and
+    exists(Function callee |
+      call.getCalleeName() = callee.getName() and
+      calls*(callee, target)
     )
-    or
-    // Fallback for unit tests: include test files
-    not exists(getSourceFunctionName()) and
-    not exists(getTargetFunctionName()) and
-    caller.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
   )
 select call, "Reachable call from `" + caller.getName() + "` to `" + call.getCalleeName() + "`"

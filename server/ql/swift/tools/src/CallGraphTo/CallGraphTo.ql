@@ -8,17 +8,14 @@
  */
 
 import swift
-
-/**
- * Gets the target function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets the caller name for a call expression.
@@ -39,11 +36,5 @@ string getCalleeName(CallExpr call) {
 }
 
 from CallExpr call
-where
-  // Use external predicate if available
-  call.getStaticTarget().getName() = getTargetFunctionName()
-  or
-  // Fallback for unit tests: include specific test files
-  not exists(getTargetFunctionName()) and
-  call.getLocation().getFile().getBaseName() = "Example1.swift"
+where call.getStaticTarget().getName() = getTargetFunctionName()
 select call, "Call to `" + getCalleeName(call) + "` from `" + getCallerName(call) + "`"

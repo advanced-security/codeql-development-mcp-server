@@ -1,3 +1,2 @@
-| Example1.rb:6:3:6:11 | call to unrelated | Reachable call from `target` to `unrelated` |
 | Example1.rb:10:3:10:8 | call to target | Reachable call from `intermediate` to `target` |
 | Example1.rb:14:3:14:14 | call to intermediate | Reachable call from `source` to `intermediate` |

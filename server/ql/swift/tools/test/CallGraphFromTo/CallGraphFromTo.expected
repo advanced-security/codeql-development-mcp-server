@@ -1,3 +1,0 @@
-| Example1.swift:6:5:6:15 | call to unrelated() | Reachable call from `target()` to `unrelated()` |
-| Example1.swift:10:5:10:12 | call to target() | Reachable call from `intermediate()` to `target()` |
-| Example1.swift:14:5:14:18 | call to intermediate() | Reachable call from `source()` to `intermediate()` |

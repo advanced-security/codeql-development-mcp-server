@@ -8,17 +8,14 @@
  */
 
 import python
-
-/**
- * Gets the target function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets the caller name for a call expression.
@@ -28,15 +25,7 @@ string getCallerName(CallNode call) {
 }
 
 from CallNode call
-where
-  (
-    // Use external predicate if available
-    call.getNode().(Call).getFunc().(Name).getId() = getTargetFunctionName()
-    or
-    // Fallback for unit tests: include test files
-    not exists(getTargetFunctionName()) and
-    call.getLocation().getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-  )
+where call.getNode().(Call).getFunc().(Name).getId() = getTargetFunctionName()
 select call.getNode(),
   "Call to `" + call.getNode().(Call).getFunc().(Name).getId() + "` from `" + getCallerName(call) +
     "`"

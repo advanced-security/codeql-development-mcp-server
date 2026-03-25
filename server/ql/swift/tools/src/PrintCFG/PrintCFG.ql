@@ -8,17 +8,14 @@
 
 import swift
 import codeql.swift.controlflow.ControlFlowGraph
-
-/**
- * Gets the source files to generate CFG from.
- * Can be a single file path or comma-separated list of file paths.
- */
-external string selectedSourceFiles();
+import ExternalPredicates
 
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
+string getSelectedSourceFile() {
+  exists(string s | selectedSourceFiles(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -43,14 +40,7 @@ File getSelectedFile() {
 /**
  * Holds if this CFG node should be included in output.
  */
-predicate shouldPrintNode(ControlFlowNode node) {
-  // Use external predicate if available
-  node.getLocation().getFile() = getSelectedFile()
-  or
-  // Fallback for unit tests: include specific test files
-  not exists(getSelectedFile()) and
-  node.getLocation().getFile().getBaseName() = "Example1.swift"
-}
+predicate shouldPrintNode(ControlFlowNode node) { node.getLocation().getFile() = getSelectedFile() }
 
 /**
  * Configuration for PrintCFG that outputs filtered CFG nodes and edges.

@@ -7,17 +7,14 @@
  */
 
 import go
-
-/**
- * Gets the source files to generate AST from.
- * Can be a single file path or comma-separated list of file paths.
- */
-external string selectedSourceFiles();
+import ExternalPredicates
 
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
+string getSelectedSourceFile() {
+  exists(string s | selectedSourceFiles(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -43,11 +40,7 @@ File getSelectedFile() {
  * Holds if the given file should be printed.
  * Uses the external predicate if available, otherwise falls back to test files.
  */
-private predicate isSelectedFile(File file) {
-  file = getSelectedFile()
-  or
-  not exists(getSelectedFile()) and file.getBaseName() = "Example1.go"
-}
+private predicate isSelectedFile(File file) { file = getSelectedFile() }
 
 // Standalone PrintAST implementation for Go.
 //

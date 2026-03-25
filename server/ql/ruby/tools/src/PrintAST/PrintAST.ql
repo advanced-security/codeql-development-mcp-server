@@ -8,17 +8,14 @@
 
 private import codeql.ruby.AST
 private import codeql.ruby.printAst
-
-/**
- * Gets the source files to generate AST from.
- * Can be a single file path or comma-separated list of file paths.
- */
-external string selectedSourceFiles();
+import ExternalPredicates
 
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
+string getSelectedSourceFile() {
+  exists(string s | selectedSourceFiles(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -47,12 +44,6 @@ File getSelectedFile() {
 class Cfg extends PrintAstConfiguration {
   override predicate shouldPrintNode(AstNode n) {
     super.shouldPrintNode(n) and
-    (
-      // Use external predicate if available
-      n.getLocation().getFile() = getSelectedFile()
-      or
-      // Fallback for unit tests: include all files
-      not exists(getSelectedFile())
-    )
+    n.getLocation().getFile() = getSelectedFile()
   }
 }

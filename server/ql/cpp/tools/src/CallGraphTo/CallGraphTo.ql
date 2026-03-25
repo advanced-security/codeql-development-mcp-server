@@ -8,17 +8,14 @@
  */
 
 import cpp
-
-/**
- * Gets the target function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a function by matching against the selected target function names.
@@ -40,12 +37,5 @@ from FunctionCall call, Function target, Function caller
 where
   call.getTarget() = target and
   call.getEnclosingFunction() = caller and
-  (
-    // Use external predicate if available
-    target = getTargetFunction()
-    or
-    // Fallback for unit tests: include test files
-    not exists(getTargetFunction()) and
-    target.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-  )
+  target = getTargetFunction()
 select call, "Call to `" + target.getQualifiedName() + "` from `" + caller.getQualifiedName() + "`"

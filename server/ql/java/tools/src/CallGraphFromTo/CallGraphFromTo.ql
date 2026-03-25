@@ -8,28 +8,21 @@
  */
 
 import java
-
-/**
- * Gets the source method name for call graph reachability analysis.
- * Can be a single method name or comma-separated list of method names.
- */
-external string sourceFunction();
-
-/**
- * Gets the target method name for call graph reachability analysis.
- * Can be a single method name or comma-separated list of method names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single source method name from the comma-separated list.
  */
-string getSourceFunctionName() { result = sourceFunction().splitAt(",").trim() }
+string getSourceFunctionName() {
+  exists(string s | sourceFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a single target method name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a method by matching against the selected source method names.
@@ -62,18 +55,10 @@ from Call call, Callable caller, Callable callee
 where
   call.getCaller() = caller and
   call.getCallee() = callee and
-  (
-    // Use external predicates if available: show calls on paths from source to target
-    exists(Callable source, Callable target |
-      source = getSourceFunction() and
-      target = getTargetFunction() and
-      calls*(source, caller) and
-      calls*(callee, target)
-    )
-    or
-    // Fallback for unit tests: include test files
-    not exists(getSourceFunctionName()) and
-    not exists(getTargetFunctionName()) and
-    caller.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
+  exists(Callable source, Callable target |
+    source = getSourceFunction() and
+    target = getTargetFunction() and
+    calls*(source, caller) and
+    calls*(callee, target)
   )
 select call, "Reachable call from `" + caller.getName() + "` to `" + callee.getName() + "`"

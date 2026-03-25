@@ -3,3 +3,5 @@ version: 2.25.0
 dependencies:
   advanced-security/ql-mcp-python-tools-src: ${workspace}
 extractor: python
+dataExtensions:
+  - 'ext/*.model.yml'

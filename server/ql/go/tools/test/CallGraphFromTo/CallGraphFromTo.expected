@@ -1,4 +1,2 @@
-| Example1.go:7:2:7:12 | call to unrelated | Reachable call from `target` to `unrelated` |
 | Example1.go:11:2:11:9 | call to target | Reachable call from `intermediate` to `target` |
 | Example1.go:15:2:15:15 | call to intermediate | Reachable call from `source` to `intermediate` |
-| Example1.go:19:2:19:9 | call to source | Reachable call from `main` to `source` |

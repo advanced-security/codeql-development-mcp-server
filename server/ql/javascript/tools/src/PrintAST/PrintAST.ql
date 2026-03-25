@@ -8,17 +8,14 @@
 
 import javascript
 import semmle.javascript.PrintAst
-
-/**
- * Gets the source files to generate AST from.
- * Can be a single file path or comma-separated list of file paths.
- */
-external string selectedSourceFiles();
+import ExternalPredicates
 
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
+string getSelectedSourceFile() {
+  exists(string s | selectedSourceFiles(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -47,13 +44,6 @@ File getSelectedFile() {
 class Cfg extends PrintAstConfiguration {
   override predicate shouldPrint(Locatable e, Location l) {
     super.shouldPrint(e, l) and
-    (
-      // Use external predicate if available
-      l.getFile() = getSelectedFile()
-      or
-      // Fallback for unit tests: include test files
-      not exists(getSelectedFile()) and
-      l.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
+    l.getFile() = getSelectedFile()
   }
 }

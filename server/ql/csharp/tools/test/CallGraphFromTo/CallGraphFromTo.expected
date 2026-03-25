@@ -1,5 +1,2 @@
-| Example1.cs:1:7:1:14 | call to constructor Object | Reachable call from `Example1` to `Object` |
-| Example1.cs:1:7:1:14 | call to method <object initializer> | Reachable call from `Example1` to `<object initializer>` |
-| Example1.cs:7:9:7:19 | call to method Unrelated | Reachable call from `Target` to `Unrelated` |
 | Example1.cs:11:9:11:16 | call to method Target | Reachable call from `Intermediate` to `Target` |
 | Example1.cs:15:9:15:22 | call to method Intermediate | Reachable call from `Source` to `Intermediate` |

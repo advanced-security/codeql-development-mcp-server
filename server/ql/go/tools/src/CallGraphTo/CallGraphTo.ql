@@ -8,17 +8,14 @@
  */
 
 import go
-
-/**
- * Gets the target function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single target function name from the comma-separated list.
  */
-string getTargetFunctionName() { result = targetFunction().splitAt(",").trim() }
+string getTargetFunctionName() {
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets the caller name for a call expression.
@@ -30,13 +27,5 @@ string getCallerName(CallExpr call) {
 }
 
 from CallExpr call
-where
-  (
-    // Use external predicate if available
-    call.getTarget().getName() = getTargetFunctionName()
-    or
-    // Fallback for unit tests: include calls from the example test file
-    not exists(getTargetFunctionName()) and
-    call.getFile().getBaseName() = "Example1.go"
-  )
+where call.getTarget().getName() = getTargetFunctionName()
 select call, "Call to `" + call.getTarget().getName() + "` from `" + getCallerName(call) + "`"
