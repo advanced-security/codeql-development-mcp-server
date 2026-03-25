@@ -4,7 +4,7 @@
 
 import { executeCodeQLCommand } from './cli-executor';
 import { logger } from '../utils/logger';
-import { writeFileSync, readFileSync } from 'fs';
+import { writeFileSync, readFileSync, statSync } from 'fs';
 import { dirname, isAbsolute } from 'path';
 import { mkdirSync } from 'fs';
 
@@ -35,31 +35,47 @@ export const BUILT_IN_EVALUATORS = {
 export type BuiltInEvaluator = keyof typeof BUILT_IN_EVALUATORS;
 
 /**
- * Extract metadata from a CodeQL query file
+ * In-memory cache for extracted query metadata, keyed by file path.
+ * Stores the file modification time to invalidate when the file changes.
+ */
+const metadataCache = new Map<string, { mtime: number; metadata: QueryMetadata }>();
+
+/**
+ * Extract metadata from a CodeQL query file.
+ * Results are cached by file path with mtime-based invalidation.
  */
 export async function extractQueryMetadata(queryPath: string): Promise<QueryMetadata> {
   try {
+    // Check cache with mtime validation
+    const stat = statSync(queryPath);
+    const mtime = stat.mtimeMs;
+    const cached = metadataCache.get(queryPath);
+    if (cached && cached.mtime === mtime) {
+      return cached.metadata;
+    }
+
     const queryContent = readFileSync(queryPath, 'utf-8');
     const metadata: QueryMetadata = {};
-    
+
     // Extract metadata from comments using regex patterns
     const kindMatch = queryContent.match(/@kind\s+([^\s]+)/);
     if (kindMatch) metadata.kind = kindMatch[1];
-    
+
     const nameMatch = queryContent.match(/@name\s+(.+)/);
     if (nameMatch) metadata.name = nameMatch[1].trim();
-    
+
     const descMatch = queryContent.match(/@description\s+(.+)/);
     if (descMatch) metadata.description = descMatch[1].trim();
-    
+
     const idMatch = queryContent.match(/@id\s+(.+)/);
     if (idMatch) metadata.id = idMatch[1].trim();
-    
+
     const tagsMatch = queryContent.match(/@tags\s+(.+)/);
     if (tagsMatch) {
       metadata.tags = tagsMatch[1].split(/\s+/).filter(t => t.length > 0);
     }
-    
+
+    metadataCache.set(queryPath, { mtime, metadata });
     return metadata;
   } catch (error) {
     logger.error('Failed to extract query metadata:', error);
