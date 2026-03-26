@@ -364,7 +364,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                     })),
                   };
                   
-                  writeFileSync(join(extDir, 'runtime.model.yml'), yaml.dump(extensionsData, { lineWidth: -1 }), 'utf8');
+                  writeFileSync(join(extDir, 'runtime.model.yml'), yaml.dump(extensionsData, { lineWidth: -1, flowLevel: 4 }), 'utf8');
                   
                   // Add the extension pack directory to --additional-packs so it can be resolved
                   const existingPacks = options['additional-packs'] as string | undefined;

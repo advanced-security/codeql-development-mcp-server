@@ -59876,7 +59876,7 @@ function registerCLITool(server, definition) {
                       data: values.map((val) => [val])
                     }))
                   };
-                  writeFileSync2(join6(extDir, "runtime.model.yml"), dump(extensionsData, { lineWidth: -1 }), "utf8");
+                  writeFileSync2(join6(extDir, "runtime.model.yml"), dump(extensionsData, { lineWidth: -1, flowLevel: 4 }), "utf8");
                   const existingPacks = options["additional-packs"];
                   options["additional-packs"] = existingPacks ? `${existingPacks}${delimiter5}${extPackDir}` : extPackDir;
                   const modelPacks = options["model-packs"];
