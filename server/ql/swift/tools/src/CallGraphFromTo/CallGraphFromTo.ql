@@ -26,21 +26,23 @@ string getTargetFunctionName() {
 
 /**
  * Gets a function by matching against the selected source function names.
+ * Supports both base names (e.g. "source") and full Swift signatures (e.g. "source()").
  */
 Function getSourceFunction() {
   exists(string selectedFunc |
     selectedFunc = getSourceFunctionName() and
-    result.getName() = selectedFunc
+    (result.getName() = selectedFunc or result.getName().matches(selectedFunc + "(%"))
   )
 }
 
 /**
  * Gets a function by matching against the selected target function names.
+ * Supports both base names (e.g. "target") and full Swift signatures (e.g. "target()").
  */
 Function getTargetFunction() {
   exists(string selectedFunc |
     selectedFunc = getTargetFunctionName() and
-    result.getName() = selectedFunc
+    (result.getName() = selectedFunc or result.getName().matches(selectedFunc + "(%"))
   )
 }
 

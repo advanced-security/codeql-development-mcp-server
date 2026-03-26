@@ -35,6 +35,9 @@ string getCalleeName(CallExpr call) {
   else result = call.toString()
 }
 
-from CallExpr call
-where call.getStaticTarget().getName() = getTargetFunctionName()
+from CallExpr call, string targetName
+where
+  targetName = getTargetFunctionName() and
+  (call.getStaticTarget().getName() = targetName or
+    call.getStaticTarget().getName().matches(targetName + "(%"))
 select call, "Call to `" + getCalleeName(call) + "` from `" + getCallerName(call) + "`"

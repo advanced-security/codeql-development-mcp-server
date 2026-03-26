@@ -19,11 +19,12 @@ string getSourceFunctionName() {
 
 /**
  * Gets a function by matching against the selected source function names.
+ * Supports both base names (e.g. "sourceFunc") and full Swift signatures (e.g. "sourceFunc()").
  */
 Function getSourceFunction() {
   exists(string selectedFunc |
     selectedFunc = getSourceFunctionName() and
-    result.getName() = selectedFunc
+    (result.getName() = selectedFunc or result.getName().matches(selectedFunc + "(%"))
   )
 }
 

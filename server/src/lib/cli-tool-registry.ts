@@ -10,7 +10,8 @@ import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } fro
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { getUserWorkspaceDir, packageRootDir, resolveToolQueryPackPath } from '../utils/package-paths';
 import { writeFileSync, rmSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
-import { basename, dirname, isAbsolute, join, resolve } from 'path';
+import { basename, delimiter, dirname, isAbsolute, join, resolve } from 'path';
+import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
@@ -322,7 +323,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                 targetPackName = `advanced-security/ql-mcp-${_queryLanguage}-tools-src`;
               } else if (query && typeof query === 'string') {
                 // Extract language from query path: .../ql/{lang}/tools/src/...
-                const match = (query as string).match(/\/ql\/([^/]+)\/tools\/src\//);
+                // Normalize backslashes for Windows compatibility
+                const normalizedQuery = (query as string).replace(/\\/g, '/');
+                const match = normalizedQuery.match(/\/ql\/([^/]+)\/tools\/src\//);
                 if (match) {
                   targetPackName = `advanced-security/ql-mcp-${match[1]}-tools-src`;
                 }
@@ -350,25 +353,23 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                   const extDir = join(extPackDir, 'ext');
                   mkdirSync(extDir, { recursive: true });
                   
-                  // Build the YAML data extensions content
-                  const extensions: string[] = ['extensions:'];
-                  for (const [predName, values] of Object.entries(extensiblePredicates)) {
-                    extensions.push('  - addsTo:');
-                    extensions.push(`      pack: ${targetPackName}`);
-                    extensions.push(`      extensible: ${predName}`);
-                    extensions.push('    data:');
-                    for (const val of values) {
-                      extensions.push(`      - ["${val}"]`);
-                    }
-                  }
-                  extensions.push('');
+                  // Build the YAML data extensions content using js-yaml for safe serialization
+                  const extensionsData = {
+                    extensions: Object.entries(extensiblePredicates).map(([predName, values]) => ({
+                      addsTo: {
+                        pack: targetPackName,
+                        extensible: predName,
+                      },
+                      data: values.map((val) => [val]),
+                    })),
+                  };
                   
-                  writeFileSync(join(extDir, 'runtime.model.yml'), extensions.join('\n'), 'utf8');
+                  writeFileSync(join(extDir, 'runtime.model.yml'), yaml.dump(extensionsData, { lineWidth: -1 }), 'utf8');
                   
                   // Add the extension pack directory to --additional-packs so it can be resolved
                   const existingPacks = options['additional-packs'] as string | undefined;
                   options['additional-packs'] = existingPacks
-                    ? `${existingPacks}:${extPackDir}`
+                    ? `${existingPacks}${delimiter}${extPackDir}`
                     : extPackDir;
                   
                   // Use --model-packs to activate the extension pack for extensible predicates

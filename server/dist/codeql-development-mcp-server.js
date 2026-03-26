@@ -12713,8 +12713,8 @@ var require_common = __commonJS({
         }
         return debug;
       }
-      function extend4(namespace, delimiter6) {
-        const newDebug = createDebug(this.namespace + (typeof delimiter6 === "undefined" ? ":" : delimiter6) + namespace);
+      function extend4(namespace, delimiter7) {
+        const newDebug = createDebug(this.namespace + (typeof delimiter7 === "undefined" ? ":" : delimiter7) + namespace);
         newDebug.log = this.log;
         return newDebug;
       }
@@ -32564,9 +32564,9 @@ var require_dist2 = __commonJS({
       return new TokenData(consumeUntil("end"), str2);
     }
     function compile(path4, options = {}) {
-      const { encode = encodeURIComponent, delimiter: delimiter6 = DEFAULT_DELIMITER } = options;
+      const { encode = encodeURIComponent, delimiter: delimiter7 = DEFAULT_DELIMITER } = options;
       const data = typeof path4 === "object" ? path4 : parse4(path4, options);
-      const fn = tokensToFunction(data.tokens, delimiter6, encode);
+      const fn = tokensToFunction(data.tokens, delimiter7, encode);
       return function path5(params = {}) {
         const [path6, ...missing] = fn(params);
         if (missing.length) {
@@ -32575,8 +32575,8 @@ var require_dist2 = __commonJS({
         return path6;
       };
     }
-    function tokensToFunction(tokens, delimiter6, encode) {
-      const encoders = tokens.map((token) => tokenToFunction(token, delimiter6, encode));
+    function tokensToFunction(tokens, delimiter7, encode) {
+      const encoders = tokens.map((token) => tokenToFunction(token, delimiter7, encode));
       return (data) => {
         const result = [""];
         for (const encoder of encoders) {
@@ -32587,11 +32587,11 @@ var require_dist2 = __commonJS({
         return result;
       };
     }
-    function tokenToFunction(token, delimiter6, encode) {
+    function tokenToFunction(token, delimiter7, encode) {
       if (token.type === "text")
         return () => [token.value];
       if (token.type === "group") {
-        const fn = tokensToFunction(token.tokens, delimiter6, encode);
+        const fn = tokensToFunction(token.tokens, delimiter7, encode);
         return (data) => {
           const [value, ...missing] = fn(data);
           if (!missing.length)
@@ -32614,7 +32614,7 @@ var require_dist2 = __commonJS({
                 throw new TypeError(`Expected "${token.name}/${index}" to be a string`);
               }
               return encodeValue(value2);
-            }).join(delimiter6)
+            }).join(delimiter7)
           ];
         };
       }
@@ -32629,14 +32629,14 @@ var require_dist2 = __commonJS({
       };
     }
     function match(path4, options = {}) {
-      const { decode = decodeURIComponent, delimiter: delimiter6 = DEFAULT_DELIMITER } = options;
+      const { decode = decodeURIComponent, delimiter: delimiter7 = DEFAULT_DELIMITER } = options;
       const { regexp, keys } = pathToRegexp(path4, options);
       const decoders = keys.map((key) => {
         if (decode === false)
           return NOOP_VALUE;
         if (key.type === "param")
           return decode;
-        return (value) => value.split(delimiter6).map(decode);
+        return (value) => value.split(delimiter7).map(decode);
       });
       return function match2(input) {
         const m = regexp.exec(input);
@@ -32655,20 +32655,20 @@ var require_dist2 = __commonJS({
       };
     }
     function pathToRegexp(path4, options = {}) {
-      const { delimiter: delimiter6 = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
+      const { delimiter: delimiter7 = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
       const keys = [];
       const flags = sensitive ? "" : "i";
       const sources = [];
       for (const input of pathsToArray(path4, [])) {
         const data = typeof input === "object" ? input : parse4(input, options);
         for (const tokens of flatten(data.tokens, 0, [])) {
-          sources.push(toRegExpSource(tokens, delimiter6, keys, data.originalPath));
+          sources.push(toRegExpSource(tokens, delimiter7, keys, data.originalPath));
         }
       }
       let pattern = `^(?:${sources.join("|")})`;
       if (trailing)
-        pattern += `(?:${escape2(delimiter6)}$)?`;
-      pattern += end ? "$" : `(?=${escape2(delimiter6)}|$)`;
+        pattern += `(?:${escape2(delimiter7)}$)?`;
+      pattern += end ? "$" : `(?=${escape2(delimiter7)}|$)`;
       const regexp = new RegExp(pattern, flags);
       return { regexp, keys };
     }
@@ -32695,7 +32695,7 @@ var require_dist2 = __commonJS({
       }
       yield* flatten(tokens, index + 1, init);
     }
-    function toRegExpSource(tokens, delimiter6, keys, originalPath) {
+    function toRegExpSource(tokens, delimiter7, keys, originalPath) {
       let result = "";
       let backtrack = "";
       let isSafeSegmentParam = true;
@@ -32703,7 +32703,7 @@ var require_dist2 = __commonJS({
         if (token.type === "text") {
           result += escape2(token.value);
           backtrack += token.value;
-          isSafeSegmentParam || (isSafeSegmentParam = token.value.includes(delimiter6));
+          isSafeSegmentParam || (isSafeSegmentParam = token.value.includes(delimiter7));
           continue;
         }
         if (token.type === "param" || token.type === "wildcard") {
@@ -32711,7 +32711,7 @@ var require_dist2 = __commonJS({
             throw new PathError(`Missing text before "${token.name}" ${token.type}`, originalPath);
           }
           if (token.type === "param") {
-            result += `(${negate(delimiter6, isSafeSegmentParam ? "" : backtrack)}+)`;
+            result += `(${negate(delimiter7, isSafeSegmentParam ? "" : backtrack)}+)`;
           } else {
             result += `([\\s\\S]+)`;
           }
@@ -32723,16 +32723,16 @@ var require_dist2 = __commonJS({
       }
       return result;
     }
-    function negate(delimiter6, backtrack) {
+    function negate(delimiter7, backtrack) {
       if (backtrack.length < 2) {
-        if (delimiter6.length < 2)
-          return `[^${escape2(delimiter6 + backtrack)}]`;
-        return `(?:(?!${escape2(delimiter6)})[^${escape2(backtrack)}])`;
+        if (delimiter7.length < 2)
+          return `[^${escape2(delimiter7 + backtrack)}]`;
+        return `(?:(?!${escape2(delimiter7)})[^${escape2(backtrack)}])`;
       }
-      if (delimiter6.length < 2) {
-        return `(?:(?!${escape2(backtrack)})[^${escape2(delimiter6)}])`;
+      if (delimiter7.length < 2) {
+        return `(?:(?!${escape2(backtrack)})[^${escape2(delimiter7)}])`;
       }
-      return `(?:(?!${escape2(backtrack)}|${escape2(delimiter6)})[\\s\\S])`;
+      return `(?:(?!${escape2(backtrack)}|${escape2(delimiter7)})[\\s\\S])`;
     }
     function stringifyTokens(tokens) {
       let value = "";
@@ -57038,978 +57038,8 @@ function getOrCreateLogDirectory(logDir) {
 
 // src/lib/cli-tool-registry.ts
 init_package_paths();
-init_temp_dir();
 import { writeFileSync as writeFileSync2, rmSync, existsSync as existsSync4, mkdirSync as mkdirSync5, readdirSync as readdirSync2, statSync as statSync2 } from "fs";
-import { basename as basename2, dirname as dirname4, isAbsolute as isAbsolute4, join as join6, resolve as resolve4 } from "path";
-function resolveDatabasePath(dbPath) {
-  if (existsSync4(join6(dbPath, "codeql-database.yml"))) {
-    return dbPath;
-  }
-  try {
-    const entries = readdirSync2(dbPath);
-    const candidates = [];
-    for (const entry of entries) {
-      const candidate = join6(dbPath, entry);
-      try {
-        if (statSync2(candidate).isDirectory() && existsSync4(join6(candidate, "codeql-database.yml"))) {
-          candidates.push(candidate);
-        }
-      } catch {
-      }
-    }
-    if (candidates.length === 1) {
-      logger.info(`Resolved database directory: ${dbPath} -> ${candidates[0]}`);
-      return candidates[0];
-    }
-    if (candidates.length > 1) {
-      const names = candidates.map((c) => basename2(c)).join(", ");
-      throw new Error(
-        `Ambiguous database path: ${dbPath} contains multiple databases (${names}). Specify the full path to the desired database subfolder.`
-      );
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith("Ambiguous database path")) {
-      throw err;
-    }
-  }
-  return dbPath;
-}
-var defaultCLIResultProcessor = (result, _params) => {
-  if (!result.success) {
-    return `Command failed (exit code ${result.exitCode || "unknown"}):
-${result.error || result.stderr}`;
-  }
-  let output = "";
-  if (result.stdout) {
-    output += result.stdout;
-  }
-  if (result.stderr) {
-    if (output) {
-      output += "\n\nWarnings/Info:\n";
-    }
-    output += result.stderr;
-  }
-  if (!output) {
-    output = "Command executed successfully (no output)";
-  }
-  return output;
-};
-function registerCLITool(server, definition) {
-  const {
-    name,
-    description,
-    command,
-    subcommand,
-    inputSchema,
-    resultProcessor = defaultCLIResultProcessor
-  } = definition;
-  server.tool(
-    name,
-    description,
-    inputSchema,
-    async (params) => {
-      const tempDirsToCleanup = [];
-      try {
-        logger.info(`Executing CLI tool: ${name}`, { command, subcommand, params });
-        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_bqrs_info" || name === "codeql_generate_query-help" || name === "codeql_database_analyze" || name === "codeql_resolve_files";
-        const extractedParams = formatShouldBePassedToCLI ? {
-          _positional: params._positional || [],
-          files: params.files,
-          file: params.file,
-          dir: params.dir,
-          packDir: params.packDir,
-          tests: params.tests,
-          query: params.query,
-          queryName: params.queryName,
-          queryLanguage: params.queryLanguage,
-          queryPack: params.queryPack,
-          sourceFiles: params.sourceFiles,
-          sourceFunction: params.sourceFunction,
-          targetFunction: params.targetFunction,
-          interpretedOutput: params.interpretedOutput,
-          evaluationFunction: params.evaluationFunction,
-          evaluationOutput: params.evaluationOutput,
-          directory: params.directory,
-          logDir: params.logDir,
-          qlref: params.qlref
-        } : {
-          _positional: params._positional || [],
-          files: params.files,
-          file: params.file,
-          dir: params.dir,
-          packDir: params.packDir,
-          tests: params.tests,
-          query: params.query,
-          queryName: params.queryName,
-          queryLanguage: params.queryLanguage,
-          queryPack: params.queryPack,
-          sourceFiles: params.sourceFiles,
-          sourceFunction: params.sourceFunction,
-          targetFunction: params.targetFunction,
-          format: params.format,
-          interpretedOutput: params.interpretedOutput,
-          evaluationFunction: params.evaluationFunction,
-          evaluationOutput: params.evaluationOutput,
-          directory: params.directory,
-          logDir: params.logDir,
-          qlref: params.qlref
-        };
-        const {
-          _positional = [],
-          files,
-          file,
-          dir,
-          packDir,
-          tests,
-          query,
-          queryName,
-          queryLanguage: _queryLanguage,
-          queryPack: _queryPack,
-          sourceFiles,
-          sourceFunction,
-          targetFunction,
-          format: _format,
-          interpretedOutput: _interpretedOutput,
-          evaluationFunction: _evaluationFunction,
-          evaluationOutput: _evaluationOutput,
-          directory,
-          logDir: customLogDir,
-          qlref
-        } = extractedParams;
-        const options = { ...params };
-        Object.keys(extractedParams).forEach((key) => delete options[key]);
-        let positionalArgs = Array.isArray(_positional) ? _positional : [_positional];
-        if (files && Array.isArray(files)) {
-          positionalArgs = [...positionalArgs, ...files];
-        }
-        if (file && name.startsWith("codeql_bqrs_")) {
-          positionalArgs = [...positionalArgs, file];
-        }
-        if (qlref && name === "codeql_resolve_qlref") {
-          positionalArgs = [...positionalArgs, qlref];
-        }
-        if (options.database && name === "codeql_resolve_database") {
-          positionalArgs = [...positionalArgs, resolveDatabasePath(options.database)];
-          delete options.database;
-        }
-        if (options.database && name === "codeql_database_create") {
-          positionalArgs = [...positionalArgs, options.database];
-          delete options.database;
-        }
-        if (name === "codeql_database_analyze") {
-          if (options.database) {
-            positionalArgs = [...positionalArgs, resolveDatabasePath(options.database)];
-            delete options.database;
-          }
-          if (options.queries) {
-            positionalArgs = [...positionalArgs, options.queries];
-            delete options.queries;
-          }
-        }
-        if (query && name === "codeql_generate_query-help") {
-          positionalArgs = [...positionalArgs, query];
-        }
-        if (dir && name === "codeql_pack_ls") {
-          positionalArgs = [...positionalArgs, dir];
-        }
-        switch (name) {
-          case "codeql_test_accept":
-          case "codeql_test_extract":
-          case "codeql_test_run":
-          case "codeql_resolve_tests":
-            if (tests && Array.isArray(tests)) {
-              const userDir = getUserWorkspaceDir();
-              positionalArgs = [...positionalArgs, ...tests.map(
-                (t) => isAbsolute4(t) ? t : resolve4(userDir, t)
-              )];
-            }
-            break;
-          case "codeql_query_run": {
-            if (options.database && typeof options.database === "string" && !isAbsolute4(options.database)) {
-              options.database = resolve4(getUserWorkspaceDir(), options.database);
-              logger.info(`Resolved database path to: ${options.database}`);
-            }
-            if (options.database && typeof options.database === "string") {
-              options.database = resolveDatabasePath(options.database);
-            }
-            const resolvedQuery = await resolveQueryPath(params, logger);
-            if (resolvedQuery) {
-              positionalArgs = [...positionalArgs, resolvedQuery];
-            } else if (query) {
-              positionalArgs = [...positionalArgs, query];
-            }
-            const extensiblePredicates = {};
-            if ((queryName === "PrintAST" || queryName === "PrintCFG") && sourceFiles) {
-              const filePaths = sourceFiles.split(",").map((f) => f.trim());
-              extensiblePredicates["selectedSourceFiles"] = filePaths;
-            }
-            if (sourceFunction) {
-              const functionNames = sourceFunction.split(",").map((f) => f.trim());
-              extensiblePredicates["sourceFunction"] = functionNames;
-            }
-            if (targetFunction) {
-              const functionNames = targetFunction.split(",").map((f) => f.trim());
-              extensiblePredicates["targetFunction"] = functionNames;
-            }
-            if (Object.keys(extensiblePredicates).length > 0) {
-              let targetPackName;
-              if (_queryLanguage) {
-                targetPackName = `advanced-security/ql-mcp-${_queryLanguage}-tools-src`;
-              } else if (query && typeof query === "string") {
-                const match = query.match(/\/ql\/([^/]+)\/tools\/src\//);
-                if (match) {
-                  targetPackName = `advanced-security/ql-mcp-${match[1]}-tools-src`;
-                }
-              }
-              if (targetPackName) {
-                try {
-                  const extPackDir = createProjectTempDir("codeql-ext-pack-");
-                  tempDirsToCleanup.push(extPackDir);
-                  const qlpackContent = [
-                    "library: true",
-                    "name: advanced-security/ql-mcp-runtime-extensions",
-                    "version: 0.0.0",
-                    "extensionTargets:",
-                    `  ${targetPackName}: "*"`,
-                    "dataExtensions:",
-                    '  - "ext/*.model.yml"',
-                    ""
-                  ].join("\n");
-                  writeFileSync2(join6(extPackDir, "qlpack.yml"), qlpackContent, "utf8");
-                  const extDir = join6(extPackDir, "ext");
-                  mkdirSync5(extDir, { recursive: true });
-                  const extensions = ["extensions:"];
-                  for (const [predName, values] of Object.entries(extensiblePredicates)) {
-                    extensions.push("  - addsTo:");
-                    extensions.push(`      pack: ${targetPackName}`);
-                    extensions.push(`      extensible: ${predName}`);
-                    extensions.push("    data:");
-                    for (const val of values) {
-                      extensions.push(`      - ["${val}"]`);
-                    }
-                  }
-                  extensions.push("");
-                  writeFileSync2(join6(extDir, "runtime.model.yml"), extensions.join("\n"), "utf8");
-                  const existingPacks = options["additional-packs"];
-                  options["additional-packs"] = existingPacks ? `${existingPacks}:${extPackDir}` : extPackDir;
-                  const modelPacks = options["model-packs"];
-                  const modelPacksArray = Array.isArray(modelPacks) ? modelPacks : [];
-                  modelPacksArray.push("advanced-security/ql-mcp-runtime-extensions@*");
-                  options["model-packs"] = modelPacksArray;
-                  logger.info(`Created runtime extension pack at ${extPackDir} targeting ${targetPackName} with predicates: ${Object.keys(extensiblePredicates).join(", ")}`);
-                } catch (err) {
-                  logger.error(`Failed to create runtime extension pack: ${err instanceof Error ? err.message : String(err)}`);
-                  throw err;
-                }
-              } else {
-                logger.warn("Could not determine target pack name for extensible predicates \u2014 queryLanguage not set and query path does not match expected pattern");
-              }
-            }
-            break;
-          }
-          case "codeql_query_compile":
-          case "codeql_resolve_metadata":
-            if (query) {
-              positionalArgs = [...positionalArgs, query];
-            }
-            break;
-          case "codeql_resolve_library-path":
-            if (query) {
-              options.query = query;
-            }
-            break;
-          case "codeql_resolve_queries":
-            if (directory) {
-              positionalArgs = [...positionalArgs, directory];
-            }
-            break;
-          case "codeql_resolve_files":
-            if (dir) {
-              positionalArgs = [...positionalArgs, dir];
-            }
-            break;
-          default:
-            break;
-        }
-        let queryLogDir;
-        if (name === "codeql_query_run" || name === "codeql_test_run" || name === "codeql_database_analyze") {
-          queryLogDir = getOrCreateLogDirectory(customLogDir);
-          logger.info(`Using log directory for ${name}: ${queryLogDir}`);
-          const timestampPath = join6(queryLogDir, "timestamp");
-          writeFileSync2(timestampPath, Date.now().toString(), "utf8");
-          options.logdir = queryLogDir;
-          if (!options.verbosity) {
-            options.verbosity = "progress+";
-          }
-          if (!options["evaluator-log"]) {
-            options["evaluator-log"] = join6(queryLogDir, "evaluator-log.jsonl");
-          }
-          if (options["tuple-counting"] === void 0) {
-            options["tuple-counting"] = true;
-          }
-          if (name === "codeql_query_run") {
-            if (!options.output) {
-              options.output = join6(queryLogDir, "results.bqrs");
-            }
-          }
-          if (options.output && typeof options.output === "string") {
-            const outputDir = dirname4(options.output);
-            mkdirSync5(outputDir, { recursive: true });
-          }
-        }
-        let result;
-        if (command === "codeql") {
-          let cwd;
-          if ((name === "codeql_pack_install" || name === "codeql_pack_ls") && (dir || packDir)) {
-            const rawCwd = dir || packDir;
-            cwd = isAbsolute4(rawCwd) ? rawCwd : resolve4(getUserWorkspaceDir(), rawCwd);
-          }
-          const defaultExamplesPath = resolve4(packageRootDir, "ql", "javascript", "examples");
-          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
-          if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile" || name === "codeql_database_analyze")) {
-            const existingAdditionalPacks = options["additional-packs"];
-            options["additional-packs"] = existingAdditionalPacks ? `${existingAdditionalPacks}:${additionalPacksPath}` : additionalPacksPath;
-          }
-          if (name === "codeql_test_run") {
-            options["keep-databases"] = true;
-          }
-          result = await executeCodeQLCommand(subcommand, options, positionalArgs, cwd);
-        } else if (command === "qlt") {
-          result = await executeQLTCommand(subcommand, options, positionalArgs);
-        } else {
-          throw new Error(`Unsupported command: ${command}`);
-        }
-        if (name === "codeql_query_run" && result.success && queryLogDir) {
-          const bqrsPath = options.output;
-          const sarifPath = join6(queryLogDir, "results-interpreted.sarif");
-          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : void 0;
-          if (existsSync4(bqrsPath) && queryFilePath) {
-            try {
-              const sarifResult = await interpretBQRSFile(
-                bqrsPath,
-                queryFilePath,
-                "sarif-latest",
-                sarifPath,
-                logger
-              );
-              if (sarifResult.success) {
-                logger.info(`Generated SARIF interpretation at ${sarifPath}`);
-              } else {
-                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
-              }
-            } catch (error2) {
-              logger.warn(`Failed to generate SARIF interpretation: ${error2}`);
-            }
-          } else if (existsSync4(bqrsPath) && !queryFilePath) {
-            logger.warn("Skipping SARIF interpretation: query file path not available");
-          }
-          result = await processQueryRunResults(result, params, logger);
-        }
-        if ((name === "codeql_query_run" || name === "codeql_database_analyze") && result.success && queryLogDir) {
-          const evalLogPath = options["evaluator-log"];
-          if (evalLogPath && existsSync4(evalLogPath)) {
-            try {
-              const summaryPath = evalLogPath.replace(/\.jsonl$/, ".summary.jsonl");
-              const summaryResult = await executeCodeQLCommand(
-                "generate log-summary",
-                { format: "predicates" },
-                [evalLogPath, summaryPath]
-              );
-              if (summaryResult.success) {
-                logger.info(`Generated evaluator log summary at ${summaryPath}`);
-              }
-            } catch (error2) {
-              logger.warn(`Failed to generate evaluator log summary: ${error2}`);
-            }
-          }
-        }
-        const processedResult = resultProcessor(result, params);
-        return {
-          content: [{
-            type: "text",
-            text: processedResult
-          }],
-          isError: !result.success
-        };
-      } catch (error2) {
-        logger.error(`Error in CLI tool ${name}:`, error2);
-        return {
-          content: [{
-            type: "text",
-            text: `Failed to execute CLI tool: ${error2 instanceof Error ? error2.message : String(error2)}`
-          }],
-          isError: true
-        };
-      } finally {
-        for (const tempDir of tempDirsToCleanup) {
-          try {
-            rmSync(tempDir, { recursive: true, force: true });
-            logger.info(`Cleaned up temporary directory: ${tempDir}`);
-          } catch (cleanupError) {
-            logger.error(`Failed to clean up temporary directory ${tempDir}:`, cleanupError);
-          }
-        }
-      }
-    }
-  );
-}
-var createCodeQLSchemas = {
-  database: () => external_exports.string().describe("Path to the CodeQL database"),
-  query: () => external_exports.string().describe("Path to the CodeQL query file (.ql)"),
-  output: () => external_exports.string().optional().describe("Output file path"),
-  outputFormat: () => external_exports.enum(["csv", "json", "bqrs", "sarif-latest", "sarifv2.1.0"]).optional().describe("Output format for results"),
-  language: () => external_exports.string().optional().describe("Programming language"),
-  threads: () => external_exports.number().optional().describe("Number of threads to use"),
-  ram: () => external_exports.number().optional().describe("Amount of RAM to use (MB)"),
-  timeout: () => external_exports.number().optional().describe("Timeout in seconds"),
-  verbose: () => external_exports.boolean().optional().describe("Enable verbose output"),
-  additionalArgs: () => external_exports.array(external_exports.string()).optional().describe("Additional command-line arguments"),
-  positionalArgs: () => external_exports.array(external_exports.string()).optional().describe("Positional arguments").transform((val) => ({ _positional: val }))
-};
-var createBQRSResultProcessor = () => (result, params) => {
-  if (!result.success) {
-    return defaultCLIResultProcessor(result, params);
-  }
-  let output = result.stdout;
-  if (params.output) {
-    output += `
-
-Results saved to: ${params.output}`;
-  }
-  if (result.stderr) {
-    output += `
-
-Additional information:
-${result.stderr}`;
-  }
-  return output;
-};
-var createDatabaseResultProcessor = () => (result, params) => {
-  if (!result.success) {
-    return defaultCLIResultProcessor(result, params);
-  }
-  let output = "Database creation completed successfully";
-  if (params.database || params._positional) {
-    const dbPath = params.database || (Array.isArray(params._positional) ? params._positional[0] : params._positional);
-    output += `
-
-Database location: ${dbPath}`;
-  }
-  if (result.stdout) {
-    output += `
-
-Output:
-${result.stdout}`;
-  }
-  if (result.stderr) {
-    output += `
-
-Additional information:
-${result.stderr}`;
-  }
-  return output;
-};
-async function resolveQueryPath(params, logger2) {
-  const { queryName, queryLanguage, queryPack, query } = params;
-  if (queryName && query) {
-    logger2.error('Cannot use both "query" and "queryName" parameters simultaneously. Use either "query" for direct file path OR "queryName" + "queryLanguage" for tool queries.');
-    throw new Error('Cannot use both "query" and "queryName" parameters simultaneously. Use either "query" for direct file path OR "queryName" + "queryLanguage" for tool queries.');
-  }
-  if (!queryName) {
-    return query || null;
-  }
-  if (!queryLanguage) {
-    logger2.error("queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift");
-    throw new Error("queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift");
-  }
-  try {
-    const defaultPackPath = resolveToolQueryPackPath(queryLanguage);
-    const packPath = queryPack || defaultPackPath;
-    logger2.info(`Resolving query: ${queryName} for language: ${queryLanguage} in pack: ${packPath}`);
-    const { executeCodeQLCommand: executeCodeQLCommand2 } = await Promise.resolve().then(() => (init_cli_executor(), cli_executor_exports));
-    const resolveResult = await executeCodeQLCommand2(
-      "resolve queries",
-      { format: "json" },
-      [packPath]
-    );
-    if (!resolveResult.success) {
-      logger2.error("Failed to resolve queries:", resolveResult.stderr || resolveResult.error);
-      throw new Error(`Failed to resolve queries: ${resolveResult.stderr || resolveResult.error}`);
-    }
-    let resolvedQueries;
-    try {
-      resolvedQueries = JSON.parse(resolveResult.stdout);
-    } catch (parseError) {
-      logger2.error("Failed to parse resolve queries output:", parseError);
-      throw new Error("Failed to parse resolve queries output", { cause: parseError });
-    }
-    const matchingQuery = resolvedQueries.find((queryPath) => {
-      const fileName = basename2(queryPath);
-      return fileName === `${queryName}.ql`;
-    });
-    if (!matchingQuery) {
-      logger2.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map((q) => basename2(q)));
-      throw new Error(`Query "${queryName}.ql" not found in pack "${packPath}"`);
-    }
-    logger2.info(`Resolved query "${queryName}" to: ${matchingQuery}`);
-    return matchingQuery;
-  } catch (error2) {
-    logger2.error("Error resolving query path:", error2);
-    throw error2;
-  }
-}
-async function interpretBQRSFile(bqrsPath, queryPath, format, outputPath, logger2) {
-  try {
-    const metadata = await extractQueryMetadata(queryPath);
-    const missingFields = [];
-    if (!metadata.id) missingFields.push("id");
-    if (!metadata.kind) missingFields.push("kind");
-    if (missingFields.length > 0) {
-      return {
-        success: false,
-        exitCode: 1,
-        stdout: "",
-        stderr: "",
-        error: `Query metadata is incomplete. Missing required field(s): ${missingFields.join(", ")}. Ensure the query file contains @id and @kind metadata.`
-      };
-    }
-    const sanitizedKind = (metadata.kind || "").replace(/[^a-zA-Z0-9_-]/g, "");
-    const sanitizedId = (metadata.id || "").replace(/[^a-zA-Z0-9_/:-]/g, "");
-    const graphFormats = ["graphtext", "dgml", "dot"];
-    if (graphFormats.includes(format) && metadata.kind !== "graph") {
-      return {
-        success: false,
-        exitCode: 1,
-        stdout: "",
-        stderr: "",
-        error: `Format '${format}' is only compatible with @kind graph queries, but this query has @kind ${metadata.kind}`
-      };
-    }
-    mkdirSync5(dirname4(outputPath), { recursive: true });
-    const params = {
-      format,
-      output: outputPath,
-      t: [`kind=${sanitizedKind}`, `id=${sanitizedId}`]
-    };
-    logger2.info(`Interpreting BQRS file ${bqrsPath} with format ${format} to ${outputPath}`);
-    const result = await executeCodeQLCommand(
-      "bqrs interpret",
-      params,
-      [bqrsPath]
-    );
-    return result;
-  } catch (error2) {
-    return {
-      success: false,
-      exitCode: 1,
-      stdout: "",
-      stderr: "",
-      error: `Failed to interpret BQRS file: ${error2}`
-    };
-  }
-}
-function getDefaultExtension(format) {
-  switch (format) {
-    case "sarif-latest":
-    case "sarifv2.1.0":
-      return ".sarif";
-    case "csv":
-      return ".csv";
-    case "graphtext":
-      return ".txt";
-    case "dgml":
-      return ".dgml";
-    case "dot":
-      return ".dot";
-    default:
-      return ".txt";
-  }
-}
-async function processQueryRunResults(result, params, logger2) {
-  try {
-    const { format, interpretedOutput, evaluationFunction, evaluationOutput, output, query, queryName, queryLanguage } = params;
-    if (!format && !evaluationFunction) {
-      return result;
-    }
-    if (!output) {
-      return result;
-    }
-    const bqrsPath = output;
-    let queryPath = null;
-    if (query) {
-      queryPath = query;
-    } else if (queryName && queryLanguage) {
-      queryPath = await resolveQueryPath(params, logger2);
-    }
-    if (!queryPath) {
-      logger2.error("Cannot determine query path for interpretation/evaluation");
-      return {
-        ...result,
-        stdout: result.stdout + "\n\nWarning: Query interpretation skipped - could not determine query path"
-      };
-    }
-    if (format) {
-      const outputFormat = format;
-      let outputFilePath = interpretedOutput;
-      if (!outputFilePath) {
-        const ext = getDefaultExtension(outputFormat);
-        outputFilePath = bqrsPath.replace(".bqrs", ext);
-      }
-      logger2.info(`Interpreting query results from ${bqrsPath} with format: ${outputFormat}`);
-      const interpretResult = await interpretBQRSFile(
-        bqrsPath,
-        queryPath,
-        outputFormat,
-        outputFilePath,
-        logger2
-      );
-      if (interpretResult.success) {
-        let enhancedOutput = result.stdout;
-        enhancedOutput += `
-
-Query results interpreted successfully with format: ${outputFormat}`;
-        enhancedOutput += `
-Interpreted output saved to: ${outputFilePath}`;
-        return {
-          ...result,
-          stdout: enhancedOutput
-        };
-      } else {
-        logger2.error("Query interpretation failed:", interpretResult.error);
-        return {
-          ...result,
-          stdout: result.stdout + `
-
-Warning: Query interpretation failed - ${interpretResult.error || interpretResult.stderr}`
-        };
-      }
-    }
-    if (evaluationFunction) {
-      logger2.info(`Using deprecated evaluationFunction parameter. Consider using format parameter instead.`);
-      logger2.info(`Evaluating query results from ${bqrsPath} using function: ${evaluationFunction}`);
-      const evaluationResult = await evaluateQueryResults(
-        bqrsPath,
-        queryPath,
-        evaluationFunction,
-        evaluationOutput
-      );
-      if (evaluationResult.success) {
-        let enhancedOutput = result.stdout;
-        if (evaluationResult.outputPath) {
-          enhancedOutput += `
-
-Query evaluation completed successfully.`;
-          enhancedOutput += `
-Evaluation output saved to: ${evaluationResult.outputPath}`;
-        }
-        if (evaluationResult.content) {
-          enhancedOutput += `
-
-=== Query Results Evaluation ===
-`;
-          enhancedOutput += evaluationResult.content;
-        }
-        return {
-          ...result,
-          stdout: enhancedOutput
-        };
-      } else {
-        logger2.error("Query evaluation failed:", evaluationResult.error);
-        return {
-          ...result,
-          stdout: result.stdout + `
-
-Warning: Query evaluation failed - ${evaluationResult.error}`
-        };
-      }
-    }
-    return result;
-  } catch (error2) {
-    logger2.error("Error in query results processing:", error2);
-    return {
-      ...result,
-      stdout: result.stdout + `
-
-Warning: Query processing error - ${error2}`
-    };
-  }
-}
-
-// src/tools/codeql/bqrs-decode.ts
-var codeqlBqrsDecodeTool = {
-  name: "codeql_bqrs_decode",
-  description: "Decode BQRS result files to human-readable formats (text, csv, json). Typical workflow: (1) use list_query_run_results to find BQRS paths from previous codeql_query_run or codeql_database_analyze runs, (2) use codeql_bqrs_info to discover result sets and column schemas, (3) decode specific result sets with this tool. For large result sets, use --rows to paginate.",
-  command: "codeql",
-  subcommand: "bqrs decode",
-  inputSchema: {
-    files: external_exports.array(external_exports.string()).describe("BQRS file(s) to decode"),
-    output: createCodeQLSchemas.output(),
-    format: external_exports.enum(["csv", "json", "text", "bqrs"]).optional().describe("Output format: text (human-readable table, default), csv, json (streaming JSON), or bqrs (binary, requires --output)"),
-    "result-set": external_exports.string().optional().describe("Decode a specific result set by name (use codeql_bqrs_info to list available sets). If omitted, all result sets are decoded."),
-    "sort-key": external_exports.string().optional().describe("Sort by column(s): comma-separated column indices (0-based)"),
-    "sort-direction": external_exports.string().optional().describe('Sort direction(s): comma-separated "asc" or "desc" per column'),
-    "no-titles": external_exports.boolean().optional().describe("Omit column titles for text and csv formats"),
-    entities: external_exports.string().optional().describe("Control entity column display: comma-separated list of url, string, id, all"),
-    rows: external_exports.number().optional().describe("Maximum number of rows to output (for pagination). Use with --start-at for paging."),
-    "start-at": external_exports.number().optional().describe('Byte offset to start decoding from (get from codeql_bqrs_info or previous JSON output "next" pointer). Must be used with --rows.'),
-    verbose: createCodeQLSchemas.verbose(),
-    additionalArgs: createCodeQLSchemas.additionalArgs()
-  },
-  examples: [
-    "codeql bqrs decode --format=csv --output=results.csv results.bqrs",
-    "codeql bqrs decode --format=json --rows=100 results.bqrs",
-    "codeql bqrs decode --result-set=#select --format=csv results.bqrs",
-    "codeql bqrs decode --format=json --entities=url,string results.bqrs"
-  ],
-  resultProcessor: createBQRSResultProcessor()
-};
-
-// src/tools/codeql/bqrs-info.ts
-var codeqlBqrsInfoTool = {
-  name: "codeql_bqrs_info",
-  description: 'Get metadata about BQRS result files: lists result sets, column names/types, and row counts. Use before codeql_bqrs_decode to discover available result sets (e.g., "#select", "edges", "nodes"). BQRS files are found at <runDir>/results.bqrs \u2014 use list_query_run_results to discover them. Use --format=json with --paginate-rows to get byte offsets for paginated decoding with codeql_bqrs_decode --start-at.',
-  command: "codeql",
-  subcommand: "bqrs info",
-  inputSchema: {
-    files: external_exports.array(external_exports.string()).describe("BQRS file(s) to examine"),
-    format: external_exports.enum(["text", "json"]).optional().describe("Output format: text (default) or json. Use json for machine-readable output and pagination offset computation."),
-    "paginate-rows": external_exports.number().optional().describe("Compute byte offsets for pagination at intervals of this many rows. Use with --format=json. Offsets can be passed to codeql_bqrs_decode --start-at."),
-    "paginate-result-set": external_exports.string().optional().describe("Compute pagination offsets only for this result set name"),
-    verbose: createCodeQLSchemas.verbose(),
-    additionalArgs: createCodeQLSchemas.additionalArgs()
-  },
-  examples: [
-    "codeql bqrs info results.bqrs",
-    "codeql bqrs info --format=json results.bqrs",
-    "codeql bqrs info --format=json --paginate-rows=100 --paginate-result-set=#select results.bqrs"
-  ],
-  resultProcessor: createBQRSResultProcessor()
-};
-
-// src/tools/codeql/bqrs-interpret.ts
-var codeqlBqrsInterpretTool = {
-  name: "codeql_bqrs_interpret",
-  description: "Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats)",
-  command: "codeql",
-  subcommand: "bqrs interpret",
-  inputSchema: {
-    file: external_exports.string().describe("The BQRS file to interpret"),
-    format: external_exports.enum(["csv", "sarif-latest", "sarifv2.1.0", "graphtext", "dgml", "dot"]).describe("Output format: csv (comma-separated), sarif-latest/sarifv2.1.0 (SARIF), graphtext/dgml/dot (graph formats, only for @kind graph queries)"),
-    output: createCodeQLSchemas.output(),
-    t: external_exports.array(external_exports.string()).describe('Query metadata key=value pairs. At least "kind" and "id" must be specified (e.g., ["kind=graph", "id=js/print-ast"])'),
-    "max-paths": external_exports.number().optional().describe("Maximum number of paths to produce for each alert with paths (default: 4)"),
-    "sarif-add-file-contents": external_exports.boolean().optional().describe("[SARIF only] Include full file contents for all files referenced in results"),
-    "sarif-add-snippets": external_exports.boolean().optional().describe("[SARIF only] Include code snippets for each location with context"),
-    "sarif-group-rules-by-pack": external_exports.boolean().optional().describe("[SARIF only] Place rule objects under their QL pack in tool.extensions property"),
-    "sarif-multicause-markdown": external_exports.boolean().optional().describe("[SARIF only] Include multi-cause alerts as Markdown-formatted lists"),
-    "sarif-category": external_exports.string().optional().describe("[SARIF only] Category for this analysis (distinguishes multiple analyses on same code)"),
-    "csv-location-format": external_exports.enum(["uri", "line-column", "offset-length"]).optional().describe("[CSV only] Format for locations in CSV output (default: line-column)"),
-    "dot-location-url-format": external_exports.string().optional().describe("[DOT only] Format string for file location URLs (placeholders: {path}, {start:line}, {start:column}, {end:line}, {end:column}, {offset}, {length})"),
-    threads: external_exports.number().optional().describe("Number of threads for computing paths (0 = one per core, -N = leave N cores unused)"),
-    "column-kind": external_exports.enum(["utf8", "utf16", "utf32", "bytes"]).optional().describe("[SARIF only] Column kind for interpreting location columns"),
-    "unicode-new-lines": external_exports.boolean().optional().describe("[SARIF only] Whether unicode newlines (U+2028, U+2029) are considered as newlines"),
-    verbose: createCodeQLSchemas.verbose(),
-    additionalArgs: createCodeQLSchemas.additionalArgs()
-  },
-  examples: [
-    "codeql bqrs interpret --format=sarif-latest --output=results.sarif -t kind=problem -t id=js/sql-injection results.bqrs",
-    "codeql bqrs interpret --format=graphtext --output=ast.txt -t kind=graph -t id=js/print-ast results.bqrs",
-    "codeql bqrs interpret --format=csv --csv-location-format=line-column --output=results.csv -t kind=problem -t id=js/xss results.bqrs",
-    "codeql bqrs interpret --format=dot --output=graph.dot -t kind=graph -t id=java/call-graph results.bqrs",
-    "codeql bqrs interpret --format=sarif-latest --sarif-add-snippets --sarif-category=security --output=results.sarif -t kind=path-problem -t id=go/path-injection results.bqrs"
-  ],
-  resultProcessor: createBQRSResultProcessor()
-};
-
-// src/tools/codeql/database-analyze.ts
-var codeqlDatabaseAnalyzeTool = {
-  name: "codeql_database_analyze",
-  description: "Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS results, and optionally SARIF output. Use list_codeql_databases to discover available databases, and register_database to register new ones. After analysis completes, use list_query_run_results to find result artifacts, then codeql_bqrs_info and codeql_bqrs_decode to inspect results.",
-  command: "codeql",
-  subcommand: "database analyze",
-  inputSchema: {
-    database: external_exports.string().describe("Path to the CodeQL database"),
-    queries: external_exports.string().describe("Queries or query suite to run"),
-    output: external_exports.string().optional().describe("Output file path"),
-    format: external_exports.enum(["csv", "json", "sarif-latest", "sarifv2.1.0"]).optional().describe("Output format for results"),
-    "download-location": external_exports.string().optional().describe("Location to download missing dependencies"),
-    threads: external_exports.number().optional().describe("Number of threads to use"),
-    ram: external_exports.number().optional().describe("Amount of RAM to use (MB)"),
-    timeout: external_exports.number().optional().describe("Timeout in seconds"),
-    logDir: external_exports.string().optional().describe("Custom directory for analysis execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
-    "evaluator-log": external_exports.string().optional().describe("Path to save evaluator log. If not provided and logDir is set, defaults to <logDir>/evaluator-log.jsonl"),
-    "tuple-counting": external_exports.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
-    "evaluator-log-level": external_exports.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
-    rerun: external_exports.boolean().optional().describe("Force re-evaluation of queries even if BQRS results already exist in the database. Without this, cached results are reused."),
-    verbose: external_exports.boolean().optional().describe("Enable verbose output"),
-    additionalArgs: external_exports.array(external_exports.string()).optional().describe("Additional command-line arguments")
-  },
-  examples: [
-    "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif",
-    "codeql database analyze mydb codeql/java-queries --format=csv",
-    "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif --rerun --tuple-counting"
-  ]
-};
-
-// src/tools/codeql/database-create.ts
-var codeqlDatabaseCreateTool = {
-  name: "codeql_database_create",
-  description: "Create a CodeQL database from source code",
-  command: "codeql",
-  subcommand: "database create",
-  inputSchema: {
-    database: external_exports.string().describe("Database path/name to create"),
-    language: external_exports.string().optional().describe("Programming language(s) to extract"),
-    "source-root": external_exports.string().optional().describe("Root directory of source code"),
-    command: external_exports.string().optional().describe("Build command for compiled languages"),
-    "build-mode": external_exports.enum(["none", "autobuild", "manual"]).optional().describe("Build mode: none (interpreted langs), autobuild, or manual"),
-    threads: external_exports.number().optional().describe("Number of threads to use"),
-    ram: external_exports.number().optional().describe("Amount of RAM to use (MB)"),
-    verbose: external_exports.boolean().optional().describe("Enable verbose output"),
-    overwrite: external_exports.boolean().optional().describe("Overwrite existing database if it exists"),
-    "no-cleanup": external_exports.boolean().optional().describe("Skip database cleanup after finalization"),
-    additionalArgs: external_exports.array(external_exports.string()).optional().describe("Additional command-line arguments")
-  },
-  examples: [
-    "codeql database create --language=java --source-root=/path/to/project mydb",
-    'codeql database create --language=cpp --command="make all" mydb',
-    "codeql database create --language=python,javascript mydb"
-  ],
-  resultProcessor: createDatabaseResultProcessor()
-};
-
-// src/tools/codeql/find-class-position.ts
-init_logger();
-import { readFile } from "fs/promises";
-async function findClassPosition(filepath, className) {
-  try {
-    const content = await readFile(filepath, "utf-8");
-    const lines = content.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const classNameRegex = new RegExp(`\\bclass\\s+(${className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})\\b`);
-      const match = classNameRegex.exec(line);
-      if (match) {
-        const start_line = i + 1;
-        const classNameStart = match.index + match[0].indexOf(match[1]);
-        const start_col = classNameStart + 1;
-        const end_col = start_col + className.length - 1;
-        return {
-          start_line,
-          start_col,
-          end_line: start_line,
-          end_col
-        };
-      }
-    }
-    throw new Error(`Class name '${className}' not found in file: ${filepath}`);
-  } catch (error2) {
-    if (error2 instanceof Error && error2.message.includes("not found in file")) {
-      throw error2;
-    }
-    throw new Error(`Failed to read or parse file ${filepath}: ${error2 instanceof Error ? error2.message : "Unknown error"}`, { cause: error2 });
-  }
-}
-function registerFindClassPositionTool(server) {
-  server.tool(
-    "find_class_position",
-    "Finds startline, startcol, endline endcol of a class for quickeval",
-    {
-      file: external_exports.string().describe("Path to the .ql file to search"),
-      name: external_exports.string().describe("Name of the class to find")
-    },
-    async ({ file, name }) => {
-      try {
-        const position = await findClassPosition(file, name);
-        return {
-          content: [{ type: "text", text: JSON.stringify(position, null, 2) }]
-        };
-      } catch (error2) {
-        logger.error("Error finding class position:", error2);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
-  );
-}
-
-// src/tools/codeql/find-predicate-position.ts
-init_logger();
-import { readFile as readFile2 } from "fs/promises";
-async function findPredicatePosition(filepath, predicateName) {
-  try {
-    const content = await readFile2(filepath, "utf-8");
-    const lines = content.split("\n");
-    const escapedName = predicateName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const predicateKeywordRegex = new RegExp(`\\bpredicate\\s+(${escapedName})\\s*\\(`);
-      let match = predicateKeywordRegex.exec(line);
-      if (!match) {
-        const returnTypeRegex = new RegExp(`(?:^|\\s)(?:abstract\\s+)?(?:cached\\s+)?(?:private\\s+)?(?:deprecated\\s+)?(?:\\w+)\\s+(${escapedName})\\s*\\(`);
-        match = returnTypeRegex.exec(line);
-      }
-      if (match) {
-        const start_line = i + 1;
-        const predicateNameStart = match.index + match[0].indexOf(match[1]);
-        const start_col = predicateNameStart + 1;
-        const end_col = start_col + predicateName.length - 1;
-        return {
-          start_line,
-          start_col,
-          end_line: start_line,
-          end_col
-        };
-      }
-    }
-    throw new Error(`Predicate name '${predicateName}' not found in file: ${filepath}`);
-  } catch (error2) {
-    if (error2 instanceof Error && error2.message.includes("not found in file")) {
-      throw error2;
-    }
-    throw new Error(`Failed to read or parse file ${filepath}: ${error2 instanceof Error ? error2.message : "Unknown error"}`, { cause: error2 });
-  }
-}
-function registerFindPredicatePositionTool(server) {
-  server.tool(
-    "find_predicate_position",
-    "Finds startline, startcol, endline endcol of a predicate for quickeval",
-    {
-      file: external_exports.string().describe("Path to the .ql file to search"),
-      name: external_exports.string().describe("Name of the predicate to find")
-    },
-    async ({ file, name }) => {
-      try {
-        const position = await findPredicatePosition(file, name);
-        return {
-          content: [{ type: "text", text: JSON.stringify(position, null, 2) }]
-        };
-      } catch (error2) {
-        logger.error("Error finding predicate position:", error2);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
-  );
-}
-
-// src/lib/query-file-finder.ts
-import * as fs from "fs";
-import * as path from "path";
+import { basename as basename2, delimiter as delimiter5, dirname as dirname4, isAbsolute as isAbsolute4, join as join6, resolve as resolve4 } from "path";
 
 // ../node_modules/js-yaml/dist/js-yaml.mjs
 function isNothing(subject) {
@@ -60597,6 +59627,977 @@ var safeLoad = renamed("safeLoad", "load");
 var safeLoadAll = renamed("safeLoadAll", "loadAll");
 var safeDump = renamed("safeDump", "dump");
 
+// src/lib/cli-tool-registry.ts
+init_temp_dir();
+function resolveDatabasePath(dbPath) {
+  if (existsSync4(join6(dbPath, "codeql-database.yml"))) {
+    return dbPath;
+  }
+  try {
+    const entries = readdirSync2(dbPath);
+    const candidates = [];
+    for (const entry of entries) {
+      const candidate = join6(dbPath, entry);
+      try {
+        if (statSync2(candidate).isDirectory() && existsSync4(join6(candidate, "codeql-database.yml"))) {
+          candidates.push(candidate);
+        }
+      } catch {
+      }
+    }
+    if (candidates.length === 1) {
+      logger.info(`Resolved database directory: ${dbPath} -> ${candidates[0]}`);
+      return candidates[0];
+    }
+    if (candidates.length > 1) {
+      const names = candidates.map((c) => basename2(c)).join(", ");
+      throw new Error(
+        `Ambiguous database path: ${dbPath} contains multiple databases (${names}). Specify the full path to the desired database subfolder.`
+      );
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Ambiguous database path")) {
+      throw err;
+    }
+  }
+  return dbPath;
+}
+var defaultCLIResultProcessor = (result, _params) => {
+  if (!result.success) {
+    return `Command failed (exit code ${result.exitCode || "unknown"}):
+${result.error || result.stderr}`;
+  }
+  let output = "";
+  if (result.stdout) {
+    output += result.stdout;
+  }
+  if (result.stderr) {
+    if (output) {
+      output += "\n\nWarnings/Info:\n";
+    }
+    output += result.stderr;
+  }
+  if (!output) {
+    output = "Command executed successfully (no output)";
+  }
+  return output;
+};
+function registerCLITool(server, definition) {
+  const {
+    name,
+    description,
+    command,
+    subcommand,
+    inputSchema,
+    resultProcessor = defaultCLIResultProcessor
+  } = definition;
+  server.tool(
+    name,
+    description,
+    inputSchema,
+    async (params) => {
+      const tempDirsToCleanup = [];
+      try {
+        logger.info(`Executing CLI tool: ${name}`, { command, subcommand, params });
+        const formatShouldBePassedToCLI = name === "codeql_bqrs_interpret" || name === "codeql_bqrs_decode" || name === "codeql_bqrs_info" || name === "codeql_generate_query-help" || name === "codeql_database_analyze" || name === "codeql_resolve_files";
+        const extractedParams = formatShouldBePassedToCLI ? {
+          _positional: params._positional || [],
+          files: params.files,
+          file: params.file,
+          dir: params.dir,
+          packDir: params.packDir,
+          tests: params.tests,
+          query: params.query,
+          queryName: params.queryName,
+          queryLanguage: params.queryLanguage,
+          queryPack: params.queryPack,
+          sourceFiles: params.sourceFiles,
+          sourceFunction: params.sourceFunction,
+          targetFunction: params.targetFunction,
+          interpretedOutput: params.interpretedOutput,
+          evaluationFunction: params.evaluationFunction,
+          evaluationOutput: params.evaluationOutput,
+          directory: params.directory,
+          logDir: params.logDir,
+          qlref: params.qlref
+        } : {
+          _positional: params._positional || [],
+          files: params.files,
+          file: params.file,
+          dir: params.dir,
+          packDir: params.packDir,
+          tests: params.tests,
+          query: params.query,
+          queryName: params.queryName,
+          queryLanguage: params.queryLanguage,
+          queryPack: params.queryPack,
+          sourceFiles: params.sourceFiles,
+          sourceFunction: params.sourceFunction,
+          targetFunction: params.targetFunction,
+          format: params.format,
+          interpretedOutput: params.interpretedOutput,
+          evaluationFunction: params.evaluationFunction,
+          evaluationOutput: params.evaluationOutput,
+          directory: params.directory,
+          logDir: params.logDir,
+          qlref: params.qlref
+        };
+        const {
+          _positional = [],
+          files,
+          file,
+          dir,
+          packDir,
+          tests,
+          query,
+          queryName,
+          queryLanguage: _queryLanguage,
+          queryPack: _queryPack,
+          sourceFiles,
+          sourceFunction,
+          targetFunction,
+          format: _format,
+          interpretedOutput: _interpretedOutput,
+          evaluationFunction: _evaluationFunction,
+          evaluationOutput: _evaluationOutput,
+          directory,
+          logDir: customLogDir,
+          qlref
+        } = extractedParams;
+        const options = { ...params };
+        Object.keys(extractedParams).forEach((key) => delete options[key]);
+        let positionalArgs = Array.isArray(_positional) ? _positional : [_positional];
+        if (files && Array.isArray(files)) {
+          positionalArgs = [...positionalArgs, ...files];
+        }
+        if (file && name.startsWith("codeql_bqrs_")) {
+          positionalArgs = [...positionalArgs, file];
+        }
+        if (qlref && name === "codeql_resolve_qlref") {
+          positionalArgs = [...positionalArgs, qlref];
+        }
+        if (options.database && name === "codeql_resolve_database") {
+          positionalArgs = [...positionalArgs, resolveDatabasePath(options.database)];
+          delete options.database;
+        }
+        if (options.database && name === "codeql_database_create") {
+          positionalArgs = [...positionalArgs, options.database];
+          delete options.database;
+        }
+        if (name === "codeql_database_analyze") {
+          if (options.database) {
+            positionalArgs = [...positionalArgs, resolveDatabasePath(options.database)];
+            delete options.database;
+          }
+          if (options.queries) {
+            positionalArgs = [...positionalArgs, options.queries];
+            delete options.queries;
+          }
+        }
+        if (query && name === "codeql_generate_query-help") {
+          positionalArgs = [...positionalArgs, query];
+        }
+        if (dir && name === "codeql_pack_ls") {
+          positionalArgs = [...positionalArgs, dir];
+        }
+        switch (name) {
+          case "codeql_test_accept":
+          case "codeql_test_extract":
+          case "codeql_test_run":
+          case "codeql_resolve_tests":
+            if (tests && Array.isArray(tests)) {
+              const userDir = getUserWorkspaceDir();
+              positionalArgs = [...positionalArgs, ...tests.map(
+                (t) => isAbsolute4(t) ? t : resolve4(userDir, t)
+              )];
+            }
+            break;
+          case "codeql_query_run": {
+            if (options.database && typeof options.database === "string" && !isAbsolute4(options.database)) {
+              options.database = resolve4(getUserWorkspaceDir(), options.database);
+              logger.info(`Resolved database path to: ${options.database}`);
+            }
+            if (options.database && typeof options.database === "string") {
+              options.database = resolveDatabasePath(options.database);
+            }
+            const resolvedQuery = await resolveQueryPath(params, logger);
+            if (resolvedQuery) {
+              positionalArgs = [...positionalArgs, resolvedQuery];
+            } else if (query) {
+              positionalArgs = [...positionalArgs, query];
+            }
+            const extensiblePredicates = {};
+            if ((queryName === "PrintAST" || queryName === "PrintCFG") && sourceFiles) {
+              const filePaths = sourceFiles.split(",").map((f) => f.trim());
+              extensiblePredicates["selectedSourceFiles"] = filePaths;
+            }
+            if (sourceFunction) {
+              const functionNames = sourceFunction.split(",").map((f) => f.trim());
+              extensiblePredicates["sourceFunction"] = functionNames;
+            }
+            if (targetFunction) {
+              const functionNames = targetFunction.split(",").map((f) => f.trim());
+              extensiblePredicates["targetFunction"] = functionNames;
+            }
+            if (Object.keys(extensiblePredicates).length > 0) {
+              let targetPackName;
+              if (_queryLanguage) {
+                targetPackName = `advanced-security/ql-mcp-${_queryLanguage}-tools-src`;
+              } else if (query && typeof query === "string") {
+                const normalizedQuery = query.replace(/\\/g, "/");
+                const match = normalizedQuery.match(/\/ql\/([^/]+)\/tools\/src\//);
+                if (match) {
+                  targetPackName = `advanced-security/ql-mcp-${match[1]}-tools-src`;
+                }
+              }
+              if (targetPackName) {
+                try {
+                  const extPackDir = createProjectTempDir("codeql-ext-pack-");
+                  tempDirsToCleanup.push(extPackDir);
+                  const qlpackContent = [
+                    "library: true",
+                    "name: advanced-security/ql-mcp-runtime-extensions",
+                    "version: 0.0.0",
+                    "extensionTargets:",
+                    `  ${targetPackName}: "*"`,
+                    "dataExtensions:",
+                    '  - "ext/*.model.yml"',
+                    ""
+                  ].join("\n");
+                  writeFileSync2(join6(extPackDir, "qlpack.yml"), qlpackContent, "utf8");
+                  const extDir = join6(extPackDir, "ext");
+                  mkdirSync5(extDir, { recursive: true });
+                  const extensionsData = {
+                    extensions: Object.entries(extensiblePredicates).map(([predName, values]) => ({
+                      addsTo: {
+                        pack: targetPackName,
+                        extensible: predName
+                      },
+                      data: values.map((val) => [val])
+                    }))
+                  };
+                  writeFileSync2(join6(extDir, "runtime.model.yml"), dump(extensionsData, { lineWidth: -1 }), "utf8");
+                  const existingPacks = options["additional-packs"];
+                  options["additional-packs"] = existingPacks ? `${existingPacks}${delimiter5}${extPackDir}` : extPackDir;
+                  const modelPacks = options["model-packs"];
+                  const modelPacksArray = Array.isArray(modelPacks) ? modelPacks : [];
+                  modelPacksArray.push("advanced-security/ql-mcp-runtime-extensions@*");
+                  options["model-packs"] = modelPacksArray;
+                  logger.info(`Created runtime extension pack at ${extPackDir} targeting ${targetPackName} with predicates: ${Object.keys(extensiblePredicates).join(", ")}`);
+                } catch (err) {
+                  logger.error(`Failed to create runtime extension pack: ${err instanceof Error ? err.message : String(err)}`);
+                  throw err;
+                }
+              } else {
+                logger.warn("Could not determine target pack name for extensible predicates \u2014 queryLanguage not set and query path does not match expected pattern");
+              }
+            }
+            break;
+          }
+          case "codeql_query_compile":
+          case "codeql_resolve_metadata":
+            if (query) {
+              positionalArgs = [...positionalArgs, query];
+            }
+            break;
+          case "codeql_resolve_library-path":
+            if (query) {
+              options.query = query;
+            }
+            break;
+          case "codeql_resolve_queries":
+            if (directory) {
+              positionalArgs = [...positionalArgs, directory];
+            }
+            break;
+          case "codeql_resolve_files":
+            if (dir) {
+              positionalArgs = [...positionalArgs, dir];
+            }
+            break;
+          default:
+            break;
+        }
+        let queryLogDir;
+        if (name === "codeql_query_run" || name === "codeql_test_run" || name === "codeql_database_analyze") {
+          queryLogDir = getOrCreateLogDirectory(customLogDir);
+          logger.info(`Using log directory for ${name}: ${queryLogDir}`);
+          const timestampPath = join6(queryLogDir, "timestamp");
+          writeFileSync2(timestampPath, Date.now().toString(), "utf8");
+          options.logdir = queryLogDir;
+          if (!options.verbosity) {
+            options.verbosity = "progress+";
+          }
+          if (!options["evaluator-log"]) {
+            options["evaluator-log"] = join6(queryLogDir, "evaluator-log.jsonl");
+          }
+          if (options["tuple-counting"] === void 0) {
+            options["tuple-counting"] = true;
+          }
+          if (name === "codeql_query_run") {
+            if (!options.output) {
+              options.output = join6(queryLogDir, "results.bqrs");
+            }
+          }
+          if (options.output && typeof options.output === "string") {
+            const outputDir = dirname4(options.output);
+            mkdirSync5(outputDir, { recursive: true });
+          }
+        }
+        let result;
+        if (command === "codeql") {
+          let cwd;
+          if ((name === "codeql_pack_install" || name === "codeql_pack_ls") && (dir || packDir)) {
+            const rawCwd = dir || packDir;
+            cwd = isAbsolute4(rawCwd) ? rawCwd : resolve4(getUserWorkspaceDir(), rawCwd);
+          }
+          const defaultExamplesPath = resolve4(packageRootDir, "ql", "javascript", "examples");
+          const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
+          if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile" || name === "codeql_database_analyze")) {
+            const existingAdditionalPacks = options["additional-packs"];
+            options["additional-packs"] = existingAdditionalPacks ? `${existingAdditionalPacks}:${additionalPacksPath}` : additionalPacksPath;
+          }
+          if (name === "codeql_test_run") {
+            options["keep-databases"] = true;
+          }
+          result = await executeCodeQLCommand(subcommand, options, positionalArgs, cwd);
+        } else if (command === "qlt") {
+          result = await executeQLTCommand(subcommand, options, positionalArgs);
+        } else {
+          throw new Error(`Unsupported command: ${command}`);
+        }
+        if (name === "codeql_query_run" && result.success && queryLogDir) {
+          const bqrsPath = options.output;
+          const sarifPath = join6(queryLogDir, "results-interpreted.sarif");
+          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : void 0;
+          if (existsSync4(bqrsPath) && queryFilePath) {
+            try {
+              const sarifResult = await interpretBQRSFile(
+                bqrsPath,
+                queryFilePath,
+                "sarif-latest",
+                sarifPath,
+                logger
+              );
+              if (sarifResult.success) {
+                logger.info(`Generated SARIF interpretation at ${sarifPath}`);
+              } else {
+                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
+              }
+            } catch (error2) {
+              logger.warn(`Failed to generate SARIF interpretation: ${error2}`);
+            }
+          } else if (existsSync4(bqrsPath) && !queryFilePath) {
+            logger.warn("Skipping SARIF interpretation: query file path not available");
+          }
+          result = await processQueryRunResults(result, params, logger);
+        }
+        if ((name === "codeql_query_run" || name === "codeql_database_analyze") && result.success && queryLogDir) {
+          const evalLogPath = options["evaluator-log"];
+          if (evalLogPath && existsSync4(evalLogPath)) {
+            try {
+              const summaryPath = evalLogPath.replace(/\.jsonl$/, ".summary.jsonl");
+              const summaryResult = await executeCodeQLCommand(
+                "generate log-summary",
+                { format: "predicates" },
+                [evalLogPath, summaryPath]
+              );
+              if (summaryResult.success) {
+                logger.info(`Generated evaluator log summary at ${summaryPath}`);
+              }
+            } catch (error2) {
+              logger.warn(`Failed to generate evaluator log summary: ${error2}`);
+            }
+          }
+        }
+        const processedResult = resultProcessor(result, params);
+        return {
+          content: [{
+            type: "text",
+            text: processedResult
+          }],
+          isError: !result.success
+        };
+      } catch (error2) {
+        logger.error(`Error in CLI tool ${name}:`, error2);
+        return {
+          content: [{
+            type: "text",
+            text: `Failed to execute CLI tool: ${error2 instanceof Error ? error2.message : String(error2)}`
+          }],
+          isError: true
+        };
+      } finally {
+        for (const tempDir of tempDirsToCleanup) {
+          try {
+            rmSync(tempDir, { recursive: true, force: true });
+            logger.info(`Cleaned up temporary directory: ${tempDir}`);
+          } catch (cleanupError) {
+            logger.error(`Failed to clean up temporary directory ${tempDir}:`, cleanupError);
+          }
+        }
+      }
+    }
+  );
+}
+var createCodeQLSchemas = {
+  database: () => external_exports.string().describe("Path to the CodeQL database"),
+  query: () => external_exports.string().describe("Path to the CodeQL query file (.ql)"),
+  output: () => external_exports.string().optional().describe("Output file path"),
+  outputFormat: () => external_exports.enum(["csv", "json", "bqrs", "sarif-latest", "sarifv2.1.0"]).optional().describe("Output format for results"),
+  language: () => external_exports.string().optional().describe("Programming language"),
+  threads: () => external_exports.number().optional().describe("Number of threads to use"),
+  ram: () => external_exports.number().optional().describe("Amount of RAM to use (MB)"),
+  timeout: () => external_exports.number().optional().describe("Timeout in seconds"),
+  verbose: () => external_exports.boolean().optional().describe("Enable verbose output"),
+  additionalArgs: () => external_exports.array(external_exports.string()).optional().describe("Additional command-line arguments"),
+  positionalArgs: () => external_exports.array(external_exports.string()).optional().describe("Positional arguments").transform((val) => ({ _positional: val }))
+};
+var createBQRSResultProcessor = () => (result, params) => {
+  if (!result.success) {
+    return defaultCLIResultProcessor(result, params);
+  }
+  let output = result.stdout;
+  if (params.output) {
+    output += `
+
+Results saved to: ${params.output}`;
+  }
+  if (result.stderr) {
+    output += `
+
+Additional information:
+${result.stderr}`;
+  }
+  return output;
+};
+var createDatabaseResultProcessor = () => (result, params) => {
+  if (!result.success) {
+    return defaultCLIResultProcessor(result, params);
+  }
+  let output = "Database creation completed successfully";
+  if (params.database || params._positional) {
+    const dbPath = params.database || (Array.isArray(params._positional) ? params._positional[0] : params._positional);
+    output += `
+
+Database location: ${dbPath}`;
+  }
+  if (result.stdout) {
+    output += `
+
+Output:
+${result.stdout}`;
+  }
+  if (result.stderr) {
+    output += `
+
+Additional information:
+${result.stderr}`;
+  }
+  return output;
+};
+async function resolveQueryPath(params, logger2) {
+  const { queryName, queryLanguage, queryPack, query } = params;
+  if (queryName && query) {
+    logger2.error('Cannot use both "query" and "queryName" parameters simultaneously. Use either "query" for direct file path OR "queryName" + "queryLanguage" for tool queries.');
+    throw new Error('Cannot use both "query" and "queryName" parameters simultaneously. Use either "query" for direct file path OR "queryName" + "queryLanguage" for tool queries.');
+  }
+  if (!queryName) {
+    return query || null;
+  }
+  if (!queryLanguage) {
+    logger2.error("queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift");
+    throw new Error("queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift");
+  }
+  try {
+    const defaultPackPath = resolveToolQueryPackPath(queryLanguage);
+    const packPath = queryPack || defaultPackPath;
+    logger2.info(`Resolving query: ${queryName} for language: ${queryLanguage} in pack: ${packPath}`);
+    const { executeCodeQLCommand: executeCodeQLCommand2 } = await Promise.resolve().then(() => (init_cli_executor(), cli_executor_exports));
+    const resolveResult = await executeCodeQLCommand2(
+      "resolve queries",
+      { format: "json" },
+      [packPath]
+    );
+    if (!resolveResult.success) {
+      logger2.error("Failed to resolve queries:", resolveResult.stderr || resolveResult.error);
+      throw new Error(`Failed to resolve queries: ${resolveResult.stderr || resolveResult.error}`);
+    }
+    let resolvedQueries;
+    try {
+      resolvedQueries = JSON.parse(resolveResult.stdout);
+    } catch (parseError) {
+      logger2.error("Failed to parse resolve queries output:", parseError);
+      throw new Error("Failed to parse resolve queries output", { cause: parseError });
+    }
+    const matchingQuery = resolvedQueries.find((queryPath) => {
+      const fileName = basename2(queryPath);
+      return fileName === `${queryName}.ql`;
+    });
+    if (!matchingQuery) {
+      logger2.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map((q) => basename2(q)));
+      throw new Error(`Query "${queryName}.ql" not found in pack "${packPath}"`);
+    }
+    logger2.info(`Resolved query "${queryName}" to: ${matchingQuery}`);
+    return matchingQuery;
+  } catch (error2) {
+    logger2.error("Error resolving query path:", error2);
+    throw error2;
+  }
+}
+async function interpretBQRSFile(bqrsPath, queryPath, format, outputPath, logger2) {
+  try {
+    const metadata = await extractQueryMetadata(queryPath);
+    const missingFields = [];
+    if (!metadata.id) missingFields.push("id");
+    if (!metadata.kind) missingFields.push("kind");
+    if (missingFields.length > 0) {
+      return {
+        success: false,
+        exitCode: 1,
+        stdout: "",
+        stderr: "",
+        error: `Query metadata is incomplete. Missing required field(s): ${missingFields.join(", ")}. Ensure the query file contains @id and @kind metadata.`
+      };
+    }
+    const sanitizedKind = (metadata.kind || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const sanitizedId = (metadata.id || "").replace(/[^a-zA-Z0-9_/:-]/g, "");
+    const graphFormats = ["graphtext", "dgml", "dot"];
+    if (graphFormats.includes(format) && metadata.kind !== "graph") {
+      return {
+        success: false,
+        exitCode: 1,
+        stdout: "",
+        stderr: "",
+        error: `Format '${format}' is only compatible with @kind graph queries, but this query has @kind ${metadata.kind}`
+      };
+    }
+    mkdirSync5(dirname4(outputPath), { recursive: true });
+    const params = {
+      format,
+      output: outputPath,
+      t: [`kind=${sanitizedKind}`, `id=${sanitizedId}`]
+    };
+    logger2.info(`Interpreting BQRS file ${bqrsPath} with format ${format} to ${outputPath}`);
+    const result = await executeCodeQLCommand(
+      "bqrs interpret",
+      params,
+      [bqrsPath]
+    );
+    return result;
+  } catch (error2) {
+    return {
+      success: false,
+      exitCode: 1,
+      stdout: "",
+      stderr: "",
+      error: `Failed to interpret BQRS file: ${error2}`
+    };
+  }
+}
+function getDefaultExtension(format) {
+  switch (format) {
+    case "sarif-latest":
+    case "sarifv2.1.0":
+      return ".sarif";
+    case "csv":
+      return ".csv";
+    case "graphtext":
+      return ".txt";
+    case "dgml":
+      return ".dgml";
+    case "dot":
+      return ".dot";
+    default:
+      return ".txt";
+  }
+}
+async function processQueryRunResults(result, params, logger2) {
+  try {
+    const { format, interpretedOutput, evaluationFunction, evaluationOutput, output, query, queryName, queryLanguage } = params;
+    if (!format && !evaluationFunction) {
+      return result;
+    }
+    if (!output) {
+      return result;
+    }
+    const bqrsPath = output;
+    let queryPath = null;
+    if (query) {
+      queryPath = query;
+    } else if (queryName && queryLanguage) {
+      queryPath = await resolveQueryPath(params, logger2);
+    }
+    if (!queryPath) {
+      logger2.error("Cannot determine query path for interpretation/evaluation");
+      return {
+        ...result,
+        stdout: result.stdout + "\n\nWarning: Query interpretation skipped - could not determine query path"
+      };
+    }
+    if (format) {
+      const outputFormat = format;
+      let outputFilePath = interpretedOutput;
+      if (!outputFilePath) {
+        const ext = getDefaultExtension(outputFormat);
+        outputFilePath = bqrsPath.replace(".bqrs", ext);
+      }
+      logger2.info(`Interpreting query results from ${bqrsPath} with format: ${outputFormat}`);
+      const interpretResult = await interpretBQRSFile(
+        bqrsPath,
+        queryPath,
+        outputFormat,
+        outputFilePath,
+        logger2
+      );
+      if (interpretResult.success) {
+        let enhancedOutput = result.stdout;
+        enhancedOutput += `
+
+Query results interpreted successfully with format: ${outputFormat}`;
+        enhancedOutput += `
+Interpreted output saved to: ${outputFilePath}`;
+        return {
+          ...result,
+          stdout: enhancedOutput
+        };
+      } else {
+        logger2.error("Query interpretation failed:", interpretResult.error);
+        return {
+          ...result,
+          stdout: result.stdout + `
+
+Warning: Query interpretation failed - ${interpretResult.error || interpretResult.stderr}`
+        };
+      }
+    }
+    if (evaluationFunction) {
+      logger2.info(`Using deprecated evaluationFunction parameter. Consider using format parameter instead.`);
+      logger2.info(`Evaluating query results from ${bqrsPath} using function: ${evaluationFunction}`);
+      const evaluationResult = await evaluateQueryResults(
+        bqrsPath,
+        queryPath,
+        evaluationFunction,
+        evaluationOutput
+      );
+      if (evaluationResult.success) {
+        let enhancedOutput = result.stdout;
+        if (evaluationResult.outputPath) {
+          enhancedOutput += `
+
+Query evaluation completed successfully.`;
+          enhancedOutput += `
+Evaluation output saved to: ${evaluationResult.outputPath}`;
+        }
+        if (evaluationResult.content) {
+          enhancedOutput += `
+
+=== Query Results Evaluation ===
+`;
+          enhancedOutput += evaluationResult.content;
+        }
+        return {
+          ...result,
+          stdout: enhancedOutput
+        };
+      } else {
+        logger2.error("Query evaluation failed:", evaluationResult.error);
+        return {
+          ...result,
+          stdout: result.stdout + `
+
+Warning: Query evaluation failed - ${evaluationResult.error}`
+        };
+      }
+    }
+    return result;
+  } catch (error2) {
+    logger2.error("Error in query results processing:", error2);
+    return {
+      ...result,
+      stdout: result.stdout + `
+
+Warning: Query processing error - ${error2}`
+    };
+  }
+}
+
+// src/tools/codeql/bqrs-decode.ts
+var codeqlBqrsDecodeTool = {
+  name: "codeql_bqrs_decode",
+  description: "Decode BQRS result files to human-readable formats (text, csv, json). Typical workflow: (1) use list_query_run_results to find BQRS paths from previous codeql_query_run or codeql_database_analyze runs, (2) use codeql_bqrs_info to discover result sets and column schemas, (3) decode specific result sets with this tool. For large result sets, use --rows to paginate.",
+  command: "codeql",
+  subcommand: "bqrs decode",
+  inputSchema: {
+    files: external_exports.array(external_exports.string()).describe("BQRS file(s) to decode"),
+    output: createCodeQLSchemas.output(),
+    format: external_exports.enum(["csv", "json", "text", "bqrs"]).optional().describe("Output format: text (human-readable table, default), csv, json (streaming JSON), or bqrs (binary, requires --output)"),
+    "result-set": external_exports.string().optional().describe("Decode a specific result set by name (use codeql_bqrs_info to list available sets). If omitted, all result sets are decoded."),
+    "sort-key": external_exports.string().optional().describe("Sort by column(s): comma-separated column indices (0-based)"),
+    "sort-direction": external_exports.string().optional().describe('Sort direction(s): comma-separated "asc" or "desc" per column'),
+    "no-titles": external_exports.boolean().optional().describe("Omit column titles for text and csv formats"),
+    entities: external_exports.string().optional().describe("Control entity column display: comma-separated list of url, string, id, all"),
+    rows: external_exports.number().optional().describe("Maximum number of rows to output (for pagination). Use with --start-at for paging."),
+    "start-at": external_exports.number().optional().describe('Byte offset to start decoding from (get from codeql_bqrs_info or previous JSON output "next" pointer). Must be used with --rows.'),
+    verbose: createCodeQLSchemas.verbose(),
+    additionalArgs: createCodeQLSchemas.additionalArgs()
+  },
+  examples: [
+    "codeql bqrs decode --format=csv --output=results.csv results.bqrs",
+    "codeql bqrs decode --format=json --rows=100 results.bqrs",
+    "codeql bqrs decode --result-set=#select --format=csv results.bqrs",
+    "codeql bqrs decode --format=json --entities=url,string results.bqrs"
+  ],
+  resultProcessor: createBQRSResultProcessor()
+};
+
+// src/tools/codeql/bqrs-info.ts
+var codeqlBqrsInfoTool = {
+  name: "codeql_bqrs_info",
+  description: 'Get metadata about BQRS result files: lists result sets, column names/types, and row counts. Use before codeql_bqrs_decode to discover available result sets (e.g., "#select", "edges", "nodes"). BQRS files are found at <runDir>/results.bqrs \u2014 use list_query_run_results to discover them. Use --format=json with --paginate-rows to get byte offsets for paginated decoding with codeql_bqrs_decode --start-at.',
+  command: "codeql",
+  subcommand: "bqrs info",
+  inputSchema: {
+    files: external_exports.array(external_exports.string()).describe("BQRS file(s) to examine"),
+    format: external_exports.enum(["text", "json"]).optional().describe("Output format: text (default) or json. Use json for machine-readable output and pagination offset computation."),
+    "paginate-rows": external_exports.number().optional().describe("Compute byte offsets for pagination at intervals of this many rows. Use with --format=json. Offsets can be passed to codeql_bqrs_decode --start-at."),
+    "paginate-result-set": external_exports.string().optional().describe("Compute pagination offsets only for this result set name"),
+    verbose: createCodeQLSchemas.verbose(),
+    additionalArgs: createCodeQLSchemas.additionalArgs()
+  },
+  examples: [
+    "codeql bqrs info results.bqrs",
+    "codeql bqrs info --format=json results.bqrs",
+    "codeql bqrs info --format=json --paginate-rows=100 --paginate-result-set=#select results.bqrs"
+  ],
+  resultProcessor: createBQRSResultProcessor()
+};
+
+// src/tools/codeql/bqrs-interpret.ts
+var codeqlBqrsInterpretTool = {
+  name: "codeql_bqrs_interpret",
+  description: "Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats)",
+  command: "codeql",
+  subcommand: "bqrs interpret",
+  inputSchema: {
+    file: external_exports.string().describe("The BQRS file to interpret"),
+    format: external_exports.enum(["csv", "sarif-latest", "sarifv2.1.0", "graphtext", "dgml", "dot"]).describe("Output format: csv (comma-separated), sarif-latest/sarifv2.1.0 (SARIF), graphtext/dgml/dot (graph formats, only for @kind graph queries)"),
+    output: createCodeQLSchemas.output(),
+    t: external_exports.array(external_exports.string()).describe('Query metadata key=value pairs. At least "kind" and "id" must be specified (e.g., ["kind=graph", "id=js/print-ast"])'),
+    "max-paths": external_exports.number().optional().describe("Maximum number of paths to produce for each alert with paths (default: 4)"),
+    "sarif-add-file-contents": external_exports.boolean().optional().describe("[SARIF only] Include full file contents for all files referenced in results"),
+    "sarif-add-snippets": external_exports.boolean().optional().describe("[SARIF only] Include code snippets for each location with context"),
+    "sarif-group-rules-by-pack": external_exports.boolean().optional().describe("[SARIF only] Place rule objects under their QL pack in tool.extensions property"),
+    "sarif-multicause-markdown": external_exports.boolean().optional().describe("[SARIF only] Include multi-cause alerts as Markdown-formatted lists"),
+    "sarif-category": external_exports.string().optional().describe("[SARIF only] Category for this analysis (distinguishes multiple analyses on same code)"),
+    "csv-location-format": external_exports.enum(["uri", "line-column", "offset-length"]).optional().describe("[CSV only] Format for locations in CSV output (default: line-column)"),
+    "dot-location-url-format": external_exports.string().optional().describe("[DOT only] Format string for file location URLs (placeholders: {path}, {start:line}, {start:column}, {end:line}, {end:column}, {offset}, {length})"),
+    threads: external_exports.number().optional().describe("Number of threads for computing paths (0 = one per core, -N = leave N cores unused)"),
+    "column-kind": external_exports.enum(["utf8", "utf16", "utf32", "bytes"]).optional().describe("[SARIF only] Column kind for interpreting location columns"),
+    "unicode-new-lines": external_exports.boolean().optional().describe("[SARIF only] Whether unicode newlines (U+2028, U+2029) are considered as newlines"),
+    verbose: createCodeQLSchemas.verbose(),
+    additionalArgs: createCodeQLSchemas.additionalArgs()
+  },
+  examples: [
+    "codeql bqrs interpret --format=sarif-latest --output=results.sarif -t kind=problem -t id=js/sql-injection results.bqrs",
+    "codeql bqrs interpret --format=graphtext --output=ast.txt -t kind=graph -t id=js/print-ast results.bqrs",
+    "codeql bqrs interpret --format=csv --csv-location-format=line-column --output=results.csv -t kind=problem -t id=js/xss results.bqrs",
+    "codeql bqrs interpret --format=dot --output=graph.dot -t kind=graph -t id=java/call-graph results.bqrs",
+    "codeql bqrs interpret --format=sarif-latest --sarif-add-snippets --sarif-category=security --output=results.sarif -t kind=path-problem -t id=go/path-injection results.bqrs"
+  ],
+  resultProcessor: createBQRSResultProcessor()
+};
+
+// src/tools/codeql/database-analyze.ts
+var codeqlDatabaseAnalyzeTool = {
+  name: "codeql_database_analyze",
+  description: "Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS results, and optionally SARIF output. Use list_codeql_databases to discover available databases, and register_database to register new ones. After analysis completes, use list_query_run_results to find result artifacts, then codeql_bqrs_info and codeql_bqrs_decode to inspect results.",
+  command: "codeql",
+  subcommand: "database analyze",
+  inputSchema: {
+    database: external_exports.string().describe("Path to the CodeQL database"),
+    queries: external_exports.string().describe("Queries or query suite to run"),
+    output: external_exports.string().optional().describe("Output file path"),
+    format: external_exports.enum(["csv", "json", "sarif-latest", "sarifv2.1.0"]).optional().describe("Output format for results"),
+    "download-location": external_exports.string().optional().describe("Location to download missing dependencies"),
+    threads: external_exports.number().optional().describe("Number of threads to use"),
+    ram: external_exports.number().optional().describe("Amount of RAM to use (MB)"),
+    timeout: external_exports.number().optional().describe("Timeout in seconds"),
+    logDir: external_exports.string().optional().describe("Custom directory for analysis execution logs (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>"),
+    "evaluator-log": external_exports.string().optional().describe("Path to save evaluator log. If not provided and logDir is set, defaults to <logDir>/evaluator-log.jsonl"),
+    "tuple-counting": external_exports.boolean().optional().describe("Display tuple counts for each evaluation step in evaluator logs"),
+    "evaluator-log-level": external_exports.number().min(1).max(5).optional().describe("Evaluator log verbosity level (1-5, default 5)"),
+    rerun: external_exports.boolean().optional().describe("Force re-evaluation of queries even if BQRS results already exist in the database. Without this, cached results are reused."),
+    verbose: external_exports.boolean().optional().describe("Enable verbose output"),
+    additionalArgs: external_exports.array(external_exports.string()).optional().describe("Additional command-line arguments")
+  },
+  examples: [
+    "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif",
+    "codeql database analyze mydb codeql/java-queries --format=csv",
+    "codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif --rerun --tuple-counting"
+  ]
+};
+
+// src/tools/codeql/database-create.ts
+var codeqlDatabaseCreateTool = {
+  name: "codeql_database_create",
+  description: "Create a CodeQL database from source code",
+  command: "codeql",
+  subcommand: "database create",
+  inputSchema: {
+    database: external_exports.string().describe("Database path/name to create"),
+    language: external_exports.string().optional().describe("Programming language(s) to extract"),
+    "source-root": external_exports.string().optional().describe("Root directory of source code"),
+    command: external_exports.string().optional().describe("Build command for compiled languages"),
+    "build-mode": external_exports.enum(["none", "autobuild", "manual"]).optional().describe("Build mode: none (interpreted langs), autobuild, or manual"),
+    threads: external_exports.number().optional().describe("Number of threads to use"),
+    ram: external_exports.number().optional().describe("Amount of RAM to use (MB)"),
+    verbose: external_exports.boolean().optional().describe("Enable verbose output"),
+    overwrite: external_exports.boolean().optional().describe("Overwrite existing database if it exists"),
+    "no-cleanup": external_exports.boolean().optional().describe("Skip database cleanup after finalization"),
+    additionalArgs: external_exports.array(external_exports.string()).optional().describe("Additional command-line arguments")
+  },
+  examples: [
+    "codeql database create --language=java --source-root=/path/to/project mydb",
+    'codeql database create --language=cpp --command="make all" mydb',
+    "codeql database create --language=python,javascript mydb"
+  ],
+  resultProcessor: createDatabaseResultProcessor()
+};
+
+// src/tools/codeql/find-class-position.ts
+init_logger();
+import { readFile } from "fs/promises";
+async function findClassPosition(filepath, className) {
+  try {
+    const content = await readFile(filepath, "utf-8");
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const classNameRegex = new RegExp(`\\bclass\\s+(${className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})\\b`);
+      const match = classNameRegex.exec(line);
+      if (match) {
+        const start_line = i + 1;
+        const classNameStart = match.index + match[0].indexOf(match[1]);
+        const start_col = classNameStart + 1;
+        const end_col = start_col + className.length - 1;
+        return {
+          start_line,
+          start_col,
+          end_line: start_line,
+          end_col
+        };
+      }
+    }
+    throw new Error(`Class name '${className}' not found in file: ${filepath}`);
+  } catch (error2) {
+    if (error2 instanceof Error && error2.message.includes("not found in file")) {
+      throw error2;
+    }
+    throw new Error(`Failed to read or parse file ${filepath}: ${error2 instanceof Error ? error2.message : "Unknown error"}`, { cause: error2 });
+  }
+}
+function registerFindClassPositionTool(server) {
+  server.tool(
+    "find_class_position",
+    "Finds startline, startcol, endline endcol of a class for quickeval",
+    {
+      file: external_exports.string().describe("Path to the .ql file to search"),
+      name: external_exports.string().describe("Name of the class to find")
+    },
+    async ({ file, name }) => {
+      try {
+        const position = await findClassPosition(file, name);
+        return {
+          content: [{ type: "text", text: JSON.stringify(position, null, 2) }]
+        };
+      } catch (error2) {
+        logger.error("Error finding class position:", error2);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error2 instanceof Error ? error2.message : "Unknown error"}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
+// src/tools/codeql/find-predicate-position.ts
+init_logger();
+import { readFile as readFile2 } from "fs/promises";
+async function findPredicatePosition(filepath, predicateName) {
+  try {
+    const content = await readFile2(filepath, "utf-8");
+    const lines = content.split("\n");
+    const escapedName = predicateName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const predicateKeywordRegex = new RegExp(`\\bpredicate\\s+(${escapedName})\\s*\\(`);
+      let match = predicateKeywordRegex.exec(line);
+      if (!match) {
+        const returnTypeRegex = new RegExp(`(?:^|\\s)(?:abstract\\s+)?(?:cached\\s+)?(?:private\\s+)?(?:deprecated\\s+)?(?:\\w+)\\s+(${escapedName})\\s*\\(`);
+        match = returnTypeRegex.exec(line);
+      }
+      if (match) {
+        const start_line = i + 1;
+        const predicateNameStart = match.index + match[0].indexOf(match[1]);
+        const start_col = predicateNameStart + 1;
+        const end_col = start_col + predicateName.length - 1;
+        return {
+          start_line,
+          start_col,
+          end_line: start_line,
+          end_col
+        };
+      }
+    }
+    throw new Error(`Predicate name '${predicateName}' not found in file: ${filepath}`);
+  } catch (error2) {
+    if (error2 instanceof Error && error2.message.includes("not found in file")) {
+      throw error2;
+    }
+    throw new Error(`Failed to read or parse file ${filepath}: ${error2 instanceof Error ? error2.message : "Unknown error"}`, { cause: error2 });
+  }
+}
+function registerFindPredicatePositionTool(server) {
+  server.tool(
+    "find_predicate_position",
+    "Finds startline, startcol, endline endcol of a predicate for quickeval",
+    {
+      file: external_exports.string().describe("Path to the .ql file to search"),
+      name: external_exports.string().describe("Name of the predicate to find")
+    },
+    async ({ file, name }) => {
+      try {
+        const position = await findPredicatePosition(file, name);
+        return {
+          content: [{ type: "text", text: JSON.stringify(position, null, 2) }]
+        };
+      } catch (error2) {
+        logger.error("Error finding predicate position:", error2);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error2 instanceof Error ? error2.message : "Unknown error"}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  );
+}
+
+// src/lib/query-file-finder.ts
+import * as fs from "fs";
+import * as path from "path";
+
 // src/lib/metadata-resolver.ts
 init_cli_executor();
 init_logger();
@@ -60942,12 +60943,12 @@ import { existsSync as existsSync6, readdirSync as readdirSync4, readFileSync as
 import { join as join8 } from "path";
 
 // src/lib/discovery-config.ts
-import { delimiter as delimiter5 } from "path";
+import { delimiter as delimiter6 } from "path";
 function parsePathList(envValue) {
   if (!envValue) {
     return [];
   }
-  return envValue.split(delimiter5).map((p) => p.trim()).filter((p) => p.length > 0);
+  return envValue.split(delimiter6).map((p) => p.trim()).filter((p) => p.length > 0);
 }
 function getDatabaseBaseDirs() {
   return parsePathList(process.env.CODEQL_DATABASES_BASE_DIRS);

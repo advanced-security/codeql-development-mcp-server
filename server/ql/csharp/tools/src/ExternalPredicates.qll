@@ -1,7 +1,7 @@
 /**
  * Shared extensible predicate declarations for MCP server tools queries.
  * Values are provided via dataExtensions YAML files during testing,
- * or via CSV files at runtime from the MCP server.
+ * or via a temporary data extension pack at runtime from the MCP server.
  */
 
 /** Holds for each source function name for call graph analysis. */
