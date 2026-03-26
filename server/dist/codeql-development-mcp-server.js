@@ -59864,7 +59864,7 @@ function registerCLITool(server, definition) {
                     '  - "ext/*.model.yml"',
                     ""
                   ].join("\n");
-                  writeFileSync2(join6(extPackDir, "qlpack.yml"), qlpackContent, "utf8");
+                  writeFileSync2(join6(extPackDir, "codeql-pack.yml"), qlpackContent, "utf8");
                   const extDir = join6(extPackDir, "ext");
                   mkdirSync5(extDir, { recursive: true });
                   const extensionsData = {
@@ -59955,7 +59955,7 @@ function registerCLITool(server, definition) {
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync4(defaultExamplesPath) ? defaultExamplesPath : void 0);
           if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile" || name === "codeql_database_analyze")) {
             const existingAdditionalPacks = options["additional-packs"];
-            options["additional-packs"] = existingAdditionalPacks ? `${existingAdditionalPacks}:${additionalPacksPath}` : additionalPacksPath;
+            options["additional-packs"] = existingAdditionalPacks ? `${existingAdditionalPacks}${delimiter5}${additionalPacksPath}` : additionalPacksPath;
           }
           if (name === "codeql_test_run") {
             options["keep-databases"] = true;

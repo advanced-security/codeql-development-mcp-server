@@ -347,7 +347,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                     '  - "ext/*.model.yml"',
                     '',
                   ].join('\n');
-                  writeFileSync(join(extPackDir, 'qlpack.yml'), qlpackContent, 'utf8');
+                  writeFileSync(join(extPackDir, 'codeql-pack.yml'), qlpackContent, 'utf8');
                   
                   // Create ext/ directory and data extension YAML
                   const extDir = join(extPackDir, 'ext');
@@ -492,7 +492,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           if (additionalPacksPath && (name === 'codeql_test_run' || name === 'codeql_query_run' || name === 'codeql_query_compile' || name === 'codeql_database_analyze')) {
             const existingAdditionalPacks = options['additional-packs'] as string | undefined;
             options['additional-packs'] = existingAdditionalPacks
-              ? `${existingAdditionalPacks}:${additionalPacksPath}`
+              ? `${existingAdditionalPacks}${delimiter}${additionalPacksPath}`
               : additionalPacksPath;
           }
           
