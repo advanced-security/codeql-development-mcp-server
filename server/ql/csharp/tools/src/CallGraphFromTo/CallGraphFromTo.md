@@ -6,7 +6,7 @@ Displays calls on reachable paths from a source method to a target method, showi
 
 This query identifies all method calls that lie on any transitive call path from a specified source method to a specified target method. Given both a source and target method name, it reports each call site along the connecting paths, which is useful for understanding indirect call chains, security-relevant data flow paths, and method reachability.
 
-The query uses transitive closure (`calls*`) to determine reachability, then reports only the direct call sites that contribute to paths between the source and target. It accepts method names via external predicates (`sourceFunction` and `targetFunction`).
+The query uses transitive closure (`calls*`) to determine reachability, then reports only the direct call sites that contribute to paths between the source and target. It accepts method names via extensible predicates (`sourceFunction` and `targetFunction`) populated via CodeQL data extensions / model packs (see `ExternalPredicates.qll`).
 
 ## Use Cases
 

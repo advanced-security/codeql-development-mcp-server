@@ -297,7 +297,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             
             // Handle extensible predicates for tool queries via data extensions.
             // Instead of CSV files + --external flags, we create a temporary
-            // extension pack with a qlpack.yml and data extension YAML that
+            // extension pack with a codeql-pack.yml and data extension YAML that
             // injects values into the src pack's extensible predicates.
             const extensiblePredicates: Record<string, string[]> = {};
             
@@ -336,7 +336,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                   const extPackDir = createProjectTempDir('codeql-ext-pack-');
                   tempDirsToCleanup.push(extPackDir);
                   
-                  // Create qlpack.yml for the temporary extension pack
+                  // Create codeql-pack.yml for the temporary extension pack
                   const qlpackContent = [
                     'library: true',
                     'name: advanced-security/ql-mcp-runtime-extensions',

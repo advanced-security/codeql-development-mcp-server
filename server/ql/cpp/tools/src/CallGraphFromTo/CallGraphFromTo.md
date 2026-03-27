@@ -6,7 +6,7 @@ Displays calls on reachable paths from a source function to a target function, s
 
 This query identifies all function calls that lie on any transitive call path from a specified source function to a specified target function. Given both a source and target function name, it reports each call site along the connecting paths, which is useful for understanding indirect call chains, security-relevant data flow paths, and function reachability.
 
-The query uses transitive closure (`calls*`) to determine reachability, then reports only the direct call sites that contribute to paths between the source and target. It accepts function names via external predicates (`sourceFunction` and `targetFunction`) and supports both simple and qualified name matching.
+The query uses transitive closure (`calls*`) to determine reachability, then reports only the direct call sites that contribute to paths between the source and target. It accepts function names via extensible predicates (`sourceFunction` and `targetFunction`) populated via CodeQL data extensions or model packs (see `ExternalPredicates.qll`) and supports both simple and qualified name matching.
 
 ## Use Cases
 
