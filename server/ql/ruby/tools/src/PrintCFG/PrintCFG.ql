@@ -17,6 +17,4 @@ query predicate nodes(CfgNode node, string property, string value) {
   value = node.toString()
 }
 
-query predicate edges(CfgNode pred, CfgNode succ) {
-  pred.getASuccessor() = succ
-}
+query predicate edges(CfgNode pred, CfgNode succ) { pred.getASuccessor() = succ }

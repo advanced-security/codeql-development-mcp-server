@@ -8,25 +8,23 @@
  */
 
 import swift
-
-/**
- * Gets the source function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string sourceFunction();
+import ExternalPredicates
 
 /**
  * Gets a single source function name from the comma-separated list.
  */
-string getSourceFunctionName() { result = sourceFunction().splitAt(",").trim() }
+string getSourceFunctionName() {
+  exists(string s | sourceFunction(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a function by matching against the selected source function names.
+ * Supports both base names (e.g. "sourceFunc") and full Swift signatures (e.g. "sourceFunc()").
  */
 Function getSourceFunction() {
   exists(string selectedFunc |
     selectedFunc = getSourceFunctionName() and
-    result.getName() = selectedFunc
+    (result.getName() = selectedFunc or result.getName().matches(selectedFunc + "(%"))
   )
 }
 
@@ -42,12 +40,5 @@ string getCalleeName(CallExpr call) {
 from CallExpr call, Function source
 where
   call.getEnclosingFunction() = source and
-  (
-    // Use external predicate if available
-    source = getSourceFunction()
-    or
-    // Fallback for unit tests: include specific test files
-    not exists(getSourceFunction()) and
-    source.getFile().getBaseName() = "Example1.swift"
-  )
+  source = getSourceFunction()
 select call, "Call from `" + source.getName() + "` to `" + getCalleeName(call) + "`"

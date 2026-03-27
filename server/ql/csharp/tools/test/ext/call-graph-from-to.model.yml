@@ -1,0 +1,11 @@
+extensions:
+  - addsTo:
+      pack: advanced-security/ql-mcp-csharp-tools-src
+      extensible: sourceFunction
+    data:
+      - ['Source']
+  - addsTo:
+      pack: advanced-security/ql-mcp-csharp-tools-src
+      extensible: targetFunction
+    data:
+      - ['Target']

@@ -8,18 +8,13 @@
 
 import java
 import semmle.code.java.PrintAst
-
-/**
- * Gets the source files to generate AST from.
- * Can be a single file path or comma-separated list of file paths.
- */
-external string selectedSourceFiles();
+import ExternalPredicates
 
 /**
  * Gets a single source file from the comma-separated list.
  */
 string getSelectedSourceFile() {
-  result = selectedSourceFiles().splitAt(",").trim()
+  exists(string s | selectedSourceFiles(s) | result = s.splitAt(",").trim())
 }
 
 /**
@@ -30,11 +25,14 @@ File getSelectedFile() {
     selectedFile = getSelectedSourceFile() and
     (
       // Match by exact relative path from source root
-      result.getRelativePath() = selectedFile or
+      result.getRelativePath() = selectedFile
+      or
       // Match by file name if no path separators
-      (not selectedFile.matches("%/%") and result.getBaseName() = selectedFile) or
+      not selectedFile.matches("%/%") and result.getBaseName() = selectedFile
+      or
       // Match by ending path component
-      result.getAbsolutePath().suffix(result.getAbsolutePath().length() - selectedFile.length()) = selectedFile
+      result.getAbsolutePath().suffix(result.getAbsolutePath().length() - selectedFile.length()) =
+        selectedFile
     )
   )
 }
@@ -46,12 +44,6 @@ File getSelectedFile() {
 class Cfg extends PrintAstConfiguration {
   override predicate shouldPrint(Element e, Location l) {
     super.shouldPrint(e, l) and
-    (
-      // Use external predicate if available
-      l.getFile() = getSelectedFile()
-      or
-      // Fallback for unit tests: include specific test files
-      (not exists(getSelectedFile()) and l.getFile().getBaseName() = "Example1.java")
-    )
+    l.getFile() = getSelectedFile()
   }
 }

@@ -1,0 +1,2 @@
+| Example1.cs:11:9:11:16 | call to method Target | Reachable call from `Intermediate` to `Target` |
+| Example1.cs:15:9:15:22 | call to method Intermediate | Reachable call from `Source` to `Intermediate` |

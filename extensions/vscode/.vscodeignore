@@ -16,6 +16,7 @@ esbuild.config.js
 coverage/**
 
 # Build artifacts that shouldn't be in the VSIX
+.tmp/**
 **/*.test.ts
 **/*.test.js
 **/*.test.cjs

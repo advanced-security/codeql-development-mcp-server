@@ -1,0 +1,6 @@
+extensions:
+  - addsTo:
+      pack: advanced-security/ql-mcp-python-tools-src
+      extensible: selectedSourceFiles
+    data:
+      - ['Example1.py']

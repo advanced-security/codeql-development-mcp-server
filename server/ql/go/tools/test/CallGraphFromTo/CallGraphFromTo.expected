@@ -1,0 +1,2 @@
+| Example1.go:11:2:11:9 | call to target | Reachable call from `intermediate` to `target` |
+| Example1.go:15:2:15:15 | call to intermediate | Reachable call from `source` to `intermediate` |

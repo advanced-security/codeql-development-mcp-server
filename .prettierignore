@@ -17,5 +17,6 @@ extensions/vscode/test/fixtures/
 node_modules
 query-results*
 server/dist/
+server/ql/*/tools/test/*
 workshops/
 

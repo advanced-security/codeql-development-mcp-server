@@ -8,18 +8,13 @@
  */
 
 import csharp
-
-/**
- * Gets the target method name for which to generate the call graph.
- * Can be a single method name or comma-separated list of method names.
- */
-external string targetFunction();
+import ExternalPredicates
 
 /**
  * Gets a single target method name from the comma-separated list.
  */
 string getTargetFunctionName() {
-  result = targetFunction().splitAt(",").trim()
+  exists(string s | targetFunction(s) | result = s.splitAt(",").trim())
 }
 
 /**
@@ -36,15 +31,5 @@ from Call call, Callable target, Callable caller
 where
   call.getTarget() = target and
   call.getEnclosingCallable() = caller and
-  (
-    // Use external predicate if available
-    target = getTargetFunction()
-    or
-    // Fallback for unit tests: include test files
-    (
-      not exists(getTargetFunction()) and
-      target.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
-  )
-select call,
-  "Call to `" + target.getName() + "` from `" + caller.getName() + "`"
+  target = getTargetFunction()
+select call, "Call to `" + target.getName() + "` from `" + caller.getName() + "`"

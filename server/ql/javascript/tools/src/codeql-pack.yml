@@ -3,4 +3,4 @@ version: 2.25.0
 description: 'Queries for codeql-development-mcp-server tools for javascript language'
 library: false
 dependencies:
-  codeql/javascript-all: 2.6.21
+  codeql/javascript-all: 2.6.24

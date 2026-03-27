@@ -1,0 +1,11 @@
+extensions:
+  - addsTo:
+      pack: advanced-security/ql-mcp-cpp-tools-src
+      extensible: sourceFunction
+    data:
+      - ['source']
+  - addsTo:
+      pack: advanced-security/ql-mcp-cpp-tools-src
+      extensible: targetFunction
+    data:
+      - ['target']

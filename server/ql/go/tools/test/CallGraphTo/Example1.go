@@ -17,3 +17,8 @@ func caller1() {
 func caller2() {
 	targetFunc()
 }
+
+func main() {
+	caller1()
+	caller2()
+}

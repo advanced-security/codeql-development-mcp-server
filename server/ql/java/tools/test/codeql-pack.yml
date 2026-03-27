@@ -3,3 +3,5 @@ version: 2.25.0
 dependencies:
   advanced-security/ql-mcp-java-tools-src: ${workspace}
 extractor: java
+dataExtensions:
+  - 'ext/*.model.yml'

@@ -1,0 +1,6 @@
+extensions:
+  - addsTo:
+      pack: advanced-security/ql-mcp-ruby-tools-src
+      extensible: selectedSourceFiles
+    data:
+      - ['Example1.rb']

@@ -7,17 +7,14 @@
  */
 
 import codeql.swift.printast.PrintAst
-
-/**
- * Gets the source files to generate AST from.
- * Can be a single file path or comma-separated list of file paths.
- */
-external string selectedSourceFiles();
+import ExternalPredicates
 
 /**
  * Gets a single source file from the comma-separated list.
  */
-string getSelectedSourceFile() { result = selectedSourceFiles().splitAt(",").trim() }
+string getSelectedSourceFile() {
+  exists(string s | selectedSourceFiles(s) | result = s.splitAt(",").trim())
+}
 
 /**
  * Gets a file by matching against the selected source file paths.
@@ -46,13 +43,6 @@ File getSelectedFile() {
 class Cfg extends PrintAstConfiguration {
   override predicate shouldPrint(Locatable e) {
     super.shouldPrint(e) and
-    (
-      // Use external predicate if available
-      e.getLocation().getFile() = getSelectedFile()
-      or
-      // Fallback for unit tests: include specific test files
-      not exists(getSelectedFile()) and
-      e.getLocation().getFile().getBaseName() = "Example1.swift"
-    )
+    e.getLocation().getFile() = getSelectedFile()
   }
 }

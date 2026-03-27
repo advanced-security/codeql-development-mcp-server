@@ -1,0 +1,6 @@
+extensions:
+  - addsTo:
+      pack: advanced-security/ql-mcp-go-tools-src
+      extensible: targetFunction
+    data:
+      - ['targetFunc']

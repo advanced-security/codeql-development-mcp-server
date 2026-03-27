@@ -3,3 +3,5 @@ version: 2.25.0
 dependencies:
   advanced-security/ql-mcp-cpp-tools-src: ${workspace}
 extractor: cpp
+dataExtensions:
+  - 'ext/*.model.yml'

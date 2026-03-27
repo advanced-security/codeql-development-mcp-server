@@ -1,0 +1,6 @@
+extensions:
+  - addsTo:
+      pack: advanced-security/ql-mcp-javascript-tools-src
+      extensible: sourceFunction
+    data:
+      - ['sourceFunc']

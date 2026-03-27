@@ -8,18 +8,13 @@
  */
 
 import javascript
-
-/**
- * Gets the source function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string sourceFunction();
+import ExternalPredicates
 
 /**
  * Gets a single source function name from the comma-separated list.
  */
 string getSourceFunctionName() {
-  result = sourceFunction().splitAt(",").trim()
+  exists(string s | sourceFunction(s) | result = s.splitAt(",").trim())
 }
 
 /**
@@ -35,15 +30,5 @@ Function getSourceFunction() {
 from CallExpr call, Function source
 where
   call.getEnclosingFunction() = source and
-  (
-    // Use external predicate if available
-    source = getSourceFunction()
-    or
-    // Fallback for unit tests: include test files
-    (
-      not exists(getSourceFunction()) and
-      source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
-  )
-select call,
-  "Call from `" + source.getName() + "` to `" + call.getCalleeName() + "`"
+  source = getSourceFunction()
+select call, "Call from `" + source.getName() + "` to `" + call.getCalleeName() + "`"

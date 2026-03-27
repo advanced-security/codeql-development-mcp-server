@@ -18,6 +18,4 @@ query predicate nodes(Node node, string property, string value) {
   value = node.toString()
 }
 
-query predicate edges(Node pred, Node succ) {
-  pred.getASuccessor() = succ
-}
+query predicate edges(Node pred, Node succ) { pred.getASuccessor() = succ }

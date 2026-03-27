@@ -14,3 +14,7 @@ func sourceFunc() {
 	unrelated1()
 	unrelated2()
 }
+
+func main() {
+	sourceFunc()
+}

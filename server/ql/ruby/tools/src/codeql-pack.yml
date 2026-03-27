@@ -3,4 +3,4 @@ version: 2.25.0
 description: 'Queries for codeql-development-mcp-server tools for ruby language'
 library: false
 dependencies:
-  codeql/ruby-all: 5.1.9
+  codeql/ruby-all: 5.1.12

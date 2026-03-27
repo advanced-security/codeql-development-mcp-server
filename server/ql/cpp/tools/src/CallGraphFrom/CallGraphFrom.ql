@@ -8,18 +8,13 @@
  */
 
 import cpp
-
-/**
- * Gets the source function name for which to generate the call graph.
- * Can be a single function name or comma-separated list of function names.
- */
-external string sourceFunction();
+import ExternalPredicates
 
 /**
  * Gets a single source function name from the comma-separated list.
  */
 string getSourceFunctionName() {
-  result = sourceFunction().splitAt(",").trim()
+  exists(string s | sourceFunction(s) | result = s.splitAt(",").trim())
 }
 
 /**
@@ -30,7 +25,8 @@ Function getSourceFunction() {
     selectedFunc = getSourceFunctionName() and
     (
       // Match by exact function name
-      result.getName() = selectedFunc or
+      result.getName() = selectedFunc
+      or
       // Match by qualified name
       result.getQualifiedName() = selectedFunc
     )
@@ -41,15 +37,5 @@ from FunctionCall call, Function source, Function callee
 where
   call.getTarget() = callee and
   call.getEnclosingFunction() = source and
-  (
-    // Use external predicate if available
-    source = getSourceFunction()
-    or
-    // Fallback for unit tests: include test files
-    (
-      not exists(getSourceFunction()) and
-      source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
-  )
-select call,
-  "Call from `" + source.getQualifiedName() + "` to `" + callee.getQualifiedName() + "`"
+  source = getSourceFunction()
+select call, "Call from `" + source.getQualifiedName() + "` to `" + callee.getQualifiedName() + "`"

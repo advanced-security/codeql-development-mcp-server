@@ -16,6 +16,4 @@ query predicate nodes(ControlFlowNode node, string property, string value) {
   value = node.toString()
 }
 
-query predicate edges(ControlFlowNode pred, ControlFlowNode succ) {
-  pred.getASuccessor() = succ
-}
+query predicate edges(ControlFlowNode pred, ControlFlowNode succ) { pred.getASuccessor() = succ }

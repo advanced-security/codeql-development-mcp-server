@@ -8,18 +8,13 @@
  */
 
 import csharp
-
-/**
- * Gets the source method name for which to generate the call graph.
- * Can be a single method name or comma-separated list of method names.
- */
-external string sourceFunction();
+import ExternalPredicates
 
 /**
  * Gets a single source method name from the comma-separated list.
  */
 string getSourceFunctionName() {
-  result = sourceFunction().splitAt(",").trim()
+  exists(string s | sourceFunction(s) | result = s.splitAt(",").trim())
 }
 
 /**
@@ -36,15 +31,5 @@ from Call call, Callable source, Callable callee
 where
   call.getEnclosingCallable() = source and
   call.getTarget() = callee and
-  (
-    // Use external predicate if available
-    source = getSourceFunction()
-    or
-    // Fallback for unit tests: include test files
-    (
-      not exists(getSourceFunction()) and
-      source.getFile().getParentContainer().getParentContainer().getBaseName() = "test"
-    )
-  )
-select call,
-  "Call from `" + source.getName() + "` to `" + callee.getName() + "`"
+  source = getSourceFunction()
+select call, "Call from `" + source.getName() + "` to `" + callee.getName() + "`"
