@@ -166,9 +166,9 @@ function registerAnnotationDeleteTool(server: McpServer): void {
 function registerAnnotationSearchTool(server: McpServer): void {
   server.tool(
     'annotation_search',
-    'Full-text search across annotation content, metadata, and labels.',
+    'Substring search across annotation content, metadata, and labels (case-insensitive SQL LIKE matching).',
     {
-      query: z.string().describe('Search term (matched against content, metadata, and label).'),
+      query: z.string().describe('Search term — matched as a substring against content, metadata, and label.'),
       category: z.string().optional().describe('Restrict search to a specific category.'),
       limit: z.number().optional().describe('Maximum number of results (default: 50).'),
     },
