@@ -252,8 +252,13 @@ export class SqliteStore {
   /**
    * Write the in-memory database to disk.
    *
-   * Uses write-to-temp + atomic rename so a crash mid-write cannot
-   * corrupt the database file.
+   * On platforms where `renameSync` can atomically replace the destination
+   * (for example, POSIX filesystems and Windows when the target is not
+   * locked), this uses a write-to-temp + atomic rename pattern so a crash
+   * mid-write cannot corrupt the existing database file. On some Windows
+   * configurations where `renameSync` fails because the destination is
+   * locked, we fall back to a direct overwrite, which is best-effort only
+   * and not fully crash-safe.
    */
   flush(): void {
     if (this.flushTimer) {
@@ -299,6 +304,10 @@ export class SqliteStore {
    * Close the database (and flush remaining changes).
    */
   close(): void {
+    if (this.flushTimer) {
+      globalThis.clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
     this.flushIfDirty();
     this.db?.close();
     this.db = null;
@@ -458,11 +467,11 @@ export class SqliteStore {
     }
     sql += ' ORDER BY updated_at DESC';
 
-    if (filter?.limit) {
+    if (filter?.limit !== undefined) {
       sql += ' LIMIT $limit';
       params.$limit = filter.limit;
     }
-    if (filter?.offset) {
+    if (filter?.offset !== undefined) {
       sql += ' OFFSET $offset';
       params.$offset = filter.offset;
     }

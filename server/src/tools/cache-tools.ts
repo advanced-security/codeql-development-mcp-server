@@ -83,11 +83,19 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
     'Retrieve cached query results with optional subset selection. Supports line ranges (for graphtext/CSV) and SARIF result indices and file filtering to return only the relevant portion.',
     {
       cacheKey: z.string().describe('The cache key of the result to retrieve.'),
-      lineRange: z.tuple([z.number(), z.number()]).optional().describe('Line range [start, end] (1-indexed, inclusive). For graphtext/CSV output only.'),
-      resultIndices: z.tuple([z.number(), z.number()]).optional().describe('SARIF result index range [start, end] (0-indexed, inclusive). For SARIF output only.'),
+      lineRange: z
+        .tuple([z.number().int().min(1), z.number().int().min(1)])
+        .refine(([start, end]) => start <= end, { message: 'lineRange start must be <= end' })
+        .optional()
+        .describe('Line range [start, end] (1-indexed, inclusive). For graphtext/CSV output only.'),
+      resultIndices: z
+        .tuple([z.number().int().min(0), z.number().int().min(0)])
+        .refine(([start, end]) => start <= end, { message: 'resultIndices start must be <= end' })
+        .optional()
+        .describe('SARIF result index range [start, end] (0-indexed, inclusive). For SARIF output only.'),
       fileFilter: z.string().optional().describe('For SARIF: only include results whose file path contains this string.'),
-      maxLines: z.number().optional().describe('Maximum number of lines to return for line-based formats (default: 500).'),
-      maxResults: z.number().optional().describe('Maximum number of SARIF results to return (default: 100).'),
+      maxLines: z.number().int().positive().optional().describe('Maximum number of lines to return for line-based formats (default: 500).'),
+      maxResults: z.number().int().positive().optional().describe('Maximum number of SARIF results to return (default: 100).'),
     },
     async ({ cacheKey, lineRange, resultIndices, fileFilter, maxLines, maxResults }) => {
       const store = sessionDataManager.getStore();
