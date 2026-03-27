@@ -13,7 +13,7 @@
 
 import initSqlJs from 'sql.js/dist/sql-asm.js';
 import type { Database as SqlJsDatabase } from 'sql.js';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { logger } from '../utils/logger';
 
@@ -65,21 +65,22 @@ export class SqliteStore {
 
   /**
    * Initialize the database. Must be called (and awaited) before any other method.
+   * Safe to call more than once — an already-open database is closed first.
    */
   async initialize(): Promise<void> {
+    if (this.db) {
+      this.close();
+    }
+
     mkdirSync(this.storageDir, { recursive: true });
 
     const SQL = await initSqlJs();
 
-    if (existsSync(this.dbPath)) {
-      try {
-        const fileBuffer = readFileSync(this.dbPath);
-        this.db = new SQL.Database(fileBuffer);
-      } catch {
-        logger.warn('Failed to read existing database, creating new one');
-        this.db = new SQL.Database();
-      }
-    } else {
+    try {
+      const fileBuffer = readFileSync(this.dbPath);
+      this.db = new SQL.Database(fileBuffer);
+    } catch {
+      // File doesn't exist or is unreadable — start with a fresh database.
       this.db = new SQL.Database();
     }
 
@@ -194,6 +195,9 @@ export class SqliteStore {
 
   /**
    * Write the in-memory database to disk.
+   *
+   * Uses write-to-temp + atomic rename so a crash mid-write cannot
+   * corrupt the database file.
    */
   flush(): void {
     if (this.flushTimer) {
@@ -203,7 +207,9 @@ export class SqliteStore {
     if (!this.db) return;
     const data = this.db.export();
     const buffer = Buffer.from(data);
-    writeFileSync(this.dbPath, buffer);
+    const tmpPath = this.dbPath + '.tmp';
+    writeFileSync(tmpPath, buffer);
+    renameSync(tmpPath, this.dbPath);
     this.dirty = false;
   }
 

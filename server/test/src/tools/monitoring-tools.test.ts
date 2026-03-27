@@ -238,6 +238,12 @@ describe('Monitoring Tools', () => {
       await sessionDataManager.initialize();
     });
 
+    afterEach(() => {
+      // Close the store so debounce timers are cancelled and the db handle
+      // is released before the test directory is removed.
+      sessionDataManager.getStore().close();
+    });
+
     it('should call session_end handler and return not found for invalid session', async () => {
       registerMonitoringTools(mockServer);
 

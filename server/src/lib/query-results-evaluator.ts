@@ -37,7 +37,10 @@ export type BuiltInEvaluator = keyof typeof BUILT_IN_EVALUATORS;
 /**
  * In-memory cache for extracted query metadata, keyed by file path.
  * Stores the file modification time to invalidate when the file changes.
+ * Bounded to {@link METADATA_CACHE_MAX} entries; oldest entries are evicted
+ * when the limit is reached (Map iteration order = insertion order).
  */
+const METADATA_CACHE_MAX = 256;
 const metadataCache = new Map<string, { mtime: number; metadata: QueryMetadata }>();
 
 /**
@@ -75,6 +78,11 @@ export async function extractQueryMetadata(queryPath: string): Promise<QueryMeta
       metadata.tags = tagsMatch[1].split(/\s+/).filter(t => t.length > 0);
     }
 
+    // Evict oldest entries when the cache exceeds the size limit.
+    if (metadataCache.size >= METADATA_CACHE_MAX) {
+      const firstKey = metadataCache.keys().next().value;
+      if (firstKey !== undefined) metadataCache.delete(firstKey);
+    }
     metadataCache.set(queryPath, { mtime, metadata });
     return metadata;
   } catch (error) {
