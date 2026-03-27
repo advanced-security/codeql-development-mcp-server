@@ -8,9 +8,11 @@ import { CLIExecutionResult, executeCodeQLCommand, executeQLTCommand } from './c
 import { resolveDatabasePath } from './database-resolver';
 import { logger } from '../utils/logger';
 import { getOrCreateLogDirectory } from './log-directory-manager';
-import { getUserWorkspaceDir, packageRootDir, resolveToolQueryPackPath } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
-import { basename, delimiter, dirname, isAbsolute, join, resolve } from 'path';
+import { resolveQueryPath } from './query-resolver';
+import { processQueryRunResults } from './result-processor';
+import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
+import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
 
