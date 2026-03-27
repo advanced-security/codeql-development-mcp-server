@@ -1,5 +1,5 @@
 ---
-applyTo: '.github/{actions,workflows}/*.{yml,yaml}'
+applyTo: '.github/{actions,workflows}/**/*.{yml,yaml}'
 description: 'Instructions for editing GitHub Actions workflows for this repository.'
 ---
 
@@ -12,7 +12,7 @@ This file contains instructions for working with GitHub Actions YAML files in th
 ## REQUIREMENTS
 
 - **ALWAYS run `npm run build-and-test` from the repo root directory and ensure it passes completely before committing any changes. This is MANDATORY and must be verified before every commit.**
-- **ALWAYS pin ALL external GitHub Actions to full-length commit SHAs, never to tags or branch names — including GitHub-maintained `actions/*` actions.** Add a trailing comment with the original tag for readability (e.g., `uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6`). To resolve a tag to its commit SHA, run `git ls-remote https://github.com/OWNER/REPO.git refs/tags/TAG` (or `refs/heads/BRANCH` for branch-based refs).
+- **ALWAYS pin ALL external GitHub Actions to full-length commit SHAs, never to tags or branch names — including GitHub-maintained `actions/*` actions.** Add a trailing comment with the original tag for readability (e.g., `uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6`). To resolve a tag to its underlying commit SHA (handling annotated tags correctly), run `git ls-remote https://github.com/OWNER/REPO.git refs/tags/TAG^{}`; for branch-based refs, use `refs/heads/BRANCH`.
 - ALWAYS use the principle of least privilege, and explicitly set `permissions` for workflows.
 - ALWAYS use valid YAML syntax and follow GitHub Actions workflow conventions.
 - ALWAYS follow best practices for GitHub Actions workflows including security, efficiency, and maintainability.
