@@ -82,7 +82,7 @@ runs:
     - name: Cache `gh-codeql` extension and CodeQL packages (Unix)
       id: cache-codeql-unix
       if: runner.os != 'Windows'
-      uses: actions/cache@v5
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: |
           ~/.local/share/gh-codeql
@@ -94,7 +94,7 @@ runs:
     - name: Cache `gh-codeql` extension and CodeQL packages (Windows)
       id: cache-codeql-windows
       if: runner.os == 'Windows'
-      uses: actions/cache@v5
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: |
           ~\AppData\Local\GitHub\gh-codeql
@@ -320,7 +320,7 @@ runs:
 
     - name: Setup Node.js
       if: inputs.install-language-runtimes == 'true'
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         cache: 'npm'
         cache-dependency-path: 'package-lock.json'
@@ -330,7 +330,7 @@ runs:
     - name: Cache language runtimes
       id: cache-runtimes
       if: inputs.install-language-runtimes == 'true'
-      uses: actions/cache@v5
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: |
           ~/go/pkg/mod
@@ -344,20 +344,20 @@ runs:
 
     - name: Setup Python (with cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'true'
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: ${{ inputs.python-version }}
         cache: 'pip'
 
     - name: Setup Python (without cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'false'
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Setup Java (with cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'true'
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
       with:
         distribution: 'temurin'
         java-version: ${{ inputs.java-version }}
@@ -365,21 +365,21 @@ runs:
 
     - name: Setup Java (without cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'false'
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
       with:
         distribution: 'temurin'
         java-version: ${{ inputs.java-version }}
 
     - name: Setup Go (with cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'true'
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
       with:
         go-version: ${{ inputs.go-version }}
         cache: true
 
     - name: Setup Go (without cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'false'
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
       with:
         go-version: ${{ inputs.go-version }}
         cache: false
@@ -388,7 +388,7 @@ runs:
     - name: Cache .NET packages
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp')
       id: cache-dotnet-packages
-      uses: actions/cache@v5
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: |
           ~/.nuget/packages
@@ -400,20 +400,20 @@ runs:
 
     - name: Setup .NET (for C#)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp')
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
 
     - name: Setup Ruby (with cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'true'
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@4dc28cf14d77b0afa6832d9765ac422dbf0dfedd # v1
       with:
         ruby-version: ${{ inputs.ruby-version }}
         bundler-cache: true
 
     - name: Setup Ruby (without cache)
       if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'false'
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@4dc28cf14d77b0afa6832d9765ac422dbf0dfedd # v1
       with:
         ruby-version: ${{ inputs.ruby-version }}
         bundler-cache: false

@@ -1,17 +1,18 @@
 ---
-applyTo: '.github/workflows/*.{yml,yaml}'
+applyTo: '.github/{actions,workflows}/*.{yml,yaml}'
 description: 'Instructions for editing GitHub Actions workflows for this repository.'
 ---
 
-# Copilot Instructions for `.github/workflows/*.{yml,yaml}` files
+# Copilot Instructions for `.github/{actions,workflows}/*.{yml,yaml}` files
 
 ## PURPOSE
 
-This file contains instructions for working with GitHub Actions workflow files in the `.github/workflows/` directory of the `codeql-development-mcp-server` repository.
+This file contains instructions for working with GitHub Actions YAML files in the `.github/actions/` and `.github/workflows/` directories of the `codeql-development-mcp-server` repository.
 
 ## REQUIREMENTS
 
 - **ALWAYS run `npm run build-and-test` from the repo root directory and ensure it passes completely before committing any changes. This is MANDATORY and must be verified before every commit.**
+- **ALWAYS pin ALL external GitHub Actions to full-length commit SHAs, never to tags or branch names — including GitHub-maintained `actions/*` actions.** Add a trailing comment with the original tag for readability (e.g., `uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6`). To resolve a tag to its commit SHA, run `git ls-remote https://github.com/OWNER/REPO.git refs/tags/TAG` (or `refs/heads/BRANCH` for branch-based refs).
 - ALWAYS use the principle of least privilege, and explicitly set `permissions` for workflows.
 - ALWAYS use valid YAML syntax and follow GitHub Actions workflow conventions.
 - ALWAYS follow best practices for GitHub Actions workflows including security, efficiency, and maintainability.
@@ -22,7 +23,6 @@ This file contains instructions for working with GitHub Actions workflow files i
 
 ## PREFERENCES
 
-- PREFER using the latest stable versions of GitHub Actions (e.g., `actions/checkout@v6`, `actions/setup-node@v6`).
 - PREFER explicit permissions declarations using the `permissions` key for security.
 - PREFER descriptive step names that include the workflow context (e.g., "Lint and Format - Checkout repository").
 - PREFER matrix strategies for testing multiple versions when applicable.
@@ -30,6 +30,7 @@ This file contains instructions for working with GitHub Actions workflow files i
 
 ## CONSTRAINTS
 
+- **NEVER reference an external GitHub Action by tag or branch name (e.g., `@v6`, `@main`). ALWAYS use the full 40-character commit SHA with a `# tag` comment.**
 - NEVER use overly broad permissions.
 - NEVER leave any trailing whitespace on any line.
 - NEVER use deprecated GitHub Actions or workflow syntax.
