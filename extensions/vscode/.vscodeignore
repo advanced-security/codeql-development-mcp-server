@@ -16,12 +16,13 @@ esbuild.config.js
 coverage/**
 
 # Build artifacts that shouldn't be in the VSIX
-.tmp/**
+**/.codeql/**
+**/.tmp/**
 **/*.test.ts
 **/*.test.js
 **/*.test.cjs
 **/*.map
-dist/test/**
+**/dist/test/**
 
 # Bundled server: exclude test/examples content
 server/ql/*/tools/test/**
