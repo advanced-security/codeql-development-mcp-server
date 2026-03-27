@@ -56,6 +56,9 @@ export async function extractQueryMetadata(queryPath: string): Promise<QueryMeta
       mtime = fstatSync(fd).mtimeMs;
       const cached = metadataCache.get(queryPath);
       if (cached && cached.mtime === mtime) {
+        // Refresh position in Map to implement true LRU behavior.
+        metadataCache.delete(queryPath);
+        metadataCache.set(queryPath, cached);
         return cached.metadata;
       }
       queryContent = readFileSync(fd, 'utf-8');
