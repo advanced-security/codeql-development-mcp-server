@@ -302,18 +302,24 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             const extensiblePredicates: Record<string, string[]> = {};
             
             if ((queryName === 'PrintAST' || queryName === 'PrintCFG') && sourceFiles) {
-              const filePaths = (sourceFiles as string).split(',').map((f: string) => f.trim());
-              extensiblePredicates['selectedSourceFiles'] = filePaths;
+              const filePaths = (sourceFiles as string).split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
+              if (filePaths.length > 0) {
+                extensiblePredicates['selectedSourceFiles'] = filePaths;
+              }
             }
-            
+
             if (sourceFunction) {
-              const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim());
-              extensiblePredicates['sourceFunction'] = functionNames;
+              const functionNames = (sourceFunction as string).split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
+              if (functionNames.length > 0) {
+                extensiblePredicates['sourceFunction'] = functionNames;
+              }
             }
-            
+
             if (targetFunction) {
-              const functionNames = (targetFunction as string).split(',').map((f: string) => f.trim());
-              extensiblePredicates['targetFunction'] = functionNames;
+              const functionNames = (targetFunction as string).split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0);
+              if (functionNames.length > 0) {
+                extensiblePredicates['targetFunction'] = functionNames;
+              }
             }
             
             if (Object.keys(extensiblePredicates).length > 0) {
@@ -375,7 +381,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                   // Use --model-packs to activate the extension pack for extensible predicates
                   const modelPacks = options['model-packs'] as string[] | undefined;
                   const modelPacksArray = Array.isArray(modelPacks) ? modelPacks : [];
-                  modelPacksArray.push('advanced-security/ql-mcp-runtime-extensions@*');
+                  modelPacksArray.push('advanced-security/ql-mcp-runtime-extensions@0.0.0');
                   options['model-packs'] = modelPacksArray;
                   
                   logger.info(`Created runtime extension pack at ${extPackDir} targeting ${targetPackName} with predicates: ${Object.keys(extensiblePredicates).join(', ')}`);

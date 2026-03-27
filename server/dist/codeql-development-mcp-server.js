@@ -59828,16 +59828,22 @@ function registerCLITool(server, definition) {
             }
             const extensiblePredicates = {};
             if ((queryName === "PrintAST" || queryName === "PrintCFG") && sourceFiles) {
-              const filePaths = sourceFiles.split(",").map((f) => f.trim());
-              extensiblePredicates["selectedSourceFiles"] = filePaths;
+              const filePaths = sourceFiles.split(",").map((f) => f.trim()).filter((f) => f.length > 0);
+              if (filePaths.length > 0) {
+                extensiblePredicates["selectedSourceFiles"] = filePaths;
+              }
             }
             if (sourceFunction) {
-              const functionNames = sourceFunction.split(",").map((f) => f.trim());
-              extensiblePredicates["sourceFunction"] = functionNames;
+              const functionNames = sourceFunction.split(",").map((f) => f.trim()).filter((f) => f.length > 0);
+              if (functionNames.length > 0) {
+                extensiblePredicates["sourceFunction"] = functionNames;
+              }
             }
             if (targetFunction) {
-              const functionNames = targetFunction.split(",").map((f) => f.trim());
-              extensiblePredicates["targetFunction"] = functionNames;
+              const functionNames = targetFunction.split(",").map((f) => f.trim()).filter((f) => f.length > 0);
+              if (functionNames.length > 0) {
+                extensiblePredicates["targetFunction"] = functionNames;
+              }
             }
             if (Object.keys(extensiblePredicates).length > 0) {
               let targetPackName;
@@ -59881,7 +59887,7 @@ function registerCLITool(server, definition) {
                   options["additional-packs"] = existingPacks ? `${existingPacks}${delimiter5}${extPackDir}` : extPackDir;
                   const modelPacks = options["model-packs"];
                   const modelPacksArray = Array.isArray(modelPacks) ? modelPacks : [];
-                  modelPacksArray.push("advanced-security/ql-mcp-runtime-extensions@*");
+                  modelPacksArray.push("advanced-security/ql-mcp-runtime-extensions@0.0.0");
                   options["model-packs"] = modelPacksArray;
                   logger.info(`Created runtime extension pack at ${extPackDir} targeting ${targetPackName} with predicates: ${Object.keys(extensiblePredicates).join(", ")}`);
                 } catch (err) {
