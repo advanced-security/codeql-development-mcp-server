@@ -498,17 +498,36 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           'verbosity',
         ]);
         const userAdditionalArgs = queryLogDir
-          ? rawAdditionalArgs.filter((arg) => {
-              const m = arg.match(/^--(?:no-)?([^=]+)/);
-              if (m && managedFlagNames.has(m[1])) {
-                logger.warn(
-                  `Ignoring "${arg}" from additionalArgs for ${name}: ` +
-                  'this flag is managed internally. Use the corresponding named parameter instead.'
-                );
-                return false;
+          ? (() => {
+              const filteredAdditionalArgs: string[] = [];
+
+              for (let i = 0; i < rawAdditionalArgs.length; i += 1) {
+                const arg = rawAdditionalArgs[i];
+                const m = arg.match(/^--(?:no-)?([^=]+)(?:=.*)?$/);
+
+                if (m && managedFlagNames.has(m[1])) {
+                  logger.warn(
+                    `Ignoring "${arg}" from additionalArgs for ${name}: ` +
+                    'this flag is managed internally. Use the corresponding named parameter instead.'
+                  );
+
+                  // Always skip the managed flag itself. If it is provided in
+                  // space-separated form (e.g. ["--output", "file.sarif"]),
+                  // also skip the following token as its value so it does not
+                  // become a stray positional argument.
+                  const hasInlineValue = arg.includes('=');
+                  if (!hasInlineValue && i + 1 < rawAdditionalArgs.length) {
+                    i += 1;
+                  }
+
+                  continue;
+                }
+
+                filteredAdditionalArgs.push(arg);
               }
-              return true;
-            })
+
+              return filteredAdditionalArgs;
+            })()
           : rawAdditionalArgs;
 
         let result: CLIExecutionResult;
