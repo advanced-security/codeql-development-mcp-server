@@ -42,7 +42,7 @@ jobs:
 
     steps:
       - name: Tag - Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -98,7 +98,7 @@ jobs:
 
       - name: Tag - Setup Node.js
         if: steps.check-tag.outputs.tag_exists != 'true'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           cache: 'npm'
           node-version-file: '.node-version'
