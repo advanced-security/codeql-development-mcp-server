@@ -166,16 +166,16 @@ function registerAnnotationDeleteTool(server: McpServer): void {
 function registerAnnotationSearchTool(server: McpServer): void {
   server.tool(
     'annotation_search',
-    'Full-text search across annotation content, metadata, and labels.',
+    'Full-text search across annotation content, metadata, and labels using SQLite FTS (token-based MATCH; use * suffix for prefix matching, e.g. "vulnerab*").',
     {
-      query: z.string().describe('Search term (matched against content, metadata, and label).'),
+      search: z.string().describe('Full-text search query matched against annotation content, metadata, and label (SQLite FTS MATCH syntax; use * for prefix matching).'),
       category: z.string().optional().describe('Restrict search to a specific category.'),
       limit: z.number().optional().describe('Maximum number of results (default: 50).'),
     },
-    async ({ query, category, limit }) => {
+    async ({ search, category, limit }) => {
       const store = sessionDataManager.getStore();
       const results = store.listAnnotations({
-        search: query,
+        search,
         category,
         limit: limit ?? 50,
       });

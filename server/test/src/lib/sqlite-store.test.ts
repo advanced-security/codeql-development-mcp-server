@@ -280,9 +280,9 @@ describe('SqliteStore', () => {
       expect(subset!.totalLines).toBe(6); // 5 lines + trailing newline
     });
 
-    it('should retrieve subset by grep', () => {
+    it('should retrieve subset by maxLines without lineRange', () => {
       store.putCacheEntry({
-        cacheKey: 'grep',
+        cacheKey: 'nolimit',
         queryName: 'PrintAST',
         queryPath: '/p.ql',
         databasePath: '/db',
@@ -292,11 +292,11 @@ describe('SqliteStore', () => {
         resultContent: 'Function foo\n  Param x\nFunction bar\n  Param y\n',
       });
 
-      const subset = store.getCacheContentSubset('grep', { grep: 'Function' });
+      const subset = store.getCacheContentSubset('nolimit', { maxLines: 2 });
       expect(subset).not.toBeNull();
       expect(subset!.returnedLines).toBe(2);
-      expect(subset!.content).toContain('Function foo');
-      expect(subset!.content).toContain('Function bar');
+      expect(subset!.truncated).toBe(true);
+      expect(subset!.content).toBe('Function foo\n  Param x');
     });
 
     it('should enforce maxLines cap', () => {
