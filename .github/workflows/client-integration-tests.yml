@@ -44,10 +44,10 @@ jobs:
 
     steps:
       - name: MCP Integration Tests - Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: MCP Integration Tests - Setup Node.js environment
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           cache: 'npm'
           node-version-file: '.node-version'
@@ -157,10 +157,10 @@ jobs:
 
     steps:
       - name: CODEQL_PATH Tests - Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: CODEQL_PATH Tests - Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           cache: 'npm'
           node-version-file: '.node-version'
