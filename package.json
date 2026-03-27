@@ -30,11 +30,6 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.2"
   },
-  "overrides": {
-    "vite": {
-      "lightningcss": "-"
-    }
-  },
   "scripts": {
     "build": "npm run build -w server && npm run build -w extensions/vscode",
     "build-and-test": "npm run build:all && npm run test:all",
