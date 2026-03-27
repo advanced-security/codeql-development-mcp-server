@@ -662,13 +662,12 @@ export class SqliteStore {
   }
 
   /**
-   * Retrieve a subset of cached result content via line range, grep, or maxLines.
+   * Retrieve a subset of cached result content via line range or maxLines.
    */
   getCacheContentSubset(
     cacheKey: string,
     options: {
       lineRange?: [number, number];
-      grep?: string;
       maxLines?: number;
     },
   ): { content: string; totalLines: number; returnedLines: number; truncated: boolean } | null {
@@ -685,11 +684,6 @@ export class SqliteStore {
       const startIdx = Math.max(0, start - 1);
       const endIdx = Math.min(totalLines, end);
       selectedLines = selectedLines.slice(startIdx, endIdx);
-    }
-
-    if (options.grep) {
-      const term = options.grep.toLowerCase();
-      selectedLines = selectedLines.filter(line => line.toLowerCase().includes(term));
     }
 
     const truncated = selectedLines.length > maxLines;

@@ -80,17 +80,16 @@ function registerQueryResultsCacheLookupTool(server: McpServer): void {
 function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
   server.tool(
     'query_results_cache_retrieve',
-    'Retrieve cached query results with optional subset selection. Supports line ranges (for graphtext/CSV), SARIF result indices, file filtering, and text search to return only the relevant portion.',
+    'Retrieve cached query results with optional subset selection. Supports line ranges (for graphtext/CSV) and SARIF result indices and file filtering to return only the relevant portion.',
     {
       cacheKey: z.string().describe('The cache key of the result to retrieve.'),
-      lineRange: z.tuple([z.number(), z.number()]).optional().describe('Line range [start, end] (1-indexed). For graphtext/CSV output.'),
-      resultIndices: z.tuple([z.number(), z.number()]).optional().describe('SARIF result index range [start, end] (0-indexed, inclusive).'),
+      lineRange: z.tuple([z.number(), z.number()]).optional().describe('Line range [start, end] (1-indexed, inclusive). For graphtext/CSV output only.'),
+      resultIndices: z.tuple([z.number(), z.number()]).optional().describe('SARIF result index range [start, end] (0-indexed, inclusive). For SARIF output only.'),
       fileFilter: z.string().optional().describe('For SARIF: only include results whose file path contains this string.'),
-      grep: z.string().optional().describe('Text search filter: only include lines/results containing this term.'),
       maxLines: z.number().optional().describe('Maximum number of lines to return for line-based formats (default: 500).'),
       maxResults: z.number().optional().describe('Maximum number of SARIF results to return (default: 100).'),
     },
-    async ({ cacheKey, lineRange, resultIndices, fileFilter, grep, maxLines, maxResults }) => {
+    async ({ cacheKey, lineRange, resultIndices, fileFilter, maxLines, maxResults }) => {
       const store = sessionDataManager.getStore();
       const meta = store.getCacheEntryMeta(cacheKey);
 
@@ -98,9 +97,10 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
         return { content: [{ type: 'text' as const, text: `No cached result found for key: ${cacheKey}` }] };
       }
 
-      // For SARIF format with SARIF-specific filters, use SARIF subset retrieval
+      // SARIF format: always use the SARIF-aware subset retrieval so that
+      // maxResults is applied and result-level filters (indices, file path) work correctly.
       const isSarif = meta.outputFormat.includes('sarif');
-      if (isSarif && (resultIndices || fileFilter)) {
+      if (isSarif) {
         const subset = store.getCacheSarifSubset(cacheKey, {
           resultIndices,
           fileFilter,
@@ -134,10 +134,9 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
         };
       }
 
-      // Line-based subset for graphtext, CSV, or any text format
+      // Line-based subset for graphtext, CSV, or any other text format.
       const subset = store.getCacheContentSubset(cacheKey, {
         lineRange,
-        grep,
         maxLines: maxLines ?? 500,
       });
       if (!subset) {
