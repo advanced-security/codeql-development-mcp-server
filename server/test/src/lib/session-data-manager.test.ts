@@ -5,17 +5,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SessionDataManager } from '../../../src/lib/session-data-manager';
 import { existsSync, rmSync } from 'fs';
+import { createProjectTempDir } from '../../../src/utils/temp-dir';
 
 describe('SessionDataManager', () => {
   let sessionManager: SessionDataManager;
-  const testStorageDir = '.ql-mcp-tracking-test';
+  let testStorageDir: string;
 
   beforeEach(async () => {
-    // Clean up any existing test storage
-    if (existsSync(testStorageDir)) {
-      rmSync(testStorageDir, { recursive: true, force: true });
-    }
-    
+    testStorageDir = createProjectTempDir('session-data-manager-test-');
+
     sessionManager = new SessionDataManager({
       storageLocation: testStorageDir,
       autoTrackSessions: true,
@@ -24,7 +22,7 @@ describe('SessionDataManager', () => {
   });
 
   afterEach(() => {
-    // Clean up test storage
+    sessionManager.getStore().close();
     if (existsSync(testStorageDir)) {
       rmSync(testStorageDir, { recursive: true, force: true });
     }

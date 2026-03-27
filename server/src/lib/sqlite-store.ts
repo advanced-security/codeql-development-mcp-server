@@ -54,6 +54,9 @@ export class SqliteStore {
   private dbPath: string;
   private storageDir: string;
   private dirty = false;
+  private flushTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+  /** Debounce interval (ms) for automatic disk writes after mutations. */
+  private static readonly FLUSH_DEBOUNCE_MS = 200;
 
   constructor(storageDir: string) {
     this.storageDir = storageDir;
@@ -193,11 +196,27 @@ export class SqliteStore {
    * Write the in-memory database to disk.
    */
   flush(): void {
+    if (this.flushTimer) {
+      globalThis.clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
     if (!this.db) return;
     const data = this.db.export();
     const buffer = Buffer.from(data);
     writeFileSync(this.dbPath, buffer);
     this.dirty = false;
+  }
+
+  /**
+   * Schedule a debounced flush.  Multiple rapid writes are coalesced into
+   * a single disk write after `FLUSH_DEBOUNCE_MS` of inactivity.
+   */
+  private scheduleFlush(): void {
+    if (this.flushTimer) globalThis.clearTimeout(this.flushTimer);
+    this.flushTimer = globalThis.setTimeout(() => {
+      this.flushTimer = null;
+      this.flushIfDirty();
+    }, SqliteStore.FLUSH_DEBOUNCE_MS);
   }
 
   /**
@@ -231,7 +250,7 @@ export class SqliteStore {
       { $id: sessionId, $data: json },
     );
     this.dirty = true;
-    this.flush();
+    this.scheduleFlush();
   }
 
   /**
@@ -270,7 +289,7 @@ export class SqliteStore {
    */
   deleteSession(sessionId: string): void {
     this.exec('DELETE FROM sessions WHERE session_id = $id', { $id: sessionId });
-    this.flush();
+    this.scheduleFlush();
   }
 
   /**
@@ -300,18 +319,15 @@ export class SqliteStore {
     metadata?: string | null,
   ): number {
     const db = this.ensureDb();
-    const now = new Date().toISOString();
     db.run(
       `INSERT INTO annotations (category, entity_key, label, content, metadata, created_at, updated_at)
-       VALUES ($category, $entity_key, $label, $content, $metadata, $created_at, $updated_at)`,
+       VALUES ($category, $entity_key, $label, $content, $metadata, datetime('now'), datetime('now'))`,
       {
         $category: category,
         $entity_key: entityKey,
         $label: label ?? null,
         $content: content ?? null,
         $metadata: metadata ?? null,
-        $created_at: now,
-        $updated_at: now,
       },
     );
     this.dirty = true;
@@ -320,7 +336,7 @@ export class SqliteStore {
     const result = db.exec('SELECT last_insert_rowid() as id');
     const id = result.length > 0 ? (result[0].values[0][0] as number) : 0;
 
-    this.flush();
+    this.scheduleFlush();
     return id;
   }
 
@@ -425,7 +441,7 @@ export class SqliteStore {
     );
     const changed = this.getRowsModified();
     this.dirty = true;
-    this.flush();
+    this.scheduleFlush();
 
     return changed > 0;
   }
@@ -463,7 +479,7 @@ export class SqliteStore {
     );
     const deleted = this.getRowsModified();
     this.dirty = true;
-    this.flush();
+    this.scheduleFlush();
 
     return deleted;
   }
@@ -517,7 +533,7 @@ export class SqliteStore {
       },
     );
     this.dirty = true;
-    this.flush();
+    this.scheduleFlush();
   }
 
   /**
@@ -650,8 +666,16 @@ export class SqliteStore {
       }
 
       if (options.resultIndices) {
-        const [start, end] = options.resultIndices;
-        selected = selected.slice(start, end);
+        const [rawStart, rawEnd] = options.resultIndices;
+        const total = selected.length;
+        if (Number.isFinite(rawStart) && Number.isFinite(rawEnd) && total > 0) {
+          const start = Math.max(0, Math.min(total - 1, Math.floor(rawStart)));
+          const end = Math.max(0, Math.min(total - 1, Math.floor(rawEnd)));
+          // resultIndices is treated as an inclusive [start, end] range
+          selected = end >= start ? selected.slice(start, end + 1) : [];
+        } else {
+          selected = [];
+        }
       }
 
       const truncated = selected.length > maxResults;
@@ -769,7 +793,7 @@ export class SqliteStore {
     if (filter?.all) {
       this.exec('DELETE FROM query_result_cache');
       const deleted = this.getRowsModified();
-      this.flush();
+      this.scheduleFlush();
       return deleted;
     }
 
@@ -798,7 +822,7 @@ export class SqliteStore {
     );
     const deleted = this.getRowsModified();
     this.dirty = true;
-    this.flush();
+    this.scheduleFlush();
     return deleted;
   }
 }

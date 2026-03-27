@@ -5,8 +5,8 @@
  * findings with notes, mirroring the seclab codeql_python MCP server's
  * SQLite-backed source tracking — but now backed by the shared SqliteStore.
  *
- * Opt-in via ENABLE_AUDIT_TOOLS=true (disabled by default).
- * Requires ENABLE_ANNOTATION_TOOLS=true (audit tools are layered on annotations).
+ * Enabled when ENABLE_ANNOTATION_TOOLS=true (disabled by default when annotation tools are off).
+ * Audit tools are layered on annotations; there is no separate ENABLE_AUDIT_TOOLS flag.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';

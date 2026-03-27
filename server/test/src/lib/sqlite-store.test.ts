@@ -2,18 +2,17 @@
  * Tests for SqliteStore — the unified sql.js persistence backend.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SqliteStore } from '../../../src/lib/sqlite-store';
 import { existsSync, rmSync } from 'fs';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { SqliteStore } from '../../../src/lib/sqlite-store';
+import { createProjectTempDir } from '../../../src/utils/temp-dir';
 
 describe('SqliteStore', () => {
   let store: SqliteStore;
-  const testDir = '.ql-mcp-sqlite-test';
+  let testDir: string;
 
   beforeEach(async () => {
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true, force: true });
-    }
+    testDir = createProjectTempDir('sqlite-store-test-');
     store = new SqliteStore(testDir);
     await store.initialize();
   });
@@ -341,7 +340,8 @@ describe('SqliteStore', () => {
         resultCount: 3,
       });
 
-      const subset = store.getCacheSarifSubset('sarif1', { resultIndices: [0, 2] });
+      // resultIndices is inclusive: [0, 1] returns indices 0 and 1 (2 results)
+      const subset = store.getCacheSarifSubset('sarif1', { resultIndices: [0, 1] });
       expect(subset).not.toBeNull();
       expect(subset!.totalResults).toBe(3);
       expect(subset!.returnedResults).toBe(2);

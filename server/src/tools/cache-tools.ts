@@ -84,12 +84,13 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
     {
       cacheKey: z.string().describe('The cache key of the result to retrieve.'),
       lineRange: z.tuple([z.number(), z.number()]).optional().describe('Line range [start, end] (1-indexed). For graphtext/CSV output.'),
-      resultIndices: z.tuple([z.number(), z.number()]).optional().describe('SARIF result index range [start, end] (0-indexed).'),
+      resultIndices: z.tuple([z.number(), z.number()]).optional().describe('SARIF result index range [start, end] (0-indexed, inclusive).'),
       fileFilter: z.string().optional().describe('For SARIF: only include results whose file path contains this string.'),
       grep: z.string().optional().describe('Text search filter: only include lines/results containing this term.'),
-      maxLines: z.number().optional().describe('Maximum number of lines to return (default: 500).'),
+      maxLines: z.number().optional().describe('Maximum number of lines to return for line-based formats (default: 500).'),
+      maxResults: z.number().optional().describe('Maximum number of SARIF results to return (default: 100).'),
     },
-    async ({ cacheKey, lineRange, resultIndices, fileFilter, grep, maxLines }) => {
+    async ({ cacheKey, lineRange, resultIndices, fileFilter, grep, maxLines, maxResults }) => {
       const store = sessionDataManager.getStore();
       const meta = store.getCacheEntryMeta(cacheKey);
 
@@ -103,7 +104,7 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
         const subset = store.getCacheSarifSubset(cacheKey, {
           resultIndices,
           fileFilter,
-          maxResults: maxLines,
+          maxResults,
         });
         if (!subset) {
           return { content: [{ type: 'text' as const, text: `Cached content not available for key: ${cacheKey}` }] };

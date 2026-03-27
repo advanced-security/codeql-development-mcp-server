@@ -1,6 +1,6 @@
 /**
  * Session Data Management
- * Provides session lifecycle management backed by SqliteStore (sql.js WASM)
+ * Provides session lifecycle management backed by SqliteStore (sql.js asm.js)
  */
 
 import { mkdirSync, writeFileSync } from 'fs';
@@ -45,7 +45,7 @@ export class SessionDataManager {
 
   /**
    * Initialize the database and ensure it's properly set up.
-   * Must be awaited before any session operations (sql.js WASM init is async).
+   * Must be awaited before any session operations (sql.js init is async).
    */
   async initialize(): Promise<void> {
     try {
