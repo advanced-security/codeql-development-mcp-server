@@ -904,6 +904,59 @@ describe('registerCLITool handler behavior', () => {
     expect(positionalArgs).toContain('--key=value');
   });
 
+  it('should filter managed flags from additionalArgs for tools with post-processing', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_database_analyze',
+      description: 'Analyze database',
+      command: 'codeql',
+      subcommand: 'database analyze',
+      inputSchema: {
+        database: z.string(),
+        queries: z.string(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Analysis complete',
+      stderr: '',
+      success: true
+    });
+
+    await handler({
+      database: '/path/to/db',
+      queries: 'security-queries',
+      additionalArgs: [
+        '--sarif-include-query-help=always',
+        '--logdir=/override',
+        '--evaluator-log=/override.jsonl',
+        '--output=/override.sarif',
+        '--no-tuple-counting',
+        '--verbosity=errors',
+        '--no-sarif-minify'
+      ]
+    });
+
+    // executeCodeQLCommand signature: (subcommand, options, additionalArgs, cwd)
+    const call = executeCodeQLCommand.mock.calls[0];
+    const positionalArgs = call[2];
+
+    // Non-managed flags should be passed through
+    expect(positionalArgs).toContain('--sarif-include-query-help=always');
+    expect(positionalArgs).toContain('--no-sarif-minify');
+
+    // Managed flags should be filtered out
+    expect(positionalArgs).not.toContain('--logdir=/override');
+    expect(positionalArgs).not.toContain('--evaluator-log=/override.jsonl');
+    expect(positionalArgs).not.toContain('--output=/override.sarif');
+    expect(positionalArgs).not.toContain('--no-tuple-counting');
+    expect(positionalArgs).not.toContain('--verbosity=errors');
+  });
+
   it('should return error content when command fails', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_test_tool',

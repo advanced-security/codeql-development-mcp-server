@@ -53068,10 +53068,6 @@ var Protocol = class {
     this._progressHandlers.clear();
     this._taskProgressTokens.clear();
     this._pendingDebouncedNotifications.clear();
-    for (const info of this._timeoutInfo.values()) {
-      clearTimeout(info.timeoutId);
-    }
-    this._timeoutInfo.clear();
     for (const controller of this._requestHandlerAbortControllers.values()) {
       controller.abort();
     }
@@ -53202,9 +53198,7 @@ var Protocol = class {
         await capturedTransport?.send(errorResponse);
       }
     }).catch((error2) => this._onerror(new Error(`Failed to send response: ${error2}`))).finally(() => {
-      if (this._requestHandlerAbortControllers.get(request.id) === abortController) {
-        this._requestHandlerAbortControllers.delete(request.id);
-      }
+      this._requestHandlerAbortControllers.delete(request.id);
     });
   }
   _onprogress(notification) {
@@ -55217,9 +55211,6 @@ var McpServer = class {
           annotations = rest.shift();
         }
       } else if (typeof firstArg === "object" && firstArg !== null) {
-        if (Object.values(firstArg).some((v) => typeof v === "object" && v !== null)) {
-          throw new Error(`Tool ${name} expected a Zod schema or ToolAnnotations, but received an unrecognized object`);
-        }
         annotations = rest.shift();
       }
     }
@@ -55337,9 +55328,6 @@ function getZodSchemaObject(schema2) {
   }
   if (isZodRawShapeCompat(schema2)) {
     return objectFromShape(schema2);
-  }
-  if (!isZodSchemaInstance(schema2)) {
-    throw new Error("inputSchema must be a Zod schema or raw shape, received an unrecognized object");
   }
   return schema2;
 }
@@ -57350,8 +57338,25 @@ function registerCLITool(server, definition) {
             mkdirSync5(outputDir, { recursive: true });
           }
         }
-        const userAdditionalArgs = Array.isArray(options.additionalArgs) ? options.additionalArgs : [];
+        const rawAdditionalArgs = Array.isArray(options.additionalArgs) ? options.additionalArgs : [];
         delete options.additionalArgs;
+        const managedFlagNames = /* @__PURE__ */ new Set([
+          "evaluator-log",
+          "logdir",
+          "output",
+          "tuple-counting",
+          "verbosity"
+        ]);
+        const userAdditionalArgs = queryLogDir ? rawAdditionalArgs.filter((arg) => {
+          const m = arg.match(/^--(?:no-)?([^=]+)/);
+          if (m && managedFlagNames.has(m[1])) {
+            logger.warn(
+              `Ignoring "${arg}" from additionalArgs for ${name}: this flag is managed internally. Use the corresponding named parameter instead.`
+            );
+            return false;
+          }
+          return true;
+        }) : rawAdditionalArgs;
         let result;
         if (command === "codeql") {
           let cwd;

@@ -477,10 +477,39 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // Extract additionalArgs from options so they are passed as raw CLI
         // arguments instead of being transformed into --additionalArgs=value
         // by buildCodeQLArgs.
-        const userAdditionalArgs = Array.isArray(options.additionalArgs)
+        const rawAdditionalArgs = Array.isArray(options.additionalArgs)
           ? options.additionalArgs as string[]
           : [];
         delete options.additionalArgs;
+
+        // For tools with post-execution processing (query run, test run,
+        // database analyze), certain CLI flags are set internally and their
+        // values are read back after execution (e.g. --evaluator-log for log
+        // summary generation, --output for SARIF interpretation).  If a user
+        // passes these flags via additionalArgs the CLI would receive
+        // conflicting duplicates and the post-processing would use stale
+        // values from the options object.  Filter them out and log a warning
+        // directing the user to the corresponding named parameter instead.
+        const managedFlagNames = new Set([
+          'evaluator-log',
+          'logdir',
+          'output',
+          'tuple-counting',
+          'verbosity',
+        ]);
+        const userAdditionalArgs = queryLogDir
+          ? rawAdditionalArgs.filter((arg) => {
+              const m = arg.match(/^--(?:no-)?([^=]+)/);
+              if (m && managedFlagNames.has(m[1])) {
+                logger.warn(
+                  `Ignoring "${arg}" from additionalArgs for ${name}: ` +
+                  'this flag is managed internally. Use the corresponding named parameter instead.'
+                );
+                return false;
+              }
+              return true;
+            })
+          : rawAdditionalArgs;
 
         let result: CLIExecutionResult;
         
