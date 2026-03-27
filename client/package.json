@@ -27,7 +27,7 @@
     "npm": ">=11.6.2"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.28.0",
     "dotenv": "^17.3.1",
     "js-yaml": "^4.1.1"
   },
