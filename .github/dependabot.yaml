@@ -9,7 +9,11 @@ updates:
     schedule:
       interval: 'weekly'
   - package-ecosystem: 'npm'
-    directory: '/'
+    directories:
+      - '/'
+      - '/client/'
+      - '/server/'
+      - '/extensions/vscode/'
     schedule:
       interval: 'weekly'
     ignore:
@@ -17,22 +21,7 @@ updates:
       ## version of 'zod' used by the '@modelcontextprotocol/sdk' dependency.
       - dependency-name: 'zod'
     versioning-strategy: 'increase'
-  - package-ecosystem: 'npm'
-    directory: '/client/'
-    schedule:
-      interval: 'weekly'
-    ignore:
-      - dependency-name: 'zod'
-    versioning-strategy: 'increase'
-  - package-ecosystem: 'npm'
-    directory: '/server/'
-    schedule:
-      interval: 'weekly'
-    ignore:
-      - dependency-name: 'zod'
-    versioning-strategy: 'increase'
-  - package-ecosystem: 'npm'
-    directory: '/extensions/vscode/'
-    schedule:
-      interval: 'weekly'
-    versioning-strategy: 'increase'
+    groups:
+      all-npm-dependencies:
+        patterns:
+          - '*'
