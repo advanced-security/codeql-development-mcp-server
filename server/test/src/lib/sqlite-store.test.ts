@@ -118,13 +118,25 @@ describe('SqliteStore', () => {
       expect(results[0].content).toBe('yes');
     });
 
-    it('should search annotations by content', () => {
+    it('should full-text search annotations across content, label, and metadata', () => {
       store.createAnnotation('note', 'a', 'Found a vulnerability in auth');
       store.createAnnotation('note', 'b', 'No issues here');
       store.createAnnotation('note', 'c', null, null, '{"detail":"vulnerability in parser"}');
 
       const results = store.listAnnotations({ search: 'vulnerability' });
       expect(results).toHaveLength(2);
+    });
+
+    it('should perform case-insensitive full-text search', () => {
+      store.createAnnotation('note', 'x', 'SQL injection risk');
+      store.createAnnotation('note', 'y', 'No problems');
+
+      const lower = store.listAnnotations({ search: 'sql' });
+      const upper = store.listAnnotations({ search: 'SQL' });
+      const mixed = store.listAnnotations({ search: 'Sql' });
+      expect(lower).toHaveLength(1);
+      expect(upper).toHaveLength(1);
+      expect(mixed).toHaveLength(1);
     });
 
     it('should support limit and offset', () => {

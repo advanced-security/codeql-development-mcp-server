@@ -13,7 +13,7 @@
 
 import initSqlJs from 'sql.js/dist/sql-asm.js';
 import type { Database as SqlJsDatabase } from 'sql.js';
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { logger } from '../utils/logger';
 
@@ -129,6 +129,41 @@ export class SqliteStore {
         ON annotations (category, entity_key);
     `);
 
+    // FTS4 virtual table for full-text search over annotation text fields.
+    // The unicode61 tokenizer provides case-insensitive, accent-insensitive matching.
+    this.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS annotations_fts
+        USING fts4(tokenize=unicode61, content, label, metadata);
+    `);
+
+    // Triggers keep the FTS index in sync with the annotations table.
+    this.exec(`
+      CREATE TRIGGER IF NOT EXISTS annotations_ai
+        AFTER INSERT ON annotations BEGIN
+          INSERT INTO annotations_fts(rowid, content, label, metadata)
+            VALUES (new.id, new.content, new.label, new.metadata);
+        END;
+    `);
+
+    this.exec(`
+      CREATE TRIGGER IF NOT EXISTS annotations_ad
+        AFTER DELETE ON annotations BEGIN
+          DELETE FROM annotations_fts WHERE rowid = old.id;
+        END;
+    `);
+
+    this.exec(`
+      CREATE TRIGGER IF NOT EXISTS annotations_au
+        AFTER UPDATE ON annotations BEGIN
+          DELETE FROM annotations_fts WHERE rowid = old.id;
+          INSERT INTO annotations_fts(rowid, content, label, metadata)
+            VALUES (new.id, new.content, new.label, new.metadata);
+        END;
+    `);
+
+    // Migration: backfill FTS for any existing rows that pre-date the FTS table.
+    this.backfillAnnotationsFts();
+
     this.exec(`
       CREATE TABLE IF NOT EXISTS query_result_cache (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -185,6 +220,27 @@ export class SqliteStore {
   }
 
   /**
+   * Backfill the FTS index for any annotations rows that were inserted before
+   * the FTS table existed (schema migration).  Compares row counts and rebuilds
+   * the entire FTS index when there is a mismatch.
+   */
+  private backfillAnnotationsFts(): void {
+    const db = this.ensureDb();
+    const ftsCountResult = db.exec('SELECT COUNT(*) FROM annotations_fts');
+    const annCountResult = db.exec('SELECT COUNT(*) FROM annotations');
+    const ftsCount = (ftsCountResult[0]?.values[0][0] as number) ?? 0;
+    const annCount = (annCountResult[0]?.values[0][0] as number) ?? 0;
+
+    if (ftsCount < annCount) {
+      // Clear and fully rebuild to avoid duplicate entries.
+      db.run('DELETE FROM annotations_fts');
+      db.run(
+        'INSERT INTO annotations_fts(rowid, content, label, metadata) SELECT id, content, label, metadata FROM annotations',
+      );
+    }
+  }
+
+  /**
    * Get the number of rows modified by the last INSERT/UPDATE/DELETE.
    */
   private getRowsModified(): number {
@@ -209,7 +265,14 @@ export class SqliteStore {
     const buffer = Buffer.from(data);
     const tmpPath = this.dbPath + '.tmp';
     writeFileSync(tmpPath, buffer);
-    renameSync(tmpPath, this.dbPath);
+    try {
+      renameSync(tmpPath, this.dbPath);
+    } catch {
+      // On some Windows configurations renameSync can fail if the destination
+      // is locked; fall back to a direct overwrite and clean up the temp file.
+      writeFileSync(this.dbPath, buffer);
+      try { unlinkSync(tmpPath); } catch { /* ignore cleanup failure */ }
+    }
     this.dirty = false;
   }
 
@@ -383,8 +446,10 @@ export class SqliteStore {
       params.$entity_key_prefix = filter.entityKeyPrefix + '%';
     }
     if (filter?.search) {
-      conditions.push('(content LIKE $search OR metadata LIKE $search OR label LIKE $search)');
-      params.$search = '%' + filter.search + '%';
+      // Use the FTS4 index for efficient, case-insensitive full-text search
+      // across content, label, and metadata fields.
+      conditions.push('id IN (SELECT rowid FROM annotations_fts WHERE annotations_fts MATCH $search)');
+      params.$search = filter.search;
     }
 
     let sql = 'SELECT * FROM annotations';
