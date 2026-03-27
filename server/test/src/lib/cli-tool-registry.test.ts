@@ -780,6 +780,130 @@ describe('registerCLITool handler behavior', () => {
     );
   });
 
+  it('should pass additionalArgs as raw CLI arguments for codeql_database_analyze', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_database_analyze',
+      description: 'Analyze database',
+      command: 'codeql',
+      subcommand: 'database analyze',
+      inputSchema: {
+        database: z.string(),
+        queries: z.string(),
+        format: z.string().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Analysis complete',
+      stderr: '',
+      success: true
+    });
+
+    await handler({
+      database: '/path/to/db',
+      queries: 'security-queries',
+      format: 'sarif-latest',
+      additionalArgs: ['--sarif-include-query-help=always', '--no-sarif-minify']
+    });
+
+    // executeCodeQLCommand signature: (subcommand, options, additionalArgs, cwd)
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1];
+    const positionalArgs = call[2];
+
+    // additionalArgs must NOT appear in the options object
+    expect(options).not.toHaveProperty('additionalArgs');
+
+    // The raw additional args should be appended after positional args
+    expect(positionalArgs).toContain('/path/to/db');
+    expect(positionalArgs).toContain('security-queries');
+    expect(positionalArgs).toContain('--sarif-include-query-help=always');
+    expect(positionalArgs).toContain('--no-sarif-minify');
+  });
+
+  it('should handle missing additionalArgs gracefully', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_database_analyze',
+      description: 'Analyze database',
+      command: 'codeql',
+      subcommand: 'database analyze',
+      inputSchema: {
+        database: z.string(),
+        queries: z.string(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Analysis complete',
+      stderr: '',
+      success: true
+    });
+
+    await handler({
+      database: '/path/to/db',
+      queries: 'security-queries'
+    });
+
+    // executeCodeQLCommand signature: (subcommand, options, additionalArgs, cwd)
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1];
+    const positionalArgs = call[2];
+
+    // additionalArgs must NOT appear in the options object
+    expect(options).not.toHaveProperty('additionalArgs');
+
+    // Positional args should only contain db and queries
+    expect(positionalArgs).toEqual(['/path/to/db', 'security-queries']);
+  });
+
+  it('should pass additionalArgs as raw CLI arguments for any tool', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_test_tool',
+      description: 'Test tool',
+      command: 'codeql',
+      subcommand: 'test',
+      inputSchema: {
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Success',
+      stderr: '',
+      success: true
+    });
+
+    await handler({
+      additionalArgs: ['--custom-flag', '--key=value']
+    });
+
+    // executeCodeQLCommand signature: (subcommand, options, additionalArgs, cwd)
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1];
+    const positionalArgs = call[2];
+
+    // additionalArgs must NOT appear in the options object
+    expect(options).not.toHaveProperty('additionalArgs');
+
+    // The raw additional args should be passed through
+    expect(positionalArgs).toContain('--custom-flag');
+    expect(positionalArgs).toContain('--key=value');
+  });
+
   it('should return error content when command fails', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_test_tool',

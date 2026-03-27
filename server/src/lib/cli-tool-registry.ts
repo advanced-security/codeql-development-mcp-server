@@ -474,6 +474,14 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
+        // Extract additionalArgs from options so they are passed as raw CLI
+        // arguments instead of being transformed into --additionalArgs=value
+        // by buildCodeQLArgs.
+        const userAdditionalArgs = Array.isArray(options.additionalArgs)
+          ? options.additionalArgs as string[]
+          : [];
+        delete options.additionalArgs;
+
         let result: CLIExecutionResult;
         
         if (command === 'codeql') {
@@ -507,9 +515,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             options['keep-databases'] = true;
           }
           
-          result = await executeCodeQLCommand(subcommand, options, positionalArgs, cwd);
+          result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
         } else if (command === 'qlt') {
-          result = await executeQLTCommand(subcommand, options, positionalArgs);
+          result = await executeQLTCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs]);
         } else {
           throw new Error(`Unsupported command: ${command}`);
         }
