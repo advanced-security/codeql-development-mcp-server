@@ -3,7 +3,7 @@ applyTo: '.github/{actions,workflows}/**/*.{yml,yaml}'
 description: 'Instructions for editing GitHub Actions workflows for this repository.'
 ---
 
-# Copilot Instructions for `.github/{actions,workflows}/*.{yml,yaml}` files
+# Copilot Instructions for `.github/{actions,workflows}/**/*.{yml,yaml}` files
 
 ## PURPOSE
 
