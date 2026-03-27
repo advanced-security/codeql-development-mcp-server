@@ -474,6 +474,62 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
+        // Extract additionalArgs from options so they are passed as raw CLI
+        // arguments instead of being transformed into --additionalArgs=value
+        // by buildCodeQLArgs.
+        const rawAdditionalArgs = Array.isArray(options.additionalArgs)
+          ? options.additionalArgs as string[]
+          : [];
+        delete options.additionalArgs;
+
+        // For tools with post-execution processing (query run, test run,
+        // database analyze), certain CLI flags are set internally and their
+        // values are read back after execution (e.g. --evaluator-log for log
+        // summary generation, --output for SARIF interpretation).  If a user
+        // passes these flags via additionalArgs the CLI would receive
+        // conflicting duplicates and the post-processing would use stale
+        // values from the options object.  Filter them out and log a warning
+        // directing the user to the corresponding named parameter instead.
+        const managedFlagNames = new Set([
+          'evaluator-log',
+          'logdir',
+          'output',
+          'tuple-counting',
+          'verbosity',
+        ]);
+        const userAdditionalArgs = queryLogDir
+          ? (() => {
+              const filteredAdditionalArgs: string[] = [];
+
+              for (let i = 0; i < rawAdditionalArgs.length; i += 1) {
+                const arg = rawAdditionalArgs[i];
+                const m = arg.match(/^--(?:no-)?([^=]+)(?:=.*)?$/);
+
+                if (m && managedFlagNames.has(m[1])) {
+                  logger.warn(
+                    `Ignoring "${arg}" from additionalArgs for ${name}: ` +
+                    'this flag is managed internally. Use the corresponding named parameter instead.'
+                  );
+
+                  // Always skip the managed flag itself. If it is provided in
+                  // space-separated form (e.g. ["--output", "file.sarif"]),
+                  // also skip the following token as its value so it does not
+                  // become a stray positional argument.
+                  const hasInlineValue = arg.includes('=');
+                  if (!hasInlineValue && i + 1 < rawAdditionalArgs.length) {
+                    i += 1;
+                  }
+
+                  continue;
+                }
+
+                filteredAdditionalArgs.push(arg);
+              }
+
+              return filteredAdditionalArgs;
+            })()
+          : rawAdditionalArgs;
+
         let result: CLIExecutionResult;
         
         if (command === 'codeql') {
@@ -507,9 +563,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             options['keep-databases'] = true;
           }
           
-          result = await executeCodeQLCommand(subcommand, options, positionalArgs, cwd);
+          result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
         } else if (command === 'qlt') {
-          result = await executeQLTCommand(subcommand, options, positionalArgs);
+          result = await executeQLTCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs]);
         } else {
           throw new Error(`Unsupported command: ${command}`);
         }

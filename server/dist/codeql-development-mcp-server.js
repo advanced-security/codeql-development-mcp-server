@@ -58042,6 +58042,34 @@ function registerCLITool(server, definition) {
             mkdirSync5(outputDir, { recursive: true });
           }
         }
+        const rawAdditionalArgs = Array.isArray(options.additionalArgs) ? options.additionalArgs : [];
+        delete options.additionalArgs;
+        const managedFlagNames = /* @__PURE__ */ new Set([
+          "evaluator-log",
+          "logdir",
+          "output",
+          "tuple-counting",
+          "verbosity"
+        ]);
+        const userAdditionalArgs = queryLogDir ? (() => {
+          const filteredAdditionalArgs = [];
+          for (let i = 0; i < rawAdditionalArgs.length; i += 1) {
+            const arg = rawAdditionalArgs[i];
+            const m = arg.match(/^--(?:no-)?([^=]+)(?:=.*)?$/);
+            if (m && managedFlagNames.has(m[1])) {
+              logger.warn(
+                `Ignoring "${arg}" from additionalArgs for ${name}: this flag is managed internally. Use the corresponding named parameter instead.`
+              );
+              const hasInlineValue = arg.includes("=");
+              if (!hasInlineValue && i + 1 < rawAdditionalArgs.length) {
+                i += 1;
+              }
+              continue;
+            }
+            filteredAdditionalArgs.push(arg);
+          }
+          return filteredAdditionalArgs;
+        })() : rawAdditionalArgs;
         let result;
         if (command === "codeql") {
           let cwd;
@@ -58058,9 +58086,9 @@ function registerCLITool(server, definition) {
           if (name === "codeql_test_run") {
             options["keep-databases"] = true;
           }
-          result = await executeCodeQLCommand(subcommand, options, positionalArgs, cwd);
+          result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
         } else if (command === "qlt") {
-          result = await executeQLTCommand(subcommand, options, positionalArgs);
+          result = await executeQLTCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs]);
         } else {
           throw new Error(`Unsupported command: ${command}`);
         }
