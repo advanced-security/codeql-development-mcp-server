@@ -4,9 +4,8 @@
 
 import { executeCodeQLCommand } from './cli-executor';
 import { logger } from '../utils/logger';
-import { fstatSync, openSync, readFileSync, writeFileSync } from 'fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, isAbsolute } from 'path';
-import { mkdirSync } from 'fs';
 
 export interface QueryEvaluationResult {
   success: boolean;
@@ -51,13 +50,18 @@ export async function extractQueryMetadata(queryPath: string): Promise<QueryMeta
   try {
     // Open once, then fstat + read via the fd to avoid TOCTOU race (CWE-367).
     const fd = openSync(queryPath, 'r');
-    const mtime = fstatSync(fd).mtimeMs;
-    const cached = metadataCache.get(queryPath);
-    if (cached && cached.mtime === mtime) {
-      return cached.metadata;
+    let queryContent: string;
+    let mtime: number;
+    try {
+      mtime = fstatSync(fd).mtimeMs;
+      const cached = metadataCache.get(queryPath);
+      if (cached && cached.mtime === mtime) {
+        return cached.metadata;
+      }
+      queryContent = readFileSync(fd, 'utf-8');
+    } finally {
+      closeSync(fd);
     }
-
-    const queryContent = readFileSync(fd, 'utf-8');
     const metadata: QueryMetadata = {};
 
     // Extract metadata from comments using regex patterns

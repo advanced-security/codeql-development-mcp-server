@@ -109,6 +109,18 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
         if (!subset) {
           return { content: [{ type: 'text' as const, text: `Cached content not available for key: ${cacheKey}` }] };
         }
+        let parsedResults: unknown;
+        try {
+          parsedResults = JSON.parse(subset.content);
+        } catch {
+          // getCacheSarifSubset fell back to plain-text content; return it as-is.
+          return {
+            content: [{
+              type: 'text' as const,
+              text: subset.content,
+            }],
+          };
+        }
         return {
           content: [{
             type: 'text' as const,
@@ -116,7 +128,7 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
               totalResults: subset.totalResults,
               returnedResults: subset.returnedResults,
               truncated: subset.truncated,
-              results: JSON.parse(subset.content),
+              results: parsedResults,
             }, null, 2),
           }],
         };
