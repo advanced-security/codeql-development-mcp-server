@@ -445,5 +445,27 @@ describe('SqliteStore', () => {
       expect(cleared).toBe(2);
       expect(store.listCacheEntries()).toHaveLength(0);
     });
+
+    it('should fall back to line-based retrieval for non-JSON SARIF content', () => {
+      const nonJsonContent = 'This is not valid JSON\nLine 2\nLine 3\nLine 4\nLine 5';
+      store.putCacheEntry({
+        cacheKey: 'bad-sarif',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'javascript',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest',
+        resultContent: nonJsonContent,
+      });
+
+      const subset = store.getCacheSarifSubset('bad-sarif', {});
+      expect(subset).not.toBeNull();
+      // Fallback should report 0 for result counts since it's not valid SARIF
+      expect(subset!.totalResults).toBe(0);
+      expect(subset!.returnedResults).toBe(0);
+      // Content should still be returned (line-based fallback)
+      expect(subset!.content).toContain('This is not valid JSON');
+    });
   });
 });

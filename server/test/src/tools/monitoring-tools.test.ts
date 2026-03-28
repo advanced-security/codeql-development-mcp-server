@@ -43,6 +43,7 @@ describe('Monitoring Tools', () => {
           maxActiveSessionsPerQuery: 3,
           scoringFrequency: 'per_call',
           archiveCompletedSessions: true,
+          enableAnnotationTools: false,
           enableRecommendations: true,
           enableMonitoringTools: false, // Default - tools disabled
         });
