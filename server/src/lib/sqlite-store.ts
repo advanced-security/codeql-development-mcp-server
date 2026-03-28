@@ -772,12 +772,15 @@ export class SqliteStore {
         truncated,
       };
     } catch {
-      const fallback = this.getCacheContentSubset(cacheKey, { maxLines: options.maxResults ?? 100 });
+      // Cached content is not valid SARIF JSON; fall back to line-oriented
+      // retrieval with a dedicated line limit.
+      const FALLBACK_MAX_LINES = 500;
+      const fallback = this.getCacheContentSubset(cacheKey, { maxLines: FALLBACK_MAX_LINES });
       if (!fallback) return null;
       return {
         content: fallback.content,
-        totalResults: fallback.totalLines,
-        returnedResults: fallback.returnedLines,
+        totalResults: 0,
+        returnedResults: 0,
         truncated: fallback.truncated,
       };
     }

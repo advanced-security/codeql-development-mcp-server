@@ -57,7 +57,7 @@ function registerAuditStoreFindingsTool(server: McpServer): void {
       repo: z.string().describe('Repository name.'),
       findings: z.array(z.object({
         sourceLocation: z.string().describe('File path of the finding.'),
-        line: z.number().describe('Line number of the finding.'),
+        line: z.number().int().min(1).describe('Line number of the finding (integer >= 1).'),
         sourceType: z.string().describe('Type of the source (e.g. "RemoteFlowSource").'),
         description: z.string().optional().describe('Human-readable description.'),
       })).describe('Array of findings to store.'),
@@ -152,7 +152,7 @@ function registerAuditAddNotesTool(server: McpServer): void {
       owner: z.string().describe('Repository owner.'),
       repo: z.string().describe('Repository name.'),
       sourceLocation: z.string().describe('File path of the finding.'),
-      line: z.number().describe('Line number of the finding.'),
+      line: z.number().int().min(1).describe('Line number of the finding (integer >= 1).'),
       notes: z.string().describe('Notes to append.'),
     },
     async ({ owner, repo, sourceLocation, line, notes }) => {

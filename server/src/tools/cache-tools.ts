@@ -136,7 +136,7 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
               totalResults: subset.totalResults,
               returnedResults: subset.returnedResults,
               truncated: subset.truncated,
-              results: parsedResults,
+              sarifSubset: parsedResults,
             }, null, 2),
           }],
         };

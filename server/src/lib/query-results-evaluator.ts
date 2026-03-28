@@ -36,8 +36,9 @@ export type BuiltInEvaluator = keyof typeof BUILT_IN_EVALUATORS;
 /**
  * In-memory cache for extracted query metadata, keyed by file path.
  * Stores the file modification time to invalidate when the file changes.
- * Bounded to {@link METADATA_CACHE_MAX} entries; oldest entries are evicted
- * when the limit is reached (Map iteration order = insertion order).
+ * Bounded to {@link METADATA_CACHE_MAX} entries; least-recently-used entries
+ * (by access) are evicted when the limit is reached. Entries are refreshed
+ * on cache hits via delete+set, so Map iteration order reflects LRU state.
  */
 const METADATA_CACHE_MAX = 256;
 const metadataCache = new Map<string, { mtime: number; metadata: QueryMetadata }>();

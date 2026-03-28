@@ -67,7 +67,7 @@ function registerAnnotationGetTool(server: McpServer): void {
     'annotation_get',
     'Retrieve a single annotation by its numeric ID.',
     {
-      id: z.number().describe('The annotation ID.'),
+      id: z.number().int().positive().describe('The annotation ID (positive integer primary key).'),
     },
     async ({ id }) => {
       const store = sessionDataManager.getStore();
@@ -118,7 +118,7 @@ function registerAnnotationUpdateTool(server: McpServer): void {
     'annotation_update',
     'Update the content, label, or metadata of an existing annotation.',
     {
-      id: z.number().describe('The annotation ID to update.'),
+      id: z.number().int().positive().describe('The annotation ID to update (positive integer primary key).'),
       content: z.string().optional().describe('New content (replaces existing).'),
       label: z.string().optional().describe('New label (replaces existing).'),
       metadata: z.string().optional().describe('New JSON-encoded metadata (replaces existing).'),
