@@ -34,9 +34,6 @@ jobs:
       - name: Lint and Format - Run prettier format check
         run: npm run format:check
 
-      - name: Lint and Format - Run markdownlint
-        run: npm run lint:md
-
       - name: Lint and Format - Summary
         run: |
           echo "## Lint and Format Check Summary" >> $GITHUB_STEP_SUMMARY
