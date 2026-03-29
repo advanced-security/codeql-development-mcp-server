@@ -77,7 +77,7 @@
           "callId": "step-6-search",
           "timestamp": "2026-01-01T00:05:00.000Z",
           "toolName": "annotation_search",
-          "parameters": {"query": "false positive"},
+          "parameters": {"search": "false positive"},
           "success": true,
           "duration": 100,
           "result": "Found annotated findings"
