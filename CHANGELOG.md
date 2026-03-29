@@ -215,7 +215,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 ### New Contributors
 
-- [@dependabot](https://github.com/dependabot)[bot] made their first contribution in [#49](https://github.com/advanced-security/codeql-development-mcp-server/pull/49)
+- @dependabot\[bot\] made their first contribution in [#49](https://github.com/advanced-security/codeql-development-mcp-server/pull/49)
 - [@MichaelRFairhurst](https://github.com/MichaelRFairhurst) made their first contribution in [#70](https://github.com/advanced-security/codeql-development-mcp-server/pull/70)
 - @github-actions[bot] made their first contribution in [#65](https://github.com/advanced-security/codeql-development-mcp-server/pull/65)
 

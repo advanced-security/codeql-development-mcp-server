@@ -26,6 +26,7 @@
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
+    "markdownlint-cli": "^0.48.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.2"
@@ -39,9 +40,10 @@
     "dev:stdio": "npm run dev:stdio -w server",
     "dev:http": "npm run dev:http -w server",
     "format": "prettier --write '**/*.{yml,yaml,md}'",
-    "format:check": "prettier --check '**/*.{yml,yaml,md}'",
+    "format:check": "prettier --check '**/*.{yml,yaml,md}' && npm run lint:md",
     "lint": "npm run lint -w client -w server -w extensions/vscode",
     "lint:fix": "npm run lint:fix -w client -w server -w extensions/vscode",
+    "lint:md": "markdownlint '**/*.md'",
     "start": "npm run start -w server",
     "test": "npm run test:server && npm run test:client && npm run test:vscode",
     "test:all": "npm run test:server && npm run test:client && npm run test:vscode",
@@ -49,7 +51,7 @@
     "test:server": "npm run test -w server",
     "test:vscode": "npm run test -w extensions/vscode",
     "package:vsix": "npm run clean:test-dbs && npm run build -w server && npm run package -w extensions/vscode",
-    "tidy": "npm run lint:fix && npm run format",
+    "tidy": "npm run lint:fix && npm run format && npm run lint:md",
     "tidy:check": "npm run lint && npm run format:check",
     "upgrade": "npm run upgrade:node",
     "upgrade:node": "npx -y npm-check-updates --color --install always --peer --reject zod --root --upgrade --workspaces"

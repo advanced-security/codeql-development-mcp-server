@@ -26,7 +26,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Lint and Format - Install node dependencies for all workspaces
-        run: npm ci --workspaces
+        run: npm ci
 
       - name: Lint and Format - Run eslint
         run: npm run lint
@@ -34,8 +34,12 @@ jobs:
       - name: Lint and Format - Run prettier format check
         run: npm run format:check
 
+      - name: Lint and Format - Run markdownlint
+        run: npm run lint:md
+
       - name: Lint and Format - Summary
         run: |
           echo "## Lint and Format Check Summary" >> $GITHUB_STEP_SUMMARY
           echo "✅ ESLint checks completed on all workspaces" >> $GITHUB_STEP_SUMMARY
           echo "✅ Prettier format checks completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Markdownlint checks completed" >> $GITHUB_STEP_SUMMARY
