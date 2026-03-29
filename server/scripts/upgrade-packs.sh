@@ -83,7 +83,8 @@ cd "${REPO_ROOT}"
 ## Strategy: run `codeql pack upgrade` first to resolve the latest compatible
 ## version into the lock file, then read the resolved version back and update
 ## the codeql-pack.yml to pin that exact version. Packs with wildcard
-## dependencies (e.g., '*') are skipped — those intentionally float.
+## dependencies (e.g., '*') still get their lock files upgraded, but the
+## pinning step is skipped — those versions intentionally float.
 pin_upstream_dep() {
 	local pack_dir="$1"
 	local pack_yml="${pack_dir}/codeql-pack.yml"
@@ -105,14 +106,21 @@ pin_upstream_dep() {
 	dep_name=$(echo "${dep_line}" | sed 's/^[[:space:]]*//' | cut -d: -f1)
 	dep_old_version=$(echo "${dep_line}" | sed 's/^[^:]*:[[:space:]]*//')
 
-	## Skip wildcard dependencies — these intentionally float
-	if [[ "${dep_old_version}" == *"*"* ]]; then
-		echo "  ℹ️  ${dep_name}: ${dep_old_version} (wildcard — skipping)"
-		return
+	## Always run codeql pack upgrade so the lock file stays in sync with
+	## the CLI, even for packs with wildcard dependencies that intentionally
+	## float. Only the pinning step is skipped for wildcard deps.
+	local upgrade_output
+	if ! upgrade_output=$(codeql pack upgrade -- "${pack_dir}" 2>&1); then
+		echo "  ❌ codeql pack upgrade failed for ${pack_dir}:" >&2
+		echo "${upgrade_output}" >&2
+		return 1
 	fi
 
-	## Run codeql pack upgrade to resolve the latest compatible version
-	codeql pack upgrade -- "${pack_dir}" >/dev/null 2>&1
+	## Skip pinning for wildcard dependencies — these intentionally float
+	if [[ "${dep_old_version}" == *"*"* ]]; then
+		echo "  ℹ️  ${dep_name}: ${dep_old_version} (wildcard — lock file upgraded, pinning skipped)"
+		return
+	fi
 
 	if [[ ! -f "${lock_file}" ]]; then
 		echo "  ⚠️  No lock file after upgrade for ${pack_dir}" >&2
