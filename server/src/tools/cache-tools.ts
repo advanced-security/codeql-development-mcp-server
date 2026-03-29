@@ -44,8 +44,9 @@ function registerQueryResultsCacheLookupTool(server: McpServer): void {
       queryName: z.string().optional().describe('Query name to search for (e.g. "PrintAST", "CallGraphFrom").'),
       databasePath: z.string().optional().describe('Database path to search for.'),
       language: z.string().optional().describe('Filter by language (e.g. "cpp", "javascript").'),
+      limit: z.number().int().positive().max(500).optional().describe('Maximum number of cache entries to return when listing by filter (default: 50, max: 500).'),
     },
-    async ({ cacheKey, queryName, databasePath, language }) => {
+    async ({ cacheKey, queryName, databasePath, language, limit }) => {
       const store = sessionDataManager.getStore();
 
       // Exact lookup by cache key
@@ -58,7 +59,7 @@ function registerQueryResultsCacheLookupTool(server: McpServer): void {
       }
 
       // List matching entries
-      const entries = store.listCacheEntries({ queryName, databasePath, language });
+      const entries = store.listCacheEntries({ queryName, databasePath, language, limit: limit ?? 50 });
       if (entries.length === 0) {
         return { content: [{ type: 'text' as const, text: JSON.stringify({ cached: false, queryName, databasePath, language }) }] };
       }

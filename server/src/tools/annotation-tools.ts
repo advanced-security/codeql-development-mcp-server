@@ -92,8 +92,8 @@ function registerAnnotationListTool(server: McpServer): void {
       category: z.string().optional().describe('Filter by annotation category.'),
       entityKey: z.string().optional().describe('Filter by exact entity key.'),
       entityKeyPrefix: z.string().optional().describe('Filter by entity key prefix (e.g. "repo:owner/name").'),
-      limit: z.number().optional().describe('Maximum number of results (default: 100).'),
-      offset: z.number().optional().describe('Number of results to skip.'),
+      limit: z.number().int().positive().optional().describe('Maximum number of results (default: 100).'),
+      offset: z.number().int().nonnegative().optional().describe('Number of results to skip.'),
     },
     async ({ category, entityKey, entityKeyPrefix, limit, offset }) => {
       const store = sessionDataManager.getStore();
@@ -170,7 +170,7 @@ function registerAnnotationSearchTool(server: McpServer): void {
     {
       search: z.string().describe('Full-text search query matched against annotation content, metadata, and label (SQLite FTS MATCH syntax; use * for prefix matching).'),
       category: z.string().optional().describe('Restrict search to a specific category.'),
-      limit: z.number().optional().describe('Maximum number of results (default: 50).'),
+      limit: z.number().int().positive().optional().describe('Maximum number of results (default: 50).'),
     },
     async ({ search, category, limit }) => {
       const store = sessionDataManager.getStore();

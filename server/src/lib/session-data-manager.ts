@@ -49,6 +49,14 @@ export class SessionDataManager {
    */
   async initialize(): Promise<void> {
     try {
+      // (Re)create the store if storageLocation changed since construction
+      // (e.g. via updateConfig or test mocks), closing the previous store first.
+      const storageDir = this.getConfig().storageLocation;
+      if (storageDir !== this.storageDir) {
+        this.store.close();
+        this.storageDir = storageDir;
+        this.store = new SqliteStore(this.storageDir);
+      }
       await this.store.initialize();
       const count = this.store.countSessions();
       logger.info(`Session data manager initialized with ${count} sessions`);

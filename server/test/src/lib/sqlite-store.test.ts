@@ -197,6 +197,23 @@ describe('SqliteStore', () => {
     it('should throw when deleting without a filter', () => {
       expect(() => store.deleteAnnotations({})).toThrow('at least one filter');
     });
+
+    it('should return empty results for invalid FTS MATCH syntax', () => {
+      store.createAnnotation('note', 'key', 'hello world');
+      // Trailing operator is invalid FTS syntax and would normally throw.
+      // listAnnotations should catch it and return [] instead.
+      const results = store.listAnnotations({ search: 'hello AND' });
+      expect(results).toEqual([]);
+    });
+
+    it('should support offset without explicit limit', () => {
+      for (let i = 0; i < 5; i++) {
+        store.createAnnotation('note', `key-${i}`, `content ${i}`);
+      }
+      // Offset only — previously would cause a SQLite syntax error.
+      const results = store.listAnnotations({ offset: 2 });
+      expect(results).toHaveLength(3);
+    });
   });
 
   describe('Persistence', () => {
@@ -410,6 +427,18 @@ describe('SqliteStore', () => {
       expect(store.listCacheEntries({ queryName: 'PrintAST' })).toHaveLength(2);
       expect(store.listCacheEntries({ databasePath: '/db1' })).toHaveLength(2);
       expect(store.listCacheEntries({ language: 'java' })).toHaveLength(1);
+    });
+
+    it('should limit cache entries returned when limit filter is set', () => {
+      for (let i = 0; i < 5; i++) {
+        store.putCacheEntry({
+          cacheKey: `k${i}`, queryName: 'Q', queryPath: '/q.ql',
+          databasePath: '/db', language: 'cpp', codeqlVersion: '2.25.0',
+          outputFormat: 'csv', resultContent: `c${i}`,
+        });
+      }
+      const limited = store.listCacheEntries({ limit: 3 });
+      expect(limited).toHaveLength(3);
     });
 
     it('should clear cache entries by filter', () => {
