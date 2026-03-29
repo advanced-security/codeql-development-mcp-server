@@ -3,4 +3,4 @@ version: 2.25.1
 description: 'Queries for codeql-development-mcp-server tools for java language'
 library: false
 dependencies:
-  codeql/java-all: 9.0.0
+  codeql/java-all: 9.0.2

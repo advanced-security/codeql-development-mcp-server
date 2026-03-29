@@ -3,4 +3,4 @@ version: 2.25.1
 description: 'Queries for codeql-development-mcp-server tools for cpp language'
 library: false
 dependencies:
-  codeql/cpp-all: 8.0.1
+  codeql/cpp-all: 8.0.3

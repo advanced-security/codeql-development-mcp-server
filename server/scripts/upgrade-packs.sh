@@ -4,9 +4,9 @@ set -euo pipefail
 ## upgrade-packs.sh
 ## Upgrade CodeQL pack dependencies for packs in the codeql-development-mcp-server
 ## repository. Unlike install-packs.sh (which honours existing lock files), this
-## script runs `codeql pack upgrade` to regenerate lock files with the latest
-## compatible dependency versions. This is necessary when the CodeQL CLI version
-## changes and existing lock files may reference incompatible pack versions.
+## script resolves and pins the latest compatible codeql/<lang>-all dependency
+## version in each source pack, then runs `codeql pack upgrade` to regenerate
+## lock files. This is the script to use when the CodeQL CLI version changes.
 ##
 ## Usage:
 ##   ./server/scripts/upgrade-packs.sh
@@ -22,7 +22,8 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Upgrade CodeQL pack dependencies for all packs in the repository.
-Regenerates codeql-pack.lock.yml files with the latest compatible versions.
+Resolves and pins the latest compatible codeql/<lang>-all version in each
+source pack, then regenerates codeql-pack.lock.yml files.
 
 OPTIONS:
     --language <lang>  Upgrade packs only for the specified language
@@ -76,10 +77,80 @@ fi
 
 cd "${REPO_ROOT}"
 
+## Resolve and pin the latest compatible version of the codeql/<lang>-all
+## upstream dependency in a source pack's codeql-pack.yml.
+##
+## Uses `codeql resolve library-path --format=json` to discover the version
+## that the current CLI resolves for the pack, then updates codeql-pack.yml
+## to pin that exact version. Packs with wildcard or range dependencies
+## (e.g., '*') are skipped — those intentionally float.
+pin_upstream_dep() {
+	local pack_dir="$1"
+	local pack_yml="${pack_dir}/codeql-pack.yml"
+
+	if [[ ! -f "${pack_yml}" ]]; then
+		return
+	fi
+
+	## Extract the codeql/*-all dependency name and current version
+	local dep_line
+	dep_line=$(grep -m1 "codeql/.*-all:" "${pack_yml}" || true)
+	if [[ -z "${dep_line}" ]]; then
+		echo "  No codeql/*-all dependency found in ${pack_yml}, skipping"
+		return
+	fi
+
+	local dep_name dep_old_version
+	dep_name=$(echo "${dep_line}" | sed 's/^[[:space:]]*//' | cut -d: -f1)
+	dep_old_version=$(echo "${dep_line}" | sed 's/^[^:]*:[[:space:]]*//')
+
+	## Skip wildcard/range dependencies — these intentionally float
+	if [[ "${dep_old_version}" == *"*"* || "${dep_old_version}" == *"^"* || "${dep_old_version}" == *">"* ]]; then
+		echo "  ℹ️  ${dep_name}: ${dep_old_version} (wildcard/range — skipping)"
+		return
+	fi
+
+	## Resolve the library path to discover the version the CLI selects.
+	## The JSON output contains a libraryPath array with entries like:
+	##   /path/.codeql/packages/codeql/javascript-all/2.6.26
+	## We extract the version from the path segment matching the dep name.
+	local resolved_version=""
+	local lib_path_json
+	lib_path_json=$(codeql resolve library-path --format=json --dir="${pack_dir}" 2>/dev/null || true)
+	if [[ -n "${lib_path_json}" ]]; then
+		resolved_version=$(echo "${lib_path_json}" \
+			| python3 -c "
+import json, sys, os
+data = json.load(sys.stdin)
+for p in data.get('libraryPath', []):
+    parts = p.split(os.sep)
+    for i in range(len(parts) - 2):
+        if parts[i] + '/' + parts[i+1] == '${dep_name}':
+            print(parts[i+2])
+            sys.exit(0)
+" 2>/dev/null || true)
+	fi
+
+	if [[ -n "${resolved_version}" ]]; then
+		if [[ "${dep_old_version}" != "${resolved_version}" ]]; then
+			sed -i.bak "s|${dep_name}: ${dep_old_version}|${dep_name}: ${resolved_version}|" "${pack_yml}"
+			rm -f "${pack_yml}.bak"
+			echo "  ✅ ${dep_name}: ${dep_old_version} -> ${resolved_version}"
+		else
+			echo "  ✅ ${dep_name}: ${resolved_version} (already current)"
+		fi
+	else
+		echo "  ⚠️  Could not resolve version for ${dep_name}, kept ${dep_old_version}" >&2
+	fi
+}
+
 ## Upgrade the src and test packs for a given parent directory.
 upgrade_packs() {
 	local _parent_dir="$1"
+
 	if [[ -d "${_parent_dir}/src" ]]; then
+		echo "INFO: Resolving latest upstream dependency for '${_parent_dir}/src'..."
+		pin_upstream_dep "${_parent_dir}/src"
 		echo "INFO: Running 'codeql pack upgrade' for '${_parent_dir}/src'..."
 		codeql pack upgrade -- "${_parent_dir}/src"
 	else
