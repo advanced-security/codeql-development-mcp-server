@@ -472,19 +472,33 @@ export class SqliteStore {
       params.$limit = filter.limit;
     }
     if (filter?.offset !== undefined) {
+      if (filter?.limit === undefined) {
+        // SQLite requires LIMIT when OFFSET is used; -1 means unlimited.
+        sql += ' LIMIT -1';
+      }
       sql += ' OFFSET $offset';
       params.$offset = filter.offset;
     }
 
     const stmt = db.prepare(sql);
-    stmt.bind(params);
-
-    const results: Annotation[] = [];
-    while (stmt.step()) {
-      results.push(stmt.getAsObject() as unknown as Annotation);
+    try {
+      stmt.bind(params);
+      const results: Annotation[] = [];
+      while (stmt.step()) {
+        results.push(stmt.getAsObject() as unknown as Annotation);
+      }
+      return results;
+    } catch (err) {
+      if (filter?.search) {
+        // Invalid FTS MATCH syntax (e.g. trailing operator) — return an empty
+        // result set rather than propagating the parse error to callers.
+        logger.warn('FTS MATCH query failed (invalid syntax?); returning empty results:', err);
+        return [];
+      }
+      throw err;
+    } finally {
+      stmt.free();
     }
-    stmt.free();
-    return results;
   }
 
   /**
@@ -793,6 +807,7 @@ export class SqliteStore {
     queryName?: string;
     databasePath?: string;
     language?: string;
+    limit?: number;
   }): Array<{
     cacheKey: string;
     queryName: string;
@@ -805,7 +820,7 @@ export class SqliteStore {
   }> {
     const db = this.ensureDb();
     const conditions: string[] = [];
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = {};
 
     if (filter?.queryName) {
       conditions.push('query_name = $query_name');
@@ -827,6 +842,11 @@ export class SqliteStore {
       sql += ' WHERE ' + conditions.join(' AND ');
     }
     sql += ' ORDER BY created_at DESC';
+
+    if (filter?.limit !== undefined) {
+      sql += ' LIMIT $limit';
+      params.$limit = filter.limit;
+    }
 
     const stmt = db.prepare(sql);
     stmt.bind(params);

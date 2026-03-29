@@ -109,7 +109,7 @@ function registerAuditListFindingsTool(server: McpServer): void {
     {
       owner: z.string().describe('Repository owner.'),
       repo: z.string().describe('Repository name.'),
-      limit: z.number().optional().describe('Maximum number of results.'),
+      limit: z.number().int().positive().max(1000).optional().describe('Maximum number of results (1–1000).'),
     },
     async ({ owner, repo, limit }) => {
       const store = sessionDataManager.getStore();
