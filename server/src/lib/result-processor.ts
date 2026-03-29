@@ -9,8 +9,7 @@
 import { basename, dirname } from 'path';
 import { mkdirSync, readFileSync } from 'fs';
 import { createHash } from 'crypto';
-import { executeCodeQLCommand, CLIExecutionResult } from './cli-executor';
-import { getActualCodeqlVersion } from './cli-executor';
+import { CLIExecutionResult, executeCodeQLCommand, getActualCodeqlVersion } from './cli-executor';
 import { evaluateQueryResults, extractQueryMetadata, QueryEvaluationResult } from './query-results-evaluator';
 import { resolveQueryPath } from './query-resolver';
 import { sessionDataManager } from './session-data-manager';
