@@ -1,0 +1,9 @@
+{
+  "toolName": "query_results_cache_lookup",
+  "parameters": {
+    "queryName": "PrintAST",
+    "language": "javascript"
+  },
+  "success": true,
+  "description": "Successfully looked up cached query results by query name and language"
+}

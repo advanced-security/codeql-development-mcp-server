@@ -17,11 +17,11 @@ import { defineConfig } from '@vscode/test-cli';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
-// Use a workspace-local .tmp path for user-data-dir to keep test artifacts
-// within the project. On macOS with deep workspace paths this may emit an
-// IPC socket length warning (>103 chars) — this is benign and non-blocking.
+// Place user-data-dir at the *project root* .tmp/ rather than under
+// extensions/vscode/.tmp/ — the shorter path keeps the IPC socket under
+// the 103-char sun_path limit on macOS/Linux.
 const extensionRoot = fileURLToPath(new URL('.', import.meta.url));
-const userDataDir = join(extensionRoot, '.tmp', 'vsc-ud');
+const userDataDir = join(extensionRoot, '..', '..', '.tmp', 'vsc-ud');
 
 export default defineConfig([
   {

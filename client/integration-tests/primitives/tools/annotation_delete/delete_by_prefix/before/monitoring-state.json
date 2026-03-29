@@ -1,0 +1,8 @@
+{
+  "toolName": "annotation_delete",
+  "parameters": {
+    "entityKeyPrefix": "file:test/"
+  },
+  "expectedSuccess": true,
+  "description": "Test annotation_delete tool deletes annotations matching an entity key prefix"
+}
