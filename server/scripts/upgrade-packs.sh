@@ -80,13 +80,14 @@ cd "${REPO_ROOT}"
 ## Resolve and pin the latest compatible version of the codeql/<lang>-all
 ## upstream dependency in a source pack's codeql-pack.yml.
 ##
-## Uses `codeql resolve library-path --format=json` to discover the version
-## that the current CLI resolves for the pack, then updates codeql-pack.yml
-## to pin that exact version. Packs with wildcard or range dependencies
-## (e.g., '*') are skipped — those intentionally float.
+## Strategy: run `codeql pack upgrade` first to resolve the latest compatible
+## version into the lock file, then read the resolved version back and update
+## the codeql-pack.yml to pin that exact version. Packs with wildcard
+## dependencies (e.g., '*') are skipped — those intentionally float.
 pin_upstream_dep() {
 	local pack_dir="$1"
 	local pack_yml="${pack_dir}/codeql-pack.yml"
+	local lock_file="${pack_dir}/codeql-pack.lock.yml"
 
 	if [[ ! -f "${pack_yml}" ]]; then
 		return
@@ -104,43 +105,36 @@ pin_upstream_dep() {
 	dep_name=$(echo "${dep_line}" | sed 's/^[[:space:]]*//' | cut -d: -f1)
 	dep_old_version=$(echo "${dep_line}" | sed 's/^[^:]*:[[:space:]]*//')
 
-	## Skip wildcard/range dependencies — these intentionally float
-	if [[ "${dep_old_version}" == *"*"* || "${dep_old_version}" == *"^"* || "${dep_old_version}" == *">"* ]]; then
-		echo "  ℹ️  ${dep_name}: ${dep_old_version} (wildcard/range — skipping)"
+	## Skip wildcard dependencies — these intentionally float
+	if [[ "${dep_old_version}" == *"*"* ]]; then
+		echo "  ℹ️  ${dep_name}: ${dep_old_version} (wildcard — skipping)"
 		return
 	fi
 
-	## Resolve the library path to discover the version the CLI selects.
-	## The JSON output contains a libraryPath array with entries like:
-	##   /path/.codeql/packages/codeql/javascript-all/2.6.26
-	## We extract the version from the path segment matching the dep name.
-	local resolved_version=""
-	local lib_path_json
-	lib_path_json=$(codeql resolve library-path --format=json --dir="${pack_dir}" 2>/dev/null || true)
-	if [[ -n "${lib_path_json}" ]]; then
-		resolved_version=$(echo "${lib_path_json}" \
-			| python3 -c "
-import json, sys, os
-data = json.load(sys.stdin)
-for p in data.get('libraryPath', []):
-    parts = p.split(os.sep)
-    for i in range(len(parts) - 2):
-        if parts[i] + '/' + parts[i+1] == '${dep_name}':
-            print(parts[i+2])
-            sys.exit(0)
-" 2>/dev/null || true)
+	## Run codeql pack upgrade to resolve the latest compatible version
+	codeql pack upgrade -- "${pack_dir}" >/dev/null 2>&1
+
+	if [[ ! -f "${lock_file}" ]]; then
+		echo "  ⚠️  No lock file after upgrade for ${pack_dir}" >&2
+		return
 	fi
 
-	if [[ -n "${resolved_version}" ]]; then
-		if [[ "${dep_old_version}" != "${resolved_version}" ]]; then
-			sed -i.bak "s|${dep_name}: ${dep_old_version}|${dep_name}: ${resolved_version}|" "${pack_yml}"
-			rm -f "${pack_yml}.bak"
-			echo "  ✅ ${dep_name}: ${dep_old_version} -> ${resolved_version}"
-		else
-			echo "  ✅ ${dep_name}: ${resolved_version} (already current)"
-		fi
+	## Read the resolved version from the lock file
+	local resolved_version
+	resolved_version=$(awk "/${dep_name//\//\\/}:/{getline; print}" "${lock_file}" \
+		| sed 's/.*version:[[:space:]]*//' | head -1)
+
+	if [[ -z "${resolved_version}" ]]; then
+		echo "  ⚠️  ${dep_name}: not found in lock file, kept ${dep_old_version}" >&2
+		return
+	fi
+
+	if [[ "${dep_old_version}" != "${resolved_version}" ]]; then
+		sed -i.bak "s|${dep_name}: ${dep_old_version}|${dep_name}: ${resolved_version}|" "${pack_yml}"
+		rm -f "${pack_yml}.bak"
+		echo "  ✅ ${dep_name}: ${dep_old_version} -> ${resolved_version}"
 	else
-		echo "  ⚠️  Could not resolve version for ${dep_name}, kept ${dep_old_version}" >&2
+		echo "  ✅ ${dep_name}: ${resolved_version} (already current)"
 	fi
 }
 
@@ -149,10 +143,8 @@ upgrade_packs() {
 	local _parent_dir="$1"
 
 	if [[ -d "${_parent_dir}/src" ]]; then
-		echo "INFO: Resolving latest upstream dependency for '${_parent_dir}/src'..."
+		echo "INFO: Upgrading '${_parent_dir}/src'..."
 		pin_upstream_dep "${_parent_dir}/src"
-		echo "INFO: Running 'codeql pack upgrade' for '${_parent_dir}/src'..."
-		codeql pack upgrade -- "${_parent_dir}/src"
 	else
 		echo "WARNING: Directory '${_parent_dir}/src' not found, skipping" >&2
 	fi
