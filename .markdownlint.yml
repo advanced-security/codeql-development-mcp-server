@@ -1,0 +1,15 @@
+# markdownlint configuration
+# https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.yaml
+#
+# This config is consumed by:
+#   1. The repo-maintained `npm run lint:md` script (markdownlint-cli)
+#   2. The org-required `markdown-lint.yml` workflow (markdownlint-cli)
+
+# MD013 - Line length: disabled (handled by prettier)
+MD013: false
+
+# MD024 - Multiple headings with the same content: allow across sections
+# Changelogs and release notes intentionally repeat headings like
+# "### Added", "### Changed", "#### MCP Server Tools" under each version.
+MD024:
+  siblings_only: true
