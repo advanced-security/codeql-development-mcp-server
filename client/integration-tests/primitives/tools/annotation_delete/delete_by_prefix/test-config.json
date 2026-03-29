@@ -1,0 +1,6 @@
+{
+  "toolName": "annotation_delete",
+  "arguments": {
+    "entityKeyPrefix": "file:test/"
+  }
+}

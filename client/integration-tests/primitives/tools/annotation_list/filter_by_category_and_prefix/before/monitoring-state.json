@@ -1,0 +1,10 @@
+{
+  "toolName": "annotation_list",
+  "parameters": {
+    "category": "note",
+    "entityKeyPrefix": "file:test/",
+    "limit": 10
+  },
+  "expectedSuccess": true,
+  "description": "Test annotation_list tool filters annotations by category and entity key prefix"
+}

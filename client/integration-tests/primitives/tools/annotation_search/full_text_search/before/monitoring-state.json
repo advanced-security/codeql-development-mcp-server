@@ -1,0 +1,9 @@
+{
+  "toolName": "annotation_search",
+  "parameters": {
+    "query": "SQL injection",
+    "limit": 20
+  },
+  "expectedSuccess": true,
+  "description": "Test annotation_search tool performs full-text search across annotation content"
+}

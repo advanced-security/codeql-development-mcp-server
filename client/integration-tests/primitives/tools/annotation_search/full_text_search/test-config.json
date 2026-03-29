@@ -1,0 +1,7 @@
+{
+  "toolName": "annotation_search",
+  "arguments": {
+    "query": "SQL injection",
+    "limit": 20
+  }
+}
