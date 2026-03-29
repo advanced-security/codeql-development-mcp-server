@@ -26,21 +26,25 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 #### MCP Server Tools
 
-- Duplicated code detection tools to support the new duplicate-code workflow prompts. ([#109](https://github.com/advanced-security/codeql-development-mcp-server/pull/109))
+| Tool                        | Description                                                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check_for_duplicated_code` | Detects duplicated code patterns across CodeQL databases to support the duplicate-code workflow prompts. ([#109](https://github.com/advanced-security/codeql-development-mcp-server/pull/109)) |
+| `find_overlapping_queries`  | Finds overlapping or redundant CodeQL queries to support the duplicate-code workflow prompts. ([#109](https://github.com/advanced-security/codeql-development-mcp-server/pull/109))            |
 
 #### MCP Server Prompts
 
-- Duplicated code detection prompts for guiding agents through finding and reporting code duplication. ([#109](https://github.com/advanced-security/codeql-development-mcp-server/pull/109))
+| Prompt                      | Description                                                                                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `check_for_duplicated_code` | Guides agents through finding and reporting duplicated code patterns across a CodeQL database. ([#109](https://github.com/advanced-security/codeql-development-mcp-server/pull/109)) |
+| `find_overlapping_queries`  | Guides agents through identifying overlapping or redundant CodeQL queries. ([#109](https://github.com/advanced-security/codeql-development-mcp-server/pull/109))                     |
 
 #### CodeQL Query Packs
 
-- `CallGraphFromTo` queries added for all supported languages (actions, cpp, csharp, go, java, javascript, python, ruby, swift). ([#168](https://github.com/advanced-security/codeql-development-mcp-server/pull/168))
+| Pack              | Description                                                                                                                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CallGraphFromTo` | Unified call-graph entry-point queries added for all supported languages (actions, cpp, csharp, go, java, javascript, python, ruby, swift). ([#168](https://github.com/advanced-security/codeql-development-mcp-server/pull/168)) |
 
 ### Changed
-
-#### MCP Server Tools
-
-- `codeql_database_analyze` — Fixed `additionalArgs` pass-through so extra CLI arguments are correctly forwarded. ([#188](https://github.com/advanced-security/codeql-development-mcp-server/pull/188))
 
 #### Infrastructure & CI/CD
 

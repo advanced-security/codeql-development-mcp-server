@@ -50,8 +50,8 @@ Within `Added` and `Changed`, use sub-headings to group by area: `MCP Server Too
 Identify all merged PRs since the last stable release tag.
 
 ```sh
-# List PRs merged since the last stable release
-git log --oneline --merges v2.25.0..HEAD
+# List PRs merged since the last stable release (replace vPREV with the last stable tag)
+git log --oneline --merges vPREV..HEAD
 ```
 
 Alternatively, use the GitHub compare view:
