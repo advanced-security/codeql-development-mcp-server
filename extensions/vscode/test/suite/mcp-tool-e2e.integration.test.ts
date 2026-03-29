@@ -360,6 +360,12 @@ suite('MCP Annotation & Audit Tool Integration Tests', () => {
     const mrvaText = (mrvaResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
     assert.ok(mrvaText.includes('10001'), 'Should find fixture MRVA run 10001');
 
+    // Step 1b: Clear any pre-existing data (idempotent, tolerates empty state)
+    await client.callTool({
+      name: 'audit_clear_repo',
+      arguments: { owner: 'arduino', repo: 'Arduino' },
+    });
+
     // Step 2: Store findings for a repository
     const storeResult = await client.callTool({
       name: 'audit_store_findings',
@@ -400,7 +406,7 @@ suite('MCP Annotation & Audit Tool Integration Tests', () => {
     // Step 5: Search for annotated findings
     const searchResult = await client.callTool({
       name: 'annotation_search',
-      arguments: { query: 'false positive' },
+      arguments: { search: 'false positive' },
     });
     assert.ok(!searchResult.isError, 'annotation_search should succeed');
     const searchText = (searchResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
