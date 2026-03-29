@@ -1,6 +1,6 @@
 name: advanced-security/ql-mcp-python-tools-src
-version: 2.25.0
+version: 2.25.1
 description: 'Queries for codeql-development-mcp-server tools for python language'
 library: false
 dependencies:
-  codeql/python-all: 7.0.1
+  codeql/python-all: 7.0.3

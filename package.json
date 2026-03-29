@@ -1,6 +1,6 @@
 {
   "name": "codeql-development-mcp-server_repo",
-  "version": "2.25.0",
+  "version": "2.25.1",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
   "private": true,
   "type": "module",
@@ -40,7 +40,7 @@
     "dev:stdio": "npm run dev:stdio -w server",
     "dev:http": "npm run dev:http -w server",
     "format": "prettier --write '**/*.{yml,yaml,md}'",
-    "format:check": "prettier --check '**/*.{yml,yaml,md}'",
+    "format:check": "prettier --check '**/*.{yml,yaml,md}' && npm run lint:md",
     "lint": "npm run lint -w client -w server -w extensions/vscode",
     "lint:fix": "npm run lint:fix -w client -w server -w extensions/vscode",
     "lint:md": "markdownlint '**/*.md'",
