@@ -14,6 +14,36 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.25.1] — 2026-03-29
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.25.1** — Full compatibility with the latest CodeQL CLI release, including upgraded QL pack dependencies for all supported languages. ([#192](https://github.com/advanced-security/codeql-development-mcp-server/pull/192))
+- **Added `CHANGELOG.md` with full release history** — Comprehensive changelog following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, with a maintenance agent skill and `markdownlint` CI enforcement. ([#193](https://github.com/advanced-security/codeql-development-mcp-server/pull/193))
+
+### Added
+
+#### Infrastructure & CI/CD
+
+- Added `CHANGELOG.md` covering all stable releases (v2.24.0 through v2.25.0) with Highlights, Added, Changed, Fixed, Dependencies, and other standard sections. ([#193](https://github.com/advanced-security/codeql-development-mcp-server/pull/193))
+- Added `maintain-changelog` agent skill (`.github/skills/maintain-changelog/SKILL.md`) with a 5-phase workflow for drafting, classifying, and promoting changelog entries. ([#193](https://github.com/advanced-security/codeql-development-mcp-server/pull/193))
+- Added `changelog_md.instructions.md` applied automatically when editing `CHANGELOG.md`. ([#193](https://github.com/advanced-security/codeql-development-mcp-server/pull/193))
+- Added `markdownlint-cli` with `.markdownlint.yml` config and `.markdownlintignore`, enforced via `npm run lint:md` and the `lint-and-format.yml` CI workflow. ([#193](https://github.com/advanced-security/codeql-development-mcp-server/pull/193))
+
+### Fixed
+
+- **`upgrade-packs.sh` not enforcing explicit upgrades** — Fixed the pack upgrade script to always regenerate lock files and display output on failure, preventing silent staleness during CodeQL CLI upgrades. ([#192](https://github.com/advanced-security/codeql-development-mcp-server/pull/192))
+
+### Dependencies
+
+- Upgraded CodeQL CLI dependency to v2.25.1. ([#192](https://github.com/advanced-security/codeql-development-mcp-server/pull/192))
+- Upgraded all `ql-mcp-*` pack dependencies and regenerated lock files for all supported languages. ([#192](https://github.com/advanced-security/codeql-development-mcp-server/pull/192))
+- Added `markdownlint-cli` as a root dev dependency. ([#193](https://github.com/advanced-security/codeql-development-mcp-server/pull/193))
+
+**Full Changelog**: [`v2.25.0...v2.25.1`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.0...v2.25.1)
+
+---
+
 ## [v2.25.0] — 2026-03-27
 
 ### Highlights
@@ -278,7 +308,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.0...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.1...HEAD
+[v2.25.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.1
 [v2.25.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.0
 [v2.24.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.24.3
 [v2.24.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.24.2
