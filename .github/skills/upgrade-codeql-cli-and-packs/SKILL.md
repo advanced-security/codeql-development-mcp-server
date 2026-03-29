@@ -289,3 +289,4 @@ See [verify-pack-compatibility.sh](verify-pack-compatibility.sh) for automated c
 
 - [add-mcp-support-for-new-language](../add-mcp-support-for-new-language/SKILL.md) - Adding support for new CodeQL languages
 - [validate-ql-mcp-server-tools-queries](../validate-ql-mcp-server-tools-queries/SKILL.md) - Validating tool query functionality
+- [maintain-changelog](../maintain-changelog/SKILL.md) - Updating `CHANGELOG.md` when preparing a release

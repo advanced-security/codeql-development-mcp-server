@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+server/dist
+coverage
+server/coverage
+extensions/vscode/coverage
+extensions/vscode/.vscode-test
+extensions/vscode/test/fixtures
+server/ql/*/tools/test/*
+server/src/prompts/
+server/src/resources/
+workshops
+**/*.testproj
+client/**/after/
+client/**/before/
+query-results*
