@@ -1,0 +1,7 @@
+{
+  "toolName": "query_results_cache_retrieve",
+  "arguments": {
+    "cacheKey": "nonexistent-key-for-test",
+    "maxLines": 50
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "toolName": "query_results_cache_compare",
+  "arguments": {
+    "queryName": "CallGraphFrom"
+  }
+}

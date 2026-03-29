@@ -1,0 +1,7 @@
+{
+  "toolName": "audit_list_findings",
+  "arguments": {
+    "owner": "arduino",
+    "repo": "Arduino"
+  }
+}

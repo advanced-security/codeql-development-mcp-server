@@ -4,66 +4,19 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { executeCodeQLCommand, executeQLTCommand, CLIExecutionResult } from './cli-executor';
+import { CLIExecutionResult, executeCodeQLCommand, executeQLTCommand } from './cli-executor';
+import { resolveDatabasePath } from './database-resolver';
 import { logger } from '../utils/logger';
-import { evaluateQueryResults, QueryEvaluationResult, extractQueryMetadata } from './query-results-evaluator';
 import { getOrCreateLogDirectory } from './log-directory-manager';
-import { getUserWorkspaceDir, packageRootDir, resolveToolQueryPackPath } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
-import { basename, delimiter, dirname, isAbsolute, join, resolve } from 'path';
+import { resolveQueryPath } from './query-resolver';
+import { processQueryRunResults } from './result-processor';
+import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
+import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
-
-/**
- * Resolve a database path that may point to a multi-language database root
- * (i.e. a directory that does not contain `codeql-database.yml` itself but
- * has a language subfolder that does). This handles the common case where
- * vscode-codeql stores databases in a parent directory with language
- * subfolders like `javascript/`, `python/`, etc.
- *
- * When multiple candidate children are found, throws an error describing
- * the ambiguity so the caller can pick the right one explicitly.
- */
-function resolveDatabasePath(dbPath: string): string {
-  if (existsSync(join(dbPath, 'codeql-database.yml'))) {
-    return dbPath;
-  }
-  try {
-    const entries = readdirSync(dbPath);
-    const candidates: string[] = [];
-    for (const entry of entries) {
-      const candidate = join(dbPath, entry);
-      try {
-        if (statSync(candidate).isDirectory() &&
-            existsSync(join(candidate, 'codeql-database.yml'))) {
-          candidates.push(candidate);
-        }
-      } catch {
-        // Skip inaccessible entries
-      }
-    }
-    if (candidates.length === 1) {
-      logger.info(`Resolved database directory: ${dbPath} -> ${candidates[0]}`);
-      return candidates[0];
-    }
-    if (candidates.length > 1) {
-      const names = candidates.map((c) => basename(c)).join(', ');
-      throw new Error(
-        `Ambiguous database path: ${dbPath} contains multiple databases (${names}). ` +
-        'Specify the full path to the desired database subfolder.'
-      );
-    }
-  } catch (err) {
-    // Re-throw ambiguity errors
-    if (err instanceof Error && err.message.startsWith('Ambiguous database path')) {
-      throw err;
-    }
-    // Parent directory not readable — return original path
-  }
-  return dbPath;
-}
 
 export interface CLIToolDefinition {
   name: string;
@@ -291,6 +244,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             const resolvedQuery = await resolveQueryPath(params, logger);
             if (resolvedQuery) {
               positionalArgs = [...positionalArgs, resolvedQuery];
+              // Store the resolved path so processQueryRunResults can reuse it
+              // without calling resolveQueryPath a second time
+              params._resolvedQueryPath = resolvedQuery;
             } else if (query) {
               positionalArgs = [...positionalArgs, query as string];
             }
@@ -572,36 +528,11 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Post-execution processing for codeql_query_run
         if (name === 'codeql_query_run' && result.success && queryLogDir) {
-          // Generate SARIF interpretation if results.bqrs exists and query path is known
-          const bqrsPath = options.output as string;
-          const sarifPath = join(queryLogDir, 'results-interpreted.sarif');
-
-          // The query file path is the last positional argument (set during query resolution)
-          const queryFilePath = positionalArgs.length > 0 ? positionalArgs[positionalArgs.length - 1] : undefined;
-
-          if (existsSync(bqrsPath) && queryFilePath) {
-            try {
-              const sarifResult = await interpretBQRSFile(
-                bqrsPath,
-                queryFilePath,
-                'sarif-latest',
-                sarifPath,
-                logger
-              );
-
-              if (sarifResult.success) {
-                logger.info(`Generated SARIF interpretation at ${sarifPath}`);
-              } else {
-                logger.warn(`SARIF interpretation returned error: ${sarifResult.error || sarifResult.stderr}`);
-              }
-            } catch (error) {
-              logger.warn(`Failed to generate SARIF interpretation: ${error}`);
-            }
-          } else if (existsSync(bqrsPath) && !queryFilePath) {
-            logger.warn('Skipping SARIF interpretation: query file path not available');
+          // Ensure params has the output path (may have been auto-set in options)
+          if (!params.output && options.output) {
+            params.output = options.output;
           }
-
-          // Process evaluation results
+          // Process query results: interpretation (SARIF/graphtext/CSV) + auto-caching
           result = await processQueryRunResults(result, params, logger);
         }
 
@@ -766,309 +697,3 @@ export const createDatabaseResultProcessor = () => (
   
   return output;
 };
-
-/**
- * Resolve query path for codeql_query_run tool
- * If queryName and queryLanguage are provided, resolve using codeql resolve queries
- */
-async function resolveQueryPath(
-  params: Record<string, unknown>, 
-  logger: { info: (_message: string, ..._args: unknown[]) => void; error: (_message: string, ..._args: unknown[]) => void }
-): Promise<string | null> {
-  const { queryName, queryLanguage, queryPack, query } = params;
-  
-  // Validate parameter usage - queryName and query are mutually exclusive
-  if (queryName && query) {
-    logger.error('Cannot use both "query" and "queryName" parameters simultaneously. Use either "query" for direct file path OR "queryName" + "queryLanguage" for tool queries.');
-    throw new Error('Cannot use both "query" and "queryName" parameters simultaneously. Use either "query" for direct file path OR "queryName" + "queryLanguage" for tool queries.');
-  }
-  
-  // If no queryName provided, fall back to direct query parameter
-  if (!queryName) {
-    return query as string || null;
-  }
-  
-  // If queryName provided but no language, we can't resolve
-  if (!queryLanguage) {
-    logger.error('queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift');
-    throw new Error('queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift');
-  }
-  
-  try {
-    // Determine the query pack path - use absolute path to ensure it works regardless of cwd
-    const defaultPackPath = resolveToolQueryPackPath(queryLanguage as string);
-    const packPath = queryPack as string || defaultPackPath;
-    
-    logger.info(`Resolving query: ${queryName} for language: ${queryLanguage} in pack: ${packPath}`);
-    
-    // Execute codeql resolve queries to get available queries
-    const { executeCodeQLCommand } = await import('./cli-executor');
-    const resolveResult = await executeCodeQLCommand(
-      'resolve queries',
-      { format: 'json' },
-      [packPath]
-    );
-    
-    if (!resolveResult.success) {
-      logger.error('Failed to resolve queries:', resolveResult.stderr || resolveResult.error);
-      throw new Error(`Failed to resolve queries: ${resolveResult.stderr || resolveResult.error}`);
-    }
-    
-    // Parse the JSON output to find matching queries
-    let resolvedQueries: string[];
-    try {
-      resolvedQueries = JSON.parse(resolveResult.stdout);
-    } catch (parseError) {
-      logger.error('Failed to parse resolve queries output:', parseError);
-      throw new Error('Failed to parse resolve queries output', { cause: parseError });
-    }
-    
-    // Find the query that matches the requested name exactly
-    const matchingQuery = resolvedQueries.find(queryPath => {
-      const fileName = basename(queryPath);
-      // Match exact query name: "PrintAST" should match "PrintAST.ql" only
-      return fileName === `${queryName}.ql`;
-    });
-
-    if (!matchingQuery) {
-      logger.error(`Query "${queryName}.ql" not found in pack "${packPath}". Available queries:`, resolvedQueries.map(q => basename(q)));
-      throw new Error(`Query "${queryName}.ql" not found in pack "${packPath}"`);
-    }
-    
-    logger.info(`Resolved query "${queryName}" to: ${matchingQuery}`);
-    return matchingQuery;
-    
-  } catch (error) {
-    logger.error('Error resolving query path:', error);
-    throw error;
-  }
-}
-
-/**
- * Interpret BQRS file using codeql bqrs interpret
- */
-async function interpretBQRSFile(
-  bqrsPath: string,
-  queryPath: string,
-  format: string,
-  outputPath: string,
-  logger: { info: (_message: string, ..._args: unknown[]) => void; error: (_message: string, ..._args: unknown[]) => void }
-): Promise<CLIExecutionResult> {
-  try {
-    // Extract query metadata to get id and kind
-    const metadata = await extractQueryMetadata(queryPath);
-    
-    // Validate required metadata fields
-    const missingFields = [];
-    if (!metadata.id) missingFields.push('id');
-    if (!metadata.kind) missingFields.push('kind');
-    
-    if (missingFields.length > 0) {
-      return {
-        success: false,
-        exitCode: 1,
-        stdout: '',
-        stderr: '',
-        error: `Query metadata is incomplete. Missing required field(s): ${missingFields.join(', ')}. Ensure the query file contains @id and @kind metadata.`
-      };
-    }
-    
-    // Sanitize metadata values to prevent command injection
-    const sanitizedKind = (metadata.kind || '').replace(/[^a-zA-Z0-9_-]/g, '');
-    const sanitizedId = (metadata.id || '').replace(/[^a-zA-Z0-9_/:-]/g, '');
-    
-    // Validate format for query kind
-    const graphFormats = ['graphtext', 'dgml', 'dot'];
-    if (graphFormats.includes(format) && metadata.kind !== 'graph') {
-      return {
-        success: false,
-        exitCode: 1,
-        stdout: '',
-        stderr: '',
-        error: `Format '${format}' is only compatible with @kind graph queries, but this query has @kind ${metadata.kind}`
-      };
-    }
-    
-    // Ensure output directory exists
-    mkdirSync(dirname(outputPath), { recursive: true });
-    
-    // Build the codeql bqrs interpret command
-    const params: Record<string, unknown> = {
-      format: format,
-      output: outputPath,
-      t: [`kind=${sanitizedKind}`, `id=${sanitizedId}`]
-    };
-    
-    logger.info(`Interpreting BQRS file ${bqrsPath} with format ${format} to ${outputPath}`);
-    
-    // Execute codeql bqrs interpret
-    const result = await executeCodeQLCommand(
-      'bqrs interpret',
-      params,
-      [bqrsPath]
-    );
-    
-    return result;
-  } catch (error) {
-    return {
-      success: false,
-      exitCode: 1,
-      stdout: '',
-      stderr: '',
-      error: `Failed to interpret BQRS file: ${error}`
-    };
-  }
-}
-
-/**
- * Get default output extension based on format
- */
-function getDefaultExtension(format: string): string {
-  switch (format) {
-    case 'sarif-latest':
-    case 'sarifv2.1.0':
-      return '.sarif';
-    case 'csv':
-      return '.csv';
-    case 'graphtext':
-      return '.txt';
-    case 'dgml':
-      return '.dgml';
-    case 'dot':
-      return '.dot';
-    default:
-      return '.txt';
-  }
-}
-
-/**
- * Process query run results with optional interpretation or evaluation
- */
-async function processQueryRunResults(
-  result: CLIExecutionResult,
-  params: Record<string, unknown>,
-  logger: { info: (_message: string, ..._args: unknown[]) => void; error: (_message: string, ..._args: unknown[]) => void }
-): Promise<CLIExecutionResult> {
-  try {
-    const { format, interpretedOutput, evaluationFunction, evaluationOutput, output, query, queryName, queryLanguage } = params;
-    
-    // If no format or evaluationFunction specified, return as-is
-    if (!format && !evaluationFunction) {
-      return result;
-    }
-    
-    // Ensure output (bqrs file) was generated
-    if (!output) {
-      return result;
-    }
-    
-    const bqrsPath = output as string;
-    
-    // Determine the query path for metadata extraction
-    let queryPath: string | null = null;
-    
-    if (query) {
-      queryPath = query as string;
-    } else if (queryName && queryLanguage) {
-      // Try to resolve the query path again for evaluation
-      queryPath = await resolveQueryPath(params, logger);
-    }
-    
-    if (!queryPath) {
-      logger.error('Cannot determine query path for interpretation/evaluation');
-      return {
-        ...result,
-        stdout: result.stdout + '\n\nWarning: Query interpretation skipped - could not determine query path'
-      };
-    }
-    
-    // Handle new format parameter (preferred approach)
-    if (format) {
-      const outputFormat = format as string;
-      
-      // Determine output path
-      let outputFilePath = interpretedOutput as string | undefined;
-      if (!outputFilePath) {
-        const ext = getDefaultExtension(outputFormat);
-        outputFilePath = bqrsPath.replace('.bqrs', ext);
-      }
-      
-      logger.info(`Interpreting query results from ${bqrsPath} with format: ${outputFormat}`);
-      
-      // Interpret the BQRS file
-      const interpretResult = await interpretBQRSFile(
-        bqrsPath,
-        queryPath,
-        outputFormat,
-        outputFilePath,
-        logger
-      );
-      
-      if (interpretResult.success) {
-        let enhancedOutput = result.stdout;
-        enhancedOutput += `\n\nQuery results interpreted successfully with format: ${outputFormat}`;
-        enhancedOutput += `\nInterpreted output saved to: ${outputFilePath}`;
-        
-        return {
-          ...result,
-          stdout: enhancedOutput
-        };
-      } else {
-        logger.error('Query interpretation failed:', interpretResult.error);
-        return {
-          ...result,
-          stdout: result.stdout + `\n\nWarning: Query interpretation failed - ${interpretResult.error || interpretResult.stderr}`
-        };
-      }
-    }
-    
-    // Handle legacy evaluationFunction parameter (deprecated)
-    if (evaluationFunction) {
-      logger.info(`Using deprecated evaluationFunction parameter. Consider using format parameter instead.`);
-      logger.info(`Evaluating query results from ${bqrsPath} using function: ${evaluationFunction}`);
-      
-      // Perform the evaluation
-      const evaluationResult: QueryEvaluationResult = await evaluateQueryResults(
-        bqrsPath,
-        queryPath,
-        evaluationFunction as string,
-        evaluationOutput as string | undefined
-      );
-      
-      if (evaluationResult.success) {
-        // Append evaluation results to the command output
-        let enhancedOutput = result.stdout;
-        
-        if (evaluationResult.outputPath) {
-          enhancedOutput += `\n\nQuery evaluation completed successfully.`;
-          enhancedOutput += `\nEvaluation output saved to: ${evaluationResult.outputPath}`;
-        }
-        
-        if (evaluationResult.content) {
-          enhancedOutput += `\n\n=== Query Results Evaluation ===\n`;
-          enhancedOutput += evaluationResult.content;
-        }
-        
-        return {
-          ...result,
-          stdout: enhancedOutput
-        };
-      } else {
-        // Evaluation failed, but don't fail the whole operation
-        logger.error('Query evaluation failed:', evaluationResult.error);
-        return {
-          ...result,
-          stdout: result.stdout + `\n\nWarning: Query evaluation failed - ${evaluationResult.error}`
-        };
-      }
-    }
-    
-    return result;
-  } catch (error) {
-    logger.error('Error in query results processing:', error);
-    return {
-      ...result,
-      stdout: result.stdout + `\n\nWarning: Query processing error - ${error}`
-    };
-  }
-}

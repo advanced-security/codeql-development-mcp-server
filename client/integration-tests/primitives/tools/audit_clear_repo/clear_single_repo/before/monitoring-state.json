@@ -1,0 +1,9 @@
+{
+  "toolName": "audit_clear_repo",
+  "parameters": {
+    "owner": "arduino",
+    "repo": "Arduino"
+  },
+  "expectedSuccess": true,
+  "description": "Test audit_clear_repo clears all findings for a single repository without affecting others"
+}

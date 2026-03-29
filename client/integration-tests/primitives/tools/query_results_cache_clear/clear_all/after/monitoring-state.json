@@ -1,0 +1,8 @@
+{
+  "toolName": "query_results_cache_clear",
+  "parameters": {
+    "all": true
+  },
+  "success": true,
+  "description": "Successfully cleared all cached query results"
+}

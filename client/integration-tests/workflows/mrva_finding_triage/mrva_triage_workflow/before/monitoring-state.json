@@ -1,0 +1,21 @@
+{
+  "sessions": [
+    {
+      "sessionId": "mrva-triage-workflow",
+      "queryPath": "/mrva-triage",
+      "language": "multi",
+      "queryType": "mrva-workflow",
+      "description": "MRVA finding triage workflow: discover runs, store findings across repos, annotate with triage decisions, search across annotations",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "unknown",
+        "documentationStatus": "missing",
+        "filesPresent": []
+      },
+      "mcpCalls": [],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

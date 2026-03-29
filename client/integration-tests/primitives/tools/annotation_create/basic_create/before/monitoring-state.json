@@ -1,0 +1,12 @@
+{
+  "toolName": "annotation_create",
+  "parameters": {
+    "category": "note",
+    "entityKey": "file:test/Example1.ql:L10",
+    "content": "Potential SQL injection via string concatenation",
+    "label": "sql-injection-candidate",
+    "metadata": "{\"severity\":\"high\",\"cwe\":\"CWE-89\"}"
+  },
+  "expectedSuccess": true,
+  "description": "Test annotation_create tool creates a note annotation with content, label, and metadata"
+}
