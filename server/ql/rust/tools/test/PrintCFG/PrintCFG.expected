@@ -1,0 +1,390 @@
+Example1.rs:
+#    3| enter fn simple_function
+#-----|  -> x
+
+#   16| enter fn complex_function
+#-----|  -> value
+
+#   34| enter fn main
+#-----|  -> ExprStmt
+
+#   11| i
+#-----|  -> i
+
+#    4| x
+#-----|  -> x
+
+#    8| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
+#    6| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
+#   12| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
+#    5| 0
+#-----|  -> ... > ...
+
+#    8| "Non-positive\n"
+#-----|  -> FormatArgsExpr
+
+#    6| "Positive\n"
+#-----|  -> FormatArgsExpr
+
+#   11| 3
+#-----|  -> 0..3
+
+#   11| 0
+#-----|  -> 3
+
+#   12| "{}\n"
+#-----|  -> i
+
+#    5| ... > ...
+#-----|  -> ExprStmt
+#-----|  -> ExprStmt
+
+#   11| 0..3
+#-----|  -> i
+
+#    8| MacroExpr
+#-----|  -> ...::_print(...)
+
+#    8| MacroExpr
+#-----|  -> { ... }
+
+#    6| MacroExpr
+#-----|  -> ...::_print(...)
+
+#    6| MacroExpr
+#-----|  -> { ... }
+
+#   12| MacroExpr
+#-----|  -> ...::_print(...)
+
+#   12| MacroExpr
+#-----|  -> { ... }
+
+#    8| { ... }
+#-----|  -> { ... }
+
+#    8| { ... }
+#-----|  -> println!...
+
+#    7| { ... }
+#-----|  -> if ... {...} else {...}
+
+#    6| { ... }
+#-----|  -> { ... }
+
+#    6| { ... }
+#-----|  -> println!...
+
+#    5| { ... }
+#-----|  -> if ... {...} else {...}
+
+#   12| { ... }
+#-----|  -> { ... }
+
+#   12| { ... }
+#-----|  -> println!...
+
+#   11| { ... }
+#-----|  -> i
+
+#    4| { ... }
+#-----|  -> exit fn simple_function (normal)
+
+#    8| ...::_print(...)
+#-----|  -> { ... }
+
+#    6| ...::_print(...)
+#-----|  -> { ... }
+
+#   12| ...::_print(...)
+#-----|  -> { ... }
+
+#   11| for ... in ... { ... }
+#-----|  -> { ... }
+
+#    5| if ... {...} else {...}
+#-----|  -> 0
+
+#   11| i
+#-----|  -> for ... in ... { ... }
+#-----|  -> ExprStmt
+
+#    4| x
+#-----|  -> ...: i32
+
+#    5| x
+#-----|  -> 0
+
+#    8| ...::_print
+#-----|  -> "Non-positive\n"
+
+#    6| ...::_print
+#-----|  -> "Positive\n"
+
+#   12| i
+#-----|  -> FormatArgsExpr
+
+#   12| ...::_print
+#-----|  -> "{}\n"
+
+#    8| ExprStmt
+#-----|  -> ...::_print
+
+#    8| ExprStmt
+#-----|  -> ExprStmt
+
+#    6| ExprStmt
+#-----|  -> ...::_print
+
+#    6| ExprStmt
+#-----|  -> ExprStmt
+
+#    5| ExprStmt
+#-----|  -> x
+
+#   12| ExprStmt
+#-----|  -> ...::_print
+
+#   12| ExprStmt
+#-----|  -> ExprStmt
+
+#    8| println!...
+#-----|  -> MacroExpr
+
+#    8| ...::format_args_nl!...
+#-----|  -> MacroExpr
+
+#    6| println!...
+#-----|  -> MacroExpr
+
+#    6| ...::format_args_nl!...
+#-----|  -> MacroExpr
+
+#   12| println!...
+#-----|  -> MacroExpr
+
+#   12| ...::format_args_nl!...
+#-----|  -> MacroExpr
+
+#    4| ...: i32
+#-----|  -> ExprStmt
+
+#   22| val
+#-----|  -> mut val
+
+#   17| value
+#-----|  -> value
+
+#   18| 0
+#-----|  -> ... < ...
+
+#   19| 1
+#-----|  -> - ...
+
+#   23| 10
+#-----|  -> ... > ...
+
+#   24| 2
+#-----|  -> ... / ...
+
+#   28| 0
+#-----|  -> match val { ... }
+
+#   28| 0
+#-----|  -> 0
+
+#   29| 1
+#-----|  -> match val { ... }
+
+#   29| 1
+#-----|  -> 1
+
+#   30| 2
+#-----|  -> ... * ...
+
+#   19| return ...
+#-----|  -> exit fn complex_function (normal)
+
+#   19| - ...
+#-----|  -> return ...
+
+#   18| ... < ...
+#-----|  -> if ... {...}
+#-----|  -> ExprStmt
+
+#   23| ... > ...
+#-----|  -> while ... { ... }
+#-----|  -> ExprStmt
+
+#   24| ... / ...
+#-----|  -> ... = ...
+
+#   24| ... = ...
+#-----|  -> { ... }
+
+#   30| ... * ...
+#-----|  -> match val { ... }
+
+#   23| while ... { ... }
+#-----|  -> val
+
+#   27| match val { ... }
+#-----|  -> { ... }
+
+#   23| { ... }
+#-----|  -> val
+
+#   17| { ... }
+#-----|  -> exit fn complex_function (normal)
+
+#   18| if ... {...}
+#-----|  -> let ... = value
+
+#   30| _
+#-----|  -> val
+
+#   28| 0
+#-----|  -> 0
+#-----|  -> 1
+
+#   29| 1
+#-----|  -> 1
+#-----|  -> _
+
+#   22| mut val
+#-----|  -> ExprStmt
+
+#   17| value
+#-----|  -> ...: i32
+
+#   18| value
+#-----|  -> 0
+
+#   22| value
+#-----|  -> val
+
+#   23| val
+#-----|  -> 10
+
+#   24| val
+#-----|  -> val
+
+#   24| val
+#-----|  -> 2
+
+#   27| val
+#-----|  -> 0
+
+#   30| val
+#-----|  -> 2
+
+#   19| ExprStmt
+#-----|  -> 1
+
+#   18| ExprStmt
+#-----|  -> value
+
+#   24| ExprStmt
+#-----|  -> val
+
+#   23| ExprStmt
+#-----|  -> val
+
+#   22| let ... = value
+#-----|  -> value
+
+#   17| ...: i32
+#-----|  -> ExprStmt
+
+#   36| result
+#-----|  -> result
+
+#   37| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
+#   35| 5
+#-----|  -> simple_function(...)
+
+#   36| 20
+#-----|  -> complex_function(...)
+
+#   37| "{}\n"
+#-----|  -> result
+
+#   37| MacroExpr
+#-----|  -> ...::_print(...)
+
+#   37| MacroExpr
+#-----|  -> { ... }
+
+#   37| { ... }
+#-----|  -> { ... }
+
+#   37| { ... }
+#-----|  -> println!...
+
+#   34| { ... }
+#-----|  -> exit fn main (normal)
+
+#   35| simple_function(...)
+#-----|  -> let ... = ...
+
+#   36| complex_function(...)
+#-----|  -> result
+
+#   37| ...::_print(...)
+#-----|  -> { ... }
+
+#   36| result
+#-----|  -> ExprStmt
+
+#   35| simple_function
+#-----|  -> 5
+
+#   36| complex_function
+#-----|  -> 20
+
+#   37| result
+#-----|  -> FormatArgsExpr
+
+#   37| ...::_print
+#-----|  -> "{}\n"
+
+#   35| ExprStmt
+#-----|  -> simple_function
+
+#   37| ExprStmt
+#-----|  -> ...::_print
+
+#   37| ExprStmt
+#-----|  -> ExprStmt
+
+#   36| let ... = ...
+#-----|  -> complex_function
+
+#   37| println!...
+#-----|  -> MacroExpr
+
+#   37| ...::format_args_nl!...
+#-----|  -> MacroExpr
+
+#    3| exit fn simple_function (normal)
+#-----|  -> exit fn simple_function
+
+#   16| exit fn complex_function (normal)
+#-----|  -> exit fn complex_function
+
+#   34| exit fn main (normal)
+#-----|  -> exit fn main
+
+#    3| exit fn simple_function
+
+#   16| exit fn complex_function
+
+#   34| exit fn main

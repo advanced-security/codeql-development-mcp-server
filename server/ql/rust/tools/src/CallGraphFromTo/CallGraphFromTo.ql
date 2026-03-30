@@ -30,7 +30,7 @@ string getTargetFunctionName() {
 predicate calls(Function caller_, Function callee_) {
   exists(CallExpr c |
     c.getEnclosingCallable() = caller_ and
-    c.getResolvedTarget().(Function).getName() = callee_.getName()
+    c.getResolvedTarget().(Function).getName().getText() = callee_.getName().getText()
   )
 }
 
@@ -39,7 +39,7 @@ predicate calls(Function caller_, Function callee_) {
  */
 string getCalleeName(CallExpr call) {
   if exists(call.getResolvedTarget().(Function).getName())
-  then result = call.getResolvedTarget().(Function).getName()
+  then result = call.getResolvedTarget().(Function).getName().getText()
   else result = call.toString()
 }
 
@@ -47,12 +47,13 @@ from CallExpr call, Function caller
 where
   call.getEnclosingCallable() = caller and
   exists(Function source, Function target |
-    source.getName() = getSourceFunctionName() and
-    target.getName() = getTargetFunctionName() and
+    source.getName().getText() = getSourceFunctionName() and
+    target.getName().getText() = getTargetFunctionName() and
     calls*(source, caller) and
     exists(Function callee |
-      call.getResolvedTarget().(Function).getName() = callee.getName() and
+      call.getResolvedTarget().(Function).getName().getText() = callee.getName().getText() and
       calls*(callee, target)
     )
   )
-select call, "Reachable call from `" + caller.getName() + "` to `" + getCalleeName(call) + "`"
+select call,
+  "Reachable call from `" + caller.getName().getText() + "` to `" + getCalleeName(call) + "`"
