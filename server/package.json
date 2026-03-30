@@ -18,6 +18,7 @@
     "ql/javascript/tools/src/",
     "ql/python/tools/src/",
     "ql/ruby/tools/src/",
+    "ql/rust/tools/src/",
     "ql/swift/tools/src/",
     "scripts/setup-packs.sh",
     "package.json",

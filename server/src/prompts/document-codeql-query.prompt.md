@@ -15,7 +15,7 @@ For creating **workshop learning content** with detailed explanations and visual
 ## Required Inputs
 
 - **queryPath**: Path to the CodeQL query file (`.ql` or `.qlref`)
-- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, swift)
+- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift)
 
 ## Documentation File Conventions
 

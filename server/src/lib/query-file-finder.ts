@@ -19,6 +19,7 @@ const LANGUAGE_EXTENSIONS: Record<string, string> = {
   javascript: 'js',
   python: 'py',
   ruby: 'rb',
+  rust: 'rs',
   swift: 'swift',
   typescript: 'ts'
 };

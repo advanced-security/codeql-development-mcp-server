@@ -38,7 +38,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ## Validate language if provided
-VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "swift")
+VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "rust" "swift")
 if [ -n "${LANGUAGE}" ]; then
 	LANGUAGE_VALID=false
 	for valid_lang in "${VALID_LANGUAGES[@]}"; do

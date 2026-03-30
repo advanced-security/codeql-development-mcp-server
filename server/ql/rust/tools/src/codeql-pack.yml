@@ -1,0 +1,6 @@
+name: advanced-security/ql-mcp-rust-tools-src
+version: 2.25.1
+description: 'Queries for codeql-development-mcp-server tools for rust language'
+library: false
+dependencies:
+  codeql/rust-all: '*'

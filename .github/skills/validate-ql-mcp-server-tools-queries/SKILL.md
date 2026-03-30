@@ -33,6 +33,7 @@ The tools queries are available for all CodeQL-supported languages:
 | javascript | `server/ql/javascript/tools/` | `.js`               |
 | python     | `server/ql/python/tools/`     | `.py`               |
 | ruby       | `server/ql/ruby/tools/`       | `.rb`               |
+| rust       | `server/ql/rust/tools/`       | `.rs`               |
 | swift      | `server/ql/swift/tools/`      | `.swift`            |
 
 ## Tools Queries Overview

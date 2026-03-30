@@ -15,7 +15,7 @@ For creating/updating **query documentation files** (`.md` or `.qhelp`), use the
 ## Required Inputs
 
 - **queryPath**: Path to the CodeQL query file (`.ql` or `.qlref`)
-- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, swift)
+- **language**: Target programming language (actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift)
 - **databasePath** (optional): Path to a real CodeQL database for profiling
 
 ## Agent AI Instructions
