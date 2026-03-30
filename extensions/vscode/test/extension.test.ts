@@ -193,15 +193,17 @@ describe('Extension', () => {
     mcpProviderInstance.requestRestart.mockClear();
     envBuilderInstance.invalidate.mockClear();
 
-    // Simulate workspace folder change
-    workspaceFolderChangeCallback!();
+    try {
+      // Simulate workspace folder change
+      workspaceFolderChangeCallback!();
 
-    // Cache invalidated immediately; no VS Code notification.
-    // VS Code manages MCP server lifecycle (stop/restart) when roots change.
-    expect(envBuilderInstance.invalidate).toHaveBeenCalledTimes(1);
-    expect(mcpProviderInstance.fireDidChange).not.toHaveBeenCalled();
-    expect(mcpProviderInstance.requestRestart).not.toHaveBeenCalled();
-
-    spy.mockRestore();
+      // Cache invalidated immediately; no VS Code notification.
+      // VS Code manages MCP server lifecycle (stop/restart) when roots change.
+      expect(envBuilderInstance.invalidate).toHaveBeenCalledTimes(1);
+      expect(mcpProviderInstance.fireDidChange).not.toHaveBeenCalled();
+      expect(mcpProviderInstance.requestRestart).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

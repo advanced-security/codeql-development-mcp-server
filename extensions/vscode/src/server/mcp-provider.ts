@@ -27,12 +27,19 @@ export class McpProvider
    */
   private _revision = 0;
 
+  /**
+   * Cached extension version to avoid repeated synchronous `readFileSync`
+   * calls on every `getEffectiveVersion()` invocation.
+   */
+  private readonly _extensionVersion: string;
+
   constructor(
     private readonly serverManager: ServerManager,
     private readonly envBuilder: EnvironmentBuilder,
     private readonly logger: Logger,
   ) {
     super();
+    this._extensionVersion = serverManager.getExtensionVersion();
     this.push(this._onDidChange);
   }
 
@@ -117,9 +124,7 @@ export class McpProvider
    * cycle.
    */
   private getEffectiveVersion(): string {
-    const base =
-      this.serverManager.getVersion() ??
-      this.serverManager.getExtensionVersion();
+    const base = this.serverManager.getVersion() ?? this._extensionVersion;
     if (this._revision === 0) {
       return base;
     }
