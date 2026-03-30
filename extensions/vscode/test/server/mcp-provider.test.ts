@@ -7,6 +7,7 @@ function createMockServerManager() {
   return {
     getCommand: vi.fn().mockReturnValue('npx'),
     getArgs: vi.fn().mockReturnValue(['-y', 'codeql-development-mcp-server']),
+    getExtensionVersion: vi.fn().mockReturnValue('2.25.1'),
     getVersion: vi.fn().mockReturnValue(undefined),
     getDescription: vi.fn().mockReturnValue('npx -y codeql-development-mcp-server'),
     getInstallDir: vi.fn().mockReturnValue('/mock/install'),
@@ -111,6 +112,26 @@ describe('McpProvider', () => {
     expect(definitions).toHaveLength(1);
   });
 
+  it('should always provide a defined version string even when serverVersion is latest', async () => {
+    // When serverManager.getVersion() returns undefined ("latest" mode),
+    // the definition must still carry a concrete version string so that
+    // VS Code has a baseline for version comparison. An undefined initial
+    // version prevents VS Code from detecting changes after requestRestart().
+    //
+    // NOTE: McpProvider caches getExtensionVersion() in its constructor, so the
+    // mock must be configured before constructing the provider.
+    serverManager.getVersion.mockReturnValue(undefined);
+    serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+    provider = new McpProvider(serverManager, envBuilder, logger);
+
+    const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+    const definitions = await provider.provideMcpServerDefinitions(token as any);
+
+    expect(definitions![0].version).toBeDefined();
+    expect(typeof definitions![0].version).toBe('string');
+    expect(definitions![0].version!.length).toBeGreaterThan(0);
+  });
+
   it('should pass version from serverManager when pinned', async () => {
     serverManager.getVersion.mockReturnValue('2.20.0');
 
@@ -118,6 +139,78 @@ describe('McpProvider', () => {
     const definitions = await provider.provideMcpServerDefinitions(token as any);
 
     expect(definitions![0].version).toBe('2.20.0');
+  });
+
+  it('should not change version on fireDidChange (soft signal)', async () => {
+    const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+    const before = await provider.provideMcpServerDefinitions(token as any);
+    const versionBefore = before![0].version;
+
+    provider.fireDidChange();
+    const after = await provider.provideMcpServerDefinitions(token as any);
+
+    expect(after![0].version).toBe(versionBefore);
+  });
+
+  it('should produce a different version after requestRestart', async () => {
+    const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+    const before = await provider.provideMcpServerDefinitions(token as any);
+    const versionBefore = before![0].version;
+
+    provider.requestRestart();
+    const after = await provider.provideMcpServerDefinitions(token as any);
+    const versionAfter = after![0].version;
+
+    expect(versionAfter).toBeDefined();
+    expect(versionAfter).not.toBe(versionBefore);
+  });
+
+  it('should produce distinct versions after successive requestRestart calls', async () => {
+    const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+
+    provider.requestRestart();
+    const defs1 = await provider.provideMcpServerDefinitions(token as any);
+
+    provider.requestRestart();
+    const defs2 = await provider.provideMcpServerDefinitions(token as any);
+
+    expect(defs1![0].version).not.toBe(defs2![0].version);
+  });
+
+  it('should append revision to pinned version after requestRestart', async () => {
+    serverManager.getVersion.mockReturnValue('2.20.0');
+    const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+
+    provider.requestRestart();
+    const definitions = await provider.provideMcpServerDefinitions(token as any);
+
+    expect(definitions![0].version).toMatch(/^2\.20\.0\+r\d+$/);
+  });
+
+  it('should append revision to extension version after requestRestart when version is latest', async () => {
+    serverManager.getVersion.mockReturnValue(undefined);
+    serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+    const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+
+    provider.requestRestart();
+    const definitions = await provider.provideMcpServerDefinitions(token as any);
+
+    expect(definitions![0].version).toMatch(/^2\.25\.1\+r\d+$/);
+  });
+
+  it('should fire change event when requestRestart is called', () => {
+    const listener = vi.fn();
+    provider.onDidChangeMcpServerDefinitions(listener);
+
+    provider.requestRestart();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('should invalidate env cache when requestRestart is called', () => {
+    provider.requestRestart();
+
+    expect(envBuilder.invalidate).toHaveBeenCalledTimes(1);
   });
 
   it('should resolve definition by refreshing environment', async () => {

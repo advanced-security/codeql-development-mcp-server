@@ -20,17 +20,59 @@ export class McpProvider
   private readonly _onDidChange = new vscode.EventEmitter<void>();
   readonly onDidChangeMcpServerDefinitions = this._onDidChange.event;
 
+  /**
+   * Monotonically increasing counter, bumped by `requestRestart()`.
+   * Appended to the version string so that VS Code sees a genuinely new
+   * server definition and triggers a stop → restart cycle.
+   */
+  private _revision = 0;
+
+  /**
+   * Cached extension version to avoid repeated synchronous `readFileSync`
+   * calls on every `getEffectiveVersion()` invocation.
+   */
+  private readonly _extensionVersion: string;
+
   constructor(
     private readonly serverManager: ServerManager,
     private readonly envBuilder: EnvironmentBuilder,
     private readonly logger: Logger,
   ) {
     super();
+    this._extensionVersion = serverManager.getExtensionVersion();
     this.push(this._onDidChange);
   }
 
-  /** Notify VS Code that the MCP server definitions have changed. */
+  /**
+   * Soft notification: tell VS Code that definitions may have changed.
+   *
+   * Does NOT bump the version, so VS Code will re-query
+   * `provideMcpServerDefinitions()` / `resolveMcpServerDefinition()` but
+   * will NOT restart the server. Use for lightweight updates (file watcher
+   * events, extension changes, background install completion) where the
+   * running server can continue with its current environment.
+   */
   fireDidChange(): void {
+    this._onDidChange.fire();
+  }
+
+  /**
+   * Request that VS Code restart the MCP server with a fresh environment.
+   *
+   * Invalidates the cached environment and bumps the internal revision counter
+   * so that the next call to `provideMcpServerDefinitions()` returns a
+   * definition with a different `version` string. VS Code compares the new
+   * version to the running server's version and, seeing a change, triggers a
+   * stop → start cycle.
+   *
+   * Use for changes that require a server restart (configuration changes).
+   */
+  requestRestart(): void {
+    this.envBuilder.invalidate();
+    this._revision++;
+    this.logger.info(
+      `Requesting ql-mcp restart (revision ${this._revision})...`,
+    );
     this._onDidChange.fire();
   }
 
@@ -40,7 +82,7 @@ export class McpProvider
     const command = this.serverManager.getCommand();
     const args = this.serverManager.getArgs();
     const env = await this.envBuilder.build();
-    const version = this.serverManager.getVersion();
+    const version = this.getEffectiveVersion();
 
     this.logger.info(
       `Providing MCP server definition: ${command} ${args.join(' ')}`,
@@ -65,5 +107,27 @@ export class McpProvider
     const env = await this.envBuilder.build();
     server.env = env;
     return server;
+  }
+
+  /**
+   * Computes the version string for the MCP server definition.
+   *
+   * Always returns a concrete string so that VS Code has a reliable
+   * baseline for version comparison.  When `serverManager.getVersion()`
+   * returns `undefined` (the "latest" / unpinned case), the extension
+   * version is used as the base instead.
+   *
+   * After one or more `requestRestart()` calls, a `+rN` revision suffix
+   * is appended so that the version is always different from the
+   * previous one.  VS Code uses the version to decide whether to
+   * restart a running server: a changed version triggers a stop → start
+   * cycle.
+   */
+  private getEffectiveVersion(): string {
+    const base = this.serverManager.getVersion() ?? this._extensionVersion;
+    if (this._revision === 0) {
+      return base;
+    }
+    return `${base}+r${this._revision}`;
   }
 }

@@ -1,6 +1,16 @@
 {
 	"folders": [
-		{ "path": "folder-a" },
-		{ "path": "folder-b" }
+		{
+			"path": "folder-a"
+		},
+		{
+			"path": "folder-b"
+		},
+		{
+			"path": "folder-c"
+		},
+		{
+			"path": "folder-d"
+		}
 	]
 }

@@ -50,6 +50,7 @@ vi.mock('../src/server/mcp-provider', () => ({
       resolveMcpServerDefinition: vi.fn().mockResolvedValue(undefined),
       onDidChangeMcpServerDefinitions: vi.fn(),
       fireDidChange: vi.fn(),
+      requestRestart: vi.fn(),
       dispose: vi.fn(),
     };
   }),
@@ -102,6 +103,8 @@ vi.mock('../src/bridge/environment-builder', () => ({
 
 import { activate, deactivate } from '../src/extension';
 import * as vscode from 'vscode';
+import { McpProvider } from '../src/server/mcp-provider';
+import { EnvironmentBuilder } from '../src/bridge/environment-builder';
 
 function createMockContext(): vscode.ExtensionContext {
   return {
@@ -167,5 +170,40 @@ describe('Extension', () => {
 
   it('should deactivate even if activate was never called', () => {
     expect(() => deactivate()).not.toThrow();
+  });
+
+  it('should invalidate env cache on workspace folder changes', async () => {
+    // Capture the workspace folder change callback
+    let workspaceFolderChangeCallback: Function | undefined;
+    const spy = vi.spyOn(vscode.workspace, 'onDidChangeWorkspaceFolders').mockImplementation(
+      (cb: Function) => { workspaceFolderChangeCallback = cb; return { dispose: vi.fn() }; },
+    );
+
+    await activate(ctx);
+
+    // The extension should have registered a workspace folder change handler
+    expect(workspaceFolderChangeCallback).toBeDefined();
+
+    // Get the mock instances created during activation
+    const mcpProviderInstance = vi.mocked(McpProvider).mock.results[0]?.value;
+    const envBuilderInstance = vi.mocked(EnvironmentBuilder).mock.results[0]?.value;
+
+    // Reset call counts from activation
+    mcpProviderInstance.fireDidChange.mockClear();
+    mcpProviderInstance.requestRestart.mockClear();
+    envBuilderInstance.invalidate.mockClear();
+
+    try {
+      // Simulate workspace folder change
+      workspaceFolderChangeCallback!();
+
+      // Cache invalidated immediately; no VS Code notification.
+      // VS Code manages MCP server lifecycle (stop/restart) when roots change.
+      expect(envBuilderInstance.invalidate).toHaveBeenCalledTimes(1);
+      expect(mcpProviderInstance.fireDidChange).not.toHaveBeenCalled();
+      expect(mcpProviderInstance.requestRestart).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
