@@ -162,7 +162,7 @@ describe('Workflow Prompts', () => {
     });
 
     it('should reject invalid language', () => {
-      const result = testDrivenDevelopmentSchema.safeParse({ language: 'kotlin' });
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'cobol' });
       expect(result.success).toBe(false);
     });
 
@@ -1597,14 +1597,14 @@ describe('Workflow Prompts', () => {
   // -----------------------------------------------------------------------
   describe('formatValidationError', () => {
     it('should format invalid_enum_value with available options', () => {
-      const result = testDrivenDevelopmentSchema.safeParse({ language: 'kotlin' });
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'cobol' });
       expect(result.success).toBe(false);
       if (!result.success) {
         const msg = formatValidationError('test_driven_development', result.error);
         expect(msg).toContain('Invalid input');
         expect(msg).toContain('test_driven_development');
         expect(msg).toContain('`language`');
-        expect(msg).toContain('kotlin');
+        expect(msg).toContain('cobol');
         expect(msg).toContain('javascript');
         expect(msg).toContain('try again');
       }
@@ -1675,13 +1675,13 @@ describe('Workflow Prompts', () => {
         innerHandler,
       );
 
-      const result = await safe({ language: 'kotlin' });
+      const result = await safe({ language: 'cobol' });
       // Handler should NOT be called
       expect(innerHandler).not.toHaveBeenCalled();
       // Should return a message, not throw
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].content.text).toContain('Invalid input');
-      expect(result.messages[0].content.text).toContain('kotlin');
+      expect(result.messages[0].content.text).toContain('cobol');
     });
 
     it('should return inline error when required fields are missing', async () => {
@@ -1941,12 +1941,12 @@ describe('Workflow Prompts', () => {
     it('explain_codeql_query handler should return inline error for invalid language', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
-        language: 'kotlin',
+        language: 'cobol',
         queryPath: '/q.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('Invalid input');
-      expect(text).toContain('kotlin');
+      expect(text).toContain('cobol');
       expect(text).toContain('javascript');
     });
 

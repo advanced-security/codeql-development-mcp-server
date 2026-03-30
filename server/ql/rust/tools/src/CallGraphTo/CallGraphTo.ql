@@ -22,7 +22,7 @@ string getTargetFunctionName() {
  */
 string getCallerName(CallExpr call) {
   if exists(call.getEnclosingCallable().(Function).getName())
-  then result = call.getEnclosingCallable().(Function).getName()
+  then result = call.getEnclosingCallable().(Function).getName().getText()
   else result = "Top-level"
 }
 
@@ -31,10 +31,11 @@ string getCallerName(CallExpr call) {
  */
 string getCalleeName(CallExpr call) {
   if exists(call.getResolvedTarget().(Function).getName())
-  then result = call.getResolvedTarget().(Function).getName()
+  then result = call.getResolvedTarget().(Function).getName().getText()
   else result = call.toString()
 }
 
 from CallExpr call
-where call.getResolvedTarget().(Function).getName() = getTargetFunctionName()
-select call, "Call to `" + getCalleeName(call) + "` from `" + getCallerName(call) + "`"
+where call.getResolvedTarget().(Function).getName().getText() = getTargetFunctionName()
+select call,
+  "Call to `" + getCalleeName(call) + "` from `" + getCallerName(call) + "`"

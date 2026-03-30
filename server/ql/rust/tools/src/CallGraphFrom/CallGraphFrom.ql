@@ -22,12 +22,13 @@ string getSourceFunctionName() {
  */
 string getCalleeName(CallExpr call) {
   if exists(call.getResolvedTarget().(Function).getName())
-  then result = call.getResolvedTarget().(Function).getName()
+  then result = call.getResolvedTarget().(Function).getName().getText()
   else result = call.toString()
 }
 
 from CallExpr call, Function source
 where
   call.getEnclosingCallable() = source and
-  source.getName() = getSourceFunctionName()
-select call, "Call from `" + source.getName() + "` to `" + getCalleeName(call) + "`"
+  source.getName().getText() = getSourceFunctionName()
+select call,
+  "Call from `" + source.getName().getText() + "` to `" + getCalleeName(call) + "`"
