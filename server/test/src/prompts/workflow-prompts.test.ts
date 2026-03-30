@@ -86,13 +86,13 @@ describe('Workflow Prompts', () => {
   // SUPPORTED_LANGUAGES
   // -----------------------------------------------------------------------
   describe('SUPPORTED_LANGUAGES', () => {
-    it('should contain the expected 9 languages', () => {
-      expect(SUPPORTED_LANGUAGES).toHaveLength(9);
+    it('should contain the expected 10 languages', () => {
+      expect(SUPPORTED_LANGUAGES).toHaveLength(10);
     });
 
     it.each([
       'actions', 'cpp', 'csharp', 'go', 'java',
-      'javascript', 'python', 'ruby', 'swift',
+      'javascript', 'python', 'ruby', 'rust', 'swift',
     ] as const)('should include "%s"', (lang) => {
       expect(SUPPORTED_LANGUAGES).toContain(lang);
     });
@@ -162,7 +162,7 @@ describe('Workflow Prompts', () => {
     });
 
     it('should reject invalid language', () => {
-      const result = testDrivenDevelopmentSchema.safeParse({ language: 'rust' });
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'kotlin' });
       expect(result.success).toBe(false);
     });
 
@@ -1597,14 +1597,14 @@ describe('Workflow Prompts', () => {
   // -----------------------------------------------------------------------
   describe('formatValidationError', () => {
     it('should format invalid_enum_value with available options', () => {
-      const result = testDrivenDevelopmentSchema.safeParse({ language: 'rust' });
+      const result = testDrivenDevelopmentSchema.safeParse({ language: 'kotlin' });
       expect(result.success).toBe(false);
       if (!result.success) {
         const msg = formatValidationError('test_driven_development', result.error);
         expect(msg).toContain('Invalid input');
         expect(msg).toContain('test_driven_development');
         expect(msg).toContain('`language`');
-        expect(msg).toContain('rust');
+        expect(msg).toContain('kotlin');
         expect(msg).toContain('javascript');
         expect(msg).toContain('try again');
       }
@@ -1675,13 +1675,13 @@ describe('Workflow Prompts', () => {
         innerHandler,
       );
 
-      const result = await safe({ language: 'rust' });
+      const result = await safe({ language: 'kotlin' });
       // Handler should NOT be called
       expect(innerHandler).not.toHaveBeenCalled();
       // Should return a message, not throw
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].content.text).toContain('Invalid input');
-      expect(result.messages[0].content.text).toContain('rust');
+      expect(result.messages[0].content.text).toContain('kotlin');
     });
 
     it('should return inline error when required fields are missing', async () => {
@@ -1941,12 +1941,12 @@ describe('Workflow Prompts', () => {
     it('explain_codeql_query handler should return inline error for invalid language', async () => {
       const handler = getRegisteredHandler(mockServer, 'explain_codeql_query');
       const result: PromptResult = await handler({
-        language: 'rust',
+        language: 'kotlin',
         queryPath: '/q.ql',
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('Invalid input');
-      expect(text).toContain('rust');
+      expect(text).toContain('kotlin');
       expect(text).toContain('javascript');
     });
 
