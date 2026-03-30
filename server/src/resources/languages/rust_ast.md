@@ -91,7 +91,7 @@ Write CodeQL queries over Rust by navigating the Rust AST classes. Model: Syntax
 - **`IfExpr`** — if/else: `if cond { ... } else { ... }`
   - `getCondition()`, `getThen()`, `getElse()`
 - **`MatchExpr`** — Pattern matching: `match x { ... }`
-  - `getExpr()` → scrutinee
+  - `getScrutinee()` → scrutinee expression
   - `getMatchArmList()` → `MatchArmList`
 - **`MatchArm`** — Match arm: `pat => expr`
   - `getPat()` → pattern
@@ -103,7 +103,7 @@ Write CodeQL queries over Rust by navigating the Rust AST classes. Model: Syntax
 - **`ForExpr`** — For loop: `for x in iter { ... }`
   - `getPat()` → loop variable pattern
   - `getIterable()` → iterator expression
-  - `getBody()` → loop body
+  - `getLoopBody()` → loop body
 - **`BreakExpr`** — Break: `break` or `break 'label value`
 - **`ContinueExpr`** — Continue: `continue` or `continue 'label`
 - **`ReturnExpr`** — Return: `return value`
