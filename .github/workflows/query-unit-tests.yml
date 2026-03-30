@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['actions', 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby']
+        language: ['actions', 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'rust']
 
     steps:
       - name: Query Unit Tests - ${{ matrix.language }} - Checkout repository

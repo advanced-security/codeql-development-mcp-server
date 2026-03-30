@@ -187,7 +187,7 @@ suite('MCP Prompt Error Handling Integration Tests', () => {
       name: 'explain_codeql_query',
       arguments: {
         queryPath: '/some/query.ql',
-        language: 'rust',
+        language: 'cobol',
       },
     });
 

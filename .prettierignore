@@ -3,6 +3,8 @@
 *.actual
 *.expected
 *.log
+*.ql
+*.qll
 *.qlref
 *.testproj/
 options
@@ -17,6 +19,8 @@ extensions/vscode/test/fixtures/
 node_modules
 query-results*
 server/dist/
+server/ql/*/tools/src/*.md
+server/ql/*/tools/src/**/*.md
 server/ql/*/tools/test/*
 workshops/
 
