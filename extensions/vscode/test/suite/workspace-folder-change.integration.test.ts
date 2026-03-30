@@ -92,18 +92,27 @@ suite('Workspace Folder Change Tests', () => {
     const envBuilder = api.environmentBuilder;
     const tempDir = createTempDir('ql-mcp-env-');
 
+    // Populate the environment cache before mutating workspace folders.
+    const envBefore = await envBuilder.build();
+    const beforeFoldersEnv =
+      envBefore.CODEQL_MCP_WORKSPACE_FOLDERS?.split(path.delimiter) ?? [];
+    assert.ok(
+      !beforeFoldersEnv.includes(tempDir),
+      `Precondition failed: tempDir ${tempDir} unexpectedly present in CODEQL_MCP_WORKSPACE_FOLDERS before add`,
+    );
+
     await addWorkspaceFolder(vscode.Uri.file(tempDir));
 
     try {
-      const env = await envBuilder.build();
+      const envAfter = await envBuilder.build();
       assert.ok(
-        env.CODEQL_MCP_WORKSPACE_FOLDERS,
+        envAfter.CODEQL_MCP_WORKSPACE_FOLDERS,
         'CODEQL_MCP_WORKSPACE_FOLDERS should be set',
       );
-      const workspaceFoldersEnv = env.CODEQL_MCP_WORKSPACE_FOLDERS.split(path.delimiter);
+      const workspaceFoldersEnv = envAfter.CODEQL_MCP_WORKSPACE_FOLDERS.split(path.delimiter);
       assert.ok(
         workspaceFoldersEnv.includes(tempDir),
-        `CODEQL_MCP_WORKSPACE_FOLDERS should include ${tempDir}: ${env.CODEQL_MCP_WORKSPACE_FOLDERS}`,
+        `CODEQL_MCP_WORKSPACE_FOLDERS should include ${tempDir}: ${envAfter.CODEQL_MCP_WORKSPACE_FOLDERS}`,
       );
     } finally {
       await removeWorkspaceFolder(tempDir);

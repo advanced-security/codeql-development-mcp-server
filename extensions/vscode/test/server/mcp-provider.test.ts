@@ -117,8 +117,12 @@ describe('McpProvider', () => {
     // the definition must still carry a concrete version string so that
     // VS Code has a baseline for version comparison. An undefined initial
     // version prevents VS Code from detecting changes after requestRestart().
+    //
+    // NOTE: McpProvider caches getExtensionVersion() in its constructor, so the
+    // mock must be configured before constructing the provider.
     serverManager.getVersion.mockReturnValue(undefined);
     serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+    provider = new McpProvider(serverManager, envBuilder, logger);
 
     const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
     const definitions = await provider.provideMcpServerDefinitions(token as any);
