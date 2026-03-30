@@ -18,6 +18,11 @@ string getSourceFunctionName() {
 }
 
 /**
+ * Gets a function by matching against the selected source function names.
+ */
+Function getSourceFunction() { result.getName().getText() = getSourceFunctionName() }
+
+/**
  * Gets the name of the called function.
  */
 string getCalleeName(CallExpr call) {
@@ -29,5 +34,5 @@ string getCalleeName(CallExpr call) {
 from CallExpr call, Function source
 where
   call.getEnclosingCallable() = source and
-  source.getName().getText() = getSourceFunctionName()
+  source = getSourceFunction()
 select call, "Call from `" + source.getName().getText() + "` to `" + getCalleeName(call) + "`"

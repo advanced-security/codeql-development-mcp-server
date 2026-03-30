@@ -18,6 +18,11 @@ string getTargetFunctionName() {
 }
 
 /**
+ * Gets a function by matching against the selected target function names.
+ */
+Function getTargetFunction() { result.getName().getText() = getTargetFunctionName() }
+
+/**
  * Gets the caller name for a call expression.
  */
 string getCallerName(CallExpr call) {
@@ -35,6 +40,8 @@ string getCalleeName(CallExpr call) {
   else result = call.toString()
 }
 
-from CallExpr call
-where call.getResolvedTarget().(Function).getName().getText() = getTargetFunctionName()
+from CallExpr call, Function target
+where
+  target = getTargetFunction() and
+  call.getResolvedTarget() = target
 select call, "Call to `" + getCalleeName(call) + "` from `" + getCallerName(call) + "`"

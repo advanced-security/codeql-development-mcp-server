@@ -32,7 +32,7 @@ fn caller2() {
 }
 ```
 
-Running with `targetFunction = "target_func"` produces results showing each call site with the message pattern ``Call to `target_func` from `caller1```.
+Running with `targetFunction = "target_func"` produces results showing each call site with the message pattern ``Call to `target_func` from `caller1` ``.
 
 ## Output Format
 

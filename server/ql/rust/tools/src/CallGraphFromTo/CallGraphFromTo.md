@@ -33,7 +33,7 @@ fn source() {
 }
 ```
 
-Running with `sourceFunction = "source"` and `targetFunction = "target"` produces results showing each call site on the path with the message pattern ``Reachable call from `intermediate` to `target```.
+Running with `sourceFunction = "source"` and `targetFunction = "target"` produces results showing each call site on the path with the message pattern ``Reachable call from `intermediate` to `target` ``.
 
 ## Output Format
 

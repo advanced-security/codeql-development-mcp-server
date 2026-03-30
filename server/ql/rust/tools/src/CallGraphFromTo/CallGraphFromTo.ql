@@ -25,12 +25,22 @@ string getTargetFunctionName() {
 }
 
 /**
- * Holds if function `caller` directly calls function `callee` by name.
+ * Gets a function by matching against the selected source function names.
+ */
+Function getSourceFunction() { result.getName().getText() = getSourceFunctionName() }
+
+/**
+ * Gets a function by matching against the selected target function names.
+ */
+Function getTargetFunction() { result.getName().getText() = getTargetFunctionName() }
+
+/**
+ * Holds if function `caller` directly calls function `callee`.
  */
 predicate calls(Function caller_, Function callee_) {
   exists(CallExpr c |
     c.getEnclosingCallable() = caller_ and
-    c.getResolvedTarget().(Function).getName().getText() = callee_.getName().getText()
+    c.getResolvedTarget().(Function) = callee_
   )
 }
 
@@ -47,11 +57,11 @@ from CallExpr call, Function caller
 where
   call.getEnclosingCallable() = caller and
   exists(Function source, Function target |
-    source.getName().getText() = getSourceFunctionName() and
-    target.getName().getText() = getTargetFunctionName() and
+    source = getSourceFunction() and
+    target = getTargetFunction() and
     calls*(source, caller) and
     exists(Function callee |
-      call.getResolvedTarget().(Function).getName().getText() = callee.getName().getText() and
+      call.getResolvedTarget().(Function) = callee and
       calls*(callee, target)
     )
   )

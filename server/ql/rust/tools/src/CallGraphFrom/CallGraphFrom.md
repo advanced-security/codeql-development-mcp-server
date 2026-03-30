@@ -33,7 +33,7 @@ fn source_func() {  // Source function for analysis
 }
 ```
 
-Running with `sourceFunction = "source_func"` produces results showing each call site with the message pattern ``Call from `source_func` to `helper1```.
+Running with `sourceFunction = "source_func"` produces results showing each call site with the message pattern ``Call from `source_func` to `helper1` ``.
 
 ## Output Format
 
