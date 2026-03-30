@@ -93,4 +93,4 @@ The server provides **11 prompts** (see `codeql://server/prompts` for the full r
 
 ## Supported Languages
 
-The server supports CodeQL queries for: `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `swift`.
+The server supports CodeQL queries for: `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`.

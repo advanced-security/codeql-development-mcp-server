@@ -113,7 +113,7 @@ Use the `codeql_pack_ls` MCP tool to see what pack versions are installed:
 For each `codeql/*-all` pack, verify it was built for a compatible CLI version by checking the `cliVersion` field in its `qlpack.yml`:
 
 ```bash
-for lang in actions cpp csharp go java javascript python ruby swift; do
+for lang in actions cpp csharp go java javascript python ruby rust swift; do
   version=$(ls ~/.codeql/packages/codeql/${lang}-all/ | head -1)
   echo "$lang-all@$version: $(cat ~/.codeql/packages/codeql/${lang}-all/$version/qlpack.yml | grep cliVersion)"
 done
