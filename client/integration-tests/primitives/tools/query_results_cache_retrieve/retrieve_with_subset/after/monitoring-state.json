@@ -1,0 +1,9 @@
+{
+  "toolName": "query_results_cache_retrieve",
+  "parameters": {
+    "cacheKey": "nonexistent-key-for-test",
+    "maxLines": 50
+  },
+  "success": true,
+  "description": "Successfully handled cache retrieve for non-existent key"
+}

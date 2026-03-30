@@ -1,0 +1,7 @@
+{
+  "toolName": "query_results_cache_lookup",
+  "arguments": {
+    "queryName": "PrintAST",
+    "language": "javascript"
+  }
+}

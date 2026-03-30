@@ -1,0 +1,90 @@
+{
+  "sessions": [
+    {
+      "sessionId": "mrva-triage-workflow",
+      "queryPath": "/mrva-triage",
+      "language": "multi",
+      "queryType": "mrva-workflow",
+      "description": "MRVA finding triage workflow: discover runs, store findings across repos, annotate with triage decisions, search across annotations",
+      "status": "active",
+      "state": {
+        "compilationStatus": "unknown",
+        "testStatus": "unknown",
+        "documentationStatus": "missing",
+        "filesPresent": []
+      },
+      "mcpCalls": [
+        {
+          "callId": "step-1-discover",
+          "timestamp": "2026-01-01T00:00:00.000Z",
+          "toolName": "list_mrva_run_results",
+          "parameters": {},
+          "success": true,
+          "duration": 500,
+          "result": "Discovered MRVA runs"
+        },
+        {
+          "callId": "step-2-store-repo1",
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "toolName": "audit_store_findings",
+          "parameters": {
+            "owner": "arduino",
+            "repo": "Arduino",
+            "findings": [{"sourceLocation": "main.cpp", "line": 42, "sourceType": "RemoteFlowSource"}]
+          },
+          "success": true,
+          "duration": 200,
+          "result": "Stored 1 finding(s)"
+        },
+        {
+          "callId": "step-3-store-repo2",
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "toolName": "audit_store_findings",
+          "parameters": {
+            "owner": "google",
+            "repo": "guava",
+            "findings": [{"sourceLocation": "src/Util.java", "line": 88, "sourceType": "RemoteFlowSource"}]
+          },
+          "success": true,
+          "duration": 200,
+          "result": "Stored 1 finding(s)"
+        },
+        {
+          "callId": "step-4-list-all",
+          "timestamp": "2026-01-01T00:03:00.000Z",
+          "toolName": "annotation_list",
+          "parameters": {"category": "audit-finding"},
+          "success": true,
+          "duration": 100,
+          "result": "Listed findings across repos"
+        },
+        {
+          "callId": "step-5-triage",
+          "timestamp": "2026-01-01T00:04:00.000Z",
+          "toolName": "audit_add_notes",
+          "parameters": {
+            "owner": "arduino",
+            "repo": "Arduino",
+            "sourceLocation": "main.cpp",
+            "line": 42,
+            "notes": "False positive: input validated before use"
+          },
+          "success": true,
+          "duration": 100,
+          "result": "Updated notes"
+        },
+        {
+          "callId": "step-6-search",
+          "timestamp": "2026-01-01T00:05:00.000Z",
+          "toolName": "annotation_search",
+          "parameters": {"search": "false positive"},
+          "success": true,
+          "duration": 100,
+          "result": "Found annotated findings"
+        }
+      ],
+      "testExecutions": [],
+      "qualityScores": []
+    }
+  ]
+}

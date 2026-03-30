@@ -1,6 +1,7 @@
 import { build } from 'esbuild';
 import { chmod, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 const distDir = 'dist';
 const entryFile = 'src/codeql-development-mcp-server.ts';
@@ -32,6 +33,14 @@ const config = {
       'import { createRequire as __bundled_createRequire__ } from "module";',
       'const require = __bundled_createRequire__(import.meta.url);',
     ].join('\n'),
+  },
+  // sql.js ships a `./dist/*` wildcard subpath export that esbuild 0.x
+  // cannot resolve. Map the specifier to its absolute on-disk path so
+  // esbuild bundles the asm.js build inline into the single output file.
+  alias: {
+    'sql.js/dist/sql-asm.js': fileURLToPath(
+      import.meta.resolve('sql.js/dist/sql-asm.js'),
+    ),
   },
   // Only generate the bundled JS file and source map
   write: true,

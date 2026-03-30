@@ -1,0 +1,9 @@
+{
+  "toolName": "audit_list_findings",
+  "parameters": {
+    "owner": "arduino",
+    "repo": "Arduino"
+  },
+  "expectedSuccess": true,
+  "description": "Test audit_list_findings lists findings for a single repository from MRVA results"
+}

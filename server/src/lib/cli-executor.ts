@@ -8,6 +8,10 @@ import { basename, delimiter, dirname, isAbsolute, join } from 'path';
 import { homedir } from 'os';
 import { promisify } from 'util';
 import { logger } from '../utils/logger';
+import { setActualCodeqlVersion, warnOnVersionMismatch } from './codeql-version';
+
+// Re-export version functions so existing callers don't break
+export { getActualCodeqlVersion, getTargetCodeqlVersion } from './codeql-version';
 
 const execFileAsync = promisify(execFile);
 
@@ -370,9 +374,9 @@ export function resetResolvedCodeQLBinary(): void {
  * Validate that the resolved CodeQL binary is actually callable.
  *
  * Runs `codeql version --format=terse` and verifies the process exits
- * successfully. This catches the case where `CODEQL_PATH` is unset and
- * `codeql` is not on PATH — the server would otherwise start normally
- * but every tool invocation would fail.
+ * successfully. Stores the actual version for later retrieval via
+ * getActualCodeqlVersion(). Warns (but does not fail) if the actual
+ * version differs from the target version in .codeql-version.
  *
  * @returns The version string reported by the CodeQL CLI.
  * @throws Error if the binary is not reachable or returns a non-zero exit code.
@@ -389,7 +393,15 @@ export async function validateCodeQLBinaryReachable(): Promise<string> {
       env,
       timeout: 15_000,
     });
-    return stdout.trim();
+    const version = stdout.trim();
+
+    // Store the actual CLI version for cache keys and diagnostics
+    setActualCodeqlVersion(version);
+
+    // Compare with target version and warn on mismatch
+    warnOnVersionMismatch(version);
+
+    return version;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(

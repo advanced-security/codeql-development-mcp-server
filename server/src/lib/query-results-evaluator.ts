@@ -4,9 +4,8 @@
 
 import { executeCodeQLCommand } from './cli-executor';
 import { logger } from '../utils/logger';
-import { writeFileSync, readFileSync } from 'fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, isAbsolute } from 'path';
-import { mkdirSync } from 'fs';
 
 export interface QueryEvaluationResult {
   success: boolean;
@@ -35,31 +34,64 @@ export const BUILT_IN_EVALUATORS = {
 export type BuiltInEvaluator = keyof typeof BUILT_IN_EVALUATORS;
 
 /**
- * Extract metadata from a CodeQL query file
+ * In-memory cache for extracted query metadata, keyed by file path.
+ * Stores the file modification time to invalidate when the file changes.
+ * Bounded to {@link METADATA_CACHE_MAX} entries; least-recently-used entries
+ * (by access) are evicted when the limit is reached. Entries are refreshed
+ * on cache hits via delete+set, so Map iteration order reflects LRU state.
+ */
+const METADATA_CACHE_MAX = 256;
+const metadataCache = new Map<string, { mtime: number; metadata: QueryMetadata }>();
+
+/**
+ * Extract metadata from a CodeQL query file.
+ * Results are cached by file path with mtime-based invalidation.
  */
 export async function extractQueryMetadata(queryPath: string): Promise<QueryMetadata> {
   try {
-    const queryContent = readFileSync(queryPath, 'utf-8');
+    // Open once, then fstat + read via the fd to avoid TOCTOU race (CWE-367).
+    const fd = openSync(queryPath, 'r');
+    let queryContent: string;
+    let mtime: number;
+    try {
+      mtime = fstatSync(fd).mtimeMs;
+      const cached = metadataCache.get(queryPath);
+      if (cached && cached.mtime === mtime) {
+        // Refresh position in Map to implement true LRU behavior.
+        metadataCache.delete(queryPath);
+        metadataCache.set(queryPath, cached);
+        return cached.metadata;
+      }
+      queryContent = readFileSync(fd, 'utf-8');
+    } finally {
+      closeSync(fd);
+    }
     const metadata: QueryMetadata = {};
-    
+
     // Extract metadata from comments using regex patterns
     const kindMatch = queryContent.match(/@kind\s+([^\s]+)/);
     if (kindMatch) metadata.kind = kindMatch[1];
-    
+
     const nameMatch = queryContent.match(/@name\s+(.+)/);
     if (nameMatch) metadata.name = nameMatch[1].trim();
-    
+
     const descMatch = queryContent.match(/@description\s+(.+)/);
     if (descMatch) metadata.description = descMatch[1].trim();
-    
+
     const idMatch = queryContent.match(/@id\s+(.+)/);
     if (idMatch) metadata.id = idMatch[1].trim();
-    
+
     const tagsMatch = queryContent.match(/@tags\s+(.+)/);
     if (tagsMatch) {
       metadata.tags = tagsMatch[1].split(/\s+/).filter(t => t.length > 0);
     }
-    
+
+    // Evict oldest entries when the cache exceeds the size limit.
+    if (metadataCache.size >= METADATA_CACHE_MAX) {
+      const firstKey = metadataCache.keys().next().value;
+      if (firstKey !== undefined) metadataCache.delete(firstKey);
+    }
+    metadataCache.set(queryPath, { mtime, metadata });
     return metadata;
   } catch (error) {
     logger.error('Failed to extract query metadata:', error);
