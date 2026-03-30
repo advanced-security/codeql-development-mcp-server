@@ -1,0 +1,7 @@
+{
+  "toolName": "audit_clear_repo",
+  "arguments": {
+    "owner": "arduino",
+    "repo": "Arduino"
+  }
+}

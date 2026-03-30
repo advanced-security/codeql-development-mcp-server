@@ -1,0 +1,8 @@
+{
+  "toolName": "query_results_cache_clear",
+  "parameters": {
+    "all": true
+  },
+  "expectedSuccess": true,
+  "description": "Test query_results_cache_clear clears all cached query results"
+}

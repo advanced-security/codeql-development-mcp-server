@@ -1,0 +1,9 @@
+{
+  "toolName": "audit_list_findings",
+  "parameters": {
+    "owner": "arduino",
+    "repo": "Arduino"
+  },
+  "success": true,
+  "description": "Successfully listed audit findings for arduino/Arduino repository"
+}

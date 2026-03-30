@@ -1,0 +1,6 @@
+{
+  "toolName": "query_results_cache_clear",
+  "arguments": {
+    "all": true
+  }
+}
