@@ -24,6 +24,7 @@ export const SUPPORTED_LANGUAGES = [
   'javascript',
   'python',
   'ruby',
+  'rust',
   'swift'
 ] as const;
 

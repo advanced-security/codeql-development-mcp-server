@@ -82,7 +82,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_NAME="${{ steps.version.outputs.release_name }}"
-          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
+          LANGUAGES="actions cpp csharp go java javascript python ruby rust swift"
 
           # Prerelease versions (containing a hyphen) require --allow-prerelease
           PRERELEASE_FLAG=""
@@ -110,7 +110,7 @@ jobs:
       - name: CodeQL - Bundle CodeQL tool query packs
         run: |
           mkdir -p dist-packs
-          LANGUAGES="actions cpp csharp go java javascript python ruby swift"
+          LANGUAGES="actions cpp csharp go java javascript python ruby rust swift"
           echo "Bundling CodeQL tool query packs..."
           for lang in ${LANGUAGES}; do
             PACK_DIR="server/ql/${lang}/tools/src"
@@ -148,6 +148,6 @@ jobs:
           echo "### Published CodeQL Packs" >> $GITHUB_STEP_SUMMARY
           echo "| Pack | Version |" >> $GITHUB_STEP_SUMMARY
           echo "| ---- | ------- |" >> $GITHUB_STEP_SUMMARY
-          for lang in actions cpp csharp go java javascript python ruby swift; do
+          for lang in actions cpp csharp go java javascript python ruby rust swift; do
             echo "| \`advanced-security/ql-mcp-${lang}-tools-src\` | ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
           done

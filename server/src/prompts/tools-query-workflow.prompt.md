@@ -19,7 +19,7 @@ Tools queries provide essential insights into how CodeQL represents your source 
 
 ## Supported Languages
 
-Tools queries are available for: `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `swift`
+Tools queries are available for: `actions`, `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`
 
 ## Prerequisites
 

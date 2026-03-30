@@ -790,8 +790,8 @@ async function resolveQueryPath(
   
   // If queryName provided but no language, we can't resolve
   if (!queryLanguage) {
-    logger.error('queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift');
-    throw new Error('queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, swift');
+    logger.error('queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift');
+    throw new Error('queryLanguage is required when using queryName parameter. Supported languages: actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift');
   }
   
   try {
