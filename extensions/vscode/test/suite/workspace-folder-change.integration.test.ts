@@ -61,7 +61,8 @@ async function removeWorkspaceFolder(fsPath: string): Promise<void> {
   const idx = folders.findIndex((f) => f.uri.fsPath === fsPath);
   if (idx < 0) return;
   const changePromise = waitForWorkspaceFolderChange();
-  vscode.workspace.updateWorkspaceFolders(idx, 1);
+  const ok = vscode.workspace.updateWorkspaceFolders(idx, 1);
+  assert.ok(ok, 'updateWorkspaceFolders (remove) returned false');
   await changePromise;
 }
 
