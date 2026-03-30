@@ -81,19 +81,21 @@ export async function activate(
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('codeql-mcp')) {
-        logger.info('Configuration changed — rebuilding environment');
+        logger.info('Configuration changed — requesting MCP server restart');
         envBuilder.invalidate();
-        mcpProvider.fireDidChange();
+        mcpProvider.requestRestart();
       }
     }),
   );
 
-  // Re-scan when workspace folders change
+  // Invalidate cached environment when workspace folders change.
+  // VS Code itself manages MCP server lifecycle when roots change
+  // (stopping and restarting the server as needed).  We just clear
+  // the cached env so the next server start picks up updated folders.
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      logger.info('Workspace folders changed — refreshing watchers');
+      logger.info('Workspace folders changed — invalidating environment cache');
       envBuilder.invalidate();
-      mcpProvider.fireDidChange();
     }),
   );
 

@@ -41,6 +41,7 @@ const testSuiteConfig = {
     'test/suite/mcp-resource-e2e.integration.test.ts',
     'test/suite/mcp-server.integration.test.ts',
     'test/suite/mcp-tool-e2e.integration.test.ts',
+    'test/suite/workspace-folder-change.integration.test.ts',
     'test/suite/workspace-scenario.integration.test.ts',
   ],
   outdir: 'dist/test/suite',
