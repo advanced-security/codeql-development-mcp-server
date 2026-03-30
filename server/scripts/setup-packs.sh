@@ -31,7 +31,7 @@ Install CodeQL pack dependencies for bundled tool query packs.
 
 OPTIONS:
     --language <lang>  Install packs only for the specified language
-                       Valid values: actions, cpp, csharp, go, java, javascript, python, ruby, swift
+                       Valid values: actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift
     -h, --help         Show this help message
 
 By default, installs pack dependencies for all supported languages.
@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ## Validate language if provided
-VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "swift")
+VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "rust" "swift")
 if [ -n "${LANGUAGE}" ]; then
   LANGUAGE_VALID=false
   for valid_lang in "${VALID_LANGUAGES[@]}"; do
