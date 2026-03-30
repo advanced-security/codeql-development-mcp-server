@@ -1,0 +1,14 @@
+{
+  "toolName": "codeql_query_run",
+  "parameters": {
+    "queryName": "PrintAST",
+    "queryLanguage": "rust",
+    "database": "server/ql/rust/tools/test/PrintAST/PrintAST.testproj",
+    "sourceFiles": "server/ql/rust/tools/test/PrintAST/Example1.rs",
+    "output": "query-results.bqrs",
+    "format": "graphtext",
+    "interpretedOutput": "query-results"
+  },
+  "expectedSuccess": true,
+  "description": "Test codeql_query_run with queryName resolution for PrintAST query using external predicates for source file selection and graphtext format interpretation for Rust language"
+}

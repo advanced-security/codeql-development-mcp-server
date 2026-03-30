@@ -1,0 +1,15 @@
+{
+  "toolName": "codeql_query_run",
+  "parameters": {
+    "queryName": "CallGraphFrom",
+    "queryLanguage": "rust",
+    "database": "server/ql/rust/tools/test/CallGraphFrom/CallGraphFrom.testproj",
+    "sourceFunction": "source_func",
+    "output": "query-results.bqrs",
+    "format": "sarif-latest",
+    "interpretedOutput": "query-results.sarif",
+    "timeout": 300000
+  },
+  "expectedSuccess": true,
+  "description": "Test codeql_query_run with queryName resolution for CallGraphFrom (@kind problem) query using external predicates and SARIF format interpretation for Rust language"
+}
