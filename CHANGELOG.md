@@ -26,7 +26,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 #### MCP Server Tools
 
-| Name                                                                                                                     | Description                                                                                                                                                                                            |
+| Tool                                                                                                                     | Description                                                                                                                                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `annotation_create`, `annotation_get`, `annotation_list`, `annotation_update`, `annotation_delete`, `annotation_search`  | General-purpose annotation tools for creating, managing, and searching notes and bookmarks on analysis entities. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169)) |
 | `audit_store_findings`, `audit_list_findings`, `audit_add_notes`, `audit_clear_repo`                                     | Repo-keyed audit tools for MRVA finding management and triage workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                         |
@@ -34,13 +34,13 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 #### MCP Server Resources
 
-| Name                          | Description                                                                                                                                                                       |
+| URI                           | Description                                                                                                                                                                       |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `codeql://languages/rust/ast` | Rust AST reference resource with verified accessor predicates for CodeQL query development. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195)) |
 
 #### CodeQL Query Packs
 
-| Name            | Description                                                                                                                                                                                 |
+| Pack            | Description                                                                                                                                                                                 |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rust tools pack | Added `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`, and `CallGraphFromTo` support for Rust. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195)) |
 
