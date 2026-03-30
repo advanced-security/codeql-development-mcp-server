@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-cpp-tools-test
-version: 2.25.1
+version: 2.25.1-next.1
 dependencies:
   advanced-security/ql-mcp-cpp-tools-src: ${workspace}
 extractor: cpp

@@ -14,6 +14,72 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+> Preview theme: the **next** phase of MCP-assisted CodeQL query development, incorporating and extending ideas for [`GitHubSecurityLab/seclab-taskflow-agent`](https://github.com/GitHubSecurityLab/seclab-taskflow-agent) and `seclab-taskflows` for multi-repository variant analysis workflows.
+
+### Highlights
+
+- **Persistent MRVA workflow state and caching** — Introduced a new `SqliteStore` backend plus opt-in annotation, audit, and query result cache tools to support the next phase of MCP-assisted CodeQL development and `seclab-taskflow-agent` integration. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
+- **Rust language support** — Added first-class Rust support with `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`, and `CallGraphFromTo` queries, bringing the total supported languages to 10. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+- **VS Code workspace change reliability** — Fixed MCP server restart behavior when workspace folders change so the extension now restarts the server with a fresh environment instead of leaving it partially stopped. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
+
+### Added
+
+#### MCP Server Tools
+
+| Name                                                                                                                     | Description                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `annotation_create`, `annotation_get`, `annotation_list`, `annotation_update`, `annotation_delete`, `annotation_search`  | General-purpose annotation tools for creating, managing, and searching notes and bookmarks on analysis entities. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169)) |
+| `audit_store_findings`, `audit_list_findings`, `audit_add_notes`, `audit_clear_repo`                                     | Repo-keyed audit tools for MRVA finding management and triage workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                         |
+| `query_results_cache_lookup`, `query_results_cache_retrieve`, `query_results_cache_clear`, `query_results_cache_compare` | Query result cache tools for lookup, subset retrieval, cache clearing, and cross-database comparison. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))            |
+
+#### MCP Server Resources
+
+| Name                          | Description                                                                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql://languages/rust/ast` | Rust AST reference resource with verified accessor predicates for CodeQL query development. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195)) |
+
+#### CodeQL Query Packs
+
+| Name            | Description                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rust tools pack | Added `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`, and `CallGraphFromTo` support for Rust. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195)) |
+
+#### Infrastructure & CI/CD
+
+- Added Rust coverage to CI and release workflows, including query unit tests and VSIX bundling. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+- Added client integration tests for the new Rust queries and for the annotation, audit, and cache tool suites, including an MRVA triage workflow end-to-end test. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169), [#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+
+### Changed
+
+#### MCP Server Tools
+
+| Tool                                   | Change                                                                                                                                                                                                |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql_query_run`                     | Query results are now auto-cached after SARIF interpretation, enabling later lookup and comparison workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))   |
+| query metadata and database resolution | Added in-memory caching with mtime-based invalidation and deduplicated resolution logic for better performance. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169)) |
+
+#### VS Code Extension
+
+- `McpProvider.requestRestart()` now invalidates the environment cache and bumps a `+rN` revision suffix so VS Code reliably restarts the MCP server after configuration changes. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
+- Cached the extension version in the provider constructor to avoid repeated synchronous reads of `package.json`. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
+
+#### Infrastructure & CI/CD
+
+- Refactored monolithic server logic into focused `database-resolver`, `query-resolver`, `result-processor`, and `codeql-version` modules for maintainability and reuse. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
+
+### Fixed
+
+- **Workspace folder changes could leave the MCP server stopped but not restarted** — The VS Code extension now rebuilds the environment and forces a proper restart when workspace folders change. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
+
+### Dependencies
+
+- Replaced `lowdb` with `sql.js` as the persistence backend, removing the previous JSON-file storage dependency. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
+- Added `codeql/rust-all` support for the new Rust tool queries. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+
+### New Contributors
+
+- [@Copilot](https://github.com/apps/copilot-swe-agent) made their first contribution in [#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195)
+
 ## [v2.25.1] — 2026-03-29
 
 ### Highlights
