@@ -51,7 +51,7 @@ find_extractor_dir() {
 }
 
 ## Languages to check
-LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "swift")
+LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "rust" "swift")
 
 ## Track overall status
 ALL_COMPATIBLE=true

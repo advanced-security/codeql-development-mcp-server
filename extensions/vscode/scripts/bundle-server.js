@@ -27,7 +27,7 @@ const targetServerDir = join(extensionRoot, 'server');
 // Languages with tool query packs
 const LANGUAGES = [
   'actions', 'cpp', 'csharp', 'go', 'java',
-  'javascript', 'python', 'ruby', 'swift',
+  'javascript', 'python', 'ruby', 'rust', 'swift',
 ];
 
 // Clean previous bundle

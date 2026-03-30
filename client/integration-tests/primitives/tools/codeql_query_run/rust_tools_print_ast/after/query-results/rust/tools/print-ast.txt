@@ -1,0 +1,502 @@
+/home/runner/work/codeql-development-mcp-server/codeql-development-mcp-server/server/ql/rust/tools/test/PrintAST/Example1.rs:
+#    1| [Comment] //...
+#    1| [SourceFile] SourceFile
+#    3|   getItem(0): [Struct] struct Example1
+#    3|     getName(): [Name] Example1
+#    3|     getFieldList(): [StructFieldList] StructFieldList
+#    4|       getField(0): [StructField] name: String
+#    4|         getName(): [Name] name
+#    4|         getTypeRepr(): [PathTypeRepr] String
+#    4|           getPath(): [Path] String
+#    4|             getSegment(): [PathSegment] String
+#    4|               getIdentifier(): [NameRef] String
+#    7|   getItem(1): [Impl] impl Example1 { ... }
+#    7|     getAssocItemList(): [AssocItemList] AssocItemList
+#    8|       getAssocItem(0): [Function] fn new
+#    8|         getParamList(): [ParamList] ParamList
+#    8|           getParam(0): [Param] ...: ...
+#    8|             getTypeRepr(): [RefTypeRepr] RefTypeRepr
+#    8|               getTypeRepr(): [PathTypeRepr] str
+#    8|                 getPath(): [Path] str
+#    8|                   getSegment(): [PathSegment] str
+#    8|                     getIdentifier(): [NameRef] str
+#    8|             getPat(): [IdentPat] name
+#    8|               getName(): [Name] name
+#    8|         getFunctionBody(): [BlockExpr] { ... }
+#    8|           getStmtList(): [StmtList] StmtList
+#    9|             getTailExpr(): [StructExpr] Example1 {...}
+#    9|               getPath(): [Path] Example1
+#    9|                 getSegment(): [PathSegment] Example1
+#    9|                   getIdentifier(): [NameRef] Example1
+#    9|               getStructExprFieldList(): [StructExprFieldList] StructExprFieldList
+#   10|                 getField(0): [StructExprField] name: ...
+#   10|                   getExpr(): [MethodCallExpr] name.to_string()
+#   10|                     getArgList(): [ArgList] ArgList
+#   10|                     getIdentifier(): [NameRef] to_string
+#   10|                     getReceiver(): [VariableAccess] name
+#   10|                       getPath(): [Path] name
+#   10|                         getSegment(): [PathSegment] name
+#   10|                           getIdentifier(): [NameRef] name
+#   10|                   getIdentifier(): [NameRef] name
+#    8|         getName(): [Name] new
+#    8|         getRetType(): [RetTypeRepr] RetTypeRepr
+#    8|           getTypeRepr(): [PathTypeRepr] Example1
+#    8|             getPath(): [Path] Example1
+#    8|               getSegment(): [PathSegment] Example1
+#    8|                 getIdentifier(): [NameRef] Example1
+#   14|       getAssocItem(1): [Function] fn greet
+#   14|         getParamList(): [ParamList] ParamList
+#   14|           getSelfParam(): [SelfParam] SelfParam
+#   14|             getName(): [Name] self
+#   14|         getFunctionBody(): [BlockExpr] { ... }
+#   14|           getStmtList(): [StmtList] StmtList
+#   15|             getTailExpr(): [MacroExpr] MacroExpr
+#   15|               getMacroCall(): [MacroCall] format!...
+#   15|                 getPath(): [Path] format
+#   15|                   getSegment(): [PathSegment] format
+#   15|                     getIdentifier(): [NameRef] format
+#   15|                 getTokenTree(): [TokenTree] TokenTree
+#   15|                 getMacroCallExpansion(): [BlockExpr] { ... }
+#   15|                   getStmtList(): [StmtList] StmtList
+#   15|                     getTailExpr(): [CallExpr] ...::must_use(...)
+#   15|                       getArgList(): [ArgList] ArgList
+#   15|                         getArg(0): [BlockExpr] { ... }
+#   15|                           getStmtList(): [StmtList] StmtList
+#   15|                             getTailExpr(): [CallExpr] ...::format(...)
+#   15|                               getArgList(): [ArgList] ArgList
+#   15|                                 getArg(0): [MacroExpr] MacroExpr
+#   15|                                   getMacroCall(): [MacroCall] ...::format_args!...
+#   15|                                     getPath(): [Path] ...::format_args
+#   15|                                       getQualifier(): [Path] ...::__export
+#   15|                                         getQualifier(): [Path] $crate
+#   15|                                           getSegment(): [PathSegment] $crate
+#   15|                                             getIdentifier(): [NameRef] $crate
+#   15|                                         getSegment(): [PathSegment] __export
+#   15|                                           getIdentifier(): [NameRef] __export
+#   15|                                       getSegment(): [PathSegment] format_args
+#   15|                                         getIdentifier(): [NameRef] format_args
+#   15|                                     getTokenTree(): [TokenTree] TokenTree
+#   15|                                     getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   15|                                       getArg(0): [FormatArgsArg] FormatArgsArg
+#   15|                                         getExpr(): [FieldExpr] self.name
+#   15|                                           getContainer(): [VariableAccess] self
+#   15|                                             getPath(): [Path] self
+#   15|                                               getSegment(): [PathSegment] self
+#   15|                                                 getIdentifier(): [NameRef] self
+#   15|                                           getIdentifier(): [NameRef] name
+#   15|                                       getTemplate(): [StringLiteralExpr] "Hello, {}!"
+#   15|                                       getFormat(0): [Format] {}
+#   15|                               getFunction(): [PathExpr] ...::format
+#   15|                                 getPath(): [Path] ...::format
+#   15|                                   getQualifier(): [Path] ...::fmt
+#   15|                                     getQualifier(): [Path] $crate
+#   15|                                       getSegment(): [PathSegment] $crate
+#   15|                                         getIdentifier(): [NameRef] $crate
+#   15|                                     getSegment(): [PathSegment] fmt
+#   15|                                       getIdentifier(): [NameRef] fmt
+#   15|                                   getSegment(): [PathSegment] format
+#   15|                                     getIdentifier(): [NameRef] format
+#   15|                       getFunction(): [PathExpr] ...::must_use
+#   15|                         getPath(): [Path] ...::must_use
+#   15|                           getQualifier(): [Path] ...::__export
+#   15|                             getQualifier(): [Path] $crate
+#   15|                               getSegment(): [PathSegment] $crate
+#   15|                                 getIdentifier(): [NameRef] $crate
+#   15|                             getSegment(): [PathSegment] __export
+#   15|                               getIdentifier(): [NameRef] __export
+#   15|                           getSegment(): [PathSegment] must_use
+#   15|                             getIdentifier(): [NameRef] must_use
+#   14|         getName(): [Name] greet
+#   14|         getRetType(): [RetTypeRepr] RetTypeRepr
+#   14|           getTypeRepr(): [PathTypeRepr] String
+#   14|             getPath(): [Path] String
+#   14|               getSegment(): [PathSegment] String
+#   14|                 getIdentifier(): [NameRef] String
+#    7|     getSelfTy(): [PathTypeRepr] Example1
+#    7|       getPath(): [Path] Example1
+#    7|         getSegment(): [PathSegment] Example1
+#    7|           getIdentifier(): [NameRef] Example1
+#   19|   getItem(2): [Function] fn helper
+#   19|     getParamList(): [ParamList] ParamList
+#   19|     getFunctionBody(): [BlockExpr] { ... }
+#   19|       getStmtList(): [StmtList] StmtList
+#   20|         getTailExpr(): [IntegerLiteralExpr] 42
+#   19|     getName(): [Name] helper
+#   19|     getRetType(): [RetTypeRepr] RetTypeRepr
+#   19|       getTypeRepr(): [PathTypeRepr] i32
+#   19|         getPath(): [Path] i32
+#   19|           getSegment(): [PathSegment] i32
+#   19|             getIdentifier(): [NameRef] i32
+#   23|   getItem(3): [Function] fn demo
+#   23|     getParamList(): [ParamList] ParamList
+#   23|       getParam(0): [Param] ...: i32
+#   23|         getTypeRepr(): [PathTypeRepr] i32
+#   23|           getPath(): [Path] i32
+#   23|             getSegment(): [PathSegment] i32
+#   23|               getIdentifier(): [NameRef] i32
+#   23|         getPat(): [IdentPat] x
+#   23|           getName(): [Name] x
+#   23|     getFunctionBody(): [BlockExpr] { ... }
+#   23|       getStmtList(): [StmtList] StmtList
+#   24|         getStatement(0): [LetStmt] let ... = ...
+#   24|           getInitializer(): [MacroExpr] MacroExpr
+#   24|             getMacroCall(): [MacroCall] vec!...
+#   24|               getPath(): [Path] vec
+#   24|                 getSegment(): [PathSegment] vec
+#   24|                   getIdentifier(): [NameRef] vec
+#   24|               getTokenTree(): [TokenTree] TokenTree
+#   24|               getMacroCallExpansion(): [CallExpr] ...::into_vec(...)
+#   24|                 getArgList(): [ArgList] ArgList
+#   24|                   getArg(0): [CallExpr] ...::box_new(...)
+#   24|                     getArgList(): [ArgList] ArgList
+#   24|                       getArg(0): [ArrayListExpr] [...]
+#   24|                         getExpr(0): [IntegerLiteralExpr] 1
+#   24|                         getExpr(1): [IntegerLiteralExpr] 2
+#   24|                         getExpr(2): [IntegerLiteralExpr] 3
+#   24|                     getFunction(): [PathExpr] ...::box_new
+#   24|                       getPath(): [Path] ...::box_new
+#   24|                         getQualifier(): [Path] ...::boxed
+#   24|                           getQualifier(): [Path] $crate
+#   24|                             getSegment(): [PathSegment] $crate
+#   24|                               getIdentifier(): [NameRef] $crate
+#   24|                           getSegment(): [PathSegment] boxed
+#   24|                             getIdentifier(): [NameRef] boxed
+#   24|                         getSegment(): [PathSegment] box_new
+#   24|                           getIdentifier(): [NameRef] box_new
+#   24|                 getFunction(): [PathExpr] ...::into_vec
+#   24|                   getPath(): [Path] ...::into_vec
+#   24|                     getQualifier(): [Path] <...>
+#   24|                       getSegment(): [PathSegment] <...>
+#   24|                         getTypeRepr(): [SliceTypeRepr] SliceTypeRepr
+#   24|                           getTypeRepr(): [InferTypeRepr] _
+#   24|                     getSegment(): [PathSegment] into_vec
+#   24|                       getIdentifier(): [NameRef] into_vec
+#   24|           getPat(): [IdentPat] numbers
+#   24|             getName(): [Name] numbers
+#   27|         getStatement(1): [ExprStmt] ExprStmt
+#   27|           getExpr(): [ForExpr] for ... in ... { ... }
+#   27|             getLoopBody(): [BlockExpr] { ... }
+#   27|               getStmtList(): [StmtList] StmtList
+#   28|                 getStatement(0): [ExprStmt] ExprStmt
+#   28|                   getExpr(): [MacroExpr] MacroExpr
+#   28|                     getMacroCall(): [MacroCall] println!...
+#   28|                       getPath(): [Path] println
+#   28|                         getSegment(): [PathSegment] println
+#   28|                           getIdentifier(): [NameRef] println
+#   28|                       getTokenTree(): [TokenTree] TokenTree
+#   28|                       getMacroCallExpansion(): [BlockExpr] { ... }
+#   28|                         getStmtList(): [StmtList] StmtList
+#   28|                           getTailExpr(): [BlockExpr] { ... }
+#   28|                             getStmtList(): [StmtList] StmtList
+#   28|                               getStatement(0): [ExprStmt] ExprStmt
+#   28|                                 getExpr(): [CallExpr] ...::_print(...)
+#   28|                                   getArgList(): [ArgList] ArgList
+#   28|                                     getArg(0): [MacroExpr] MacroExpr
+#   28|                                       getMacroCall(): [MacroCall] ...::format_args_nl!...
+#   28|                                         getPath(): [Path] ...::format_args_nl
+#   28|                                           getQualifier(): [Path] $crate
+#   28|                                             getSegment(): [PathSegment] $crate
+#   28|                                               getIdentifier(): [NameRef] $crate
+#   28|                                           getSegment(): [PathSegment] format_args_nl
+#   28|                                             getIdentifier(): [NameRef] format_args_nl
+#   28|                                         getTokenTree(): [TokenTree] TokenTree
+#   28|                                         getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   28|                                           getArg(0): [FormatArgsArg] FormatArgsArg
+#   28|                                             getExpr(): [VariableAccess] n
+#   28|                                               getPath(): [Path] n
+#   28|                                                 getSegment(): [PathSegment] n
+#   28|                                                   getIdentifier(): [NameRef] n
+#   28|                                           getTemplate(): [StringLiteralExpr] "{}\n"
+#   28|                                           getFormat(0): [Format] {}
+#   28|                                   getFunction(): [PathExpr] ...::_print
+#   28|                                     getPath(): [Path] ...::_print
+#   28|                                       getQualifier(): [Path] ...::io
+#   28|                                         getQualifier(): [Path] $crate
+#   28|                                           getSegment(): [PathSegment] $crate
+#   28|                                             getIdentifier(): [NameRef] $crate
+#   28|                                         getSegment(): [PathSegment] io
+#   28|                                           getIdentifier(): [NameRef] io
+#   28|                                       getSegment(): [PathSegment] _print
+#   28|                                         getIdentifier(): [NameRef] _print
+#   27|             getIterable(): [RefExpr] &numbers
+#   27|               getExpr(): [VariableAccess] numbers
+#   27|                 getPath(): [Path] numbers
+#   27|                   getSegment(): [PathSegment] numbers
+#   27|                     getIdentifier(): [NameRef] numbers
+#   27|             getPat(): [IdentPat] n
+#   27|               getName(): [Name] n
+#   32|         getStatement(2): [ExprStmt] ExprStmt
+#   32|           getExpr(): [IfExpr] if ... {...} else {...}
+#   32|             getCondition(): [BinaryExpr] ... > ...
+#   32|               getLhs(): [VariableAccess] x
+#   32|                 getPath(): [Path] x
+#   32|                   getSegment(): [PathSegment] x
+#   32|                     getIdentifier(): [NameRef] x
+#   32|               getRhs(): [IntegerLiteralExpr] 0
+#   34|             getElse(): [BlockExpr] { ... }
+#   34|               getStmtList(): [StmtList] StmtList
+#   35|                 getStatement(0): [ExprStmt] ExprStmt
+#   35|                   getExpr(): [MacroExpr] MacroExpr
+#   35|                     getMacroCall(): [MacroCall] println!...
+#   35|                       getPath(): [Path] println
+#   35|                         getSegment(): [PathSegment] println
+#   35|                           getIdentifier(): [NameRef] println
+#   35|                       getTokenTree(): [TokenTree] TokenTree
+#   35|                       getMacroCallExpansion(): [BlockExpr] { ... }
+#   35|                         getStmtList(): [StmtList] StmtList
+#   35|                           getTailExpr(): [BlockExpr] { ... }
+#   35|                             getStmtList(): [StmtList] StmtList
+#   35|                               getStatement(0): [ExprStmt] ExprStmt
+#   35|                                 getExpr(): [CallExpr] ...::_print(...)
+#   35|                                   getArgList(): [ArgList] ArgList
+#   35|                                     getArg(0): [MacroExpr] MacroExpr
+#   35|                                       getMacroCall(): [MacroCall] ...::format_args_nl!...
+#   35|                                         getPath(): [Path] ...::format_args_nl
+#   35|                                           getQualifier(): [Path] $crate
+#   35|                                             getSegment(): [PathSegment] $crate
+#   35|                                               getIdentifier(): [NameRef] $crate
+#   35|                                           getSegment(): [PathSegment] format_args_nl
+#   35|                                             getIdentifier(): [NameRef] format_args_nl
+#   35|                                         getTokenTree(): [TokenTree] TokenTree
+#   35|                                         getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   35|                                           getTemplate(): [StringLiteralExpr] "Non-positive\n"
+#   35|                                   getFunction(): [PathExpr] ...::_print
+#   35|                                     getPath(): [Path] ...::_print
+#   35|                                       getQualifier(): [Path] ...::io
+#   35|                                         getQualifier(): [Path] $crate
+#   35|                                           getSegment(): [PathSegment] $crate
+#   35|                                             getIdentifier(): [NameRef] $crate
+#   35|                                         getSegment(): [PathSegment] io
+#   35|                                           getIdentifier(): [NameRef] io
+#   35|                                       getSegment(): [PathSegment] _print
+#   35|                                         getIdentifier(): [NameRef] _print
+#   32|             getThen(): [BlockExpr] { ... }
+#   32|               getStmtList(): [StmtList] StmtList
+#   33|                 getStatement(0): [ExprStmt] ExprStmt
+#   33|                   getExpr(): [MacroExpr] MacroExpr
+#   33|                     getMacroCall(): [MacroCall] println!...
+#   33|                       getPath(): [Path] println
+#   33|                         getSegment(): [PathSegment] println
+#   33|                           getIdentifier(): [NameRef] println
+#   33|                       getTokenTree(): [TokenTree] TokenTree
+#   33|                       getMacroCallExpansion(): [BlockExpr] { ... }
+#   33|                         getStmtList(): [StmtList] StmtList
+#   33|                           getTailExpr(): [BlockExpr] { ... }
+#   33|                             getStmtList(): [StmtList] StmtList
+#   33|                               getStatement(0): [ExprStmt] ExprStmt
+#   33|                                 getExpr(): [CallExpr] ...::_print(...)
+#   33|                                   getArgList(): [ArgList] ArgList
+#   33|                                     getArg(0): [MacroExpr] MacroExpr
+#   33|                                       getMacroCall(): [MacroCall] ...::format_args_nl!...
+#   33|                                         getPath(): [Path] ...::format_args_nl
+#   33|                                           getQualifier(): [Path] $crate
+#   33|                                             getSegment(): [PathSegment] $crate
+#   33|                                               getIdentifier(): [NameRef] $crate
+#   33|                                           getSegment(): [PathSegment] format_args_nl
+#   33|                                             getIdentifier(): [NameRef] format_args_nl
+#   33|                                         getTokenTree(): [TokenTree] TokenTree
+#   33|                                         getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   33|                                           getTemplate(): [StringLiteralExpr] "Positive\n"
+#   33|                                   getFunction(): [PathExpr] ...::_print
+#   33|                                     getPath(): [Path] ...::_print
+#   33|                                       getQualifier(): [Path] ...::io
+#   33|                                         getQualifier(): [Path] $crate
+#   33|                                           getSegment(): [PathSegment] $crate
+#   33|                                             getIdentifier(): [NameRef] $crate
+#   33|                                         getSegment(): [PathSegment] io
+#   33|                                           getIdentifier(): [NameRef] io
+#   33|                                       getSegment(): [PathSegment] _print
+#   33|                                         getIdentifier(): [NameRef] _print
+#   39|         getTailExpr(): [MatchExpr] match x { ... }
+#   39|           getScrutinee(): [VariableAccess] x
+#   39|             getPath(): [Path] x
+#   39|               getSegment(): [PathSegment] x
+#   39|                 getIdentifier(): [NameRef] x
+#   39|           getMatchArmList(): [MatchArmList] MatchArmList
+#   40|             getArm(0): [MatchArm] 0 => ...
+#   40|               getExpr(): [MacroExpr] MacroExpr
+#   40|                 getMacroCall(): [MacroCall] println!...
+#   40|                   getPath(): [Path] println
+#   40|                     getSegment(): [PathSegment] println
+#   40|                       getIdentifier(): [NameRef] println
+#   40|                   getTokenTree(): [TokenTree] TokenTree
+#   40|                   getMacroCallExpansion(): [BlockExpr] { ... }
+#   40|                     getStmtList(): [StmtList] StmtList
+#   40|                       getStatement(0): [ExprStmt] ExprStmt
+#   40|                         getExpr(): [CallExpr] ...::_print(...)
+#   40|                           getArgList(): [ArgList] ArgList
+#   40|                             getArg(0): [MacroExpr] MacroExpr
+#   40|                               getMacroCall(): [MacroCall] ...::format_args_nl!...
+#   40|                                 getPath(): [Path] ...::format_args_nl
+#   40|                                   getQualifier(): [Path] $crate
+#   40|                                     getSegment(): [PathSegment] $crate
+#   40|                                       getIdentifier(): [NameRef] $crate
+#   40|                                   getSegment(): [PathSegment] format_args_nl
+#   40|                                     getIdentifier(): [NameRef] format_args_nl
+#   40|                                 getTokenTree(): [TokenTree] TokenTree
+#   40|                                 getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   40|                                   getTemplate(): [StringLiteralExpr] "Zero\n"
+#   40|                           getFunction(): [PathExpr] ...::_print
+#   40|                             getPath(): [Path] ...::_print
+#   40|                               getQualifier(): [Path] ...::io
+#   40|                                 getQualifier(): [Path] $crate
+#   40|                                   getSegment(): [PathSegment] $crate
+#   40|                                     getIdentifier(): [NameRef] $crate
+#   40|                                 getSegment(): [PathSegment] io
+#   40|                                   getIdentifier(): [NameRef] io
+#   40|                               getSegment(): [PathSegment] _print
+#   40|                                 getIdentifier(): [NameRef] _print
+#   40|               getPat(): [LiteralPat] 0
+#   40|                 getLiteral(): [IntegerLiteralExpr] 0
+#   41|             getArm(1): [MatchArm] 1 => ...
+#   41|               getExpr(): [MacroExpr] MacroExpr
+#   41|                 getMacroCall(): [MacroCall] println!...
+#   41|                   getPath(): [Path] println
+#   41|                     getSegment(): [PathSegment] println
+#   41|                       getIdentifier(): [NameRef] println
+#   41|                   getTokenTree(): [TokenTree] TokenTree
+#   41|                   getMacroCallExpansion(): [BlockExpr] { ... }
+#   41|                     getStmtList(): [StmtList] StmtList
+#   41|                       getStatement(0): [ExprStmt] ExprStmt
+#   41|                         getExpr(): [CallExpr] ...::_print(...)
+#   41|                           getArgList(): [ArgList] ArgList
+#   41|                             getArg(0): [MacroExpr] MacroExpr
+#   41|                               getMacroCall(): [MacroCall] ...::format_args_nl!...
+#   41|                                 getPath(): [Path] ...::format_args_nl
+#   41|                                   getQualifier(): [Path] $crate
+#   41|                                     getSegment(): [PathSegment] $crate
+#   41|                                       getIdentifier(): [NameRef] $crate
+#   41|                                   getSegment(): [PathSegment] format_args_nl
+#   41|                                     getIdentifier(): [NameRef] format_args_nl
+#   41|                                 getTokenTree(): [TokenTree] TokenTree
+#   41|                                 getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   41|                                   getTemplate(): [StringLiteralExpr] "One\n"
+#   41|                           getFunction(): [PathExpr] ...::_print
+#   41|                             getPath(): [Path] ...::_print
+#   41|                               getQualifier(): [Path] ...::io
+#   41|                                 getQualifier(): [Path] $crate
+#   41|                                   getSegment(): [PathSegment] $crate
+#   41|                                     getIdentifier(): [NameRef] $crate
+#   41|                                 getSegment(): [PathSegment] io
+#   41|                                   getIdentifier(): [NameRef] io
+#   41|                               getSegment(): [PathSegment] _print
+#   41|                                 getIdentifier(): [NameRef] _print
+#   41|               getPat(): [LiteralPat] 1
+#   41|                 getLiteral(): [IntegerLiteralExpr] 1
+#   42|             getArm(2): [MatchArm] _ => ...
+#   42|               getExpr(): [MacroExpr] MacroExpr
+#   42|                 getMacroCall(): [MacroCall] println!...
+#   42|                   getPath(): [Path] println
+#   42|                     getSegment(): [PathSegment] println
+#   42|                       getIdentifier(): [NameRef] println
+#   42|                   getTokenTree(): [TokenTree] TokenTree
+#   42|                   getMacroCallExpansion(): [BlockExpr] { ... }
+#   42|                     getStmtList(): [StmtList] StmtList
+#   42|                       getStatement(0): [ExprStmt] ExprStmt
+#   42|                         getExpr(): [CallExpr] ...::_print(...)
+#   42|                           getArgList(): [ArgList] ArgList
+#   42|                             getArg(0): [MacroExpr] MacroExpr
+#   42|                               getMacroCall(): [MacroCall] ...::format_args_nl!...
+#   42|                                 getPath(): [Path] ...::format_args_nl
+#   42|                                   getQualifier(): [Path] $crate
+#   42|                                     getSegment(): [PathSegment] $crate
+#   42|                                       getIdentifier(): [NameRef] $crate
+#   42|                                   getSegment(): [PathSegment] format_args_nl
+#   42|                                     getIdentifier(): [NameRef] format_args_nl
+#   42|                                 getTokenTree(): [TokenTree] TokenTree
+#   42|                                 getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   42|                                   getTemplate(): [StringLiteralExpr] "Other\n"
+#   42|                           getFunction(): [PathExpr] ...::_print
+#   42|                             getPath(): [Path] ...::_print
+#   42|                               getQualifier(): [Path] ...::io
+#   42|                                 getQualifier(): [Path] $crate
+#   42|                                   getSegment(): [PathSegment] $crate
+#   42|                                     getIdentifier(): [NameRef] $crate
+#   42|                                 getSegment(): [PathSegment] io
+#   42|                                   getIdentifier(): [NameRef] io
+#   42|                               getSegment(): [PathSegment] _print
+#   42|                                 getIdentifier(): [NameRef] _print
+#   42|               getPat(): [WildcardPat] _
+#   23|     getName(): [Name] demo
+#   46|   getItem(4): [Function] fn main
+#   46|     getParamList(): [ParamList] ParamList
+#   46|     getFunctionBody(): [BlockExpr] { ... }
+#   46|       getStmtList(): [StmtList] StmtList
+#   47|         getStatement(0): [LetStmt] let ... = ...
+#   47|           getInitializer(): [CallExpr] ...::new(...)
+#   47|             getArgList(): [ArgList] ArgList
+#   47|               getArg(0): [StringLiteralExpr] "World"
+#   47|             getFunction(): [PathExpr] ...::new
+#   47|               getPath(): [Path] ...::new
+#   47|                 getQualifier(): [Path] Example1
+#   47|                   getSegment(): [PathSegment] Example1
+#   47|                     getIdentifier(): [NameRef] Example1
+#   47|                 getSegment(): [PathSegment] new
+#   47|                   getIdentifier(): [NameRef] new
+#   47|           getPat(): [IdentPat] example
+#   47|             getName(): [Name] example
+#   48|         getStatement(1): [ExprStmt] ExprStmt
+#   48|           getExpr(): [MacroExpr] MacroExpr
+#   48|             getMacroCall(): [MacroCall] println!...
+#   48|               getPath(): [Path] println
+#   48|                 getSegment(): [PathSegment] println
+#   48|                   getIdentifier(): [NameRef] println
+#   48|               getTokenTree(): [TokenTree] TokenTree
+#   48|               getMacroCallExpansion(): [BlockExpr] { ... }
+#   48|                 getStmtList(): [StmtList] StmtList
+#   48|                   getTailExpr(): [BlockExpr] { ... }
+#   48|                     getStmtList(): [StmtList] StmtList
+#   48|                       getStatement(0): [ExprStmt] ExprStmt
+#   48|                         getExpr(): [CallExpr] ...::_print(...)
+#   48|                           getArgList(): [ArgList] ArgList
+#   48|                             getArg(0): [MacroExpr] MacroExpr
+#   48|                               getMacroCall(): [MacroCall] ...::format_args_nl!...
+#   48|                                 getPath(): [Path] ...::format_args_nl
+#   48|                                   getQualifier(): [Path] $crate
+#   48|                                     getSegment(): [PathSegment] $crate
+#   48|                                       getIdentifier(): [NameRef] $crate
+#   48|                                   getSegment(): [PathSegment] format_args_nl
+#   48|                                     getIdentifier(): [NameRef] format_args_nl
+#   48|                                 getTokenTree(): [TokenTree] TokenTree
+#   48|                                 getMacroCallExpansion(): [FormatArgsExpr] FormatArgsExpr
+#   48|                                   getArg(0): [FormatArgsArg] FormatArgsArg
+#   48|                                     getExpr(): [MethodCallExpr] example.greet()
+#   48|                                       getArgList(): [ArgList] ArgList
+#   48|                                       getIdentifier(): [NameRef] greet
+#   48|                                       getReceiver(): [VariableAccess] example
+#   48|                                         getPath(): [Path] example
+#   48|                                           getSegment(): [PathSegment] example
+#   48|                                             getIdentifier(): [NameRef] example
+#   48|                                   getTemplate(): [StringLiteralExpr] "{}\n"
+#   48|                                   getFormat(0): [Format] {}
+#   48|                           getFunction(): [PathExpr] ...::_print
+#   48|                             getPath(): [Path] ...::_print
+#   48|                               getQualifier(): [Path] ...::io
+#   48|                                 getQualifier(): [Path] $crate
+#   48|                                   getSegment(): [PathSegment] $crate
+#   48|                                     getIdentifier(): [NameRef] $crate
+#   48|                                 getSegment(): [PathSegment] io
+#   48|                                   getIdentifier(): [NameRef] io
+#   48|                               getSegment(): [PathSegment] _print
+#   48|                                 getIdentifier(): [NameRef] _print
+#   49|         getStatement(2): [LetStmt] let ... = ...
+#   49|           getInitializer(): [CallExpr] helper(...)
+#   49|             getArgList(): [ArgList] ArgList
+#   49|             getFunction(): [PathExpr] helper
+#   49|               getPath(): [Path] helper
+#   49|                 getSegment(): [PathSegment] helper
+#   49|                   getIdentifier(): [NameRef] helper
+#   49|           getPat(): [IdentPat] _result
+#   49|             getName(): [Name] _result
+#   50|         getStatement(3): [ExprStmt] ExprStmt
+#   50|           getExpr(): [CallExpr] demo(...)
+#   50|             getArgList(): [ArgList] ArgList
+#   50|               getArg(0): [IntegerLiteralExpr] 5
+#   50|             getFunction(): [PathExpr] demo
+#   50|               getPath(): [Path] demo
+#   50|                 getSegment(): [PathSegment] demo
+#   50|                   getIdentifier(): [NameRef] demo
+#   46|     getName(): [Name] main
+#   26| [Comment] //...
+#   31| [Comment] //...
+#   38| [Comment] //...

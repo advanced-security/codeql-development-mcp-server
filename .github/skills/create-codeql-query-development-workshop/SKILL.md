@@ -398,6 +398,7 @@ Include appropriate CodeQL libraries in `codeql-pack.yml`:
 - **JavaScript/TypeScript**: `codeql/javascript-all`
 - **Python**: `codeql/python-all`
 - **Ruby**: `codeql/ruby-all`
+- **Rust**: `codeql/rust-all`
 
 ### Java-Specific API Notes
 

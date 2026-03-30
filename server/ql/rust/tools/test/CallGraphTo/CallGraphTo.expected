@@ -1,0 +1,2 @@
+| Example1.rs:12:5:12:17 | target_func(...) | Call to `target_func` from `caller1` |
+| Example1.rs:16:5:16:17 | target_func(...) | Call to `target_func` from `caller2` |

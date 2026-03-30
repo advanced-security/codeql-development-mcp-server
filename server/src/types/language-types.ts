@@ -21,6 +21,7 @@ import javascriptSecurity from '../resources/languages/javascript_security_query
 import pythonAst from '../resources/languages/python_ast.md';
 import pythonSecurity from '../resources/languages/python_security_query_guide.md';
 import rubyAst from '../resources/languages/ruby_ast.md';
+import rustAst from '../resources/languages/rust_ast.md';
 
 export interface LanguageResource {
   language: string;
@@ -71,5 +72,9 @@ export const LANGUAGE_RESOURCES: LanguageResource[] = [
   {
     language: 'ruby',
     astContent: rubyAst
+  },
+  {
+    language: 'rust',
+    astContent: rustAst
   }
 ];

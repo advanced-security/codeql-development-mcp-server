@@ -35,6 +35,7 @@ Currently supported languages:
 - `javascript/` - JavaScript/TypeScript
 - `python/` - Python
 - `ruby/` - Ruby
+- `rust/` - Rust
 - `swift/` - Swift
 
 ## Testing

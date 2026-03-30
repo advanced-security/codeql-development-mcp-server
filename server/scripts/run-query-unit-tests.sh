@@ -14,7 +14,7 @@ Run CodeQL query unit tests for all language tools directories.
 OPTIONS:
     --fail-fast        Exit immediately after the first test failure
     --language <lang>  Run tests only for the specified language
-                       Valid values: actions, cpp, csharp, go, java, javascript, python, ruby, swift
+                       Valid values: actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift
     -h, --help         Show this help message
 
 By default, the script runs all tests and reports failures at the end.
@@ -44,7 +44,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ## Validate language if provided
-VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "swift")
+VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "rust" "swift")
 if [ -n "${LANGUAGE}" ]; then
 	LANGUAGE_VALID=false
 	for valid_lang in "${VALID_LANGUAGES[@]}"; do

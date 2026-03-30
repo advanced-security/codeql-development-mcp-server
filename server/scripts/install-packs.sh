@@ -12,7 +12,7 @@ Install CodeQL packs for queries and query-tests associated with the MCP server.
 
 OPTIONS:
     --language <lang>  Install packs only for the specified language
-                       Valid values: actions, cpp, csharp, go, java, javascript, python, ruby, swift
+                       Valid values: actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift
     -h, --help         Show this help message
 
 By default, the script installs packs for all supported languages.
@@ -38,7 +38,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ## Validate language if provided
-VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "swift")
+VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "rust" "swift")
 if [ -n "${LANGUAGE}" ]; then
 	LANGUAGE_VALID=false
 	for valid_lang in "${VALID_LANGUAGES[@]}"; do
@@ -113,5 +113,6 @@ else
 	install_packs "server/ql/javascript/tools"
 	install_packs "server/ql/python/tools"
 	install_packs "server/ql/ruby/tools"
+	install_packs "server/ql/rust/tools"
 	install_packs "server/ql/swift/tools"
 fi

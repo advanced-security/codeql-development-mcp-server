@@ -1,0 +1,2 @@
+| Example1.rs:10:5:10:12 | target(...) | Reachable call from `intermediate` to `target` |
+| Example1.rs:14:5:14:18 | intermediate(...) | Reachable call from `source` to `intermediate` |
