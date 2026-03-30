@@ -180,7 +180,7 @@ describe('McpProvider', () => {
     provider.requestRestart();
     const definitions = await provider.provideMcpServerDefinitions(token as any);
 
-    expect(definitions![0].version).toMatch(/^2\.20\.0\.\d+$/);
+    expect(definitions![0].version).toMatch(/^2\.20\.0\+r\d+$/);
   });
 
   it('should append revision to extension version after requestRestart when version is latest', async () => {
@@ -191,7 +191,7 @@ describe('McpProvider', () => {
     provider.requestRestart();
     const definitions = await provider.provideMcpServerDefinitions(token as any);
 
-    expect(definitions![0].version).toMatch(/^2\.25\.1\.\d+$/);
+    expect(definitions![0].version).toMatch(/^2\.25\.1\+r\d+$/);
   });
 
   it('should fire change event when requestRestart is called', () => {
@@ -201,6 +201,12 @@ describe('McpProvider', () => {
     provider.requestRestart();
 
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('should invalidate env cache when requestRestart is called', () => {
+    provider.requestRestart();
+
+    expect(envBuilder.invalidate).toHaveBeenCalledTimes(1);
   });
 
   it('should resolve definition by refreshing environment', async () => {

@@ -82,7 +82,6 @@ export async function activate(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('codeql-mcp')) {
         logger.info('Configuration changed — requesting MCP server restart');
-        envBuilder.invalidate();
         mcpProvider.requestRestart();
       }
     }),

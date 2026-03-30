@@ -52,14 +52,16 @@ export class McpProvider
   /**
    * Request that VS Code restart the MCP server with a fresh environment.
    *
-   * Bumps the internal revision counter so that the next call to
-   * `provideMcpServerDefinitions()` returns a definition with a different
-   * `version` string. VS Code compares the new version to the running
-   * server's version and, seeing a change, triggers a stop → start cycle.
+   * Invalidates the cached environment and bumps the internal revision counter
+   * so that the next call to `provideMcpServerDefinitions()` returns a
+   * definition with a different `version` string. VS Code compares the new
+   * version to the running server's version and, seeing a change, triggers a
+   * stop → start cycle.
    *
    * Use for changes that require a server restart (configuration changes).
    */
   requestRestart(): void {
+    this.envBuilder.invalidate();
     this._revision++;
     this.logger.info(
       `Requesting ql-mcp restart (revision ${this._revision})...`,
@@ -108,7 +110,7 @@ export class McpProvider
    * returns `undefined` (the "latest" / unpinned case), the extension
    * version is used as the base instead.
    *
-   * After one or more `requestRestart()` calls, a `.N` revision suffix
+   * After one or more `requestRestart()` calls, a `+rN` revision suffix
    * is appended so that the version is always different from the
    * previous one.  VS Code uses the version to decide whether to
    * restart a running server: a changed version triggers a stop → start
@@ -121,6 +123,6 @@ export class McpProvider
     if (this._revision === 0) {
       return base;
     }
-    return `${base}.${this._revision}`;
+    return `${base}+r${this._revision}`;
   }
 }

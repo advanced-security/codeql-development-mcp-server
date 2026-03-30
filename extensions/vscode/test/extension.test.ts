@@ -175,8 +175,7 @@ describe('Extension', () => {
   it('should invalidate env cache on workspace folder changes', async () => {
     // Capture the workspace folder change callback
     let workspaceFolderChangeCallback: Function | undefined;
-    const vscodeMock = vi.mocked(vscode);
-    vscodeMock.workspace.onDidChangeWorkspaceFolders = vi.fn().mockImplementation(
+    const spy = vi.spyOn(vscode.workspace, 'onDidChangeWorkspaceFolders').mockImplementation(
       (cb: Function) => { workspaceFolderChangeCallback = cb; return { dispose: vi.fn() }; },
     );
 
@@ -202,5 +201,7 @@ describe('Extension', () => {
     expect(envBuilderInstance.invalidate).toHaveBeenCalledTimes(1);
     expect(mcpProviderInstance.fireDidChange).not.toHaveBeenCalled();
     expect(mcpProviderInstance.requestRestart).not.toHaveBeenCalled();
+
+    spy.mockRestore();
   });
 });
