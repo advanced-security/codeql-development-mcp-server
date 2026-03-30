@@ -37,5 +37,4 @@ string getCalleeName(CallExpr call) {
 
 from CallExpr call
 where call.getResolvedTarget().(Function).getName().getText() = getTargetFunctionName()
-select call,
-  "Call to `" + getCalleeName(call) + "` from `" + getCallerName(call) + "`"
+select call, "Call to `" + getCalleeName(call) + "` from `" + getCallerName(call) + "`"

@@ -30,5 +30,4 @@ from CallExpr call, Function source
 where
   call.getEnclosingCallable() = source and
   source.getName().getText() = getSourceFunctionName()
-select call,
-  "Call from `" + source.getName().getText() + "` to `" + getCalleeName(call) + "`"
+select call, "Call from `" + source.getName().getText() + "` to `" + getCalleeName(call) + "`"

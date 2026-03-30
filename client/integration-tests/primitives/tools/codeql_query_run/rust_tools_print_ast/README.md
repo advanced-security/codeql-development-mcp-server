@@ -55,7 +55,7 @@ The tool should:
 
 ## External Predicates Integration
 
-This test demonstrates the integration between the MCP server's sourceFiles parameter and CodeQL's external predicates system. The PrintAST query uses `external string selectedSourceFiles()` to receive file paths, making it work with any Rust code database rather than being limited to test directories.
+This test demonstrates the integration between the MCP server's sourceFiles parameter and CodeQL's extensible predicates system. The PrintAST query uses `extensible predicate selectedSourceFiles(string path)` to receive file paths via data extensions, making it work with any Rust code database rather than being limited to test directories.
 
 ## Format Parameter
 

@@ -56,7 +56,7 @@ The tool should:
 
 ## External Predicates Integration
 
-This test demonstrates the integration between the MCP server's sourceFunction parameter and CodeQL's external predicates system. The CallGraphFrom query uses `external string sourceFunction()` to receive the function name, making it work with any Rust code database.
+This test demonstrates the integration between the MCP server's sourceFunction parameter and CodeQL's extensible predicates system. The CallGraphFrom query uses `extensible predicate sourceFunction(string name)` to receive the function name via data extensions, making it work with any Rust code database.
 
 ## Format Parameter
 
