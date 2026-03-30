@@ -1,0 +1,7 @@
+name: advanced-security/ql-mcp-rust-tools-test
+version: 2.25.1
+dependencies:
+  advanced-security/ql-mcp-rust-tools-src: ${workspace}
+extractor: rust
+dataExtensions:
+  - 'ext/*.model.yml'

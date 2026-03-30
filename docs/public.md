@@ -187,6 +187,7 @@ The MCP server includes tool query packs for the following CodeQL languages:
 | JavaScript/TypeScript | `javascript`      | `advanced-security/ql-mcp-javascript-tools-src` |
 | Python                | `python`          | `advanced-security/ql-mcp-python-tools-src`     |
 | Ruby                  | `ruby`            | `advanced-security/ql-mcp-ruby-tools-src`       |
+| Rust                  | `rust`            | `advanced-security/ql-mcp-rust-tools-src`       |
 | Swift                 | `swift`           | `advanced-security/ql-mcp-swift-tools-src`      |
 
 Each pack contains the following tool queries used by the server:

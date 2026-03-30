@@ -279,6 +279,6 @@ jobs:
           echo "### Published CodeQL Packs" >> $GITHUB_STEP_SUMMARY
           echo "| Pack | Version |" >> $GITHUB_STEP_SUMMARY
           echo "| ---- | ------- |" >> $GITHUB_STEP_SUMMARY
-          for lang in actions cpp csharp go java javascript python ruby swift; do
+          for lang in actions cpp csharp go java javascript python ruby rust swift; do
             echo "| \`advanced-security/ql-mcp-${lang}-tools-src\` | ${RELEASE_NAME} |" >> $GITHUB_STEP_SUMMARY
           done
