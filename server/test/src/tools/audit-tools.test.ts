@@ -116,7 +116,7 @@ describe('Audit Tools', () => {
         expect(lineSchema.safeParse(42).success).toBe(true);
       });
 
-      it('should validate audit_add_notes line as positive integer', () => {
+      it('should validate audit_add_notes line as optional positive integer', () => {
         registerAuditTools(mockServer);
 
         const addNotesCall = (mockServer.tool as any).mock.calls.find(
@@ -129,6 +129,22 @@ describe('Audit Tools', () => {
         expect(lineSchema.safeParse(-1).success).toBe(false);
         expect(lineSchema.safeParse(1.5).success).toBe(false);
         expect(lineSchema.safeParse(10).success).toBe(true);
+        expect(lineSchema.safeParse(undefined).success).toBe(true);
+      });
+
+      it('should have findingId as optional positive integer in audit_add_notes', () => {
+        registerAuditTools(mockServer);
+
+        const addNotesCall = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'audit_add_notes',
+        );
+        expect(addNotesCall).toBeDefined();
+        const findingIdSchema = addNotesCall[2].findingId;
+
+        expect(findingIdSchema.safeParse(1).success).toBe(true);
+        expect(findingIdSchema.safeParse(0).success).toBe(false);
+        expect(findingIdSchema.safeParse(-1).success).toBe(false);
+        expect(findingIdSchema.safeParse(undefined).success).toBe(true);
       });
     });
 
@@ -257,6 +273,72 @@ describe('Audit Tools', () => {
         });
 
         expect(result.content[0].text).toContain('No finding found');
+      });
+
+      it('should add notes by findingId', async () => {
+        registerAuditTools(mockServer);
+
+        const storeHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'audit_store_findings',
+        )[3];
+
+        await storeHandler({
+          owner: 'org',
+          repo: 'lib',
+          findings: [
+            { sourceLocation: 'src/handler.ts', line: 10, sourceType: 'Sink' },
+          ],
+        });
+
+        // Retrieve the finding id from the list
+        const listHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'audit_list_findings',
+        )[3];
+        const listResult = await listHandler({ owner: 'org', repo: 'lib' });
+        const findings = JSON.parse(listResult.content[0].text);
+        expect(findings.length).toBeGreaterThan(0);
+        const findingId = findings[0].id;
+
+        const addNotesHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'audit_add_notes',
+        )[3];
+
+        const result = await addNotesHandler({
+          findingId,
+          notes: 'Investigated via findingId',
+        });
+
+        expect(result.content[0].text).toContain('Updated notes');
+        expect(result.content[0].text).toContain(`${findingId}`);
+      });
+
+      it('should return not found for non-existent findingId', async () => {
+        registerAuditTools(mockServer);
+
+        const addNotesHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'audit_add_notes',
+        )[3];
+
+        const result = await addNotesHandler({
+          findingId: 99999,
+          notes: 'notes',
+        });
+
+        expect(result.content[0].text).toContain('No audit finding found');
+      });
+
+      it('should require either findingId or composite key for add_notes', async () => {
+        registerAuditTools(mockServer);
+
+        const addNotesHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'audit_add_notes',
+        )[3];
+
+        const result = await addNotesHandler({
+          notes: 'notes without identification',
+        });
+
+        expect(result.content[0].text).toContain('Either findingId or all of');
       });
 
       it('should clear all findings for a repository', async () => {

@@ -219,14 +219,34 @@ function registerQueryResultsCacheCompareTool(server: McpServer): void {
         byDatabase.get(key)!.push(entry);
       }
 
-      const comparison = Array.from(byDatabase.entries()).map(([db, dbEntries]) => ({
-        database: db,
-        languages: [...new Set(dbEntries.map(e => e.language))],
-        formats: [...new Set(dbEntries.map(e => e.outputFormat))],
-        totalResultCount: dbEntries.reduce((sum, e) => sum + (e.resultCount ?? 0), 0),
-        cachedRuns: dbEntries.length,
-        latestCachedAt: dbEntries[0].createdAt,
-      }));
+      const comparison = Array.from(byDatabase.entries()).map(([db, dbEntries]) => {
+        // For each entry, prefer the stored resultCount; fall back to
+        // parsing the cached SARIF content to extract the result count.
+        let totalResultCount = 0;
+        for (const e of dbEntries) {
+          if (e.resultCount != null) {
+            totalResultCount += e.resultCount;
+          } else {
+            // Attempt to derive result count from cached SARIF content
+            try {
+              const content = store.getCacheContent(e.cacheKey);
+              if (content) {
+                const sarif = JSON.parse(content);
+                const count = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
+                totalResultCount += count;
+              }
+            } catch { /* non-SARIF or missing content */ }
+          }
+        }
+        return {
+          database: db,
+          languages: [...new Set(dbEntries.map(e => e.language))],
+          formats: [...new Set(dbEntries.map(e => e.outputFormat))],
+          totalResultCount,
+          cachedRuns: dbEntries.length,
+          latestCachedAt: dbEntries[0].createdAt,
+        };
+      });
 
       return {
         content: [{

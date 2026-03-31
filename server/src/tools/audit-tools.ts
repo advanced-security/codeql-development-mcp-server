@@ -147,16 +147,40 @@ function registerAuditListFindingsTool(server: McpServer): void {
 function registerAuditAddNotesTool(server: McpServer): void {
   server.tool(
     'audit_add_notes',
-    'Append notes to an existing audit finding. The notes are appended to the annotation content.',
+    'Append notes to an existing audit finding. Identify the finding by findingId (preferred) or by owner+repo+sourceLocation+line.',
     {
-      owner: z.string().describe('Repository owner.'),
-      repo: z.string().describe('Repository name.'),
-      sourceLocation: z.string().describe('File path of the finding.'),
-      line: z.number().int().min(1).describe('Line number of the finding (integer >= 1).'),
+      findingId: z.number().int().positive().optional().describe('Annotation ID of the finding (returned by audit_store_findings and audit_list_findings). Preferred lookup method.'),
+      owner: z.string().optional().describe('Repository owner (required when findingId is not provided).'),
+      repo: z.string().optional().describe('Repository name (required when findingId is not provided).'),
+      sourceLocation: z.string().optional().describe('File path of the finding (required when findingId is not provided).'),
+      line: z.number().int().min(1).optional().describe('Line number of the finding (required when findingId is not provided).'),
       notes: z.string().describe('Notes to append.'),
     },
-    async ({ owner, repo, sourceLocation, line, notes }) => {
+    async ({ findingId, owner, repo, sourceLocation, line, notes }) => {
       const store = sessionDataManager.getStore();
+
+      // Primary lookup by findingId
+      if (findingId) {
+        const annotation = store.getAnnotation(findingId);
+        if (!annotation || annotation.category !== AUDIT_CATEGORY) {
+          return {
+            content: [{ type: 'text' as const, text: `No audit finding found with id ${findingId}.` }],
+          };
+        }
+        const updatedContent = (annotation.content || '') + '\n' + notes;
+        store.updateAnnotation(annotation.id, { content: updatedContent.trim() });
+        return {
+          content: [{ type: 'text' as const, text: `Updated notes for finding id ${findingId}.` }],
+        };
+      }
+
+      // Fallback lookup by composite key
+      if (!owner || !repo || !sourceLocation || !line) {
+        return {
+          content: [{ type: 'text' as const, text: 'Either findingId or all of owner+repo+sourceLocation+line must be provided.' }],
+        };
+      }
+
       const entityKey = `${repoKey(owner, repo)}:${sourceLocation}:L${line}`;
 
       const existing = store.listAnnotations({

@@ -90,6 +90,11 @@
           "default": true,
           "markdownDescription": "Copy CodeQL databases from the `GitHub.vscode-codeql` extension storage into a managed directory, removing query-server lock files so the MCP server CLI can operate without contention. Disable to use databases in-place (may fail when the CodeQL query server is running)."
         },
+        "codeql-mcp.enableAnnotationTools": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable annotation, audit, and query results caching tools. When enabled, the MCP server registers `annotation_*`, `audit_*`, and `query_results_cache_*` tools. Disable to reduce the tool surface if these capabilities are not needed."
+        },
         "codeql-mcp.serverArgs": {
           "type": "array",
           "items": {

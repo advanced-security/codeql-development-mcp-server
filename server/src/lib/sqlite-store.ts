@@ -456,9 +456,12 @@ export class SqliteStore {
     }
     if (filter?.search) {
       // Use the FTS4 index for efficient, case-insensitive full-text search
-      // across content, label, and metadata fields.
-      conditions.push('id IN (SELECT rowid FROM annotations_fts WHERE annotations_fts MATCH $search)');
+      // across content, label, and metadata fields. Also match the category
+      // column directly (not in FTS) so searches like "performance" find
+      // annotations whose category is "performance".
+      conditions.push('(id IN (SELECT rowid FROM annotations_fts WHERE annotations_fts MATCH $search) OR category = $search_cat)');
       params.$search = filter.search;
+      params.$search_cat = filter.search;
     }
 
     let sql = 'SELECT * FROM annotations';

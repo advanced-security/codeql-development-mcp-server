@@ -18,6 +18,32 @@ import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
 
+/**
+ * Per-database mutex map — serializes concurrent CLI operations that
+ * acquire an exclusive lock on a CodeQL database (e.g. database analyze).
+ */
+const databaseLocks = new Map<string, Promise<unknown>>();
+
+/**
+ * Acquire a serialized slot for the given database path.
+ * Returns a release function that must be called when the operation completes.
+ */
+function acquireDatabaseLock(dbPath: string): { ready: Promise<void>; release: () => void } {
+  const key = dbPath;
+  const previous = databaseLocks.get(key) ?? Promise.resolve();
+
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  databaseLocks.set(key, gate);
+
+  return {
+    ready: previous.then(() => {}),
+    release,
+  };
+}
+
 export interface CLIToolDefinition {
   name: string;
   description: string;
@@ -352,6 +378,15 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             break;
           }
             
+          case 'codeql_bqrs_interpret':
+            // Map 'database' to '--source-archive' for codeql bqrs interpret
+            if (options.database) {
+              const dbPath = resolveDatabasePath(options.database as string);
+              options['source-archive'] = join(dbPath, 'src');
+              delete options.database;
+            }
+            break;
+
           case 'codeql_query_compile':
           case 'codeql_resolve_metadata':
             // Handle query parameter as positional argument for query compilation and metadata tools
@@ -519,7 +554,19 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             options['keep-databases'] = true;
           }
           
-          result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
+          // Serialize concurrent database_analyze calls to the same database
+          // to prevent "cache directory is already locked" errors from the CLI.
+          let dbLock: { ready: Promise<void>; release: () => void } | undefined;
+          if (name === 'codeql_database_analyze' && positionalArgs.length > 0) {
+            dbLock = acquireDatabaseLock(positionalArgs[0]);
+            await dbLock.ready;
+          }
+
+          try {
+            result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
+          } finally {
+            dbLock?.release();
+          }
         } else if (command === 'qlt') {
           result = await executeQLTCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs]);
         } else {

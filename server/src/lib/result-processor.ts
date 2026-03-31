@@ -232,6 +232,16 @@ export async function processQueryRunResults(
             });
 
             const store = sessionDataManager.getStore();
+
+            // Compute result count from content for SARIF formats
+            let resultCount: number | null = null;
+            if (outputFormat.includes('sarif')) {
+              try {
+                const sarif = JSON.parse(resultContent);
+                resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? null;
+              } catch { /* non-SARIF content — leave count null */ }
+            }
+
             store.putCacheEntry({
               bqrsPath,
               cacheKey,
@@ -244,6 +254,7 @@ export async function processQueryRunResults(
               queryName: (queryName as string) || basename(queryPath, '.ql'),
               queryPath,
               resultContent,
+              resultCount,
             });
             enhancedOutput += `\nResults cached with key: ${cacheKey}`;
             logger.info(`Cached query results with key: ${cacheKey}`);

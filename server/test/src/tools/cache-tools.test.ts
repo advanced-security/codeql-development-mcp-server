@@ -349,6 +349,43 @@ describe('Cache Tools', () => {
         const result = await clearHandler({});
         expect(result.content[0].text).toContain('At least one filter');
       });
+
+      it('should derive totalResultCount from SARIF content when resultCount is null', async () => {
+        const sarif = {
+          version: '2.1.0',
+          runs: [{
+            tool: { driver: { name: 'codeql' } },
+            results: [
+              { ruleId: 'r1', message: { text: 'msg1' }, locations: [] },
+              { ruleId: 'r2', message: { text: 'msg2' }, locations: [] },
+              { ruleId: 'r3', message: { text: 'msg3' }, locations: [] },
+            ],
+          }],
+        };
+        const store = sessionDataManager.getStore();
+        // Cache entry without resultCount (simulates old cache entries)
+        store.putCacheEntry({
+          cacheKey: 'compare-no-count',
+          queryName: 'UI5Clickjacking',
+          queryPath: '/ui5.ql',
+          databasePath: '/db1',
+          language: 'javascript',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'sarif-latest',
+          resultContent: JSON.stringify(sarif),
+          // resultCount deliberately omitted
+        });
+
+        registerCacheTools(mockServer);
+
+        const compareHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'query_results_cache_compare',
+        )[3];
+
+        const result = await compareHandler({ queryName: 'UI5Clickjacking' });
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.comparison[0].totalResultCount).toBe(3);
+      });
     });
   });
 });

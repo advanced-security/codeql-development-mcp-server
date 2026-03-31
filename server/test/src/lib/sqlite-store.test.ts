@@ -139,6 +139,15 @@ describe('SqliteStore', () => {
       expect(mixed).toHaveLength(1);
     });
 
+    it('should search annotations by category field', () => {
+      store.createAnnotation('performance', 'query1', 'slow predicate');
+      store.createAnnotation('note', 'query2', 'unrelated content');
+
+      const results = store.listAnnotations({ search: 'performance' });
+      expect(results).toHaveLength(1);
+      expect(results[0].category).toBe('performance');
+    });
+
     it('should support limit and offset', () => {
       for (let i = 0; i < 10; i++) {
         store.createAnnotation('note', `key-${i}`, `content ${i}`);
