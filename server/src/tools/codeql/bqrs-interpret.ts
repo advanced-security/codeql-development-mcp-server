@@ -16,7 +16,7 @@ export const codeqlBqrsInterpretTool: CLIToolDefinition = {
       .describe('Output format: csv (comma-separated), sarif-latest/sarifv2.1.0 (SARIF), graphtext/dgml/dot (graph formats, only for @kind graph queries)'),
     output: createCodeQLSchemas.output(),
     database: z.string().optional()
-      .describe('Path to the CodeQL database, used to resolve source archive context for SARIF interpretation (provides file contents and snippets)'),
+      .describe('Path to the CodeQL database. When provided, auto-resolves --source-archive (for file contents/snippets) and --source-location-prefix (from codeql-database.yml metadata) so SARIF results include full source context'),
     t: z.array(z.string())
       .describe('Query metadata key=value pairs in KEY=VALUE format. At least "kind" and "id" must be specified. Example: ["kind=problem", "id=js/sql-injection"]. Common keys: kind (problem|path-problem|graph|metric|diagnostic), id (query identifier like js/xss)'),
     'max-paths': z.number().optional()

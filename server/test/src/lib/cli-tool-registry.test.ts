@@ -549,6 +549,107 @@ describe('registerCLITool handler behavior', () => {
     );
   });
 
+  it('should auto-resolve source-location-prefix from codeql-database.yml for bqrs_interpret with database', async () => {
+    // Create a temp database directory with codeql-database.yml containing sourceLocationPrefix
+    const tmpDir = createTestTempDir('bqrs-interpret-slp');
+    const dbDir = join(tmpDir, 'test-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), [
+      'primaryLanguage: javascript',
+      'sourceLocationPrefix: /Users/dev/my-project',
+      'creationMetadata:',
+      '  cliVersion: 2.25.1',
+    ].join('\n'), 'utf8');
+    // Create src.zip so source-archive resolution succeeds
+    writeFileSync(join(dbDir, 'src.zip'), '', 'utf8');
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    try {
+      await handler({ file: '/path/to/results.bqrs', database: dbDir, format: 'sarif-latest' });
+
+      const callArgs = executeCodeQLCommand.mock.calls[0];
+      const options = callArgs[1] as Record<string, unknown>;
+      // source-location-prefix should be auto-resolved from codeql-database.yml
+      expect(options['source-location-prefix']).toBe('/Users/dev/my-project');
+      // source-archive should point to src.zip
+      expect(options['source-archive']).toBe(join(dbDir, 'src.zip'));
+      // database should be removed from options (not passed to CLI)
+      expect(options).not.toHaveProperty('database');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should not set source-location-prefix when codeql-database.yml has no sourceLocationPrefix for bqrs_interpret', async () => {
+    // Create a temp database directory with codeql-database.yml WITHOUT sourceLocationPrefix
+    const tmpDir = createTestTempDir('bqrs-interpret-no-slp');
+    const dbDir = join(tmpDir, 'test-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), [
+      'primaryLanguage: javascript',
+      'creationMetadata:',
+      '  cliVersion: 2.25.1',
+    ].join('\n'), 'utf8');
+    // Create src directory as fallback source archive
+    mkdirSync(join(dbDir, 'src'), { recursive: true });
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    try {
+      await handler({ file: '/path/to/results.bqrs', database: dbDir, format: 'sarif-latest' });
+
+      const callArgs = executeCodeQLCommand.mock.calls[0];
+      const options = callArgs[1] as Record<string, unknown>;
+      // source-location-prefix should NOT be set when not in codeql-database.yml
+      expect(options).not.toHaveProperty('source-location-prefix');
+      // source-archive should fall back to src directory
+      expect(options['source-archive']).toBe(join(dbDir, 'src'));
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('should NOT pass format to CLI options for tools where format should not be on CLI', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_query_run',

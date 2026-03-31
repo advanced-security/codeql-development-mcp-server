@@ -11,7 +11,7 @@ import { getOrCreateLogDirectory } from './log-directory-manager';
 import { resolveQueryPath } from './query-resolver';
 import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync, realpathSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
@@ -384,7 +384,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
             
           case 'codeql_bqrs_interpret':
-            // Map 'database' to '--source-archive' for codeql bqrs interpret
+            // Map 'database' to '--source-archive' and '--source-location-prefix'
+            // for codeql bqrs interpret
             if (options.database) {
               const dbPath = resolveDatabasePath(options.database as string);
               const srcZipPath = join(dbPath, 'src.zip');
@@ -398,6 +399,17 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                 throw new Error(
                   `CodeQL database at "${dbPath}" does not contain a source archive (expected "src.zip" file or "src" directory).`,
                 );
+              }
+              // Auto-resolve --source-location-prefix from codeql-database.yml
+              const dbYmlPath = join(dbPath, 'codeql-database.yml');
+              try {
+                const dbYml = readFileSync(dbYmlPath, 'utf8');
+                const dbMeta = yaml.load(dbYml) as Record<string, unknown> | undefined;
+                if (dbMeta?.sourceLocationPrefix && typeof dbMeta.sourceLocationPrefix === 'string') {
+                  options['source-location-prefix'] = dbMeta.sourceLocationPrefix;
+                }
+              } catch {
+                // codeql-database.yml missing or unparseable — skip prefix resolution
               }
               delete options.database;
             }
