@@ -713,6 +713,72 @@ describe('registerCLITool handler behavior', () => {
     );
   });
 
+  it('should strip JSON array brackets from file parameter for BQRS tools', async () => {
+    // Regression test: some MCP clients send the file parameter as a JSON-encoded
+    // array string like '["/path/to/file.bqrs"]' instead of a plain path.
+    // The handler must extract the path without brackets.
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    // Simulate MCP client sending JSON-encoded array as file string
+    await handler({ file: '["/path/to/results.bqrs"]', format: 'sarif-latest' });
+
+    const callArgs = executeCodeQLCommand.mock.calls[0];
+    const positionalArgs = callArgs[2] as string[];
+    // Should extract the clean path without brackets
+    expect(positionalArgs).toContain('/path/to/results.bqrs');
+    expect(positionalArgs).not.toContain('["/path/to/results.bqrs"]');
+  });
+
+  it('should handle file parameter passed as actual array for BQRS tools', async () => {
+    // Edge case: MCP SDK might not validate and pass an actual array through
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_info',
+      description: 'BQRS info',
+      command: 'codeql',
+      subcommand: 'bqrs info',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Info output',
+      stderr: '',
+      success: true
+    });
+
+    // Simulate passing an actual array instead of a string
+    await handler({ file: ['/path/to/results.bqrs'] as unknown as string });
+
+    const callArgs = executeCodeQLCommand.mock.calls[0];
+    const positionalArgs = callArgs[2] as string[];
+    // Should extract the first element from the array
+    expect(positionalArgs).toContain('/path/to/results.bqrs');
+  });
+
   it('should handle tests parameter as positional for test tools', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_test_run',

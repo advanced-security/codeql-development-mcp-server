@@ -200,7 +200,18 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Handle file parameter as positional argument for BQRS tools
         if (file && name.startsWith('codeql_bqrs_')) {
-          positionalArgs = [...positionalArgs, file as string];
+          // Defensive coercion: handle file value that is an actual array
+          // or a JSON-encoded array string (e.g. '["/path/to/file.bqrs"]')
+          let cleanFile = Array.isArray(file) ? String(file[0]) : String(file);
+          if (cleanFile.startsWith('[') && cleanFile.endsWith(']')) {
+            try {
+              const parsed = JSON.parse(cleanFile);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                cleanFile = String(parsed[0]);
+              }
+            } catch { /* not valid JSON — use as-is */ }
+          }
+          positionalArgs = [...positionalArgs, cleanFile];
         }
 
         // Handle qlref parameter as positional argument for resolve qlref tool
