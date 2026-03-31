@@ -160,7 +160,7 @@ function registerAuditAddNotesTool(server: McpServer): void {
       const store = sessionDataManager.getStore();
 
       // Primary lookup by findingId
-      if (findingId) {
+      if (findingId != null) {
         const annotation = store.getAnnotation(findingId);
         if (!annotation || annotation.category !== AUDIT_CATEGORY) {
           return {

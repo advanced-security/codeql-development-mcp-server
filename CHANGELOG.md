@@ -20,7 +20,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - **Persistent MRVA workflow state and caching** — Introduced a new `SqliteStore` backend plus opt-in annotation, audit, and query result cache tools to support the next phase of MCP-assisted CodeQL development and `seclab-taskflow-agent` integration. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
 - **Rust language support** — Added first-class Rust support with `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`, and `CallGraphFromTo` queries, bringing the total supported languages to 10. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
-- **Bug fixes and design improvements from v2.25.1-next.1 evaluation** — Fixed 5 bugs across `bqrs_interpret`, `bqrs_info`, `annotation_search`, `audit_add_notes`, and `query_results_cache_compare`; added `database_analyze` auto-caching and per-database mutex serialization; auto-enabled annotation tools in VS Code extension. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- **Bug fixes and design improvements from v2.25.1-next.2 evaluation** — Fixed 5 bugs across `bqrs_interpret`, `bqrs_info`, `annotation_search`, `audit_add_notes`, and `query_results_cache_compare`; added `database_analyze` auto-caching and per-database mutex serialization; auto-enabled annotation tools in VS Code extension. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 
 ### Added
 
