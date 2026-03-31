@@ -198,8 +198,10 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           positionalArgs = [...positionalArgs, ...files as string[]];
         }
 
-        // Handle file parameter as positional argument for BQRS tools
-        if (file && name.startsWith('codeql_bqrs_')) {
+        // Handle file parameter as positional argument for BQRS tools.
+        // Check for key presence (not truthiness) so that empty strings
+        // are caught by the validation below rather than silently skipped.
+        if (file !== undefined && name.startsWith('codeql_bqrs_')) {
           // Defensive coercion: handle file value that is an actual array
           // or a JSON-encoded array string (e.g. '["/path/to/file.bqrs"]')
           let cleanFile = Array.isArray(file) ? (file.length > 0 ? String(file[0]) : '') : String(file);
@@ -213,7 +215,7 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               }
             } catch { /* not valid JSON — use as-is */ }
           }
-          if (!cleanFile) {
+          if (!cleanFile.trim()) {
             throw new Error('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
           }
           positionalArgs = [...positionalArgs, cleanFile];
@@ -399,11 +401,19 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             break;
           }
             
-          case 'codeql_bqrs_interpret':
+          case 'codeql_bqrs_interpret': {
             // Map 'database' to '--source-archive' and '--source-location-prefix'
-            // for codeql bqrs interpret (only when not explicitly provided)
-            if (options.database) {
-              const dbPath = resolveDatabasePath(options.database as string);
+            // for codeql bqrs interpret (only when not explicitly provided).
+            // Always delete the synthetic 'database' key to prevent it from
+            // being forwarded as an unsupported CLI flag.
+            const dbValue = options.database;
+            delete options.database;
+            if (dbValue !== undefined) {
+              const dbStr = String(dbValue).trim();
+              if (!dbStr) {
+                throw new Error('The "database" parameter must be a non-empty path to a CodeQL database.');
+              }
+              const dbPath = resolveDatabasePath(dbStr);
               if (!options['source-archive']) {
                 const srcZipPath = join(dbPath, 'src.zip');
                 const srcDirPath = join(dbPath, 'src');
@@ -412,7 +422,6 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                 } else if (existsSync(srcDirPath)) {
                   options['source-archive'] = srcDirPath;
                 } else {
-                  delete options.database;
                   throw new Error(
                     `CodeQL database at "${dbPath}" does not contain a source archive (expected "src.zip" file or "src" directory).`,
                   );
@@ -432,9 +441,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
                   // codeql-database.yml missing or unparseable — skip prefix resolution
                 }
               }
-              delete options.database;
             }
             break;
+          }
 
           case 'codeql_query_compile':
           case 'codeql_resolve_metadata':

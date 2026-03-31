@@ -382,7 +382,7 @@ export function cacheDatabaseAnalyzeResults(
       resultCount,
     });
 
-    logger.info(`Cached database-analyze results with key: ${cacheKey} (${resultCount ?? 0} results)`);
+    logger.info(`Cached database-analyze results with key: ${cacheKey} (${resultCount != null ? `${resultCount} results` : 'result count unknown'})`);
   } catch (err) {
     logger.error('Failed to cache database-analyze results:', err);
   }

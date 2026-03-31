@@ -1301,4 +1301,70 @@ describe('registerCLITool handler behavior', () => {
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('should return error when file parameter is an empty string for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_info',
+      description: 'BQRS info',
+      command: 'codeql',
+      subcommand: 'bqrs info',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    const result = await handler({ file: '' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should return error when file parameter is a whitespace-only string for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    const result = await handler({ file: '   ' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should return error when database parameter is an empty string for bqrs_interpret', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    const result = await handler({
+      file: '/path/to/results.bqrs',
+      database: '',
+      format: 'sarif-latest'
+    });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "database" parameter must be a non-empty path to a CodeQL database.');
+  });
 });

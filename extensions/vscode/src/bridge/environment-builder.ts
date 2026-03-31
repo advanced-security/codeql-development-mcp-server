@@ -151,17 +151,18 @@ export class EnvironmentBuilder extends DisposableObject {
     // The setting controls ENABLE_ANNOTATION_TOOLS and defaults
     // MONITORING_STORAGE_LOCATION to the scratch directory so tools work
     // out-of-the-box without manual env var configuration.
-    // Only set these when not already defined, to avoid overriding values
-    // inherited from a parent process or earlier env setup.
+    // Respect values inherited from the extension host process environment;
+    // only apply defaults when not already defined there. The additionalEnv
+    // block below still overrides everything for advanced users.
     const enableAnnotations = config.get<boolean>('enableAnnotationTools', true);
-    if (!('ENABLE_ANNOTATION_TOOLS' in env)) {
+    if (typeof process.env.ENABLE_ANNOTATION_TOOLS === 'string') {
+      env.ENABLE_ANNOTATION_TOOLS = process.env.ENABLE_ANNOTATION_TOOLS;
+    } else {
       env.ENABLE_ANNOTATION_TOOLS = enableAnnotations ? 'true' : 'false';
     }
-    if (
-      enableAnnotations &&
-      env.CODEQL_MCP_SCRATCH_DIR &&
-      !('MONITORING_STORAGE_LOCATION' in env)
-    ) {
+    if (typeof process.env.MONITORING_STORAGE_LOCATION === 'string') {
+      env.MONITORING_STORAGE_LOCATION = process.env.MONITORING_STORAGE_LOCATION;
+    } else if (enableAnnotations && env.CODEQL_MCP_SCRATCH_DIR) {
       env.MONITORING_STORAGE_LOCATION = env.CODEQL_MCP_SCRATCH_DIR;
     }
 
