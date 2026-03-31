@@ -1201,4 +1201,104 @@ describe('registerCLITool handler behavior', () => {
 
     expect(result.content[0].text).toContain('Command failed');
   });
+
+  it('should return error when file parameter is an empty array for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    // Simulate passing an empty array as the file parameter
+    const result = await handler({ file: [] as unknown as string });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should return error when file parameter is a JSON-encoded empty array string for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_info',
+      description: 'BQRS info',
+      command: 'codeql',
+      subcommand: 'bqrs info',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    // Simulate passing a JSON-encoded empty array string
+    const result = await handler({ file: '[]' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should not override explicit source-archive when database is provided for bqrs_interpret', async () => {
+    const tmpDir = createTestTempDir('bqrs-interpret-explicit-sa');
+    const dbDir = join(tmpDir, 'test-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), [
+      'primaryLanguage: javascript',
+      'sourceLocationPrefix: /Users/dev/my-project',
+    ].join('\n'), 'utf8');
+    // Create src.zip so auto-resolution would normally pick it
+    writeFileSync(join(dbDir, 'src.zip'), '', 'utf8');
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        'source-archive': z.string().optional(),
+        'source-location-prefix': z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    try {
+      // Provide explicit source-archive and source-location-prefix alongside database
+      await handler({
+        file: '/path/to/results.bqrs',
+        database: dbDir,
+        'source-archive': '/explicit/archive.zip',
+        'source-location-prefix': '/explicit/prefix',
+        format: 'sarif-latest'
+      });
+
+      const callArgs = executeCodeQLCommand.mock.calls[0];
+      const options = callArgs[1] as Record<string, unknown>;
+      // Explicit source-archive should be preserved, NOT overridden by auto-resolution
+      expect(options['source-archive']).toBe('/explicit/archive.zip');
+      // Explicit source-location-prefix should be preserved, NOT overridden by auto-resolution
+      expect(options['source-location-prefix']).toBe('/explicit/prefix');
+      // database should still be removed from options
+      expect(options).not.toHaveProperty('database');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
