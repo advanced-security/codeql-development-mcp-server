@@ -20,7 +20,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - **Persistent MRVA workflow state and caching** — Introduced a new `SqliteStore` backend plus opt-in annotation, audit, and query result cache tools to support the next phase of MCP-assisted CodeQL development and `seclab-taskflow-agent` integration. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
 - **Rust language support** — Added first-class Rust support with `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`, and `CallGraphFromTo` queries, bringing the total supported languages to 10. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
-- **VS Code workspace change reliability** — Fixed MCP server restart behavior when workspace folders change so the extension now restarts the server with a fresh environment instead of leaving it partially stopped. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
+- **Bug fixes and design improvements from v2.25.1-next.1 evaluation** — Fixed 5 bugs across `bqrs_interpret`, `bqrs_info`, `annotation_search`, `audit_add_notes`, and `query_results_cache_compare`; added `database_analyze` auto-caching and per-database mutex serialization; auto-enabled annotation tools in VS Code extension. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 
 ### Added
 
@@ -53,15 +53,22 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 #### MCP Server Tools
 
-| Tool                                   | Change                                                                                                                                                                                                |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `codeql_query_run`                     | Query results are now auto-cached after SARIF interpretation, enabling later lookup and comparison workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))   |
-| query metadata and database resolution | Added in-memory caching with mtime-based invalidation and deduplicated resolution logic for better performance. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169)) |
+| Tool                                   | Change                                                                                                                                                                                                                                                                                    |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql_query_run`                     | Query results are now auto-cached after SARIF interpretation, enabling later lookup and comparison workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                       |
+| query metadata and database resolution | Added in-memory caching with mtime-based invalidation and deduplicated resolution logic for better performance. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                     |
+| `codeql_bqrs_interpret`                | Added optional `database` parameter mapped to `--source-archive` for SARIF source context; validates that `src.zip` or `src` exists. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                                |
+| `codeql_bqrs_info`                     | **Breaking**: renamed `files` (array) parameter to `file` (string) to match the CLI which accepts exactly one file. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                                                 |
+| `codeql_database_analyze`              | Results are now auto-cached after SARIF output for `query_results_cache_compare` and `query_results_cache_retrieve`; concurrent calls to the same database are serialized via a per-database mutex. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199)) |
+| `audit_add_notes`                      | Added `findingId` as preferred lookup; `owner`/`repo`/`sourceLocation`/`line` are now optional fallback fields. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                                                     |
+| `annotation_search`                    | Category field is now matched with case-insensitive `COLLATE NOCASE` alongside the existing FTS index. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                                                              |
+| `query_results_cache_compare`          | SARIF content fallback for result count is now gated on SARIF output format, avoiding unnecessary JSON parsing of non-SARIF cache entries. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                          |
 
 #### VS Code Extension
 
 - `McpProvider.requestRestart()` now invalidates the environment cache and bumps a `+rN` revision suffix so VS Code reliably restarts the MCP server after configuration changes. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
 - Cached the extension version in the provider constructor to avoid repeated synchronous reads of `package.json`. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
+- New `codeql-mcp.enableAnnotationTools` setting (default: `true`) auto-sets `ENABLE_ANNOTATION_TOOLS` and `MONITORING_STORAGE_LOCATION` environment variables; `additionalEnv` overrides for advanced users. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 
 #### Infrastructure & CI/CD
 
@@ -70,6 +77,12 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 ### Fixed
 
 - **Workspace folder changes could leave the MCP server stopped but not restarted** — The VS Code extension now rebuilds the environment and forces a proper restart when workspace folders change. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
+- **`codeql_bqrs_interpret` unusable through MCP interface** — Added `database` parameter mapped to `--source-archive` with `src.zip`/`src` fallback and clear error when neither exists. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- **`query_results_cache_compare` reported `totalResultCount: 0`** — Result count is now computed from SARIF `runs[0].results.length` at cache time; compare tool falls back to parsing cached SARIF content only for SARIF-format entries. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- **`annotation_search` ignored `category` field** — Extended FTS search condition to also match category with case-insensitive `COLLATE NOCASE`. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- **`audit_add_notes` ignored `findingId`** — Added `findingId` as preferred direct-lookup alternative to the composite key fields. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- **`codeql_bqrs_info` `files` array caused CLI error** — Changed parameter from `files` (array) to `file` (string) to match the CLI expectation. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- **Per-database mutex lock key not normalized** — Database lock key now uses `realpath` to prevent bypassing serialization with relative paths, symlinks, or different casing. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 
 ### Dependencies
 

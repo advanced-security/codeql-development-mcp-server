@@ -11,7 +11,7 @@ import { getOrCreateLogDirectory } from './log-directory-manager';
 import { resolveQueryPath } from './query-resolver';
 import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, rmSync, existsSync, mkdirSync, realpathSync } from 'fs';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
@@ -389,7 +389,16 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               const dbPath = resolveDatabasePath(options.database as string);
               const srcZipPath = join(dbPath, 'src.zip');
               const srcDirPath = join(dbPath, 'src');
-              options['source-archive'] = existsSync(srcZipPath) ? srcZipPath : srcDirPath;
+              if (existsSync(srcZipPath)) {
+                options['source-archive'] = srcZipPath;
+              } else if (existsSync(srcDirPath)) {
+                options['source-archive'] = srcDirPath;
+              } else {
+                delete options.database;
+                throw new Error(
+                  `CodeQL database at "${dbPath}" does not contain a source archive (expected "src.zip" file or "src" directory).`,
+                );
+              }
               delete options.database;
             }
             break;
@@ -563,9 +572,14 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           
           // Serialize concurrent database_analyze calls to the same database
           // to prevent "cache directory is already locked" errors from the CLI.
+          // Normalize the lock key via realpath to avoid bypassing serialization
+          // when the same database is referenced through relative paths, symlinks,
+          // or different casing.
           let dbLock: { ready: Promise<void>; release: () => void } | undefined;
           if (name === 'codeql_database_analyze' && positionalArgs.length > 0) {
-            dbLock = acquireDatabaseLock(positionalArgs[0]);
+            let lockKey = resolve(positionalArgs[0]);
+            try { lockKey = realpathSync(lockKey); } catch { /* use resolved path if realpath fails */ }
+            dbLock = acquireDatabaseLock(lockKey);
             await dbLock.ready;
           }
 

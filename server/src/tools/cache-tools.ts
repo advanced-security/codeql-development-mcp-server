@@ -226,7 +226,7 @@ function registerQueryResultsCacheCompareTool(server: McpServer): void {
         for (const e of dbEntries) {
           if (e.resultCount != null) {
             totalResultCount += e.resultCount;
-          } else {
+          } else if (e.outputFormat.includes('sarif')) {
             // Attempt to derive result count from cached SARIF content
             try {
               const content = store.getCacheContent(e.cacheKey);
@@ -235,7 +235,7 @@ function registerQueryResultsCacheCompareTool(server: McpServer): void {
                 const count = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
                 totalResultCount += count;
               }
-            } catch { /* non-SARIF or missing content */ }
+            } catch { /* malformed SARIF or missing content */ }
           }
         }
         return {
