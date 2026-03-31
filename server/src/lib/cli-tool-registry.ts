@@ -9,7 +9,7 @@ import { resolveDatabasePath } from './database-resolver';
 import { logger } from '../utils/logger';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { resolveQueryPath } from './query-resolver';
-import { processQueryRunResults } from './result-processor';
+import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
 import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
@@ -603,6 +603,11 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               logger.warn(`Failed to generate evaluator log summary: ${error}`);
             }
           }
+        }
+
+        // Post-execution: cache database_analyze results in query results cache
+        if (name === 'codeql_database_analyze' && result.success && options.output) {
+          cacheDatabaseAnalyzeResults({ ...params, output: options.output, format: options.format }, logger);
         }
 
         // Process the result

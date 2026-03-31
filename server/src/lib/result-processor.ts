@@ -317,3 +317,73 @@ export async function processQueryRunResults(
     };
   }
 }
+
+/**
+ * Cache results produced by `codeql database analyze`.
+ *
+ * When the output file is SARIF, stores the entire SARIF blob in the
+ * query results cache under a deterministic key so that
+ * `query_results_cache_compare` and `query_results_cache_retrieve` can
+ * access database-analyze results the same way they access query-run results.
+ */
+export function cacheDatabaseAnalyzeResults(
+  params: Record<string, unknown>,
+  logger: ProcessorLogger,
+): void {
+  try {
+    const config = sessionDataManager.getConfig();
+    if (!config.enableAnnotationTools) return;
+
+    const outputPath = params.output as string | undefined;
+    const format = params.format as string | undefined;
+    const dbPath = params.database as string | undefined;
+    const queries = params.queries as string | undefined;
+
+    if (!outputPath || !format || !dbPath) return;
+
+    // Only cache SARIF outputs
+    if (!format.includes('sarif')) return;
+
+    let resultContent: string;
+    try {
+      resultContent = readFileSync(outputPath, 'utf8');
+    } catch {
+      return; // Output file may not exist if analysis failed
+    }
+
+    const codeqlVersion = getActualCodeqlVersion();
+    const queryName = queries ? basename(queries, '.qls') : 'database-analyze';
+
+    // Compute result count from SARIF content
+    let resultCount: number | null = null;
+    try {
+      const sarif = JSON.parse(resultContent);
+      resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? null;
+    } catch { /* non-SARIF content */ }
+
+    const cacheKey = computeQueryCacheKey({
+      codeqlVersion,
+      databasePath: dbPath,
+      outputFormat: format,
+      queryPath: queries || 'database-analyze',
+    });
+
+    const store = sessionDataManager.getStore();
+    store.putCacheEntry({
+      cacheKey,
+      codeqlVersion,
+      databasePath: dbPath,
+      interpretedPath: outputPath,
+      language: 'unknown',
+      outputFormat: format,
+      queryName,
+      queryPath: queries || 'database-analyze',
+      resultContent,
+      resultCount,
+    });
+
+    logger.info(`Cached database-analyze results with key: ${cacheKey} (${resultCount ?? 0} results)`);
+  } catch (err) {
+    logger.error('Failed to cache database-analyze results:', err);
+  }
+}
