@@ -278,6 +278,39 @@ describe('EnvironmentBuilder', () => {
     expect(env.ENABLE_ANNOTATION_TOOLS).toBe('true');
   });
 
+  it('should not overwrite MONITORING_STORAGE_LOCATION if already set in parent env', async () => {
+    const vscode = await import('vscode');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/workspace' }, name: 'ws', index: 0 },
+      ];
+      // Simulate parent process env with MONITORING_STORAGE_LOCATION already set
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'additionalEnv') return { MONITORING_STORAGE_LOCATION: '/custom/storage/path' };
+          if (_key === 'additionalDatabaseDirs') return [];
+          if (_key === 'additionalQueryRunResultsDirs') return [];
+          if (_key === 'additionalMrvaRunResultsDirs') return [];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      // additionalEnv should override the default MONITORING_STORAGE_LOCATION
+      expect(env.MONITORING_STORAGE_LOCATION).toBe('/custom/storage/path');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
   it('should set ENABLE_ANNOTATION_TOOLS=false when setting is disabled', async () => {
     const vscode = await import('vscode');
     const originalGetConfig = vscode.workspace.getConfiguration;
