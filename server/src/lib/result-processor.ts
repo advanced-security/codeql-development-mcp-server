@@ -238,7 +238,7 @@ export async function processQueryRunResults(
             if (outputFormat.includes('sarif')) {
               try {
                 const sarif = JSON.parse(resultContent);
-                resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? null;
+                resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
               } catch { /* non-SARIF content — leave count null */ }
             }
 
@@ -358,7 +358,7 @@ export function cacheDatabaseAnalyzeResults(
     let resultCount: number | null = null;
     try {
       const sarif = JSON.parse(resultContent);
-      resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? null;
+      resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
     } catch { /* non-SARIF content */ }
 
     const cacheKey = computeQueryCacheKey({

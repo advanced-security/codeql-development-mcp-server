@@ -361,7 +361,7 @@ export class MonitoringIntegrationTestRunner {
       if (fs.existsSync(beforeDir)) {
         const bqrsFiles = fs.readdirSync(beforeDir).filter((f) => f.endsWith(".bqrs"));
         if (bqrsFiles.length > 0) {
-          params.bqrs = path.join(beforeDir, bqrsFiles[0]);
+          params.file = path.join(beforeDir, bqrsFiles[0]);
         } else {
           throw new Error(`No .bqrs files found in ${beforeDir} for ${toolName}`);
         }

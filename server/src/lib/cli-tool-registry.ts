@@ -32,15 +32,20 @@ function acquireDatabaseLock(dbPath: string): { ready: Promise<void>; release: (
   const key = dbPath;
   const previous = databaseLocks.get(key) ?? Promise.resolve();
 
-  let release!: () => void;
+  let resolveGate!: () => void;
   const gate = new Promise<void>(resolve => {
-    release = resolve;
+    resolveGate = resolve;
   });
   databaseLocks.set(key, gate);
 
   return {
     ready: previous.then(() => {}),
-    release,
+    release: () => {
+      resolveGate();
+      if (databaseLocks.get(key) === gate) {
+        databaseLocks.delete(key);
+      }
+    },
   };
 }
 
@@ -382,7 +387,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             // Map 'database' to '--source-archive' for codeql bqrs interpret
             if (options.database) {
               const dbPath = resolveDatabasePath(options.database as string);
-              options['source-archive'] = join(dbPath, 'src');
+              const srcZipPath = join(dbPath, 'src.zip');
+              const srcDirPath = join(dbPath, 'src');
+              options['source-archive'] = existsSync(srcZipPath) ? srcZipPath : srcDirPath;
               delete options.database;
             }
             break;
@@ -607,7 +614,10 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
 
         // Post-execution: cache database_analyze results in query results cache
         if (name === 'codeql_database_analyze' && result.success && options.output) {
-          cacheDatabaseAnalyzeResults({ ...params, output: options.output, format: options.format }, logger);
+          const resolvedDb = typeof params.database === 'string'
+            ? resolveDatabasePath(params.database)
+            : params.database;
+          cacheDatabaseAnalyzeResults({ ...params, database: resolvedDb, output: options.output, format: options.format }, logger);
         }
 
         // Process the result

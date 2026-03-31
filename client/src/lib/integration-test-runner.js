@@ -931,7 +931,7 @@ export class IntegrationTestRunner {
       // Use static BQRS file
       const bqrsFile = path.join(staticPath, "src", "ExampleQuery1", "ExampleQuery1.test.bqrs");
       if (fs.existsSync(bqrsFile)) {
-        params.files = [bqrsFile];
+        params.file = bqrsFile;
       } else {
         throw new Error(`Static BQRS file not found: ${bqrsFile}`);
       }

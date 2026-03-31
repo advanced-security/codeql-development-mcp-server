@@ -281,61 +281,70 @@ describe('EnvironmentBuilder', () => {
   it('should set ENABLE_ANNOTATION_TOOLS=false when setting is disabled', async () => {
     const vscode = await import('vscode');
     const originalGetConfig = vscode.workspace.getConfiguration;
-    vscode.workspace.getConfiguration = () => ({
-      get: (_key: string, defaultVal?: any) => {
-        if (_key === 'enableAnnotationTools') return false;
-        if (_key === 'additionalDatabaseDirs') return [];
-        if (_key === 'additionalQueryRunResultsDirs') return [];
-        if (_key === 'additionalMrvaRunResultsDirs') return [];
-        return defaultVal;
-      },
-      has: () => false,
-      inspect: () => undefined as any,
-      update: () => Promise.resolve(),
-    }) as any;
 
-    builder.invalidate();
-    const env = await builder.build();
-    expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+    try {
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'enableAnnotationTools') return false;
+          if (_key === 'additionalDatabaseDirs') return [];
+          if (_key === 'additionalQueryRunResultsDirs') return [];
+          if (_key === 'additionalMrvaRunResultsDirs') return [];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
 
-    vscode.workspace.getConfiguration = originalGetConfig;
+      builder.invalidate();
+      const env = await builder.build();
+      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+    } finally {
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
   });
 
   it('should set MONITORING_STORAGE_LOCATION to scratch dir when annotations enabled with workspace', async () => {
     const vscode = await import('vscode');
     const origFolders = vscode.workspace.workspaceFolders;
-    (vscode.workspace.workspaceFolders as any) = [
-      { uri: { fsPath: '/mock/workspace' }, name: 'ws', index: 0 },
-    ];
 
-    builder.invalidate();
-    const env = await builder.build();
-    expect(env.MONITORING_STORAGE_LOCATION).toBe('/mock/workspace/.codeql/ql-mcp');
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/workspace' }, name: 'ws', index: 0 },
+      ];
 
-    (vscode.workspace.workspaceFolders as any) = origFolders;
+      builder.invalidate();
+      const env = await builder.build();
+      expect(env.MONITORING_STORAGE_LOCATION).toBe('/mock/workspace/.codeql/ql-mcp');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+    }
   });
 
   it('should allow additionalEnv to override ENABLE_ANNOTATION_TOOLS', async () => {
     const vscode = await import('vscode');
     const originalGetConfig = vscode.workspace.getConfiguration;
-    vscode.workspace.getConfiguration = () => ({
-      get: (_key: string, defaultVal?: any) => {
-        if (_key === 'additionalEnv') return { ENABLE_ANNOTATION_TOOLS: 'false' };
-        if (_key === 'additionalDatabaseDirs') return [];
-        if (_key === 'additionalQueryRunResultsDirs') return [];
-        if (_key === 'additionalMrvaRunResultsDirs') return [];
-        return defaultVal;
-      },
-      has: () => false,
-      inspect: () => undefined as any,
-      update: () => Promise.resolve(),
-    }) as any;
 
-    builder.invalidate();
-    const env = await builder.build();
-    // additionalEnv comes after the default, so it should override
-    expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+    try {
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'additionalEnv') return { ENABLE_ANNOTATION_TOOLS: 'false' };
+          if (_key === 'additionalDatabaseDirs') return [];
+          if (_key === 'additionalQueryRunResultsDirs') return [];
+          if (_key === 'additionalMrvaRunResultsDirs') return [];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
 
-    vscode.workspace.getConfiguration = originalGetConfig;
+      builder.invalidate();
+      const env = await builder.build();
+      // additionalEnv comes after the default, so it should override
+      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+    } finally {
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
   });
 });
