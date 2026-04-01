@@ -530,6 +530,8 @@ describe('Cache Tools', () => {
         const result = await compareHandler({ queryName: 'UI5Clickjacking' });
         const parsed = JSON.parse(result.content[0].text);
         expect(parsed.comparison[0].resultCount).toBe(5);
+        // Backward-compatible alias
+        expect(parsed.comparison[0].totalResultCount).toBe(5);
       });
     });
   });

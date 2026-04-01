@@ -71,14 +71,15 @@ On activation the extension:
 
 ## Settings
 
-| Setting                           | Default    | Description                                                                               |
-| --------------------------------- | ---------- | ----------------------------------------------------------------------------------------- |
-| `codeql-mcp.autoDownloadPacks`    | `true`     | Download pre-compiled tool query packs matching the detected CodeQL CLI version from GHCR |
-| `codeql-mcp.autoInstall`          | `true`     | Automatically install/update the MCP server on activation                                 |
-| `codeql-mcp.serverVersion`        | `"latest"` | npm version to install (`"latest"` or a specific version)                                 |
-| `codeql-mcp.serverCommand`        | `"node"`   | Command to launch the MCP server (override for local dev)                                 |
-| `codeql-mcp.watchCodeqlExtension` | `true`     | Discover databases and query results from the CodeQL extension                            |
-| `codeql-mcp.additionalEnv`        | `{}`       | Extra environment variables for the MCP server process                                    |
+| Setting                            | Default    | Description                                                                                                           |
+| ---------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| `codeql-mcp.additionalEnv`         | `{}`       | Extra environment variables for the MCP server process                                                                |
+| `codeql-mcp.autoDownloadPacks`     | `true`     | Download pre-compiled tool query packs matching the detected CodeQL CLI version from GHCR                             |
+| `codeql-mcp.autoInstall`           | `true`     | Automatically install/update the MCP server on activation                                                             |
+| `codeql-mcp.enableAnnotationTools` | `true`     | Enable annotation, audit, query results cache, and SARIF analysis tools. Set to `false` to disable these opt-in tools |
+| `codeql-mcp.serverCommand`         | `"node"`   | Command to launch the MCP server (override for local dev)                                                             |
+| `codeql-mcp.serverVersion`         | `"latest"` | npm version to install (`"latest"` or a specific version)                                                             |
+| `codeql-mcp.watchCodeqlExtension`  | `true`     | Discover databases and query results from the CodeQL extension                                                        |
 
 ## Commands
 

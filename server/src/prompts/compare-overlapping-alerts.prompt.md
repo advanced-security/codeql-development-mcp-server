@@ -102,7 +102,7 @@ If sink overlap is found, re-check with `source` and `full-path` modes:
 For each overlapping pair, use #read_database_source to read the relevant source file from the CodeQL database. **Note**: the `filePath` parameter uses the URI from the SARIF alert location, not an absolute path:
 
 ```
-read_database_source(database="{{databasePath}}", filePath="<uri-from-alert>")
+read_database_source(databasePath="{{databasePath}}", filePath="<uri-from-alert>")
 ```
 
 Read 10–20 lines around the flagged location for context. When comparing across databases, read from each database separately.

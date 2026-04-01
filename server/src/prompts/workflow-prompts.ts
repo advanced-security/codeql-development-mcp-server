@@ -383,8 +383,6 @@ export const checkForDuplicatedCodeSchema = z.object({
 /**
  * Schema for compare_overlapping_alerts prompt parameters.
  *
- * Schema for compare_overlapping_alerts prompt parameters.
- *
  * - `sarifPathA` is **required** — the primary SARIF data source.
  * - `sarifPathB` is optional — enables cross-file/cross-run comparison.
  * - `ruleIdA` and `ruleIdB` are optional — narrows analysis to specific rules.

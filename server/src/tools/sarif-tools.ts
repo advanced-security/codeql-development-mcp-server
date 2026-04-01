@@ -72,11 +72,21 @@ function loadSarif(
   }
 
   try {
-    const sarif = JSON.parse(content) as SarifDocument;
-    if (!sarif.runs || !Array.isArray(sarif.runs)) {
+    const parsed = JSON.parse(content);
+    if (!parsed || typeof parsed !== 'object') {
+      return { error: 'Invalid SARIF: expected a JSON object.' };
+    }
+    if (!Array.isArray(parsed.runs)) {
       return { error: 'Invalid SARIF: missing or invalid "runs" array.' };
     }
-    return { sarif };
+    if (parsed.runs.length === 0) {
+      return { error: 'Invalid SARIF: "runs" array is empty.' };
+    }
+    const run = parsed.runs[0];
+    if (!run.tool?.driver) {
+      return { error: 'Invalid SARIF: missing tool.driver in first run.' };
+    }
+    return { sarif: parsed as SarifDocument };
   } catch {
     return { error: 'Failed to parse SARIF JSON.' };
   }

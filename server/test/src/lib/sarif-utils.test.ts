@@ -530,6 +530,33 @@ describe('sarifRuleToMarkdown', () => {
 
     expect(markdown).toBe('');
   });
+
+  it('should escape pipes and backslashes in result messages', () => {
+    const sarif: SarifDocument = {
+      version: '2.1.0',
+      runs: [{
+        tool: {
+          driver: {
+            name: 'CodeQL',
+            rules: [{ id: 'test/escape', shortDescription: { text: 'Escape test' } }],
+          },
+        },
+        results: [{
+          ruleId: 'test/escape',
+          ruleIndex: 0,
+          message: { text: 'Found a|b and c\\d pattern' },
+          locations: [{ physicalLocation: { artifactLocation: { uri: 'test.js' }, region: { startLine: 1 } } }],
+        }],
+      }],
+    };
+    const markdown = sarifRuleToMarkdown(sarif, 'test/escape');
+
+    // Pipes must be escaped to not break markdown table
+    expect(markdown).not.toContain('| Found a|b');
+    expect(markdown).toContain('a\\|b');
+    // Backslashes must also be escaped
+    expect(markdown).toContain('c\\\\d');
+  });
 });
 
 // ---------------------------------------------------------------------------

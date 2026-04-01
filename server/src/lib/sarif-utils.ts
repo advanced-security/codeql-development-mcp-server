@@ -499,7 +499,7 @@ export function sarifRuleToMarkdown(sarif: SarifDocument, ruleId: string): strin
       const loc = r.locations?.[0]?.physicalLocation;
       const uri = loc?.artifactLocation?.uri ?? '(unknown)';
       const line = loc?.region?.startLine ?? '-';
-      const msg = r.message.text.replace(/\|/g, '\\|');
+      const msg = r.message.text.replace(/([\\|])/g, '\\$1');
       lines.push(`| ${i + 1} | ${uri} | ${line} | ${msg} |`);
     }
     lines.push('');

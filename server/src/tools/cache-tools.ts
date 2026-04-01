@@ -238,6 +238,7 @@ function registerQueryResultsCacheCompareTool(server: McpServer): void {
           languages: [...new Set(dbEntries.map(e => e.language))],
           formats: [...new Set(dbEntries.map(e => e.outputFormat))],
           resultCount,
+          totalResultCount: resultCount,
           cachedRuns: dbEntries.length,
           latestCachedAt: dbEntries[0].createdAt,
         };

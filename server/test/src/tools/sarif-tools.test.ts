@@ -188,6 +188,27 @@ describe('SARIF Tools', () => {
         const result = await handlers.sarif_extract_rule({ sarifPath: '/nonexistent/path.sarif', ruleId: 'js/sql-injection' });
         expect(result.content[0].text).toContain('Failed to read SARIF file');
       });
+
+      it('should return error for invalid SARIF content', async () => {
+        const badPath = join(testStorageDir, 'bad.sarif');
+        writeFileSync(badPath, '{"not": "sarif"}');
+        const result = await handlers.sarif_extract_rule({ sarifPath: badPath, ruleId: 'js/sql-injection' });
+        expect(result.content[0].text).toContain('Invalid SARIF');
+      });
+
+      it('should return error for SARIF with empty runs', async () => {
+        const emptyPath = join(testStorageDir, 'empty-runs.sarif');
+        writeFileSync(emptyPath, '{"version": "2.1.0", "runs": []}');
+        const result = await handlers.sarif_extract_rule({ sarifPath: emptyPath, ruleId: 'js/sql-injection' });
+        expect(result.content[0].text).toContain('empty');
+      });
+
+      it('should return error for SARIF missing tool.driver', async () => {
+        const noDriverPath = join(testStorageDir, 'no-driver.sarif');
+        writeFileSync(noDriverPath, '{"version": "2.1.0", "runs": [{"tool": {}}]}');
+        const result = await handlers.sarif_extract_rule({ sarifPath: noDriverPath, ruleId: 'js/sql-injection' });
+        expect(result.content[0].text).toContain('tool.driver');
+      });
     });
 
     describe('sarif_list_rules', () => {
