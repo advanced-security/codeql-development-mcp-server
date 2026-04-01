@@ -83,6 +83,7 @@ This resource provides a complete reference of the default tools exposed by the 
 1. `codeql_query_run` with `queryName="PrintAST"` — visualize the AST
 2. `codeql_query_run` with `queryName="PrintCFG"` — visualize control flow
 3. `codeql_query_run` with `queryName="CallGraphFrom"` / `"CallGraphTo"` — trace call relationships
+4. `codeql_query_run` with `queryName="CallGraphFromTo"` — verify source-to-sink call paths
 
 ### Profile Query Performance
 

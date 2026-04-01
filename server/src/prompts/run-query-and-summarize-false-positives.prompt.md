@@ -12,15 +12,18 @@ Help a developer discover what kinds of false positives are produced by their cu
 
 1. Read the provided CodeQL query to understand what patterns it is designed to detect.
 2. Discover the results of this query on a real database, by:
-   - Running the tool #list_query_run_results to find existing runs for this query
-   - If no existing runs are found, run the query on a relevant database using #codeql_query_run tool
-3. Analyze and group the results into what appear to be similar types of results. This may mean:
+   - Using #query_results_cache_lookup with `ruleId` (the query's `@id` metadata) to find previously cached results
+   - Running #list_query_run_results to find existing run artifacts
+   - If no existing results are found, run the query using #codeql_query_run with `format: "sarif-latest"` to produce SARIF output (results are auto-cached with `ruleId` for later lookup)
+3. Use #sarif_list_rules on the SARIF output to confirm rule metadata and result counts. For multi-rule SARIF, use #sarif_extract_rule to isolate the specific query's results.
+4. Use #sarif_rule_to_markdown to generate a structured overview with a results table and Mermaid dataflow diagrams for path-problem results. This gives an immediate visual summary of all findings.
+5. Analyze and group the results into what appear to be similar types of results. This may mean:
    - Grouping results in the same file
    - Grouping results that reference the same elements
    - Grouping results with similar messages
-4. For each group, explore the actual code for a sample of alerts in that group, using the #read_database_source tool to triage the results and determine which groups appear to be false positives
-5. For each false positive case discovered in this exploration, group them into categories of similar root causes. For example, a query might not properly account for unreachable code, or there may be a commonly used library that violates the query's assumptions but is actually safe.
-6. Explain these results to the user in order of most common to least common, so they can understand where their query may need improvement to reduce false positives.
+6. For each group, explore the actual code for a sample of alerts using #read_database_source with the `filePath` from the SARIF alert URI and 10–20 lines of context around the flagged location.
+7. For each false positive case discovered, group them into categories of similar root causes.
+8. Explain these results to the user in order of most common to least common.
 
 ## Input Context
 
@@ -32,7 +35,7 @@ You will be provided with:
 
 ### Exploring code paths
 
-The tool #read_database_source can be used to read the code of a particular finding. A good strategy to explore the code paths of a finding is:
+Use #read_database_source with the `filePath` from the SARIF alert's `physicalLocation.artifactLocation.uri` and the `databasePath` of the CodeQL database. Read 10–20 lines around the flagged location:
 
 1. Read in the immediate context of the violation.
    - Some queries may depend on later context (e.g., an "unused variable" may only be used after its declaration)

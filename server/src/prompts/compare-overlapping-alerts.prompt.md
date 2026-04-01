@@ -19,7 +19,7 @@ This workflow supports:
 
 ### Step 1: Discover available rules
 
-Use `sarif_list_rules` on each SARIF source to understand what rules and result counts are present:
+Use #sarif_list_rules on each SARIF source to understand what rules and result counts are present:
 
 ```
 sarif_list_rules(sarifPath="{{sarifPathA}}")
@@ -34,18 +34,18 @@ Depending on the use case, choose the appropriate strategy:
 
 **Same-file, different rules** (custom vs standard overlap):
 
-- Use `sarif_extract_rule` to extract each rule's results from the same file
-- Use `sarif_compare_alerts` to compare individual alert pairs
+- Use #sarif_extract_rule to extract each rule's results from the same file
+- Use #sarif_compare_alerts to compare individual alert pairs
 
 **Different files, same rule** (behavioral deviation across runs):
 
-- Use `sarif_diff_runs` to get a high-level diff of added/removed/changed rules
-- For changed rules, use `sarif_extract_rule` on both files and compare results
+- Use #sarif_diff_runs to get a high-level diff of added/removed/changed rules
+- For changed rules, use #sarif_extract_rule on both files and compare results
 
 **Different files, different rules** (cross-pack overlap):
 
-- Use `sarif_extract_rule` on each file with the respective rule IDs
-- Use `sarif_compare_alerts` with different `sarifPath` values for alertA and alertB
+- Use #sarif_extract_rule on each file with the respective rule IDs
+- Use #sarif_compare_alerts with different `sarifPath` values for alertA and alertB
 
 ### Step 3: Diff runs (for cross-run comparison)
 
@@ -80,7 +80,7 @@ The markdown report includes:
 
 ### Step 5: Compare specific alerts for overlap
 
-Use `sarif_compare_alerts` to compare individual results between rules or files. Each alert specifier can reference a **different SARIF file**:
+Use #sarif_compare_alerts to compare individual results between rules or files. Each alert specifier can reference a **different SARIF file**:
 
 ```
 sarif_compare_alerts(
@@ -99,7 +99,7 @@ If sink overlap is found, re-check with `source` and `full-path` modes:
 
 ### Step 6: Read source code context
 
-For each overlapping pair, use `read_database_source` to read the relevant source file from the CodeQL database. **Note**: the `filePath` parameter uses the URI from the SARIF alert location, not an absolute path:
+For each overlapping pair, use #read_database_source to read the relevant source file from the CodeQL database. **Note**: the `filePath` parameter uses the URI from the SARIF alert location, not an absolute path:
 
 ```
 read_database_source(database="{{databasePath}}", filePath="<uri-from-alert>")
@@ -120,7 +120,7 @@ For each overlapping or divergent pair, classify as:
 3. **False overlap** — Same file and line but semantically different issues (different arguments, different properties).
    - **Action**: no change needed
 
-4. **Behavioral regression** — A rule that previously found N results now finds fewer (or zero). Visible via `sarif_diff_runs` `changedRules`.
+4. **Behavioral regression** — A rule that previously found N results now finds fewer (or zero). Visible via #sarif_diff_runs `changedRules`.
    - **Action**: investigate query or library changes between CodeQL versions
 
 5. **New coverage** — A rule appears in `addedRules` or has increased results. Indicates improved detection.
@@ -139,9 +139,9 @@ Create a structured summary with:
 ## Notes
 
 - `ruleId` values correspond to CodeQL query `@id` metadata (e.g., `js/sql-injection`)
-- `sarif_compare_alerts` supports **cross-file** comparison: `alertA.sarifPath` and `alertB.sarifPath` can be different files
-- `sarif_diff_runs` compares by rule ID, not by result content — use it for high-level structural comparison, then drill into individual alerts
-- `read_database_source` requires the database path — pass via the `databasePath` parameter or resolve it with `list_codeql_databases`
+- #sarif_compare_alerts supports **cross-file** comparison: `alertA.sarifPath` and `alertB.sarifPath` can be different files
+- #sarif_diff_runs compares by rule ID, not by result content — use it for high-level structural comparison, then drill into individual alerts
+- #read_database_source requires the database path — pass via the `databasePath` parameter or resolve it with #list_codeql_databases
 - When working from cached results, substitute `cacheKey` for `sarifPath` in all tool calls
 - Path similarity above 0.7 usually indicates redundancy; below 0.3 indicates complementary coverage
-- For cross-version comparison, run `codeql database analyze` with two different CodeQL CLI versions against the same database, save both SARIF files, and use `sarif_diff_runs` to compare
+- For cross-version comparison, run `codeql database analyze` with two different CodeQL CLI versions against the same database, save both SARIF files, and use #sarif_diff_runs to compare

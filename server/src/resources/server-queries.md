@@ -6,16 +6,17 @@ For general QL query writing guidance (syntax, metadata, `from`/`where`/`select`
 
 ## Bundled Tools Queries
 
-The server bundles four tools queries that operate on CodeQL databases:
+The server bundles five tools queries that operate on CodeQL databases:
 
-| Query           | Purpose                                           | Output Format             |
-| --------------- | ------------------------------------------------- | ------------------------- |
-| `PrintAST`      | Visualize the Abstract Syntax Tree of source code | `@kind graph` (graphtext) |
-| `PrintCFG`      | Visualize the Control Flow Graph of a function    | `@kind graph` (graphtext) |
-| `CallGraphFrom` | Show all functions called FROM a given function   | `@kind graph` (graphtext) |
-| `CallGraphTo`   | Show all call sites that call TO a given function | `@kind graph` (graphtext) |
+| Query             | Purpose                                                 | Output Format             |
+| ----------------- | ------------------------------------------------------- | ------------------------- |
+| `PrintAST`        | Visualize the Abstract Syntax Tree of source code       | `@kind graph` (graphtext) |
+| `PrintCFG`        | Visualize the Control Flow Graph of a function          | `@kind graph` (graphtext) |
+| `CallGraphFrom`   | Show all functions called FROM a given function         | `@kind graph` (graphtext) |
+| `CallGraphTo`     | Show all call sites that call TO a given function       | `@kind graph` (graphtext) |
+| `CallGraphFromTo` | Show calls FROM one function TO another (bidirectional) | `@kind graph` (graphtext) |
 
-All four queries use `@kind graph` metadata and produce output in graphtext format.
+All five queries use `@kind graph` metadata and produce output in graphtext format.
 
 ## PrintAST
 
@@ -101,19 +102,42 @@ Parameters:
 
 **Output**: A graph showing each caller function and the specific call site where the target function is invoked.
 
+## CallGraphFromTo
+
+**Purpose**: Shows the call relationship between two specific functions — whether function A calls function B (directly or transitively) and what the call path looks like.
+
+**When to use**: When investigating whether a specific source function can reach a specific sink function through the call graph. Useful for validating dataflow hypotheses before writing taint-tracking queries.
+
+**How to run**:
+
+```text
+Tool: codeql_query_run
+Parameters:
+  queryName: "CallGraphFromTo"
+  queryLanguage: "<language>"
+  database: "<path-to-database>"
+  sourceFunction: "<calling-function-name>"
+  targetFunction: "<called-function-name>"
+  format: "graphtext"
+  interpretedOutput: "<output-directory>"
+```
+
+**Output**: A graph showing the call path from the source function to the target function, including intermediate call sites.
+
 ## Language Support
 
-| Language   | PrintAST | PrintCFG | CallGraphFrom | CallGraphTo |
-| ---------- | :------: | :------: | :-----------: | :---------: |
-| actions    |    ✓     |    ✓     |               |             |
-| cpp        |    ✓     |    ✓     |       ✓       |      ✓      |
-| csharp     |    ✓     |    ✓     |       ✓       |      ✓      |
-| go         |    ✓     |    ✓     |       ✓       |      ✓      |
-| java       |    ✓     |    ✓     |       ✓       |      ✓      |
-| javascript |    ✓     |    ✓     |       ✓       |      ✓      |
-| python     |    ✓     |    ✓     |       ✓       |      ✓      |
-| ruby       |    ✓     |    ✓     |       ✓       |      ✓      |
-| swift      |    ✓     |    ✓     |       ✓       |      ✓      |
+| Language   | PrintAST | PrintCFG | CallGraphFrom | CallGraphTo | CallGraphFromTo |
+| ---------- | :------: | :------: | :-----------: | :---------: | :-------------: |
+| actions    |    ✓     |    ✓     |               |             |                 |
+| cpp        |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| csharp     |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| go         |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| java       |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| javascript |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| python     |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| ruby       |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| rust       |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
+| swift      |    ✓     |    ✓     |       ✓       |      ✓      |        ✓        |
 
 Note: The `actions` language supports PrintAST and PrintCFG only (no call graph queries).
 
@@ -125,7 +149,8 @@ Use the `tools_query_workflow` prompt for a guided step-by-step workflow:
 2. **Run PrintAST**: Understand how the source code maps to QL classes
 3. **Run PrintCFG**: Understand control flow for the functions of interest
 4. **Run CallGraphFrom / CallGraphTo**: Trace call relationships to identify sources and sinks
-5. **Write detection queries**: Use the insights from steps 2–4 to select the right QL classes and predicates
+5. **Run CallGraphFromTo**: Verify specific source-to-sink call paths
+6. **Write detection queries**: Use the insights from steps 2–5 to select the right QL classes and predicates
 
 ## Related Resources
 
