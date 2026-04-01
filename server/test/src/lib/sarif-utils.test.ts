@@ -9,6 +9,7 @@ import {
   diffSarifRules,
   extractRuleFromSarif,
   findOverlappingAlerts,
+  getRuleDisplayName,
   listSarifRules,
   sarifResultToMermaid,
   sarifRuleToMarkdown,
@@ -1075,5 +1076,35 @@ describe('diffSarifRules', () => {
 
     expect(diff.summary.toolA).toBe('CodeQL');
     expect(diff.summary.toolVersionA).toBe('2.20.4');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getRuleDisplayName
+// ---------------------------------------------------------------------------
+
+describe('getRuleDisplayName', () => {
+  it('should prefer shortDescription.text', () => {
+    const rule: SarifRule = {
+      id: 'js/sql-injection',
+      name: 'js/sql-injection',
+      shortDescription: { text: 'Database query built from user-controlled sources' },
+    };
+    expect(getRuleDisplayName(rule)).toBe('Database query built from user-controlled sources');
+  });
+
+  it('should fall back to name when shortDescription is absent', () => {
+    const rule: SarifRule = {
+      id: 'js/sql-injection',
+      name: 'SqlInjection',
+    };
+    expect(getRuleDisplayName(rule)).toBe('SqlInjection');
+  });
+
+  it('should fall back to id when both name and shortDescription are absent', () => {
+    const rule: SarifRule = {
+      id: 'js/sql-injection',
+    };
+    expect(getRuleDisplayName(rule)).toBe('js/sql-injection');
   });
 });

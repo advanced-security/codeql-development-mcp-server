@@ -1,0 +1,6 @@
+{
+  "sessions": [],
+  "parameters": {
+    "sarifPathA": "nonexistent/path/to/results.sarif"
+  }
+}

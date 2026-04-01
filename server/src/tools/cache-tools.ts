@@ -227,29 +227,17 @@ function registerQueryResultsCacheCompareTool(server: McpServer): void {
       }
 
       const comparison = Array.from(byDatabase.entries()).map(([db, dbEntries]) => {
-        // For each entry, prefer the stored resultCount; fall back to
-        // parsing the cached SARIF content to extract the result count.
-        let totalResultCount = 0;
-        for (const e of dbEntries) {
-          if (e.resultCount != null) {
-            totalResultCount += e.resultCount;
-          } else if (e.outputFormat.includes('sarif')) {
-            // Attempt to derive result count from cached SARIF content
-            try {
-              const content = store.getCacheContent(e.cacheKey);
-              if (content) {
-                const sarif = JSON.parse(content);
-                const count = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
-                totalResultCount += count;
-              }
-            } catch { /* malformed SARIF or missing content */ }
-          }
-        }
+        // Use the latest entry's result count (entries are sorted by createdAt DESC).
+        // When multiple cache entries exist for the same ruleId on the same database
+        // (e.g. one from query_run and another from database_analyze decomposition),
+        // the latest entry is the most representative.
+        const latestEntry = dbEntries[0];
+        const resultCount = latestEntry.resultCount ?? 0;
         return {
           database: db,
           languages: [...new Set(dbEntries.map(e => e.language))],
           formats: [...new Set(dbEntries.map(e => e.outputFormat))],
-          totalResultCount,
+          resultCount,
           cachedRuns: dbEntries.length,
           latestCachedAt: dbEntries[0].createdAt,
         };

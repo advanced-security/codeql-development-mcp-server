@@ -86,6 +86,21 @@ export interface SarifDiffResult {
 }
 
 // ---------------------------------------------------------------------------
+// SARIF rule helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the human-readable display name for a SARIF rule.
+ *
+ * Priority: `shortDescription.text` → `name` → `id` (fallback).
+ * This is the single authoritative function for deriving a rule's
+ * display name from its SARIF definition.
+ */
+export function getRuleDisplayName(rule: SarifRule): string {
+  return rule.shortDescription?.text ?? rule.name ?? rule.id;
+}
+
+// ---------------------------------------------------------------------------
 // Location extraction helpers
 // ---------------------------------------------------------------------------
 
@@ -445,7 +460,7 @@ export function sarifRuleToMarkdown(sarif: SarifDocument, ruleId: string): strin
   lines.push(`## ${ruleId}`);
   lines.push('');
   if (rule) {
-    const name = rule.shortDescription?.text ?? rule.name ?? ruleId;
+    const name = getRuleDisplayName(rule);
     lines.push(`**Name**: ${name}`);
 
     const props = rule.properties as Record<string, unknown> | undefined;
@@ -549,7 +564,7 @@ export function listSarifRules(sarif: SarifDocument): SarifRuleSummary[] {
     const props = rule.properties as Record<string, unknown> | undefined;
     summaries.push({
       kind: props?.kind as string | undefined,
-      name: rule.shortDescription?.text ?? rule.name,
+      name: getRuleDisplayName(rule),
       precision: props?.precision as string | undefined,
       resultCount: countByRule.get(rule.id) ?? 0,
       ruleId: rule.id,

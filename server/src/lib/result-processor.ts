@@ -10,9 +10,10 @@ import { basename, dirname } from 'path';
 import { mkdirSync, readFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { CLIExecutionResult, executeCodeQLCommand, getActualCodeqlVersion } from './cli-executor';
+import { readDatabaseMetadata } from './database-resolver';
 import { evaluateQueryResults, extractQueryMetadata, QueryEvaluationResult } from './query-results-evaluator';
 import { resolveQueryPath } from './query-resolver';
-import { decomposeSarifByRule } from './sarif-utils';
+import { decomposeSarifByRule, getRuleDisplayName } from './sarif-utils';
 import { sessionDataManager } from './session-data-manager';
 
 /**
@@ -218,7 +219,7 @@ export async function processQueryRunResults(
             const resultContent = readFileSync(outputFilePath, 'utf8');
             const codeqlVersion = getActualCodeqlVersion();
             const dbPath = (params.database as string) || '';
-            const lang = (queryLanguage as string) || 'unknown';
+            const lang = (queryLanguage as string) || (dbPath ? (readDatabaseMetadata(dbPath).language ?? 'unknown') : 'unknown');
             const extPreds: Record<string, string> = {};
             if (params.sourceFiles) extPreds.sourceFiles = params.sourceFiles as string;
             if (params.sourceFunction) extPreds.sourceFunction = params.sourceFunction as string;
@@ -237,14 +238,17 @@ export async function processQueryRunResults(
             // Compute result count from content for SARIF formats
             let resultCount: number | null = null;
             let ruleId: string | null = null;
+            let sarifQueryName: string | null = null;
             if (outputFormat.includes('sarif')) {
               try {
                 const sarif = JSON.parse(resultContent);
                 resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
-                // Extract ruleId from SARIF — single-query runs have exactly one rule
+                // Extract ruleId and query name from SARIF — single-query runs have exactly one rule
                 const rules = sarif?.runs?.[0]?.tool?.driver?.rules;
                 if (Array.isArray(rules) && rules.length > 0) {
-                  ruleId = (rules[0] as { id?: string }).id ?? null;
+                  const rule = rules[0] as import('../types/sarif').SarifRule;
+                  ruleId = rule.id ?? null;
+                  sarifQueryName = getRuleDisplayName(rule);
                 }
               } catch { /* non-SARIF content — leave count/ruleId null */ }
             }
@@ -258,7 +262,7 @@ export async function processQueryRunResults(
               interpretedPath: outputFilePath,
               language: lang,
               outputFormat,
-              queryName: (queryName as string) || basename(queryPath, '.ql'),
+              queryName: sarifQueryName || (queryName as string) || basename(queryPath, '.ql'),
               queryPath,
               resultContent,
               resultCount,
@@ -371,8 +375,8 @@ export function cacheDatabaseAnalyzeResults(
       resultCount = runs?.[0]?.results?.length ?? 0;
     } catch { /* non-SARIF content */ }
 
-    // Resolve language from database metadata if possible
-    const language = (params.language as string) || 'unknown';
+    // Resolve language from database metadata
+    const language = (params.language as string) || (readDatabaseMetadata(dbPath).language ?? 'unknown');
 
     const cacheKey = computeQueryCacheKey({
       codeqlVersion,
@@ -406,6 +410,8 @@ export function cacheDatabaseAnalyzeResults(
         for (const [ruleId, ruleSarif] of decomposed) {
           const ruleResults = ruleSarif.runs[0]?.results ?? [];
           const ruleContent = JSON.stringify(ruleSarif, null, 2);
+          const ruleDef = ruleSarif.runs[0]?.tool.driver.rules?.[0];
+          const ruleDisplayName = ruleDef ? getRuleDisplayName(ruleDef) : ruleId;
           const ruleCacheKey = computeQueryCacheKey({
             codeqlVersion,
             databasePath: dbPath,
@@ -420,7 +426,7 @@ export function cacheDatabaseAnalyzeResults(
             interpretedPath: outputPath,
             language,
             outputFormat: format,
-            queryName: ruleId,
+            queryName: ruleDisplayName,
             queryPath: queries || 'database-analyze',
             resultContent: ruleContent,
             resultCount: ruleResults.length,

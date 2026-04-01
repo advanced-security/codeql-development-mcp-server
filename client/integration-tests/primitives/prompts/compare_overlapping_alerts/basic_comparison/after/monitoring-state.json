@@ -1,0 +1,10 @@
+{
+  "sessions": [
+    {
+      "expectedContentPatterns": [
+        "sarif_list_rules",
+        "sarif_compare_alerts"
+      ]
+    }
+  ]
+}

@@ -506,18 +506,7 @@ describe('Cache Tools', () => {
         expect(parsed.entries).toHaveLength(2);
       });
 
-      it('should derive totalResultCount from SARIF content when resultCount is null', async () => {
-        const sarif = {
-          version: '2.1.0',
-          runs: [{
-            tool: { driver: { name: 'codeql' } },
-            results: [
-              { ruleId: 'r1', message: { text: 'msg1' }, locations: [] },
-              { ruleId: 'r2', message: { text: 'msg2' }, locations: [] },
-              { ruleId: 'r3', message: { text: 'msg3' }, locations: [] },
-            ],
-          }],
-        };
+      it('should use latest entry resultCount for comparison', async () => {
         const store = sessionDataManager.getStore();
         // Cache entry without resultCount (simulates old cache entries)
         store.putCacheEntry({
@@ -528,8 +517,8 @@ describe('Cache Tools', () => {
           language: 'javascript',
           codeqlVersion: '2.25.0',
           outputFormat: 'sarif-latest',
-          resultContent: JSON.stringify(sarif),
-          // resultCount deliberately omitted
+          resultContent: '{}',
+          resultCount: 5,
         });
 
         registerCacheTools(mockServer);
@@ -540,7 +529,7 @@ describe('Cache Tools', () => {
 
         const result = await compareHandler({ queryName: 'UI5Clickjacking' });
         const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.comparison[0].totalResultCount).toBe(3);
+        expect(parsed.comparison[0].resultCount).toBe(5);
       });
     });
   });

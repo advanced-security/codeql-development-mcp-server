@@ -5,13 +5,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { CLIExecutionResult, executeCodeQLCommand, executeQLTCommand } from './cli-executor';
-import { resolveDatabasePath } from './database-resolver';
+import { readDatabaseMetadata, resolveDatabasePath } from './database-resolver';
 import { logger } from '../utils/logger';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { resolveQueryPath } from './query-resolver';
 import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
@@ -430,15 +430,9 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               // Auto-resolve --source-location-prefix from codeql-database.yml
               // (only when not explicitly provided)
               if (!options['source-location-prefix']) {
-                const dbYmlPath = join(dbPath, 'codeql-database.yml');
-                try {
-                  const dbYml = readFileSync(dbYmlPath, 'utf8');
-                  const dbMeta = yaml.load(dbYml) as Record<string, unknown> | undefined;
-                  if (dbMeta?.sourceLocationPrefix && typeof dbMeta.sourceLocationPrefix === 'string') {
-                    options['source-location-prefix'] = dbMeta.sourceLocationPrefix;
-                  }
-                } catch {
-                  // codeql-database.yml missing or unparseable — skip prefix resolution
+                const dbMeta = readDatabaseMetadata(dbPath);
+                if (dbMeta.sourceLocationPrefix) {
+                  options['source-location-prefix'] = dbMeta.sourceLocationPrefix;
                 }
               }
             }
