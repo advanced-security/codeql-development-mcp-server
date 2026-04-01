@@ -16,6 +16,7 @@ import { access } from 'fs/promises';
 function createMockCliResolver() {
   return {
     resolve: vi.fn().mockResolvedValue('/usr/local/bin/codeql'),
+    getCliVersion: vi.fn().mockReturnValue('2.25.1'),
     invalidateCache: vi.fn(),
     dispose: vi.fn(),
     push: vi.fn(),
@@ -29,6 +30,7 @@ function createMockServerManager(bundledQlRoot?: string) {
     getInstallDir: vi.fn().mockReturnValue('/mock/global-storage/mcp-server'),
     getCommand: vi.fn().mockReturnValue('npx'),
     getArgs: vi.fn().mockReturnValue(['-y', 'codeql-development-mcp-server']),
+    getExtensionVersion: vi.fn().mockReturnValue('2.25.1'),
     dispose: vi.fn(),
     push: vi.fn(),
   } as any;
@@ -203,5 +205,173 @@ describe('PackInstaller', () => {
 
   it('should be disposable', () => {
     expect(() => installer.dispose()).not.toThrow();
+  });
+
+  describe('baseVersion', () => {
+    it('should strip pre-release suffix', () => {
+      expect(PackInstaller.baseVersion('2.25.1-next.1')).toBe('2.25.1');
+    });
+
+    it('should strip v prefix', () => {
+      expect(PackInstaller.baseVersion('v2.24.3')).toBe('2.24.3');
+    });
+
+    it('should strip both v prefix and pre-release suffix', () => {
+      expect(PackInstaller.baseVersion('v2.25.0-rc1')).toBe('2.25.0');
+    });
+
+    it('should pass through bare version unchanged', () => {
+      expect(PackInstaller.baseVersion('2.25.1')).toBe('2.25.1');
+    });
+  });
+
+  describe('getPackVersionForCli', () => {
+    it('should return pack version for known CLI version', () => {
+      expect(PackInstaller.getPackVersionForCli('2.25.0')).toBe('2.25.0');
+    });
+
+    it('should return undefined for unknown CLI version', () => {
+      expect(PackInstaller.getPackVersionForCli('9.99.99')).toBeUndefined();
+    });
+
+    it('should handle CLI version with pre-release suffix', () => {
+      expect(PackInstaller.getPackVersionForCli('2.24.1-rc1')).toBe('2.24.1');
+    });
+  });
+
+  describe('getTargetCliVersion', () => {
+    it('should derive base version from extension version', () => {
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+      expect(installer.getTargetCliVersion()).toBe('2.25.1');
+    });
+
+    it('should handle stable extension version', () => {
+      serverManager.getExtensionVersion.mockReturnValue('2.25.0');
+      expect(installer.getTargetCliVersion()).toBe('2.25.0');
+    });
+  });
+
+  describe('version-aware pack download', () => {
+    beforeEach(() => {
+      vi.mocked(access).mockResolvedValue(undefined);
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          cb(null, '', '');
+          return {} as any;
+        },
+      );
+    });
+
+    it('should download packs when CLI version differs from target', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      // Should have called pack download, not pack install
+      const calls = vi.mocked(execFile).mock.calls;
+      expect(calls.length).toBe(1);
+      const [cmd, args] = calls[0];
+      expect(cmd).toBe('/usr/local/bin/codeql');
+      expect(args).toContain('download');
+      expect(args).toContain('advanced-security/ql-mcp-javascript-tools-src@2.24.1');
+    });
+
+    it('should fall back to bundled pack install when CLI version matches target', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      const calls = vi.mocked(execFile).mock.calls;
+      expect(calls.length).toBe(1);
+      const [, args] = calls[0];
+      expect(args).toContain('install');
+      expect(args).toContain('--no-strict-mode');
+    });
+
+    it('should fall back to bundled pack install when download is disabled', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({
+        languages: ['javascript'],
+        downloadForCliVersion: false,
+      });
+
+      const calls = vi.mocked(execFile).mock.calls;
+      expect(calls.length).toBe(1);
+      const [, args] = calls[0];
+      expect(args).toContain('install');
+    });
+
+    it('should fall back to bundled install when CLI version is unknown', async () => {
+      cliResolver.getCliVersion.mockReturnValue('9.99.99');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      const calls = vi.mocked(execFile).mock.calls;
+      expect(calls.length).toBe(1);
+      const [, args] = calls[0];
+      expect(args).toContain('install');
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('No known ql-mcp pack version'),
+      );
+    });
+
+    it('should fall back to bundled install when download fails', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      let callCount = 0;
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          callCount++;
+          if (callCount === 1) {
+            // Download fails
+            cb(new Error('download failed'), '', 'network error');
+          } else {
+            // Install succeeds
+            cb(null, '', '');
+          }
+          return {} as any;
+        },
+      );
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      // Should have tried download then fallen back to install
+      expect(callCount).toBe(2);
+    });
+
+    it('should download packs for all specified languages', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.0');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({
+        languages: ['javascript', 'python', 'go'],
+      });
+
+      const calls = vi.mocked(execFile).mock.calls;
+      expect(calls.length).toBe(3);
+      expect(calls[0][1]).toContain('advanced-security/ql-mcp-javascript-tools-src@2.24.0');
+      expect(calls[1][1]).toContain('advanced-security/ql-mcp-python-tools-src@2.24.0');
+      expect(calls[2][1]).toContain('advanced-security/ql-mcp-go-tools-src@2.24.0');
+    });
+
+    it('should not attempt download when CLI version is undefined', async () => {
+      cliResolver.getCliVersion.mockReturnValue(undefined);
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      const calls = vi.mocked(execFile).mock.calls;
+      expect(calls.length).toBe(1);
+      const [, args] = calls[0];
+      expect(args).toContain('install');
+    });
   });
 });

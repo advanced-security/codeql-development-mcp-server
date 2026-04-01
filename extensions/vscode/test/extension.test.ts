@@ -9,6 +9,7 @@ vi.mock('../src/codeql/cli-resolver', () => ({
   CliResolver: vi.fn().mockImplementation(function () {
     return {
       resolve: vi.fn().mockResolvedValue('/mock/codeql'),
+      getCliVersion: vi.fn().mockReturnValue('2.25.1'),
       invalidateCache: vi.fn(),
       dispose: vi.fn(),
     };
@@ -25,6 +26,7 @@ vi.mock('../src/server/server-manager', () => ({
       getArgs: vi.fn().mockReturnValue(['-y', 'codeql-development-mcp-server']),
       getVersion: vi.fn().mockReturnValue(undefined),
       getDescription: vi.fn().mockReturnValue('npx -y codeql-development-mcp-server'),
+      getExtensionVersion: vi.fn().mockReturnValue('2.25.1'),
       getInstallDir: vi.fn().mockReturnValue('/mock/install'),
       getPackageRoot: vi.fn().mockReturnValue('/mock/install/node_modules/codeql-development-mcp-server'),
       getInstalledVersion: vi.fn().mockResolvedValue('2.24.1'),
