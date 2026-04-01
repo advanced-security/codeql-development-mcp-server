@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_diff_runs",
+  "expectedSuccess": true,
+  "description": "Test sarif_diff_runs detects changed result counts between two SARIF files"
+}

@@ -1,0 +1,267 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "version": "2.20.4",
+          "rules": [
+            {
+              "id": "js/sql-injection",
+              "name": "js/sql-injection",
+              "shortDescription": {
+                "text": "Database query built from user-controlled sources"
+              },
+              "fullDescription": {
+                "text": "Building a database query from user-controlled sources is vulnerable to insertion of malicious database code by the user."
+              },
+              "help": {
+                "text": "Avoid string concatenation in SQL queries.",
+                "markdown": "# SQL Injection\n\nBuilding a database query from user-controlled sources is vulnerable to SQL injection.\n\n## Recommendation\n\nUse parameterized queries or prepared statements."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "external/cwe/cwe-089"
+                ],
+                "kind": "path-problem",
+                "precision": "high",
+                "security-severity": "8.8"
+              }
+            },
+            {
+              "id": "js/missing-rate-limiting",
+              "name": "js/missing-rate-limiting",
+              "shortDescription": {
+                "text": "Missing rate limiting"
+              },
+              "help": {
+                "text": "Add rate limiting to route handlers.",
+                "markdown": "# Missing Rate Limiting\n\nWithout rate limiting, API endpoints are vulnerable to denial-of-service attacks."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "external/cwe/cwe-770"
+                ],
+                "kind": "problem",
+                "precision": "medium",
+                "security-severity": "7.5"
+              }
+            }
+          ]
+        },
+        "extensions": [
+          {
+            "name": "codeql/javascript-queries",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "results": [
+        {
+          "ruleId": "js/sql-injection",
+          "ruleIndex": 0,
+          "message": {
+            "text": "This query string depends on a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/routes/users.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 9,
+                  "endLine": 25,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/routes/users.js"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 15,
+                  "endColumn": 30
+                }
+              },
+              "message": {
+                "text": "user-provided value"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "src/routes/users.js"
+                          },
+                          "region": {
+                            "startLine": 20,
+                            "startColumn": 15,
+                            "endColumn": 30
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.id"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "src/routes/users.js"
+                          },
+                          "region": {
+                            "startLine": 22,
+                            "startColumn": 7,
+                            "endColumn": 20
+                          }
+                        },
+                        "message": {
+                          "text": "userId"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "src/routes/users.js"
+                          },
+                          "region": {
+                            "startLine": 25,
+                            "startColumn": 9,
+                            "endColumn": 42
+                          }
+                        },
+                        "message": {
+                          "text": "db.query(...)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "abc123def456"
+          }
+        },
+        {
+          "ruleId": "js/sql-injection",
+          "ruleIndex": 0,
+          "message": {
+            "text": "This query string depends on a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/routes/products.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 5,
+                  "endLine": 18,
+                  "endColumn": 48
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "src/routes/products.js"
+                          },
+                          "region": {
+                            "startLine": 12,
+                            "startColumn": 20,
+                            "endColumn": 35
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "src/routes/products.js"
+                          },
+                          "region": {
+                            "startLine": 18,
+                            "startColumn": 5,
+                            "endColumn": 48
+                          }
+                        },
+                        "message": {
+                          "text": "db.execute(...)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "ghi789jkl012"
+          }
+        },
+        {
+          "ruleId": "js/missing-rate-limiting",
+          "ruleIndex": 1,
+          "message": {
+            "text": "This route handler performs an authorization check, but is not rate-limited."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/routes/users.js",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1,
+                  "endLine": 15,
+                  "endColumn": 45
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "mno345pqr678"
+          }
+        }
+      ]
+    }
+  ]
+}

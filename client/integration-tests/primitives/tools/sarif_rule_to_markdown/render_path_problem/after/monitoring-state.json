@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_rule_to_markdown",
+  "success": true,
+  "description": "Successfully generated markdown with Mermaid dataflow diagrams for js/sql-injection"
+}

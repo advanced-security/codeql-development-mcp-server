@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_extract_rule",
+  "success": true,
+  "description": "Successfully extracted js/sql-injection results from multi-rule SARIF"
+}

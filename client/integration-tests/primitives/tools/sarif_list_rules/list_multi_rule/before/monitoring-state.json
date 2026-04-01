@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_list_rules",
+  "expectedSuccess": true,
+  "description": "Test sarif_list_rules lists all rules with result counts from multi-rule SARIF"
+}

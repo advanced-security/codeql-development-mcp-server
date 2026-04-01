@@ -1,0 +1,7 @@
+{
+  "toolName": "sarif_diff_runs",
+  "arguments": {
+    "labelA": "baseline",
+    "labelB": "comparison"
+  }
+}

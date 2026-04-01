@@ -42,11 +42,12 @@ function registerQueryResultsCacheLookupTool(server: McpServer): void {
     {
       cacheKey: z.string().optional().describe('Look up by exact cache key (if known).'),
       queryName: z.string().optional().describe('Query name to search for (e.g. "PrintAST", "CallGraphFrom").'),
+      ruleId: z.string().optional().describe('Filter by CodeQL query @id (e.g. "js/sql-injection"). The @id is the most reliable identifier.'),
       databasePath: z.string().optional().describe('Database path to search for.'),
       language: z.string().optional().describe('Filter by language (e.g. "cpp", "javascript").'),
       limit: z.number().int().positive().max(500).optional().describe('Maximum number of cache entries to return when listing by filter (default: 50, max: 500).'),
     },
-    async ({ cacheKey, queryName, databasePath, language, limit }) => {
+    async ({ cacheKey, queryName, ruleId, databasePath, language, limit }) => {
       const store = sessionDataManager.getStore();
 
       // Exact lookup by cache key
@@ -59,9 +60,9 @@ function registerQueryResultsCacheLookupTool(server: McpServer): void {
       }
 
       // List matching entries
-      const entries = store.listCacheEntries({ queryName, databasePath, language, limit: limit ?? 50 });
+      const entries = store.listCacheEntries({ queryName, ruleId, databasePath, language, limit: limit ?? 50 });
       if (entries.length === 0) {
-        return { content: [{ type: 'text' as const, text: JSON.stringify({ cached: false, queryName, databasePath, language }) }] };
+        return { content: [{ type: 'text' as const, text: JSON.stringify({ cached: false, queryName, ruleId, databasePath, language }) }] };
       }
 
       return {
@@ -177,15 +178,16 @@ function registerQueryResultsCacheClearTool(server: McpServer): void {
     {
       cacheKey: z.string().optional().describe('Clear a specific cache entry.'),
       queryName: z.string().optional().describe('Clear all entries for this query name.'),
+      ruleId: z.string().optional().describe('Clear all entries for this CodeQL query @id.'),
       databasePath: z.string().optional().describe('Clear all entries for this database.'),
       all: z.boolean().optional().describe('Clear the entire query results cache.'),
     },
-    async ({ cacheKey, queryName, databasePath, all }) => {
-      if (!cacheKey && !queryName && !databasePath && !all) {
-        return { content: [{ type: 'text' as const, text: 'At least one filter (cacheKey, queryName, databasePath, or all) is required.' }] };
+    async ({ cacheKey, queryName, ruleId, databasePath, all }) => {
+      if (!cacheKey && !queryName && !ruleId && !databasePath && !all) {
+        return { content: [{ type: 'text' as const, text: 'At least one filter (cacheKey, queryName, ruleId, databasePath, or all) is required.' }] };
       }
       const store = sessionDataManager.getStore();
-      const cleared = store.clearCacheEntries({ cacheKey, queryName, databasePath, all: all ?? false });
+      const cleared = store.clearCacheEntries({ cacheKey, queryName, ruleId, databasePath, all: all ?? false });
       return { content: [{ type: 'text' as const, text: `Cleared ${cleared} cached query result(s).` }] };
     },
   );
@@ -200,15 +202,20 @@ function registerQueryResultsCacheCompareTool(server: McpServer): void {
     'query_results_cache_compare',
     'Compare cached query results across multiple databases for the same query. Useful for MRVA-style cross-repository analysis.',
     {
-      queryName: z.string().describe('The query name to compare across databases.'),
+      queryName: z.string().optional().describe('The query name to compare across databases.'),
+      ruleId: z.string().optional().describe('The CodeQL query @id to compare across databases (preferred over queryName).'),
       language: z.string().optional().describe('Filter by language.'),
     },
-    async ({ queryName, language }) => {
+    async ({ queryName, ruleId, language }) => {
+      if (!queryName && !ruleId) {
+        return { content: [{ type: 'text' as const, text: 'Either queryName or ruleId is required.' }] };
+      }
       const store = sessionDataManager.getStore();
-      const entries = store.listCacheEntries({ queryName, language });
+      const entries = store.listCacheEntries({ queryName, ruleId, language });
 
       if (entries.length === 0) {
-        return { content: [{ type: 'text' as const, text: `No cached results found for query "${queryName}".` }] };
+        const identifier = ruleId ?? queryName;
+        return { content: [{ type: 'text' as const, text: `No cached results found for "${identifier}".` }] };
       }
 
       // Group by database
@@ -252,7 +259,8 @@ function registerQueryResultsCacheCompareTool(server: McpServer): void {
         content: [{
           type: 'text' as const,
           text: JSON.stringify({
-            queryName,
+            queryName: queryName ?? null,
+            ruleId: ruleId ?? null,
             databases: comparison.length,
             comparison,
           }, null, 2),

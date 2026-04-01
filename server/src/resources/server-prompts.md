@@ -6,6 +6,7 @@ This resource provides a complete reference of the prompts exposed by the CodeQL
 
 | Prompt                                    | Description                                                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `compare_overlapping_alerts`              | Analyze two CodeQL rules within SARIF data to detect overlapping alerts and classify overlap types            |
 | `document_codeql_query`                   | Create or update standardized markdown documentation for a CodeQL query                                       |
 | `explain_codeql_query`                    | Generate a detailed explanation of a CodeQL query with Mermaid evaluation diagrams                            |
 | `ql_lsp_iterative_development`            | Iterative CodeQL query development using LSP tools for completion, navigation, and validation                 |
@@ -40,6 +41,10 @@ This resource provides a complete reference of the prompts exposed by the CodeQL
 - **`document_codeql_query`** — Generates standardized markdown documentation as a sibling `.md` file to a query. Requires `queryPath` and `language`.
 - **`run_query_and_summarize_false_positives`** — Runs a CodeQL query on a database and groups results into false-positive categories by root cause.
 - **`sarif_rank_false_positives`** / **`sarif_rank_true_positives`** — Analyze SARIF output to assess query precision by ranking results as likely true or false positives.
+
+### Alert Analysis and Comparison
+
+- **`compare_overlapping_alerts`** — Analyzes two CodeQL rules within the same SARIF data to identify overlapping alerts. Classifies each overlap as redundant, complementary, or false overlap. Uses `sarif_extract_rule`, `sarif_compare_alerts`, and `read_database_source` tools. Requires `sarifPath`, `ruleIdA`, and `ruleIdB`; optionally accepts `databasePath` for source code context.
 
 ### Workshop Creation
 

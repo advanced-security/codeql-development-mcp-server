@@ -1125,6 +1125,80 @@ export class IntegrationTestRunner {
       params.status = "completed";
     } else if (toolName === "sessions_compare") {
       params.sessionIds = ["session-1", "session-2"];
+    } else if (
+      toolName === "sarif_extract_rule" ||
+      toolName === "sarif_list_rules" ||
+      toolName === "sarif_rule_to_markdown"
+    ) {
+      // Look for .sarif files in the before directory
+      if (fs.existsSync(beforeDir)) {
+        const sarifFiles = fs.readdirSync(beforeDir).filter((f) => f.endsWith(".sarif"));
+        if (sarifFiles.length > 0) {
+          params.sarifPath = path.join(beforeDir, sarifFiles[0]);
+        } else {
+          throw new Error(`No .sarif files found in ${beforeDir} for ${toolName}/${testCase}`);
+        }
+      } else {
+        throw new Error(`Test directory ${beforeDir} not found for ${toolName}/${testCase}`);
+      }
+      // Read ruleId from test-config.json arguments
+      const sarifTestConfigPath = path.join(testCaseDir, "test-config.json");
+      if (fs.existsSync(sarifTestConfigPath)) {
+        const sarifTestConfig = JSON.parse(fs.readFileSync(sarifTestConfigPath, "utf8"));
+        if (sarifTestConfig.arguments?.ruleId) {
+          params.ruleId = sarifTestConfig.arguments.ruleId;
+        }
+      }
+    } else if (toolName === "sarif_compare_alerts") {
+      // Look for .sarif files in the before directory
+      if (fs.existsSync(beforeDir)) {
+        const sarifFiles = fs.readdirSync(beforeDir).filter((f) => f.endsWith(".sarif"));
+        if (sarifFiles.length > 0) {
+          const sarifPath = path.join(beforeDir, sarifFiles[0]);
+          // Read alert specs and overlapMode from test-config.json
+          const compareConfigPath = path.join(testCaseDir, "test-config.json");
+          if (fs.existsSync(compareConfigPath)) {
+            const compareConfig = JSON.parse(fs.readFileSync(compareConfigPath, "utf8"));
+            const args = compareConfig.arguments || {};
+            params.alertA = { ...args.alertA, sarifPath };
+            params.alertB = { ...args.alertB, sarifPath };
+            if (args.overlapMode) {
+              params.overlapMode = args.overlapMode;
+            }
+          }
+        } else {
+          throw new Error(`No .sarif files found in ${beforeDir} for ${toolName}/${testCase}`);
+        }
+      } else {
+        throw new Error(`Test directory ${beforeDir} not found for ${toolName}/${testCase}`);
+      }
+    } else if (toolName === "sarif_diff_runs") {
+      // Look for .sarif files in the before directory — expects two files
+      if (fs.existsSync(beforeDir)) {
+        const sarifFiles = fs
+          .readdirSync(beforeDir)
+          .filter((f) => f.endsWith(".sarif"))
+          .sort();
+        if (sarifFiles.length >= 2) {
+          params.sarifPathA = path.join(beforeDir, sarifFiles[0]);
+          params.sarifPathB = path.join(beforeDir, sarifFiles[1]);
+        } else if (sarifFiles.length === 1) {
+          params.sarifPathA = path.join(beforeDir, sarifFiles[0]);
+          params.sarifPathB = path.join(beforeDir, sarifFiles[0]);
+        } else {
+          throw new Error(`No .sarif files found in ${beforeDir} for ${toolName}/${testCase}`);
+        }
+      } else {
+        throw new Error(`Test directory ${beforeDir} not found for ${toolName}/${testCase}`);
+      }
+      // Read labels from test-config.json arguments
+      const diffConfigPath = path.join(testCaseDir, "test-config.json");
+      if (fs.existsSync(diffConfigPath)) {
+        const diffConfig = JSON.parse(fs.readFileSync(diffConfigPath, "utf8"));
+        const args = diffConfig.arguments || {};
+        if (args.labelA) params.labelA = args.labelA;
+        if (args.labelB) params.labelB = args.labelB;
+      }
     }
 
     return params;

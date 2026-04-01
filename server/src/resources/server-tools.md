@@ -58,6 +58,16 @@ This resource provides a complete reference of the default tools exposed by the 
 | `search_ql_code`                 | Search QL source files for text or regex patterns with structured results (replaces grep for QL code)        |
 | `validate_codeql_query`          | Quick heuristic validation for CodeQL query structure (does not compile the query)                           |
 
+## SARIF Analysis Tools
+
+| Tool                     | Description                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `sarif_extract_rule`     | Extract all data for a specific rule from multi-rule SARIF. Returns a valid SARIF JSON subset        |
+| `sarif_list_rules`       | List all rules in a SARIF file with result counts, severity, precision, and tags                     |
+| `sarif_rule_to_markdown` | Convert per-rule SARIF data to markdown with Mermaid dataflow diagrams                               |
+| `sarif_compare_alerts`   | Compare code locations of two SARIF alerts for overlap (sink, source, any-location, full-path modes) |
+| `sarif_diff_runs`        | Diff two SARIF files to find added, removed, and changed rules/results across analysis runs          |
+
 ## Common Tool Workflows
 
 ### Create and Test a Query
@@ -92,6 +102,17 @@ This resource provides a complete reference of the default tools exposed by the 
 2. `codeql_lsp_definition` — navigate to definitions
 3. `codeql_lsp_references` — find all references
 4. `codeql_lsp_diagnostics` — real-time validation
+
+### Analyze and Compare Results
+
+1. `codeql_database_analyze` — run query packs and produce SARIF
+2. `sarif_list_rules` — discover rules and result counts in the SARIF
+3. `query_results_cache_lookup` with `ruleId` — find cached results by CodeQL query `@id`
+4. `sarif_extract_rule` — extract results for a specific rule from multi-rule SARIF
+5. `sarif_rule_to_markdown` — generate markdown report with Mermaid dataflow diagrams
+6. `sarif_compare_alerts` — compare two alerts for location overlap
+7. `sarif_diff_runs` — diff two SARIF files to detect behavioral changes across runs
+8. `query_results_cache_compare` with `ruleId` — compare results across databases
 
 ## Tool Input Conventions
 

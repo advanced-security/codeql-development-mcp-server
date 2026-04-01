@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_compare_alerts",
+  "success": true,
+  "description": "Successfully compared alert locations for sink overlap"
+}

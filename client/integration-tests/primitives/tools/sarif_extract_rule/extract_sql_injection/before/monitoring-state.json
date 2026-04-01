@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_extract_rule",
+  "expectedSuccess": true,
+  "description": "Test sarif_extract_rule extracts results for a specific rule from multi-rule SARIF"
+}

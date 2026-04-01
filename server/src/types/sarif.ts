@@ -111,6 +111,10 @@ export const SarifRunSchema = z.object({
       informationUri: z.string().optional(),
       rules: z.array(SarifRuleSchema).optional(),
     }),
+    extensions: z.array(z.object({
+      name: z.string(),
+      version: z.string().optional(),
+    })).optional(),
   }),
   results: z.array(SarifResultSchema).optional(),
   properties: z.record(z.any()).optional(),
