@@ -39,12 +39,12 @@ This resource provides a complete reference of the prompts exposed by the CodeQL
 ### Documentation and Quality
 
 - **`document_codeql_query`** — Generates standardized markdown documentation as a sibling `.md` file to a query. Requires `queryPath` and `language`.
-- **`run_query_and_summarize_false_positives`** — Runs a CodeQL query on a database and groups results into false-positive categories by root cause. Uses #query_results_cache_lookup, #sarif_list_rules, #sarif_extract_rule, #sarif_rule_to_markdown, and #read_database_source for structured analysis.
-- **`sarif_rank_false_positives`** / **`sarif_rank_true_positives`** — Analyze SARIF output to assess query precision by ranking results as likely true or false positives. Uses #sarif_list_rules, #sarif_extract_rule, #sarif_rule_to_markdown, #read_database_source, #sarif_compare_alerts, and #sarif_diff_runs for context gathering.
+- **`run_query_and_summarize_false_positives`** — Runs a CodeQL query on a database and groups results into false-positive categories by root cause. Uses `query_results_cache_lookup`, `sarif_list_rules`, `sarif_extract_rule`, `sarif_rule_to_markdown`, and `read_database_source` for structured analysis.
+- **`sarif_rank_false_positives`** / **`sarif_rank_true_positives`** — Analyze SARIF output to assess query precision by ranking results as likely true or false positives. Uses `sarif_list_rules`, `sarif_extract_rule`, `sarif_rule_to_markdown`, `read_database_source`, `sarif_compare_alerts`, and `sarif_diff_runs` for context gathering.
 
 ### Alert Analysis and Comparison
 
-- **`compare_overlapping_alerts`** — Compares CodeQL SARIF alerts across any combination of SARIF files, analysis runs, CodeQL databases, or query packs. Classifies findings as redundant, complementary, false overlap, behavioral regression, or new coverage. Uses #sarif_list_rules, #sarif_extract_rule, #sarif_rule_to_markdown, #sarif_compare_alerts, #sarif_diff_runs, and #read_database_source tools. Requires `sarifPathA`; optionally accepts `sarifPathB` for cross-file comparison, `ruleIdA`/`ruleIdB` to narrow to specific rules, and `databasePath` for source code context.
+- **`compare_overlapping_alerts`** — Compares CodeQL SARIF alerts across any combination of SARIF files, analysis runs, CodeQL databases, or query packs. Classifies findings as redundant, complementary, false overlap, behavioral regression, or new coverage. Uses `sarif_list_rules`, `sarif_extract_rule`, `sarif_rule_to_markdown`, `sarif_compare_alerts`, `sarif_diff_runs`, and `read_database_source` tools. Requires `sarifPathA`; optionally accepts `sarifPathB` for cross-file comparison, `ruleIdA`/`ruleIdB` to narrow to specific rules, and `databasePath` for source code context.
 
 ### Workshop Creation
 

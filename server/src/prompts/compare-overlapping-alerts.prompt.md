@@ -19,14 +19,20 @@ This workflow supports:
 
 ### Step 1: Discover available rules
 
-Use #sarif_list_rules on each SARIF source to understand what rules and result counts are present:
+Use #sarif_list_rules on each SARIF source to understand what rules and result counts are present. When comparing within a single file, call it once:
+
+```
+sarif_list_rules(sarifPath="{{sarifPathA}}")
+```
+
+When comparing two different SARIF files, call it on both:
 
 ```
 sarif_list_rules(sarifPath="{{sarifPathA}}")
 sarif_list_rules(sarifPath="{{sarifPathB}}")
 ```
 
-If comparing within a single file, call it once. The response includes `ruleId`, `resultCount`, `kind`, `precision`, `severity`, and `tags` for each rule.
+The response includes `ruleId`, `resultCount`, `kind`, `precision`, `severity`, and `tags` for each rule.
 
 ### Step 2: Choose a comparison strategy
 

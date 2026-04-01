@@ -508,9 +508,8 @@ describe('Cache Tools', () => {
 
       it('should use latest entry resultCount for comparison', async () => {
         const store = sessionDataManager.getStore();
-        // Cache entry without resultCount (simulates old cache entries)
         store.putCacheEntry({
-          cacheKey: 'compare-no-count',
+          cacheKey: 'compare-latest-count',
           queryName: 'UI5Clickjacking',
           queryPath: '/ui5.ql',
           databasePath: '/db1',

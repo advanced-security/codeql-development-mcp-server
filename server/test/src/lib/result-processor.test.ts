@@ -2,9 +2,11 @@
  * Tests for result-processor — query result caching behavior.
  */
 
-import { existsSync, rmSync } from 'fs';
+import { existsSync, rmSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { computeQueryCacheKey } from '../../../src/lib/result-processor';
+import { readDatabaseMetadata } from '../../../src/lib/database-resolver';
 import { createProjectTempDir } from '../../../src/utils/temp-dir';
 
 // We can't easily test processQueryRunResults end-to-end because it
@@ -66,12 +68,10 @@ describe('computeQueryCacheKey', () => {
 });
 
 /**
- * Test the resolveDatabaseLanguage function.
- * This is an internal function, so we test it indirectly by importing it
- * via a re-export or by testing through the cache integration path.
- * For direct testing, we use the module internals.
+ * Test language resolution via readDatabaseMetadata (the shared function
+ * used by result-processor for resolving language from database metadata).
  */
-describe('resolveDatabaseLanguage', () => {
+describe('database language resolution for caching', () => {
   let testDir: string;
 
   beforeEach(() => {
@@ -84,29 +84,20 @@ describe('resolveDatabaseLanguage', () => {
     }
   });
 
-  // Since resolveDatabaseLanguage is not exported, we test the behavior
-  // through importing the module and testing the function's effect on
-  // caching. For now, validate the YAML parsing logic pattern.
-  it('should extract language from codeql-database.yml content', () => {
-    const yamlContent = `---
-sourceLocationPrefix: /src
-primaryLanguage: javascript
-creationMetadata:
-  cliVersion: 2.25.1
-`;
-    // Simulate the regex the function uses
-    const match = yamlContent.match(/^primaryLanguage\s*:\s*(\S+)/m);
-    expect(match).not.toBeNull();
-    expect(match![1]).toBe('javascript');
+  it('should resolve language from codeql-database.yml', () => {
+    writeFileSync(join(testDir, 'codeql-database.yml'), 'primaryLanguage: javascript\n');
+    const metadata = readDatabaseMetadata(testDir);
+    expect(metadata.language).toBe('javascript');
   });
 
-  it('should handle YAML without primaryLanguage', () => {
-    const yamlContent = `---
-sourceLocationPrefix: /src
-creationMetadata:
-  cliVersion: 2.25.1
-`;
-    const match = yamlContent.match(/^primaryLanguage\s*:\s*(\S+)/m);
-    expect(match).toBeNull();
+  it('should return undefined language when file is missing', () => {
+    const metadata = readDatabaseMetadata(testDir);
+    expect(metadata.language).toBeUndefined();
+  });
+
+  it('should resolve language from codeql-database.yaml', () => {
+    writeFileSync(join(testDir, 'codeql-database.yaml'), 'primaryLanguage: python\n');
+    const metadata = readDatabaseMetadata(testDir);
+    expect(metadata.language).toBe('python');
   });
 });

@@ -612,11 +612,19 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           // when the same database is referenced through relative paths, symlinks,
           // or different casing.
           let dbLock: { ready: Promise<void>; release: () => void } | undefined;
-          if (name === 'codeql_database_analyze' && positionalArgs.length > 0) {
-            let lockKey = resolve(positionalArgs[0]);
-            try { lockKey = realpathSync(lockKey); } catch { /* use resolved path if realpath fails */ }
-            dbLock = acquireDatabaseLock(lockKey);
-            await dbLock.ready;
+          if (name === 'codeql_database_analyze') {
+            // Use the resolved database path from params (set before positionalArgs
+            // construction) rather than positionalArgs[0], which may include
+            // _positional values prepended before the database path.
+            const resolvedDb = typeof params.database === 'string'
+              ? resolveDatabasePath(params.database)
+              : (positionalArgs.length > 0 ? positionalArgs[0] : undefined);
+            if (resolvedDb) {
+              let lockKey = resolve(resolvedDb);
+              try { lockKey = realpathSync(lockKey); } catch { /* use resolved path if realpath fails */ }
+              dbLock = acquireDatabaseLock(lockKey);
+              await dbLock.ready;
+            }
           }
 
           try {
