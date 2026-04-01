@@ -41,7 +41,7 @@
     "typescript"
   ],
   "author": "@github/ps-codeql",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "LicenseRef-CodeQL-Terms",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git",

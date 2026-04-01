@@ -4,7 +4,7 @@
   "description": "LLM-assisted development of CodeQL queries, libraries, and tests via #ql-mcp prompts, resources, and tools.",
   "version": "2.25.1-next.2",
   "publisher": "advanced-security",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "LicenseRef-CodeQL-Terms",
   "icon": "media/codeql-icon.png",
   "repository": {
     "type": "git",
