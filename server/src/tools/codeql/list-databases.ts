@@ -60,9 +60,9 @@ export async function discoverDatabases(
         continue;
       }
 
-      // Check for codeql-database.yml
-      const ymlPath = join(entryPath, 'codeql-database.yml');
-      if (!existsSync(ymlPath)) {
+      // Check for codeql-database.yml or codeql-database.yaml
+      if (!existsSync(join(entryPath, 'codeql-database.yml')) &&
+          !existsSync(join(entryPath, 'codeql-database.yaml'))) {
         continue;
       }
 

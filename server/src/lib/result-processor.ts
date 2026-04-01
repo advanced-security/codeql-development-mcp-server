@@ -13,7 +13,7 @@ import { CLIExecutionResult, executeCodeQLCommand, getActualCodeqlVersion } from
 import { readDatabaseMetadata } from './database-resolver';
 import { evaluateQueryResults, extractQueryMetadata, QueryEvaluationResult } from './query-results-evaluator';
 import { resolveQueryPath } from './query-resolver';
-import { decomposeSarifByRule, getRuleDisplayName } from './sarif-utils';
+import { collectAllRules, decomposeSarifByRule, getRuleDisplayName } from './sarif-utils';
 import { sessionDataManager } from './session-data-manager';
 
 /**
@@ -243,12 +243,15 @@ export async function processQueryRunResults(
               try {
                 const sarif = JSON.parse(resultContent);
                 resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
-                // Extract ruleId and query name from SARIF — single-query runs have exactly one rule
-                const rules = sarif?.runs?.[0]?.tool?.driver?.rules;
-                if (Array.isArray(rules) && rules.length > 0) {
-                  const rule = rules[0] as import('../types/sarif').SarifRule;
-                  ruleId = rule.id ?? null;
-                  sarifQueryName = getRuleDisplayName(rule);
+                // Extract ruleId and query name from SARIF — supports both standard
+                // (driver.rules) and grouped-by-pack (extensions[].rules) layouts
+                const run = sarif?.runs?.[0];
+                if (run) {
+                  const allRules = collectAllRules(run as import('../types/sarif').SarifDocument['runs'][0]);
+                  if (allRules.length > 0) {
+                    ruleId = allRules[0].id ?? null;
+                    sarifQueryName = getRuleDisplayName(allRules[0]);
+                  }
                 }
               } catch { /* non-SARIF content — leave count/ruleId null */ }
             }

@@ -206,7 +206,11 @@ export class SqliteStore {
         ON query_result_cache (rule_id);
     `);
 
-    // Migration: add run_id column for multi-run differentiation.
+    // Migration: add run_id column for future multi-run differentiation.
+    // Currently unused (empty string default) — the deterministic cache_key
+    // means repeated runs overwrite prior entries. A future enhancement will
+    // incorporate run_id into the cache key to enable storing multiple runs
+    // of the same query against the same database for comparison.
     this.migrateAddColumn('query_result_cache', 'run_id', "TEXT NOT NULL DEFAULT ''");
   }
 

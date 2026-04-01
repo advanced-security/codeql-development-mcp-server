@@ -100,6 +100,24 @@ export function getRuleDisplayName(rule: SarifRule): string {
   return rule.shortDescription?.text ?? rule.name ?? rule.id;
 }
 
+/**
+ * Collect all rule definitions from a SARIF run.
+ *
+ * Rules may live in `tool.driver.rules` (standard) or in
+ * `tool.extensions[].rules` (when `--sarif-group-rules-by-pack` is used).
+ * This function merges both sources into a single array.
+ */
+export function collectAllRules(run: SarifDocument['runs'][0]): SarifRule[] {
+  const driverRules = run.tool.driver.rules ?? [];
+  const extensionRules: SarifRule[] = [];
+  for (const ext of run.tool.extensions ?? []) {
+    if (ext.rules) {
+      extensionRules.push(...ext.rules);
+    }
+  }
+  return [...driverRules, ...extensionRules];
+}
+
 // ---------------------------------------------------------------------------
 // Location extraction helpers
 // ---------------------------------------------------------------------------
@@ -325,7 +343,8 @@ export function extractRuleFromSarif(sarif: SarifDocument, ruleId: string): Sari
     return { ...sarif, runs: [{ tool: { driver: { name: 'CodeQL', rules: [] } }, results: [] }] };
   }
 
-  const allRules = run.tool.driver.rules ?? [];
+  // Collect rules from both driver and extensions (supports --sarif-group-rules-by-pack)
+  const allRules = collectAllRules(run);
   const matchingRules = allRules.filter(r => r.id === ruleId);
   const matchingResults = (run.results ?? [])
     .filter(r => r.ruleId === ruleId)
@@ -544,7 +563,7 @@ export function listSarifRules(sarif: SarifDocument): SarifRuleSummary[] {
   const run = sarif.runs[0];
   if (!run) return [];
 
-  const allRules = run.tool.driver.rules ?? [];
+  const allRules = collectAllRules(run);
   const results = run.results ?? [];
   const toolName = run.tool.driver.name;
   const toolVersion = run.tool.driver.version;

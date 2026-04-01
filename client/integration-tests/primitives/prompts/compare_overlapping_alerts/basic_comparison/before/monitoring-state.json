@@ -1,6 +1,6 @@
 {
   "sessions": [],
   "parameters": {
-    "sarifPathA": "nonexistent/path/to/results.sarif"
+    "sarifPathA": "client/integration-tests/primitives/tools/sarif_extract_rule/extract_sql_injection/before/test-input.sarif"
   }
 }

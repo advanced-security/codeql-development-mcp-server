@@ -233,6 +233,74 @@ function createSingleRuleSarif(): SarifDocument {
   };
 }
 
+/** SARIF with --sarif-group-rules-by-pack: rules in extensions, not driver. */
+function createGroupedByPackSarif(): SarifDocument {
+  return {
+    version: '2.1.0',
+    runs: [{
+      tool: {
+        driver: {
+          name: 'CodeQL',
+          version: '2.25.1',
+          rules: [], // empty when grouped by pack
+        },
+        extensions: [
+          {
+            name: 'custom/security-queries',
+            version: '1.0.0',
+            rules: [
+              {
+                id: 'js/custom-sqli',
+                shortDescription: { text: 'Custom SQL injection' },
+                help: { markdown: '# Custom SQLi\n\nCustom query.' },
+                properties: { kind: 'path-problem', precision: 'high', 'security-severity': '8.8', tags: ['security'] },
+              },
+              {
+                id: 'js/custom-xss',
+                shortDescription: { text: 'Custom XSS' },
+                properties: { kind: 'path-problem', precision: 'high', tags: ['security'] },
+              },
+            ],
+          },
+          {
+            name: 'custom/quality-queries',
+            version: '1.0.0',
+            rules: [
+              {
+                id: 'js/custom-lint',
+                shortDescription: { text: 'Lint check' },
+                properties: { kind: 'problem', precision: 'medium', tags: ['quality'] },
+              },
+            ],
+          },
+        ],
+      },
+      results: [
+        {
+          ruleId: 'js/custom-sqli',
+          message: { text: 'SQL injection found.' },
+          locations: [{ physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 10 } } }],
+        },
+        {
+          ruleId: 'js/custom-sqli',
+          message: { text: 'Another SQL injection.' },
+          locations: [{ physicalLocation: { artifactLocation: { uri: 'src/api.js' }, region: { startLine: 20 } } }],
+        },
+        {
+          ruleId: 'js/custom-xss',
+          message: { text: 'XSS found.' },
+          locations: [{ physicalLocation: { artifactLocation: { uri: 'src/views.js' }, region: { startLine: 30 } } }],
+        },
+        {
+          ruleId: 'js/custom-lint',
+          message: { text: 'Lint issue.' },
+          locations: [{ physicalLocation: { artifactLocation: { uri: 'src/utils.js' }, region: { startLine: 5 } } }],
+        },
+      ],
+    }],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // extractRuleFromSarif
 // ---------------------------------------------------------------------------
@@ -310,6 +378,15 @@ describe('extractRuleFromSarif', () => {
 
     // The xss rule was at index 1 in the original; should be 0 in extracted
     expect(extracted.runs[0].results![0].ruleIndex).toBe(0);
+  });
+
+  it('should extract rules from extensions when driver.rules is empty (grouped-by-pack)', () => {
+    const sarif = createGroupedByPackSarif();
+    const extracted = extractRuleFromSarif(sarif, 'js/custom-sqli');
+
+    expect(extracted.runs[0].results).toHaveLength(2);
+    expect(extracted.runs[0].tool.driver.rules).toHaveLength(1);
+    expect(extracted.runs[0].tool.driver.rules![0].id).toBe('js/custom-sqli');
   });
 });
 
@@ -1003,6 +1080,18 @@ describe('listSarifRules', () => {
 
     expect(rules[0].tool).toBe('CodeQL');
     expect(rules[0].toolVersion).toBe('2.20.4');
+  });
+
+  it('should list rules from extensions when grouped-by-pack', () => {
+    const sarif = createGroupedByPackSarif();
+    const rules = listSarifRules(sarif);
+
+    expect(rules).toHaveLength(3);
+    const sqli = rules.find(r => r.ruleId === 'js/custom-sqli');
+    expect(sqli).toBeDefined();
+    expect(sqli!.resultCount).toBe(2);
+    expect(sqli!.name).toBe('Custom SQL injection');
+    expect(sqli!.kind).toBe('path-problem');
   });
 });
 

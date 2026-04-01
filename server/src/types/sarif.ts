@@ -113,6 +113,7 @@ export const SarifRunSchema = z.object({
     }),
     extensions: z.array(z.object({
       name: z.string(),
+      rules: z.array(SarifRuleSchema).optional(),
       version: z.string().optional(),
     })).optional(),
   }),
