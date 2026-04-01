@@ -18,8 +18,8 @@ describe('codeql_bqrs_info tool definition', () => {
     expect(codeqlBqrsInfoTool.subcommand).toBe('bqrs info');
   });
 
-  it('should have files as required positional input', () => {
-    expect(codeqlBqrsInfoTool.inputSchema).toHaveProperty('files');
+  it('should have file as required positional input', () => {
+    expect(codeqlBqrsInfoTool.inputSchema).toHaveProperty('file');
   });
 
   it('should support format parameter (text or json)', () => {

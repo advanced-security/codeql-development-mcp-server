@@ -10,8 +10,10 @@ import { basename, dirname } from 'path';
 import { mkdirSync, readFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { CLIExecutionResult, executeCodeQLCommand, getActualCodeqlVersion } from './cli-executor';
+import { readDatabaseMetadata } from './database-resolver';
 import { evaluateQueryResults, extractQueryMetadata, QueryEvaluationResult } from './query-results-evaluator';
 import { resolveQueryPath } from './query-resolver';
+import { collectAllRules, decomposeSarifByRule, getRuleDisplayName } from './sarif-utils';
 import { sessionDataManager } from './session-data-manager';
 
 /**
@@ -217,7 +219,7 @@ export async function processQueryRunResults(
             const resultContent = readFileSync(outputFilePath, 'utf8');
             const codeqlVersion = getActualCodeqlVersion();
             const dbPath = (params.database as string) || '';
-            const lang = (queryLanguage as string) || 'unknown';
+            const lang = (queryLanguage as string) || (dbPath ? (readDatabaseMetadata(dbPath).language ?? 'unknown') : 'unknown');
             const extPreds: Record<string, string> = {};
             if (params.sourceFiles) extPreds.sourceFiles = params.sourceFiles as string;
             if (params.sourceFunction) extPreds.sourceFunction = params.sourceFunction as string;
@@ -232,6 +234,28 @@ export async function processQueryRunResults(
             });
 
             const store = sessionDataManager.getStore();
+
+            // Compute result count from content for SARIF formats
+            let resultCount: number | null = null;
+            let ruleId: string | null = null;
+            let sarifQueryName: string | null = null;
+            if (outputFormat.includes('sarif')) {
+              try {
+                const sarif = JSON.parse(resultContent);
+                resultCount = (sarif?.runs?.[0]?.results as unknown[] | undefined)?.length ?? 0;
+                // Extract ruleId and query name from SARIF — supports both standard
+                // (driver.rules) and grouped-by-pack (extensions[].rules) layouts
+                const run = sarif?.runs?.[0];
+                if (run) {
+                  const allRules = collectAllRules(run as import('../types/sarif').SarifDocument['runs'][0]);
+                  if (allRules.length > 0) {
+                    ruleId = allRules[0].id ?? null;
+                    sarifQueryName = getRuleDisplayName(allRules[0]);
+                  }
+                }
+              } catch { /* non-SARIF content — leave count/ruleId null */ }
+            }
+
             store.putCacheEntry({
               bqrsPath,
               cacheKey,
@@ -241,9 +265,11 @@ export async function processQueryRunResults(
               interpretedPath: outputFilePath,
               language: lang,
               outputFormat,
-              queryName: (queryName as string) || basename(queryPath, '.ql'),
+              queryName: sarifQueryName || (queryName as string) || basename(queryPath, '.ql'),
               queryPath,
               resultContent,
+              resultCount,
+              ruleId,
             });
             enhancedOutput += `\nResults cached with key: ${cacheKey}`;
             logger.info(`Cached query results with key: ${cacheKey}`);
@@ -304,5 +330,119 @@ export async function processQueryRunResults(
       ...result,
       stdout: result.stdout + `\n\nWarning: Query processing error - ${error}`,
     };
+  }
+}
+
+/**
+ * Cache results produced by `codeql database analyze`.
+ *
+ * When the output file is SARIF, stores the entire SARIF blob in the
+ * query results cache under a deterministic key so that
+ * `query_results_cache_compare` and `query_results_cache_retrieve` can
+ * access database-analyze results the same way they access query-run results.
+ */
+export function cacheDatabaseAnalyzeResults(
+  params: Record<string, unknown>,
+  logger: ProcessorLogger,
+): void {
+  try {
+    const config = sessionDataManager.getConfig();
+    if (!config.enableAnnotationTools) return;
+
+    const outputPath = params.output as string | undefined;
+    const format = params.format as string | undefined;
+    const dbPath = params.database as string | undefined;
+    const queries = params.queries as string | undefined;
+
+    if (!outputPath || !format || !dbPath) return;
+
+    // Only cache SARIF outputs
+    if (!format.includes('sarif')) return;
+
+    let resultContent: string;
+    try {
+      resultContent = readFileSync(outputPath, 'utf8');
+    } catch {
+      return; // Output file may not exist if analysis failed
+    }
+
+    const codeqlVersion = getActualCodeqlVersion();
+    const queryName = queries ? basename(queries, '.qls') : 'database-analyze';
+
+    // Compute result count from SARIF content
+    let resultCount: number | null = null;
+    let parsedSarif: Record<string, unknown> | null = null;
+    try {
+      parsedSarif = JSON.parse(resultContent) as Record<string, unknown>;
+      const runs = parsedSarif?.runs as Array<{ results?: unknown[] }> | undefined;
+      resultCount = runs?.[0]?.results?.length ?? 0;
+    } catch { /* non-SARIF content */ }
+
+    // Resolve language from database metadata
+    const language = (params.language as string) || (readDatabaseMetadata(dbPath).language ?? 'unknown');
+
+    const cacheKey = computeQueryCacheKey({
+      codeqlVersion,
+      databasePath: dbPath,
+      outputFormat: format,
+      queryPath: queries || 'database-analyze',
+    });
+
+    const store = sessionDataManager.getStore();
+
+    // Store the full pack-level entry (for bulk retrieval)
+    store.putCacheEntry({
+      cacheKey,
+      codeqlVersion,
+      databasePath: dbPath,
+      interpretedPath: outputPath,
+      language,
+      outputFormat: format,
+      queryName,
+      queryPath: queries || 'database-analyze',
+      resultContent,
+      resultCount,
+    });
+
+    logger.info(`Cached database-analyze results with key: ${cacheKey} (${resultCount != null ? `${resultCount} results` : 'result count unknown'})`);
+
+    // Decompose multi-rule SARIF into per-rule cache entries
+    if (parsedSarif) {
+      try {
+        const decomposed = decomposeSarifByRule(parsedSarif as unknown as import('../types/sarif').SarifDocument);
+        for (const [ruleId, ruleSarif] of decomposed) {
+          const ruleResults = ruleSarif.runs[0]?.results ?? [];
+          const ruleContent = JSON.stringify(ruleSarif, null, 2);
+          const ruleDef = ruleSarif.runs[0]?.tool.driver.rules?.[0];
+          const ruleDisplayName = ruleDef ? getRuleDisplayName(ruleDef) : ruleId;
+          const ruleCacheKey = computeQueryCacheKey({
+            codeqlVersion,
+            databasePath: dbPath,
+            outputFormat: format,
+            queryPath: `${queries || 'database-analyze'}#${ruleId}`,
+          });
+
+          store.putCacheEntry({
+            cacheKey: ruleCacheKey,
+            codeqlVersion,
+            databasePath: dbPath,
+            interpretedPath: outputPath,
+            language,
+            outputFormat: format,
+            queryName: ruleDisplayName,
+            queryPath: queries || 'database-analyze',
+            resultContent: ruleContent,
+            resultCount: ruleResults.length,
+            ruleId,
+          });
+
+          logger.info(`Cached per-rule entry for ${ruleId} with key: ${ruleCacheKey} (${ruleResults.length} results)`);
+        }
+      } catch (decomposeErr) {
+        logger.error('Failed to decompose SARIF by rule:', decomposeErr);
+      }
+    }
+  } catch (err) {
+    logger.error('Failed to cache database-analyze results:', err);
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "codeql-development-mcp-server",
-  "version": "2.25.1-next.1",
+  "version": "2.25.1-next.2",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
   "main": "dist/codeql-development-mcp-server.js",
   "type": "module",
@@ -41,7 +41,7 @@
     "typescript"
   ],
   "author": "@github/ps-codeql",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "LicenseRef-CodeQL-Terms",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/advanced-security/codeql-development-mcp-server.git",

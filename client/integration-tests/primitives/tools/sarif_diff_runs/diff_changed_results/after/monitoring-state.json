@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_diff_runs",
+  "success": true,
+  "description": "Successfully diffed two SARIF runs and detected changed result counts"
+}

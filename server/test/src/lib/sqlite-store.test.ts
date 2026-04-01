@@ -139,6 +139,15 @@ describe('SqliteStore', () => {
       expect(mixed).toHaveLength(1);
     });
 
+    it('should search annotations by category field', () => {
+      store.createAnnotation('performance', 'query1', 'slow predicate');
+      store.createAnnotation('note', 'query2', 'unrelated content');
+
+      const results = store.listAnnotations({ search: 'performance' });
+      expect(results).toHaveLength(1);
+      expect(results[0].category).toBe('performance');
+    });
+
     it('should support limit and offset', () => {
       for (let i = 0; i < 10; i++) {
         store.createAnnotation('note', `key-${i}`, `content ${i}`);
@@ -495,6 +504,114 @@ describe('SqliteStore', () => {
       expect(subset!.returnedResults).toBe(0);
       // Content should still be returned (line-based fallback)
       expect(subset!.content).toContain('This is not valid JSON');
+    });
+
+    it('should store and retrieve rule_id', () => {
+      store.putCacheEntry({
+        cacheKey: 'rule-test',
+        queryName: 'SqlInjection',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'javascript',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest',
+        resultContent: '{}',
+        ruleId: 'js/sql-injection',
+      });
+
+      const meta = store.getCacheEntryMeta('rule-test');
+      expect(meta).not.toBeNull();
+      expect(meta!.ruleId).toBe('js/sql-injection');
+    });
+
+    it('should store and retrieve run_id', () => {
+      store.putCacheEntry({
+        cacheKey: 'run-test',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'javascript',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest',
+        resultContent: '{}',
+        runId: 'run-2026-03-31-001',
+      });
+
+      const meta = store.getCacheEntryMeta('run-test');
+      expect(meta).not.toBeNull();
+      expect(meta!.runId).toBe('run-2026-03-31-001');
+    });
+
+    it('should default rule_id and run_id to null and empty string', () => {
+      store.putCacheEntry({
+        cacheKey: 'defaults',
+        queryName: 'Q',
+        queryPath: '/q.ql',
+        databasePath: '/db',
+        language: 'cpp',
+        codeqlVersion: '2.25.0',
+        outputFormat: 'csv',
+        resultContent: 'data',
+      });
+
+      const meta = store.getCacheEntryMeta('defaults');
+      expect(meta).not.toBeNull();
+      expect(meta!.ruleId).toBeNull();
+      expect(meta!.runId).toBe('');
+    });
+
+    it('should filter cache entries by ruleId', () => {
+      store.putCacheEntry({
+        cacheKey: 'r1', queryName: 'SqlInjection', queryPath: '/a.ql',
+        databasePath: '/db', language: 'javascript', codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest', resultContent: 'a', ruleId: 'js/sql-injection',
+      });
+      store.putCacheEntry({
+        cacheKey: 'r2', queryName: 'XSS', queryPath: '/b.ql',
+        databasePath: '/db', language: 'javascript', codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest', resultContent: 'b', ruleId: 'js/xss',
+      });
+      store.putCacheEntry({
+        cacheKey: 'r3', queryName: 'SqlInjection', queryPath: '/c.ql',
+        databasePath: '/db2', language: 'javascript', codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest', resultContent: 'c', ruleId: 'js/sql-injection',
+      });
+
+      const sqlEntries = store.listCacheEntries({ ruleId: 'js/sql-injection' });
+      expect(sqlEntries).toHaveLength(2);
+      expect(sqlEntries.every(e => e.ruleId === 'js/sql-injection')).toBe(true);
+    });
+
+    it('should clear cache entries by ruleId', () => {
+      store.putCacheEntry({
+        cacheKey: 'cr1', queryName: 'Q1', queryPath: '/a.ql',
+        databasePath: '/db', language: 'javascript', codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest', resultContent: 'a', ruleId: 'js/sql-injection',
+      });
+      store.putCacheEntry({
+        cacheKey: 'cr2', queryName: 'Q2', queryPath: '/b.ql',
+        databasePath: '/db', language: 'javascript', codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest', resultContent: 'b', ruleId: 'js/xss',
+      });
+
+      const cleared = store.clearCacheEntries({ ruleId: 'js/sql-injection' });
+      expect(cleared).toBe(1);
+      expect(store.listCacheEntries()).toHaveLength(1);
+      expect(store.listCacheEntries()[0].ruleId).toBe('js/xss');
+    });
+
+    it('should list cache entries with ruleId in metadata', () => {
+      store.putCacheEntry({
+        cacheKey: 'meta-rule', queryName: 'Q', queryPath: '/q.ql',
+        databasePath: '/db', language: 'javascript', codeqlVersion: '2.25.0',
+        outputFormat: 'sarif-latest', resultContent: '{}',
+        ruleId: 'js/cap-log-injection', runId: 'run-001',
+      });
+
+      const entries = store.listCacheEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].ruleId).toBe('js/cap-log-injection');
+      expect(entries[0].runId).toBe('run-001');
     });
   });
 });

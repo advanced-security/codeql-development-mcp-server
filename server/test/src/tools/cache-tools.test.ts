@@ -349,6 +349,189 @@ describe('Cache Tools', () => {
         const result = await clearHandler({});
         expect(result.content[0].text).toContain('At least one filter');
       });
+
+      it('should lookup cache entry by exact cacheKey', async () => {
+        const store = sessionDataManager.getStore();
+        store.putCacheEntry({
+          cacheKey: 'exact-key-abc',
+          queryName: 'PrintAST',
+          queryPath: '/print-ast.ql',
+          databasePath: '/db1',
+          language: 'javascript',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'graphtext',
+          resultContent: 'AST output',
+          resultCount: 5,
+        });
+
+        registerCacheTools(mockServer);
+
+        const lookupHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'query_results_cache_lookup',
+        )[3];
+
+        const result = await lookupHandler({ cacheKey: 'exact-key-abc' });
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.cached).toBe(true);
+        expect(parsed.cacheKey).toBe('exact-key-abc');
+        expect(parsed.queryName).toBe('PrintAST');
+        expect(parsed.language).toBe('javascript');
+        expect(parsed.resultCount).toBe(5);
+      });
+
+      it('should return cached:false for non-existent cacheKey lookup', async () => {
+        registerCacheTools(mockServer);
+
+        const lookupHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'query_results_cache_lookup',
+        )[3];
+
+        const result = await lookupHandler({ cacheKey: 'nonexistent-key' });
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.cached).toBe(false);
+        expect(parsed.cacheKey).toBe('nonexistent-key');
+      });
+
+      it('should lookup cache entries by language filter', async () => {
+        const store = sessionDataManager.getStore();
+        store.putCacheEntry({
+          cacheKey: 'js-entry-1',
+          queryName: 'PrintAST',
+          queryPath: '/print-ast.ql',
+          databasePath: '/db1',
+          language: 'javascript',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'graphtext',
+          resultContent: 'content1',
+        });
+        store.putCacheEntry({
+          cacheKey: 'js-entry-2',
+          queryName: 'CallGraphTo',
+          queryPath: '/cg.ql',
+          databasePath: '/db2',
+          language: 'javascript',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'graphtext',
+          resultContent: 'content2',
+        });
+        store.putCacheEntry({
+          cacheKey: 'cpp-entry-1',
+          queryName: 'PrintAST',
+          queryPath: '/print-ast.ql',
+          databasePath: '/db3',
+          language: 'cpp',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'graphtext',
+          resultContent: 'content3',
+        });
+
+        registerCacheTools(mockServer);
+
+        const lookupHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'query_results_cache_lookup',
+        )[3];
+
+        const result = await lookupHandler({ language: 'javascript' });
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.cached).toBe(true);
+        expect(parsed.count).toBe(2);
+        expect(parsed.entries).toHaveLength(2);
+        // All entries should be JavaScript
+        for (const entry of parsed.entries) {
+          expect(entry.language).toBe('javascript');
+        }
+      });
+
+      it('should lookup cache entries by databasePath filter', async () => {
+        const store = sessionDataManager.getStore();
+        store.putCacheEntry({
+          cacheKey: 'db1-entry',
+          queryName: 'PrintAST',
+          queryPath: '/print-ast.ql',
+          databasePath: '/db1',
+          language: 'javascript',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'graphtext',
+          resultContent: 'content1',
+        });
+        store.putCacheEntry({
+          cacheKey: 'db2-entry',
+          queryName: 'PrintAST',
+          queryPath: '/print-ast.ql',
+          databasePath: '/db2',
+          language: 'javascript',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'graphtext',
+          resultContent: 'content2',
+        });
+
+        registerCacheTools(mockServer);
+
+        const lookupHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'query_results_cache_lookup',
+        )[3];
+
+        const result = await lookupHandler({ databasePath: '/db1' });
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.cached).toBe(true);
+        expect(parsed.count).toBe(1);
+        expect(parsed.entries[0].databasePath).toBe('/db1');
+      });
+
+      it('should respect limit parameter in cache lookup', async () => {
+        const store = sessionDataManager.getStore();
+        for (let i = 0; i < 5; i++) {
+          store.putCacheEntry({
+            cacheKey: `limit-entry-${i}`,
+            queryName: 'Q',
+            queryPath: '/q.ql',
+            databasePath: `/db${i}`,
+            language: 'javascript',
+            codeqlVersion: '2.25.0',
+            outputFormat: 'graphtext',
+            resultContent: `content${i}`,
+          });
+        }
+
+        registerCacheTools(mockServer);
+
+        const lookupHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'query_results_cache_lookup',
+        )[3];
+
+        const result = await lookupHandler({ language: 'javascript', limit: 2 });
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.cached).toBe(true);
+        expect(parsed.count).toBe(2);
+        expect(parsed.entries).toHaveLength(2);
+      });
+
+      it('should use latest entry resultCount for comparison', async () => {
+        const store = sessionDataManager.getStore();
+        store.putCacheEntry({
+          cacheKey: 'compare-latest-count',
+          queryName: 'UI5Clickjacking',
+          queryPath: '/ui5.ql',
+          databasePath: '/db1',
+          language: 'javascript',
+          codeqlVersion: '2.25.0',
+          outputFormat: 'sarif-latest',
+          resultContent: '{}',
+          resultCount: 5,
+        });
+
+        registerCacheTools(mockServer);
+
+        const compareHandler = (mockServer.tool as any).mock.calls.find(
+          (call: any) => call[0] === 'query_results_cache_compare',
+        )[3];
+
+        const result = await compareHandler({ queryName: 'UI5Clickjacking' });
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.comparison[0].resultCount).toBe(5);
+        // Backward-compatible alias
+        expect(parsed.comparison[0].totalResultCount).toBe(5);
+      });
     });
   });
 });

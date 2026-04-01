@@ -6,7 +6,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['test/**/*.{test,spec}.{js,ts}'],
-    exclude: ['test/suite/**'],
+    exclude: ['test/suite/**', 'dist/**', 'node_modules/**'],
     watch: false,
     testTimeout: 10000,
     alias: {

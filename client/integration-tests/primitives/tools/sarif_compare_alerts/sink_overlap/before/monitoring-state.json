@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_compare_alerts",
+  "expectedSuccess": true,
+  "description": "Test sarif_compare_alerts detects sink overlap between two alerts in the same file"
+}

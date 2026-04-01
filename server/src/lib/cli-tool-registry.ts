@@ -5,18 +5,49 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { CLIExecutionResult, executeCodeQLCommand, executeQLTCommand } from './cli-executor';
-import { resolveDatabasePath } from './database-resolver';
+import { readDatabaseMetadata, resolveDatabasePath } from './database-resolver';
 import { logger } from '../utils/logger';
 import { getOrCreateLogDirectory } from './log-directory-manager';
 import { resolveQueryPath } from './query-resolver';
-import { processQueryRunResults } from './result-processor';
+import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
-import { writeFileSync, rmSync, existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
 
 export type { CLIExecutionResult } from './cli-executor';
+
+/**
+ * Per-database mutex map — serializes concurrent CLI operations that
+ * acquire an exclusive lock on a CodeQL database (e.g. database analyze).
+ */
+const databaseLocks = new Map<string, Promise<unknown>>();
+
+/**
+ * Acquire a serialized slot for the given database path.
+ * Returns a release function that must be called when the operation completes.
+ */
+function acquireDatabaseLock(dbPath: string): { ready: Promise<void>; release: () => void } {
+  const key = dbPath;
+  const previous = databaseLocks.get(key) ?? Promise.resolve();
+
+  let resolveGate!: () => void;
+  const gate = new Promise<void>(resolve => {
+    resolveGate = resolve;
+  });
+  databaseLocks.set(key, gate);
+
+  return {
+    ready: previous.then(() => {}),
+    release: () => {
+      resolveGate();
+      if (databaseLocks.get(key) === gate) {
+        databaseLocks.delete(key);
+      }
+    },
+  };
+}
 
 export interface CLIToolDefinition {
   name: string;
@@ -167,9 +198,27 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           positionalArgs = [...positionalArgs, ...files as string[]];
         }
 
-        // Handle file parameter as positional argument for BQRS tools
-        if (file && name.startsWith('codeql_bqrs_')) {
-          positionalArgs = [...positionalArgs, file as string];
+        // Handle file parameter as positional argument for BQRS tools.
+        // Check for key presence (not truthiness) so that empty strings
+        // are caught by the validation below rather than silently skipped.
+        if (file !== undefined && name.startsWith('codeql_bqrs_')) {
+          // Defensive coercion: handle file value that is an actual array
+          // or a JSON-encoded array string (e.g. '["/path/to/file.bqrs"]')
+          let cleanFile = Array.isArray(file) ? (file.length > 0 ? String(file[0]) : '') : String(file);
+          if (cleanFile.startsWith('[') && cleanFile.endsWith(']')) {
+            try {
+              const parsed = JSON.parse(cleanFile);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                cleanFile = String(parsed[0]);
+              } else {
+                cleanFile = '';
+              }
+            } catch { /* not valid JSON — use as-is */ }
+          }
+          if (!cleanFile.trim()) {
+            throw new Error('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+          }
+          positionalArgs = [...positionalArgs, cleanFile];
         }
 
         // Handle qlref parameter as positional argument for resolve qlref tool
@@ -352,6 +401,44 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             break;
           }
             
+          case 'codeql_bqrs_interpret': {
+            // Map 'database' to '--source-archive' and '--source-location-prefix'
+            // for codeql bqrs interpret (only when not explicitly provided).
+            // Always delete the synthetic 'database' key to prevent it from
+            // being forwarded as an unsupported CLI flag.
+            const dbValue = options.database;
+            delete options.database;
+            if (dbValue !== undefined) {
+              const dbStr = String(dbValue).trim();
+              if (!dbStr) {
+                throw new Error('The "database" parameter must be a non-empty path to a CodeQL database.');
+              }
+              const dbPath = resolveDatabasePath(dbStr);
+              if (!options['source-archive']) {
+                const srcZipPath = join(dbPath, 'src.zip');
+                const srcDirPath = join(dbPath, 'src');
+                if (existsSync(srcZipPath)) {
+                  options['source-archive'] = srcZipPath;
+                } else if (existsSync(srcDirPath)) {
+                  options['source-archive'] = srcDirPath;
+                } else {
+                  throw new Error(
+                    `CodeQL database at "${dbPath}" does not contain a source archive (expected "src.zip" file or "src" directory).`,
+                  );
+                }
+              }
+              // Auto-resolve --source-location-prefix from codeql-database.yml
+              // (only when not explicitly provided)
+              if (!options['source-location-prefix']) {
+                const dbMeta = readDatabaseMetadata(dbPath);
+                if (dbMeta.sourceLocationPrefix) {
+                  options['source-location-prefix'] = dbMeta.sourceLocationPrefix;
+                }
+              }
+            }
+            break;
+          }
+
           case 'codeql_query_compile':
           case 'codeql_resolve_metadata':
             // Handle query parameter as positional argument for query compilation and metadata tools
@@ -519,7 +606,32 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
             options['keep-databases'] = true;
           }
           
-          result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
+          // Serialize concurrent database_analyze calls to the same database
+          // to prevent "cache directory is already locked" errors from the CLI.
+          // Normalize the lock key via realpath to avoid bypassing serialization
+          // when the same database is referenced through relative paths, symlinks,
+          // or different casing.
+          let dbLock: { ready: Promise<void>; release: () => void } | undefined;
+          if (name === 'codeql_database_analyze') {
+            // Use the resolved database path from params (set before positionalArgs
+            // construction) rather than positionalArgs[0], which may include
+            // _positional values prepended before the database path.
+            const resolvedDb = typeof params.database === 'string'
+              ? resolveDatabasePath(params.database)
+              : (positionalArgs.length > 0 ? positionalArgs[0] : undefined);
+            if (resolvedDb) {
+              let lockKey = resolve(resolvedDb);
+              try { lockKey = realpathSync(lockKey); } catch { /* use resolved path if realpath fails */ }
+              dbLock = acquireDatabaseLock(lockKey);
+              await dbLock.ready;
+            }
+          }
+
+          try {
+            result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
+          } finally {
+            dbLock?.release();
+          }
         } else if (command === 'qlt') {
           result = await executeQLTCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs]);
         } else {
@@ -556,6 +668,14 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               logger.warn(`Failed to generate evaluator log summary: ${error}`);
             }
           }
+        }
+
+        // Post-execution: cache database_analyze results in query results cache
+        if (name === 'codeql_database_analyze' && result.success && options.output) {
+          const resolvedDb = typeof params.database === 'string'
+            ? resolveDatabasePath(params.database)
+            : params.database;
+          cacheDatabaseAnalyzeResults({ ...params, database: resolvedDb, output: options.output, format: options.format }, logger);
         }
 
         // Process the result

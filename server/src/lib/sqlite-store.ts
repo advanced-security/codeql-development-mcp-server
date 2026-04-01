@@ -198,11 +198,40 @@ export class SqliteStore {
       CREATE INDEX IF NOT EXISTS idx_qrc_language
         ON query_result_cache (language);
     `);
+
+    // Migration: add rule_id column for CodeQL query @id metadata.
+    this.migrateAddColumn('query_result_cache', 'rule_id', 'TEXT');
+    this.exec(`
+      CREATE INDEX IF NOT EXISTS idx_qrc_rule_id
+        ON query_result_cache (rule_id);
+    `);
+
+    // Migration: add run_id column for future multi-run differentiation.
+    // Currently unused (empty string default) — the deterministic cache_key
+    // means repeated runs overwrite prior entries. A future enhancement will
+    // incorporate run_id into the cache key to enable storing multiple runs
+    // of the same query against the same database for comparison.
+    this.migrateAddColumn('query_result_cache', 'run_id', "TEXT NOT NULL DEFAULT ''");
   }
 
   // ---------------------------------------------------------------------------
   // Low-level helpers
   // ---------------------------------------------------------------------------
+
+  /**
+   * Add a column to a table if it does not already exist (safe migration).
+   */
+  private migrateAddColumn(table: string, column: string, type: string): void {
+    const db = this.ensureDb();
+    const result = db.exec(`PRAGMA table_info(${table})`);
+    const columns = result.length > 0
+      ? result[0].values.map(row => row[1] as string)
+      : [];
+    if (!columns.includes(column)) {
+      db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+      this.dirty = true;
+    }
+  }
 
   private ensureDb(): SqlJsDatabase {
     if (!this.db) throw new Error('SqliteStore not initialized — call initialize() first');
@@ -456,9 +485,12 @@ export class SqliteStore {
     }
     if (filter?.search) {
       // Use the FTS4 index for efficient, case-insensitive full-text search
-      // across content, label, and metadata fields.
-      conditions.push('id IN (SELECT rowid FROM annotations_fts WHERE annotations_fts MATCH $search)');
+      // across content, label, and metadata fields. Also match the category
+      // column directly (not in FTS) so searches like "performance" find
+      // annotations whose category is "performance".
+      conditions.push('(id IN (SELECT rowid FROM annotations_fts WHERE annotations_fts MATCH $search) OR category = $search_cat COLLATE NOCASE)');
       params.$search = filter.search;
+      params.$search_cat = filter.search;
     }
 
     let sql = 'SELECT * FROM annotations';
@@ -599,17 +631,19 @@ export class SqliteStore {
     bqrsPath?: string | null;
     interpretedPath?: string | null;
     executionTimeMs?: number | null;
+    ruleId?: string | null;
+    runId?: string | null;
   }): void {
     const db = this.ensureDb();
     db.run(
       `INSERT OR REPLACE INTO query_result_cache
        (cache_key, query_name, query_path, database_path, language, codeql_version,
         external_predicates, output_format, result_content, result_count,
-        bqrs_path, interpreted_path, execution_time_ms, created_at)
+        bqrs_path, interpreted_path, execution_time_ms, rule_id, run_id, created_at)
        VALUES ($cache_key, $query_name, $query_path, $database_path, $language,
         $codeql_version, $external_predicates, $output_format, $result_content,
         $result_count, $bqrs_path, $interpreted_path, $execution_time_ms,
-        datetime('now'))`,
+        $rule_id, $run_id, datetime('now'))`,
       {
         $cache_key: entry.cacheKey,
         $query_name: entry.queryName,
@@ -624,6 +658,8 @@ export class SqliteStore {
         $bqrs_path: entry.bqrsPath ?? null,
         $interpreted_path: entry.interpretedPath ?? null,
         $execution_time_ms: entry.executionTimeMs ?? null,
+        $rule_id: entry.ruleId ?? null,
+        $run_id: entry.runId ?? '',
       },
     );
     this.dirty = true;
@@ -640,12 +676,14 @@ export class SqliteStore {
     language: string;
     outputFormat: string;
     resultCount: number | null;
+    ruleId: string | null;
+    runId: string;
     createdAt: string;
   } | null {
     const db = this.ensureDb();
     const stmt = db.prepare(
       `SELECT cache_key, query_name, database_path, language, output_format,
-              result_count, created_at
+              result_count, rule_id, run_id, created_at
        FROM query_result_cache WHERE cache_key = $key`,
     );
     stmt.bind({ $key: cacheKey });
@@ -659,6 +697,8 @@ export class SqliteStore {
         language: row.language as string,
         outputFormat: row.output_format as string,
         resultCount: row.result_count as number | null,
+        ruleId: (row.rule_id as string | null) ?? null,
+        runId: (row.run_id as string) ?? '',
         createdAt: row.created_at as string,
       };
     }
@@ -807,6 +847,7 @@ export class SqliteStore {
     queryName?: string;
     databasePath?: string;
     language?: string;
+    ruleId?: string;
     limit?: number;
   }): Array<{
     cacheKey: string;
@@ -816,6 +857,8 @@ export class SqliteStore {
     outputFormat: string;
     resultCount: number | null;
     executionTimeMs: number | null;
+    ruleId: string | null;
+    runId: string;
     createdAt: string;
   }> {
     const db = this.ensureDb();
@@ -834,9 +877,13 @@ export class SqliteStore {
       conditions.push('language = $language');
       params.$language = filter.language;
     }
+    if (filter?.ruleId) {
+      conditions.push('rule_id = $rule_id');
+      params.$rule_id = filter.ruleId;
+    }
 
     let sql = `SELECT cache_key, query_name, database_path, language, output_format,
-                      result_count, execution_time_ms, created_at
+                      result_count, execution_time_ms, rule_id, run_id, created_at
                FROM query_result_cache`;
     if (conditions.length > 0) {
       sql += ' WHERE ' + conditions.join(' AND ');
@@ -859,6 +906,8 @@ export class SqliteStore {
       outputFormat: string;
       resultCount: number | null;
       executionTimeMs: number | null;
+      ruleId: string | null;
+      runId: string;
       createdAt: string;
     }> = [];
     while (stmt.step()) {
@@ -871,6 +920,8 @@ export class SqliteStore {
         outputFormat: row.output_format as string,
         resultCount: row.result_count as number | null,
         executionTimeMs: row.execution_time_ms as number | null,
+        ruleId: (row.rule_id as string | null) ?? null,
+        runId: (row.run_id as string) ?? '',
         createdAt: row.created_at as string,
       });
     }
@@ -885,6 +936,7 @@ export class SqliteStore {
     cacheKey?: string;
     queryName?: string;
     databasePath?: string;
+    ruleId?: string;
     all?: boolean;
   }): number {
     if (filter?.all) {
@@ -908,6 +960,10 @@ export class SqliteStore {
     if (filter?.databasePath) {
       conditions.push('database_path = $database_path');
       params.$database_path = filter.databasePath;
+    }
+    if (filter?.ruleId) {
+      conditions.push('rule_id = $rule_id');
+      params.$rule_id = filter.ruleId;
     }
 
     if (conditions.length === 0) return 0;

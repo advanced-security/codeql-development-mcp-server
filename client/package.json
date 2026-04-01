@@ -1,6 +1,6 @@
 {
   "name": "codeql-development-mcp-server_client",
-  "version": "2.25.1-next.1",
+  "version": "2.25.1-next.2",
   "description": "MCP client for integration testing of the CodeQL development MCP server",
   "main": "src/ql-mcp-client.js",
   "type": "module",
@@ -21,7 +21,7 @@
     "typescript"
   ],
   "author": "@github/ps-codeql",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "LicenseRef-CodeQL-Terms",
   "engines": {
     "node": ">=24.13.0",
     "npm": ">=11.6.2"

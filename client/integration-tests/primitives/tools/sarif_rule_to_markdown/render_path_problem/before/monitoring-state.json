@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_rule_to_markdown",
+  "expectedSuccess": true,
+  "description": "Test sarif_rule_to_markdown generates markdown with Mermaid diagrams for path-problem results"
+}

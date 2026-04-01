@@ -1,0 +1,6 @@
+{
+  "toolName": "sarif_rule_to_markdown",
+  "arguments": {
+    "ruleId": "js/sql-injection"
+  }
+}

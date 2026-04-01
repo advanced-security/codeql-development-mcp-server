@@ -20,7 +20,7 @@ export const codeqlBqrsInfoTool: CLIToolDefinition = {
   command: 'codeql',
   subcommand: 'bqrs info',
   inputSchema: {
-    files: z.array(z.string()).describe('BQRS file(s) to examine'),
+    file: z.string().describe('BQRS file to examine'),
     format: z.enum(['text', 'json']).optional()
       .describe('Output format: text (default) or json. Use json for machine-readable output and pagination offset computation.'),
     'paginate-rows': z.number().optional()

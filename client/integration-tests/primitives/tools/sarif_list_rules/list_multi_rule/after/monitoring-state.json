@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_list_rules",
+  "success": true,
+  "description": "Successfully listed all rules with result counts"
+}

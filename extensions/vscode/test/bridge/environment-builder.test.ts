@@ -272,4 +272,124 @@ describe('EnvironmentBuilder', () => {
   it('should be disposable', () => {
     expect(() => builder.dispose()).not.toThrow();
   });
+
+  it('should set ENABLE_ANNOTATION_TOOLS=true by default', async () => {
+    const env = await builder.build();
+    expect(env.ENABLE_ANNOTATION_TOOLS).toBe('true');
+  });
+
+  it('should not overwrite MONITORING_STORAGE_LOCATION if already set in parent env', async () => {
+    const vscode = await import('vscode');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const origMonLoc = process.env.MONITORING_STORAGE_LOCATION;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/workspace' }, name: 'ws', index: 0 },
+      ];
+      // Simulate parent process env with MONITORING_STORAGE_LOCATION already set
+      process.env.MONITORING_STORAGE_LOCATION = '/custom/storage/path';
+
+      builder.invalidate();
+      const env = await builder.build();
+      // process.env value should be preserved
+      expect(env.MONITORING_STORAGE_LOCATION).toBe('/custom/storage/path');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      if (origMonLoc === undefined) {
+        delete process.env.MONITORING_STORAGE_LOCATION;
+      } else {
+        process.env.MONITORING_STORAGE_LOCATION = origMonLoc;
+      }
+    }
+  });
+
+  it('should set ENABLE_ANNOTATION_TOOLS=false when setting is disabled', async () => {
+    const vscode = await import('vscode');
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'enableAnnotationTools') return false;
+          if (_key === 'additionalDatabaseDirs') return [];
+          if (_key === 'additionalQueryRunResultsDirs') return [];
+          if (_key === 'additionalMrvaRunResultsDirs') return [];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+    } finally {
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should set MONITORING_STORAGE_LOCATION to scratch dir when annotations enabled with workspace', async () => {
+    const vscode = await import('vscode');
+    const origFolders = vscode.workspace.workspaceFolders;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/workspace' }, name: 'ws', index: 0 },
+      ];
+
+      builder.invalidate();
+      const env = await builder.build();
+      expect(env.MONITORING_STORAGE_LOCATION).toBe('/mock/workspace/.codeql/ql-mcp');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+    }
+  });
+
+  it('should allow additionalEnv to override ENABLE_ANNOTATION_TOOLS', async () => {
+    const vscode = await import('vscode');
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'additionalEnv') return { ENABLE_ANNOTATION_TOOLS: 'false' };
+          if (_key === 'additionalDatabaseDirs') return [];
+          if (_key === 'additionalQueryRunResultsDirs') return [];
+          if (_key === 'additionalMrvaRunResultsDirs') return [];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      // additionalEnv comes after the default, so it should override
+      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+    } finally {
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should preserve ENABLE_ANNOTATION_TOOLS from parent process environment', async () => {
+    const origValue = process.env.ENABLE_ANNOTATION_TOOLS;
+
+    try {
+      process.env.ENABLE_ANNOTATION_TOOLS = 'false';
+
+      builder.invalidate();
+      const env = await builder.build();
+      // Inherited process.env value should be preserved
+      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+    } finally {
+      if (origValue === undefined) {
+        delete process.env.ENABLE_ANNOTATION_TOOLS;
+      } else {
+        process.env.ENABLE_ANNOTATION_TOOLS = origValue;
+      }
+    }
+  });
 });

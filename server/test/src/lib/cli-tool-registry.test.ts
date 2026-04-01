@@ -549,6 +549,107 @@ describe('registerCLITool handler behavior', () => {
     );
   });
 
+  it('should auto-resolve source-location-prefix from codeql-database.yml for bqrs_interpret with database', async () => {
+    // Create a temp database directory with codeql-database.yml containing sourceLocationPrefix
+    const tmpDir = createTestTempDir('bqrs-interpret-slp');
+    const dbDir = join(tmpDir, 'test-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), [
+      'primaryLanguage: javascript',
+      'sourceLocationPrefix: /Users/dev/my-project',
+      'creationMetadata:',
+      '  cliVersion: 2.25.1',
+    ].join('\n'), 'utf8');
+    // Create src.zip so source-archive resolution succeeds
+    writeFileSync(join(dbDir, 'src.zip'), '', 'utf8');
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    try {
+      await handler({ file: '/path/to/results.bqrs', database: dbDir, format: 'sarif-latest' });
+
+      const callArgs = executeCodeQLCommand.mock.calls[0];
+      const options = callArgs[1] as Record<string, unknown>;
+      // source-location-prefix should be auto-resolved from codeql-database.yml
+      expect(options['source-location-prefix']).toBe('/Users/dev/my-project');
+      // source-archive should point to src.zip
+      expect(options['source-archive']).toBe(join(dbDir, 'src.zip'));
+      // database should be removed from options (not passed to CLI)
+      expect(options).not.toHaveProperty('database');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should not set source-location-prefix when codeql-database.yml has no sourceLocationPrefix for bqrs_interpret', async () => {
+    // Create a temp database directory with codeql-database.yml WITHOUT sourceLocationPrefix
+    const tmpDir = createTestTempDir('bqrs-interpret-no-slp');
+    const dbDir = join(tmpDir, 'test-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), [
+      'primaryLanguage: javascript',
+      'creationMetadata:',
+      '  cliVersion: 2.25.1',
+    ].join('\n'), 'utf8');
+    // Create src directory as fallback source archive
+    mkdirSync(join(dbDir, 'src'), { recursive: true });
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    try {
+      await handler({ file: '/path/to/results.bqrs', database: dbDir, format: 'sarif-latest' });
+
+      const callArgs = executeCodeQLCommand.mock.calls[0];
+      const options = callArgs[1] as Record<string, unknown>;
+      // source-location-prefix should NOT be set when not in codeql-database.yml
+      expect(options).not.toHaveProperty('source-location-prefix');
+      // source-archive should fall back to src directory
+      expect(options['source-archive']).toBe(join(dbDir, 'src'));
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('should NOT pass format to CLI options for tools where format should not be on CLI', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_query_run',
@@ -610,6 +711,72 @@ describe('registerCLITool handler behavior', () => {
       ['/path/to/results.bqrs'],
       undefined
     );
+  });
+
+  it('should strip JSON array brackets from file parameter for BQRS tools', async () => {
+    // Regression test: some MCP clients send the file parameter as a JSON-encoded
+    // array string like '["/path/to/file.bqrs"]' instead of a plain path.
+    // The handler must extract the path without brackets.
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    // Simulate MCP client sending JSON-encoded array as file string
+    await handler({ file: '["/path/to/results.bqrs"]', format: 'sarif-latest' });
+
+    const callArgs = executeCodeQLCommand.mock.calls[0];
+    const positionalArgs = callArgs[2] as string[];
+    // Should extract the clean path without brackets
+    expect(positionalArgs).toContain('/path/to/results.bqrs');
+    expect(positionalArgs).not.toContain('["/path/to/results.bqrs"]');
+  });
+
+  it('should handle file parameter passed as actual array for BQRS tools', async () => {
+    // Edge case: MCP SDK might not validate and pass an actual array through
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_info',
+      description: 'BQRS info',
+      command: 'codeql',
+      subcommand: 'bqrs info',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Info output',
+      stderr: '',
+      success: true
+    });
+
+    // Simulate passing an actual array instead of a string
+    await handler({ file: ['/path/to/results.bqrs'] as unknown as string });
+
+    const callArgs = executeCodeQLCommand.mock.calls[0];
+    const positionalArgs = callArgs[2] as string[];
+    // Should extract the first element from the array
+    expect(positionalArgs).toContain('/path/to/results.bqrs');
   });
 
   it('should handle tests parameter as positional for test tools', async () => {
@@ -1033,5 +1200,171 @@ describe('registerCLITool handler behavior', () => {
     const result = await handler({});
 
     expect(result.content[0].text).toContain('Command failed');
+  });
+
+  it('should return error when file parameter is an empty array for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    // Simulate passing an empty array as the file parameter
+    const result = await handler({ file: [] as unknown as string });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should return error when file parameter is a JSON-encoded empty array string for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_info',
+      description: 'BQRS info',
+      command: 'codeql',
+      subcommand: 'bqrs info',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    // Simulate passing a JSON-encoded empty array string
+    const result = await handler({ file: '[]' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should not override explicit source-archive when database is provided for bqrs_interpret', async () => {
+    const tmpDir = createTestTempDir('bqrs-interpret-explicit-sa');
+    const dbDir = join(tmpDir, 'test-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), [
+      'primaryLanguage: javascript',
+      'sourceLocationPrefix: /Users/dev/my-project',
+    ].join('\n'), 'utf8');
+    // Create src.zip so auto-resolution would normally pick it
+    writeFileSync(join(dbDir, 'src.zip'), '', 'utf8');
+
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        'source-archive': z.string().optional(),
+        'source-location-prefix': z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Interpreted',
+      stderr: '',
+      success: true
+    });
+
+    try {
+      // Provide explicit source-archive and source-location-prefix alongside database
+      await handler({
+        file: '/path/to/results.bqrs',
+        database: dbDir,
+        'source-archive': '/explicit/archive.zip',
+        'source-location-prefix': '/explicit/prefix',
+        format: 'sarif-latest'
+      });
+
+      const callArgs = executeCodeQLCommand.mock.calls[0];
+      const options = callArgs[1] as Record<string, unknown>;
+      // Explicit source-archive should be preserved, NOT overridden by auto-resolution
+      expect(options['source-archive']).toBe('/explicit/archive.zip');
+      // Explicit source-location-prefix should be preserved, NOT overridden by auto-resolution
+      expect(options['source-location-prefix']).toBe('/explicit/prefix');
+      // database should still be removed from options
+      expect(options).not.toHaveProperty('database');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should return error when file parameter is an empty string for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_info',
+      description: 'BQRS info',
+      command: 'codeql',
+      subcommand: 'bqrs info',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    const result = await handler({ file: '' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should return error when file parameter is a whitespace-only string for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        file: z.string()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    const result = await handler({ file: '   ' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "file" parameter for BQRS tools must be a non-empty string path to a .bqrs file.');
+  });
+
+  it('should return error when database parameter is an empty string for bqrs_interpret', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_interpret',
+      description: 'Interpret BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs interpret',
+      inputSchema: {
+        file: z.string(),
+        database: z.string().optional(),
+        format: z.string().optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+
+    const result = await handler({
+      file: '/path/to/results.bqrs',
+      database: '',
+      format: 'sarif-latest'
+    });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('The "database" parameter must be a non-empty path to a CodeQL database.');
   });
 });

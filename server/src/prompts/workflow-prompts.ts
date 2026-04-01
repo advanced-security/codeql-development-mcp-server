@@ -381,6 +381,36 @@ export const checkForDuplicatedCodeSchema = z.object({
 });
 
 /**
+ * Schema for compare_overlapping_alerts prompt parameters.
+ *
+ * - `sarifPathA` is **required** — the primary SARIF data source.
+ * - `sarifPathB` is optional — enables cross-file/cross-run comparison.
+ * - `ruleIdA` and `ruleIdB` are optional — narrows analysis to specific rules.
+ * - `databasePath` is optional — enables source code context lookup.
+ */
+export const compareOverlappingAlertsSchema = z.object({
+  databasePath: z
+    .string()
+    .optional()
+    .describe('Path to the CodeQL database for reading source code context'),
+  ruleIdA: z
+    .string()
+    .optional()
+    .describe('First CodeQL query @id / SARIF rule ID (e.g. "js/sql-injection"). Omit to compare all rules.'),
+  ruleIdB: z
+    .string()
+    .optional()
+    .describe('Second CodeQL query @id / SARIF rule ID (e.g. "js/cap-sql-injection"). Omit to compare all rules.'),
+  sarifPathA: z
+    .string()
+    .describe('Path to the first SARIF file (or the only file when comparing within one file)'),
+  sarifPathB: z
+    .string()
+    .optional()
+    .describe('Path to the second SARIF file (for cross-run or cross-database comparison)'),
+});
+
+/**
  * Schema for find_overlapping_queries prompt parameters.
  *
  * - `queryDescription` is **required** – describes the new query's purpose.
@@ -591,6 +621,7 @@ export function createSafePromptHandler<T extends z.ZodObject<z.ZodRawShape>>(
 /** Names of every workflow prompt registered with the MCP server. */
 export const WORKFLOW_PROMPT_NAMES = [
   'check_for_duplicated_code',
+  'compare_overlapping_alerts',
   'document_codeql_query',
   'explain_codeql_query',
   'find_overlapping_queries',
@@ -1153,6 +1184,55 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
               content: {
                 type: 'text',
                 text: warningSection + contextSection + template,
+              },
+            },
+          ],
+        };
+      },
+    ),
+  );
+
+  // Compare Overlapping Alerts Prompt
+  server.prompt(
+    'compare_overlapping_alerts',
+    'Compare CodeQL SARIF alerts across rules, files, runs, databases, or CodeQL versions. Detect overlap, redundancy, and behavioral deviations.',
+    toPermissiveShape(compareOverlappingAlertsSchema.shape),
+    createSafePromptHandler(
+      'compare_overlapping_alerts',
+      compareOverlappingAlertsSchema,
+      async ({ sarifPathA, sarifPathB, ruleIdA, ruleIdB, databasePath }) => {
+        const template = loadPromptTemplate('compare-overlapping-alerts.prompt.md');
+        const content = processPromptTemplate(template, {
+          sarifPathA,
+          sarifPathB: sarifPathB || sarifPathA,
+          ruleIdA: ruleIdA || '<all-rules>',
+          ruleIdB: ruleIdB || '<all-rules>',
+          databasePath: databasePath || '<database-path>',
+        });
+
+        let contextSection = '## Alert Comparison Context\n\n';
+        contextSection += `- **SARIF Path A**: ${sarifPathA}\n`;
+        if (sarifPathB) {
+          contextSection += `- **SARIF Path B**: ${sarifPathB}\n`;
+        }
+        if (ruleIdA) {
+          contextSection += `- **Rule A**: ${ruleIdA}\n`;
+        }
+        if (ruleIdB) {
+          contextSection += `- **Rule B**: ${ruleIdB}\n`;
+        }
+        if (databasePath) {
+          contextSection += `- **Database Path**: ${databasePath}\n`;
+        }
+        contextSection += '\n';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: contextSection + content,
               },
             },
           ],

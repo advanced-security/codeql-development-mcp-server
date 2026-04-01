@@ -1,0 +1,14 @@
+{
+  "toolName": "sarif_compare_alerts",
+  "arguments": {
+    "alertA": {
+      "ruleId": "js/sql-injection",
+      "resultIndex": 0
+    },
+    "alertB": {
+      "ruleId": "js/missing-rate-limiting",
+      "resultIndex": 0
+    },
+    "overlapMode": "sink"
+  }
+}

@@ -8,9 +8,10 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
+import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { z } from 'zod';
+import { readDatabaseMetadata } from '../../lib/database-resolver';
 import { getDatabaseBaseDirs } from '../../lib/discovery-config';
 import { logger } from '../../utils/logger';
 
@@ -20,42 +21,6 @@ export interface DatabaseInfo {
   language?: string;
   name: string;
   path: string;
-}
-
-/**
- * Parse `codeql-database.yml` to extract metadata.
- * Uses simple line-based parsing to avoid a YAML dependency.
- */
-function parseDatabaseYml(ymlPath: string): Partial<DatabaseInfo> {
-  try {
-    const content = readFileSync(ymlPath, 'utf-8');
-    const info: Partial<DatabaseInfo> = {};
-
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim();
-      const colonIdx = trimmed.indexOf(':');
-      if (colonIdx === -1) continue;
-
-      const key = trimmed.substring(0, colonIdx).trim();
-      const value = trimmed.substring(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
-
-      switch (key) {
-        case 'primaryLanguage':
-          info.language = value;
-          break;
-        case 'cliVersion':
-          info.cliVersion = value;
-          break;
-        case 'creationTime':
-          info.creationTime = value;
-          break;
-      }
-    }
-
-    return info;
-  } catch {
-    return {};
-  }
 }
 
 /**
@@ -95,13 +60,13 @@ export async function discoverDatabases(
         continue;
       }
 
-      // Check for codeql-database.yml
-      const ymlPath = join(entryPath, 'codeql-database.yml');
-      if (!existsSync(ymlPath)) {
+      // Check for codeql-database.yml or codeql-database.yaml
+      if (!existsSync(join(entryPath, 'codeql-database.yml')) &&
+          !existsSync(join(entryPath, 'codeql-database.yaml'))) {
         continue;
       }
 
-      const metadata = parseDatabaseYml(ymlPath);
+      const metadata = readDatabaseMetadata(entryPath);
 
       // Apply language filter
       if (language && metadata.language !== language) {

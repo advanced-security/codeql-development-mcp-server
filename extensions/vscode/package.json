@@ -2,9 +2,9 @@
   "name": "vscode-codeql-development-mcp-server",
   "displayName": "CodeQL Development MCP Server",
   "description": "LLM-assisted development of CodeQL queries, libraries, and tests via #ql-mcp prompts, resources, and tools.",
-  "version": "2.25.1-next.1",
+  "version": "2.25.1-next.2",
   "publisher": "advanced-security",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "LicenseRef-CodeQL-Terms",
   "icon": "media/codeql-icon.png",
   "repository": {
     "type": "git",
@@ -80,6 +80,11 @@
           "default": [],
           "description": "Additional directories containing query run result subdirectories. Appended to CODEQL_QUERY_RUN_RESULTS_DIRS alongside the vscode-codeql query storage path."
         },
+        "codeql-mcp.autoDownloadPacks": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically download pre-compiled tool query packs from GHCR that match the detected CodeQL CLI version. When disabled, the extension uses only the VSIX-bundled packs via `codeql pack install` (which requires compilation against the local CLI). Disable this if you want strict use of the bundled packs for the same overall version of both CodeQL CLI and ql-mcp server."
+        },
         "codeql-mcp.autoInstall": {
           "type": "boolean",
           "default": true,
@@ -89,6 +94,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Copy CodeQL databases from the `GitHub.vscode-codeql` extension storage into a managed directory, removing query-server lock files so the MCP server CLI can operate without contention. Disable to use databases in-place (may fail when the CodeQL query server is running)."
+        },
+        "codeql-mcp.enableAnnotationTools": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable annotation, audit, and query results caching tools. When enabled, the MCP server registers `annotation_*`, `audit_*`, and `query_results_cache_*` tools. Disable to reduce the tool surface if these capabilities are not needed."
         },
         "codeql-mcp.serverArgs": {
           "type": "array",

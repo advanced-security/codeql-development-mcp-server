@@ -345,7 +345,14 @@ suite('MCP Annotation & Audit Tool Integration Tests', () => {
     assert.ok(toolNames.includes('query_results_cache_clear'), 'Should include query_results_cache_clear');
     assert.ok(toolNames.includes('query_results_cache_compare'), 'Should include query_results_cache_compare');
 
-    console.log(`[mcp-annotation-e2e] All 14 annotation/audit/cache tools registered`);
+    // Layer 4: SARIF analysis tools (gated by same flag)
+    assert.ok(toolNames.includes('sarif_extract_rule'), 'Should include sarif_extract_rule');
+    assert.ok(toolNames.includes('sarif_list_rules'), 'Should include sarif_list_rules');
+    assert.ok(toolNames.includes('sarif_rule_to_markdown'), 'Should include sarif_rule_to_markdown');
+    assert.ok(toolNames.includes('sarif_compare_alerts'), 'Should include sarif_compare_alerts');
+    assert.ok(toolNames.includes('sarif_diff_runs'), 'Should include sarif_diff_runs');
+
+    console.log(`[mcp-annotation-e2e] All 19 annotation/audit/cache/sarif tools registered`);
   });
 
   test('MRVA + Annotation workflow: store and retrieve findings', async function () {

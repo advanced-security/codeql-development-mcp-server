@@ -18,6 +18,18 @@ You will be provided with:
 - **SARIF Results**: Array of results to analyze
 - **Code Snippets**: When available, code snippets from SARIF physical locations
 
+## Recommended Tool Usage
+
+Use these tools to gather context for each result:
+
+1. **#sarif_list_rules** — Discover all rules and result counts in the SARIF data. Helps scope the analysis.
+2. **#sarif_extract_rule** — Extract results for the specific query `@id` from multi-rule SARIF. Returns a clean SARIF subset.
+3. **#sarif_rule_to_markdown** — Generate a structured markdown report with results table and Mermaid dataflow diagrams. Provides quick visual triage of dataflow paths.
+4. **#read_database_source** — Read source code from the CodeQL database using the `filePath` from the SARIF alert URI. Read 10–20 lines around each flagged location to verify vulnerability patterns.
+5. **#query_results_cache_lookup** with `ruleId` — Check if results for this query are already cached from previous runs.
+6. **#sarif_compare_alerts** — Compare results across different SARIF files (e.g., standard vs custom query packs) to identify which findings are unique to the query under analysis.
+7. **#sarif_diff_runs** — Compare against a baseline SARIF run to distinguish new findings from regressions.
+
 ## Analysis Guidelines
 
 ### What Makes a Result Likely to be a True Positive?

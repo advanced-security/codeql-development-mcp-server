@@ -45,6 +45,7 @@ All settings are under the `codeql-mcp` namespace in VS Code settings:
 | `codeql-mcp.serverCommand`                 | `"node"`   | Command to launch the server. Override to `"npx"` or a custom path. |
 | `codeql-mcp.serverArgs`                    | `[]`       | Custom args. When empty, the bundled entry point is used.           |
 | `codeql-mcp.watchCodeqlExtension`          | `true`     | Watch for databases and results from the CodeQL extension.          |
+| `codeql-mcp.enableAnnotationTools`         | `true`     | Enable annotation, audit, and cache tools.                          |
 | `codeql-mcp.additionalEnv`                 | `{}`       | Extra environment variables passed to the server process.           |
 | `codeql-mcp.additionalDatabaseDirs`        | `[]`       | Additional directories to search for CodeQL databases.              |
 | `codeql-mcp.additionalMrvaRunResultsDirs`  | `[]`       | Additional directories containing MRVA run results.                 |

@@ -31,12 +31,24 @@ const KNOWN_LOCATIONS = [
  */
 export class CliResolver extends DisposableObject {
   private cachedPath: string | undefined | null = null; // null = not yet resolved
+  private cachedVersion: string | undefined;
 
   constructor(
     private readonly logger: Logger,
     private readonly vsCodeCodeqlStoragePath?: string,
   ) {
     super();
+  }
+
+  /**
+   * Get the CodeQL CLI version string (e.g. '2.25.1').
+   *
+   * Returns the cached version detected during the most recent `resolve()`,
+   * or `undefined` if no CLI has been resolved yet or the version could not
+   * be parsed.
+   */
+  getCliVersion(): string | undefined {
+    return this.cachedVersion;
   }
 
   /** Resolve the CodeQL CLI path. Returns `undefined` if not found. */
@@ -93,17 +105,38 @@ export class CliResolver extends DisposableObject {
   /** Clear the cached path so the next `resolve()` re-probes. */
   invalidateCache(): void {
     this.cachedPath = null;
+    this.cachedVersion = undefined;
   }
 
   /** Check if a path exists and responds to `--version`. */
   private async validateBinary(binaryPath: string): Promise<boolean> {
     try {
       await access(binaryPath, constants.X_OK);
-      await this.getVersion(binaryPath);
+      const versionOutput = await this.getVersion(binaryPath);
+      this.cachedVersion = CliResolver.parseVersionString(versionOutput);
       return true;
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Parse a version number from the `codeql --version` output.
+   *
+   * Recognises both legacy and current formats:
+   *  - "CodeQL command-line toolchain release 2.19.0."
+   *  - "CodeQL CLI 2.25.1"
+   *
+   * The regex looks for the last `X.Y.Z` triplet on the first line,
+   * which avoids matching unrelated version numbers that may appear
+   * earlier in error messages.
+   *
+   * Returns the bare version (e.g. '2.25.1') or `undefined` if not parseable.
+   */
+  static parseVersionString(versionOutput: string): string | undefined {
+    const firstLine = versionOutput.split('\n')[0] ?? '';
+    const matches = [...firstLine.matchAll(/(\d+\.\d+\.\d+)/g)];
+    return matches.length > 0 ? matches[matches.length - 1][1] : undefined;
   }
 
   /**
