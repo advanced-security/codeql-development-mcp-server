@@ -127,11 +127,16 @@ export class CliResolver extends DisposableObject {
    *  - "CodeQL command-line toolchain release 2.19.0."
    *  - "CodeQL CLI 2.25.1"
    *
+   * The regex looks for the last `X.Y.Z` triplet on the first line,
+   * which avoids matching unrelated version numbers that may appear
+   * earlier in error messages.
+   *
    * Returns the bare version (e.g. '2.25.1') or `undefined` if not parseable.
    */
   static parseVersionString(versionOutput: string): string | undefined {
-    const match = /(\d+\.\d+\.\d+)/.exec(versionOutput);
-    return match?.[1];
+    const firstLine = versionOutput.split('\n')[0] ?? '';
+    const matches = [...firstLine.matchAll(/(\d+\.\d+\.\d+)/g)];
+    return matches.length > 0 ? matches[matches.length - 1][1] : undefined;
   }
 
   /**
