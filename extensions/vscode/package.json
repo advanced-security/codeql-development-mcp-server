@@ -80,6 +80,11 @@
           "default": [],
           "description": "Additional directories containing query run result subdirectories. Appended to CODEQL_QUERY_RUN_RESULTS_DIRS alongside the vscode-codeql query storage path."
         },
+        "codeql-mcp.autoDownloadPacks": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically download pre-compiled tool query packs from GHCR that match the detected CodeQL CLI version. When disabled, the extension uses only the VSIX-bundled packs via `codeql pack install` (which requires compilation against the local CLI). Disable this if you want strict use of the bundled packs for the same overall version of both CodeQL CLI and ql-mcp server."
+        },
         "codeql-mcp.autoInstall": {
           "type": "boolean",
           "default": true,

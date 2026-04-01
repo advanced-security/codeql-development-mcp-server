@@ -170,11 +170,12 @@ export async function activate(
     logger.info('Auto-install enabled — starting background setup...');
     logger.info(`Install directory: ${serverManager.getInstallDir?.() ?? 'unknown'}`);
     logger.info(`Server launch: ${serverManager.getDescription?.() ?? 'unknown'}`);
+    const autoDownloadPacks = config.get<boolean>('autoDownloadPacks', true);
     // Run in background — don't block activation
     void (async () => {
       try {
         await serverManager.ensureInstalled();
-        await packInstaller.installAll();
+        await packInstaller.installAll({ downloadForCliVersion: autoDownloadPacks });
         mcpProvider.fireDidChange();
         logger.info('✅ MCP server setup complete. Server is ready to be started.');
       } catch (err) {

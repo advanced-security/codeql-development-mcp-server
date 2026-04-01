@@ -64,6 +64,49 @@ describe('CliResolver', () => {
     process.env.CODEQL_PATH = originalEnv;
   });
 
+  it('should cache CLI version after resolve', async () => {
+    const originalEnv = process.env.CODEQL_PATH;
+    process.env.CODEQL_PATH = '/usr/local/bin/codeql';
+
+    vi.mocked(access).mockResolvedValueOnce(undefined);
+    vi.mocked(execFile).mockImplementationOnce(
+      (_cmd: any, _args: any, callback: any) => {
+        callback(null, 'CodeQL command-line toolchain release 2.25.1.\n', '');
+        return {} as any;
+      },
+    );
+
+    await resolver.resolve();
+    expect(resolver.getCliVersion()).toBe('2.25.1');
+
+    process.env.CODEQL_PATH = originalEnv;
+  });
+
+  it('should return undefined for getCliVersion before resolve', () => {
+    expect(resolver.getCliVersion()).toBeUndefined();
+  });
+
+  it('should clear cached version on invalidateCache', async () => {
+    const originalEnv = process.env.CODEQL_PATH;
+    process.env.CODEQL_PATH = '/usr/local/bin/codeql';
+
+    vi.mocked(access).mockResolvedValue(undefined);
+    vi.mocked(execFile).mockImplementation(
+      (_cmd: any, _args: any, callback: any) => {
+        callback(null, 'CodeQL CLI 2.24.3\n', '');
+        return {} as any;
+      },
+    );
+
+    await resolver.resolve();
+    expect(resolver.getCliVersion()).toBe('2.24.3');
+
+    resolver.invalidateCache();
+    expect(resolver.getCliVersion()).toBeUndefined();
+
+    process.env.CODEQL_PATH = originalEnv;
+  });
+
   it('should cache resolved path', async () => {
     const originalEnv = process.env.CODEQL_PATH;
     process.env.CODEQL_PATH = '/cached/codeql';
@@ -166,6 +209,26 @@ describe('CliResolver', () => {
 
   it('should be disposable', () => {
     expect(() => resolver.dispose()).not.toThrow();
+  });
+
+  describe('parseVersionString', () => {
+    it('should parse legacy format', () => {
+      expect(CliResolver.parseVersionString(
+        'CodeQL command-line toolchain release 2.19.0.\n',
+      )).toBe('2.19.0');
+    });
+
+    it('should parse current format', () => {
+      expect(CliResolver.parseVersionString('CodeQL CLI 2.25.1\n')).toBe('2.25.1');
+    });
+
+    it('should parse bare version string', () => {
+      expect(CliResolver.parseVersionString('2.24.3')).toBe('2.24.3');
+    });
+
+    it('should return undefined for non-version output', () => {
+      expect(CliResolver.parseVersionString('no version here')).toBeUndefined();
+    });
   });
 
   describe('vscode-codeql distribution discovery', () => {
