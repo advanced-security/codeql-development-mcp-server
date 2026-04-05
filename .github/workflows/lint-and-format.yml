@@ -25,6 +25,12 @@ jobs:
           cache: 'npm'
           node-version-file: '.node-version'
 
+      - name: Lint and Format - Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: 'client/go.mod'
+          cache-dependency-path: 'client/go.sum'
+
       - name: Lint and Format - Install node dependencies for all workspaces
         run: npm ci
 

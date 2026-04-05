@@ -127,14 +127,16 @@ describe('SARIF Tools', () => {
       });
 
       registerSarifTools(mockServer);
-      expect(mockServer.tool).toHaveBeenCalledTimes(5);
+      expect(mockServer.tool).toHaveBeenCalledTimes(7);
 
       const toolNames = (mockServer.tool as any).mock.calls.map((call: any) => call[0]);
+      expect(toolNames).toContain('sarif_compare_alerts');
+      expect(toolNames).toContain('sarif_deduplicate_rules');
+      expect(toolNames).toContain('sarif_diff_runs');
       expect(toolNames).toContain('sarif_extract_rule');
       expect(toolNames).toContain('sarif_list_rules');
       expect(toolNames).toContain('sarif_rule_to_markdown');
-      expect(toolNames).toContain('sarif_compare_alerts');
-      expect(toolNames).toContain('sarif_diff_runs');
+      expect(toolNames).toContain('sarif_store');
     });
   });
 
@@ -320,6 +322,118 @@ describe('SARIF Tools', () => {
 
       it('should return error when sarifPathA is missing', async () => {
         const result = await handlers.sarif_diff_runs({
+          sarifPathB: testSarifPath,
+        });
+        expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+      });
+    });
+
+    describe('sarif_store', () => {
+      let mockPutCacheEntry: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        mockPutCacheEntry = vi.fn();
+        vi.spyOn(sessionDataManager, 'getStore').mockReturnValue({
+          putCacheEntry: mockPutCacheEntry,
+        } as any);
+      });
+
+      it('should store SARIF from file path and return cache key', async () => {
+        const result = await handlers.sarif_store({ sarifPath: testSarifPath });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.cacheKey).toBeDefined();
+        expect(parsed.cacheKey).toMatch(/^sarif-store-/);
+        expect(parsed.source).toBe('file');
+        expect(parsed.resultCount).toBe(2);
+        expect(parsed.ruleCount).toBe(2);
+        expect(parsed.toolName).toBe('CodeQL');
+        expect(mockPutCacheEntry).toHaveBeenCalledTimes(1);
+      });
+
+      it('should store SARIF from inline content', async () => {
+        const content = JSON.stringify(createTestSarif());
+        const result = await handlers.sarif_store({ sarifContent: content });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.cacheKey).toMatch(/^sarif-store-/);
+        expect(parsed.source).toBe('inline');
+        expect(parsed.resultCount).toBe(2);
+        expect(mockPutCacheEntry).toHaveBeenCalledTimes(1);
+      });
+
+      it('should store SARIF with label', async () => {
+        const result = await handlers.sarif_store({
+          label: 'my-analysis',
+          sarifPath: testSarifPath,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.label).toBe('my-analysis');
+      });
+
+      it('should return error when neither content nor path provided', async () => {
+        const result = await handlers.sarif_store({});
+        expect(result.content[0].text).toContain('Either sarifContent or sarifPath is required');
+      });
+
+      it('should return error for invalid SARIF content', async () => {
+        const result = await handlers.sarif_store({ sarifContent: '{"not": "sarif"}' });
+        expect(result.content[0].text).toContain('Invalid SARIF');
+      });
+
+      it('should return error for nonexistent file', async () => {
+        const result = await handlers.sarif_store({ sarifPath: '/nonexistent/path.sarif' });
+        expect(result.content[0].text).toContain('Failed to read SARIF file');
+      });
+    });
+
+    describe('sarif_deduplicate_rules', () => {
+      it('should find duplicate rules between identical SARIF files', async () => {
+        const result = await handlers.sarif_deduplicate_rules({
+          sarifPathA: testSarifPath,
+          sarifPathB: testSarifPath,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.summary.totalRulesA).toBe(2);
+        expect(parsed.summary.totalRulesB).toBe(2);
+        // Same file = same rules with perfect overlap
+        expect(parsed.duplicateGroups.length).toBeGreaterThan(0);
+
+        // The js/sql-injection vs js/sql-injection pair should have overlap score 1.0
+        const selfMatch = parsed.duplicateGroups.find(
+          (g: any) => g.ruleIdA === 'js/sql-injection' && g.ruleIdB === 'js/sql-injection',
+        );
+        expect(selfMatch).toBeDefined();
+        expect(selfMatch.overlapScore).toBe(1);
+      });
+
+      it('should return no duplicates when threshold is very high and rules differ', async () => {
+        const sarifB = createTestSarif();
+        // Change all locations so nothing overlaps
+        sarifB.runs[0].results = [{
+          ruleId: 'js/xss',
+          ruleIndex: 1,
+          message: { text: 'Different XSS.' },
+          locations: [{ physicalLocation: { artifactLocation: { uri: 'src/other.js' }, region: { startLine: 999, startColumn: 1, endColumn: 10 } } }],
+        }];
+        sarifB.runs[0].tool.driver.rules = [sarifB.runs[0].tool.driver.rules[1]];
+        const pathB = join(testStorageDir, 'different.sarif');
+        writeFileSync(pathB, JSON.stringify(sarifB));
+
+        const result = await handlers.sarif_deduplicate_rules({
+          overlapThreshold: 0.99,
+          sarifPathA: testSarifPath,
+          sarifPathB: pathB,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.summary.overlapThreshold).toBe(0.99);
+      });
+
+      it('should return error when SARIF A is missing', async () => {
+        const result = await handlers.sarif_deduplicate_rules({
           sarifPathB: testSarifPath,
         });
         expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');

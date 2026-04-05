@@ -88,6 +88,11 @@ echo "📦 Building CodeQL MCP server bundle..."
 cd "$SERVER_DIR"
 npm run bundle
 
+# Step 1b: Build the Go client binary
+echo "📦 Building Go client binary..."
+cd "$CLIENT_DIR"
+make build
+
 # Step 2: Install CodeQL packs (only once for both modes, skip if --no-install-packs)
 if [ "$SKIP_PACK_INSTALL" = true ]; then
     echo "📦 Skipping CodeQL pack installation (--no-install-packs)"
@@ -95,6 +100,10 @@ else
     echo "📦 Installing CodeQL pack dependencies..."
     "$SERVER_DIR/scripts/install-packs.sh"
 fi
+
+# Step 3: Extract test databases used by integration tests
+echo "📦 Extracting test databases..."
+"$SERVER_DIR/scripts/extract-test-databases.sh"
 
 cd "$CLIENT_DIR"
 
@@ -132,7 +141,7 @@ run_tests_in_mode() {
 
     # Run the integration tests (skip pack installation since we already did it)
     echo "🧪 Running tests..."
-    node src/ql-mcp-client.js integration-tests --no-install-packs "$@"
+    "$CLIENT_DIR/gh-ql-mcp-client" integration-tests --mode "$MCP_MODE" --no-install-packs "$@"
 
     if [ "$MCP_MODE" = "http" ]; then
         # Stop the server before next mode
