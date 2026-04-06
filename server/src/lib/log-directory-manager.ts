@@ -3,7 +3,7 @@
  */
 
 import { mkdirSync, existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { join, resolve, sep } from 'path';
 import { randomBytes } from 'crypto';
 import { getProjectTmpDir } from '../utils/temp-dir';
 
@@ -14,7 +14,7 @@ import { getProjectTmpDir } from '../utils/temp-dir';
 function ensurePathWithinBase(baseDir: string, targetPath: string): string {
   const absBase = resolve(baseDir);
   const absTarget = resolve(targetPath);
-  if (!absTarget.startsWith(absBase + '/') && absTarget !== absBase) {
+  if (!absTarget.startsWith(absBase + sep) && absTarget !== absBase) {
     throw new Error(`Provided log directory is outside the allowed base directory: ${absBase}`);
   }
   return absTarget;

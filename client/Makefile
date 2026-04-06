@@ -2,6 +2,10 @@ BINARY_NAME := gh-ql-mcp-client
 MODULE := github.com/advanced-security/codeql-development-mcp-server/client
 VERSION := $(shell grep 'Version = ' cmd/root.go | head -1 | sed 's/.*"\(.*\)"/\1/')
 
+# Use bash as the Make recipe shell (required on Windows where the default
+# shell cannot execute .sh scripts).
+SHELL := bash
+
 # Disable CGO to avoid Xcode/C compiler dependency
 export CGO_ENABLED = 0
 
