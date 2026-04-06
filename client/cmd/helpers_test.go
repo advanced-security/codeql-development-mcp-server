@@ -3,15 +3,15 @@ package cmd
 import "testing"
 
 func TestParseRepo_Valid(t *testing.T) {
-	owner, repo, err := parseRepo("has-ghas/dubbo")
+	owner, repo, err := parseRepo("example-owner/example-repo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if owner != "has-ghas" {
-		t.Errorf("owner = %q, want %q", owner, "has-ghas")
+	if owner != "example-owner" {
+		t.Errorf("owner = %q, want %q", owner, "example-owner")
 	}
-	if repo != "dubbo" {
-		t.Errorf("repo = %q, want %q", repo, "dubbo")
+	if repo != "example-repo" {
+		t.Errorf("repo = %q, want %q", repo, "example-repo")
 	}
 }
 
