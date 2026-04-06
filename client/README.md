@@ -33,11 +33,12 @@ gh ql-mcp-client <command> [flags]
 
 | Flag       | Default     | Description                           |
 | ---------- | ----------- | ------------------------------------- |
-| `--mode`   | `http`      | MCP server transport (`stdio`/`http`) |
+| `--mode`   | `stdio`     | MCP server transport (`stdio`/`http`) |
 | `--host`   | `localhost` | MCP server host (http mode)           |
 | `--port`   | `3000`      | MCP server port (http mode)           |
 | `--format` | `text`      | Output format (`text`/`json`)         |
 
+Transport is configured via CLI flags. The CLI does not currently read `MCP_MODE`.
 ### Commands
 
 #### `code-scanning` (alias: `cs`)
