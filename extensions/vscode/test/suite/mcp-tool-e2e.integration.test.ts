@@ -256,17 +256,17 @@ suite('MCP Server Tool Integration Tests', () => {
     console.log(`[mcp-tool-e2e] list_mrva_run_results result:\n${text}`);
   });
 
-  test('Annotation and audit tools should NOT appear by default', async function () {
+  test('Annotation and audit tools should appear by default', async function () {
     this.timeout(15_000);
 
     const response = await client.listTools();
     const toolNames = response.tools.map(t => t.name);
 
-    assert.ok(!toolNames.includes('annotation_create'), 'annotation_create should NOT be registered by default');
-    assert.ok(!toolNames.includes('audit_store_findings'), 'audit_store_findings should NOT be registered by default');
-    assert.ok(!toolNames.includes('query_results_cache_lookup'), 'query_results_cache_lookup should NOT be registered by default');
+    assert.ok(toolNames.includes('annotation_create'), 'annotation_create should be registered by default');
+    assert.ok(toolNames.includes('audit_store_findings'), 'audit_store_findings should be registered by default');
+    assert.ok(toolNames.includes('query_results_cache_lookup'), 'query_results_cache_lookup should be registered by default');
 
-    console.log('[mcp-tool-e2e] Confirmed annotation/audit/cache tools are not registered by default');
+    console.log('[mcp-tool-e2e] Confirmed annotation/audit/cache tools are registered by default');
   });
 });
 
