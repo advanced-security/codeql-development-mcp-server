@@ -127,9 +127,15 @@ run_tests_in_mode() {
         echo "📡 Using stdio transport (client spawns server directly)"
     fi
 
-    # Run the integration tests (skip pack installation since we already did it)
+    # Run the integration tests.
+    # Only forward --no-install-packs when the user explicitly requested it,
+    # so the codeql_pack_install fixture is still exercised by default.
     echo "🧪 Running tests..."
-    "$CLIENT_DIR/gh-ql-mcp-client" integration-tests --mode "$MCP_MODE" --no-install-packs "$@"
+    local client_args=(integration-tests --mode "$MCP_MODE")
+    if [ "$SKIP_PACK_INSTALL" = true ]; then
+        client_args+=(--no-install-packs)
+    fi
+    "$CLIENT_DIR/gh-ql-mcp-client" "${client_args[@]}" "$@"
 
     if [ "$MCP_MODE" = "http" ]; then
         # Stop the server before next mode
