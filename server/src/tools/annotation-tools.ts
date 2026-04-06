@@ -1,7 +1,7 @@
 /**
  * Annotation Tools — general-purpose notes and bookmarks on any entity.
  *
- * Opt-in via ENABLE_ANNOTATION_TOOLS=true (disabled by default).
+ * Enabled by default. Can be disabled via ENABLE_ANNOTATION_TOOLS=false.
  * Uses the shared SqliteStore from the session data manager.
  */
 
@@ -14,15 +14,6 @@ import { logger } from '../utils/logger';
  * Register all annotation tools with the MCP server.
  */
 export function registerAnnotationTools(server: McpServer): void {
-  const config = sessionDataManager.getConfig();
-
-  if (!config.enableAnnotationTools) {
-    logger.info(
-      'Annotation tools are disabled (opt-in). Set ENABLE_ANNOTATION_TOOLS=true to enable annotation_* tools.',
-    );
-    return;
-  }
-
   registerAnnotationCreateTool(server);
   registerAnnotationGetTool(server);
   registerAnnotationListTool(server);

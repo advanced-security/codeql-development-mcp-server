@@ -3,9 +3,8 @@
 # Run integration tests - orchestrates the complete test workflow
 # This script mimics the GitHub Actions workflow for local execution
 #
-# By default, this script runs integration tests in TWO modes:
-#   1. Default mode (standard tools) - tests the user experience
-#   2. Annotation mode (annotation_*, audit_*, query_results_cache_* tools)
+# By default, this script runs integration tests in DEFAULT mode, which
+# includes all annotation, audit, cache, and SARIF tools (always enabled).
 #
 # Monitoring mode (session_* tools) is disabled by default as those tools
 # are deprecated. Set ENABLE_MONITORING_TOOLS=true to also run monitoring tests.
@@ -20,8 +19,8 @@
 #                             unset   = skip monitoring mode (default)
 #
 # Usage:
-#   ./run-integration-tests.sh                              # Default + annotation modes
-#   ENABLE_MONITORING_TOOLS=true ./run-integration-tests.sh # Default + annotation + monitoring
+#   ./run-integration-tests.sh                              # Default mode (all tools)
+#   ENABLE_MONITORING_TOOLS=true ./run-integration-tests.sh # Default + monitoring
 #   MCP_MODE=http ./run-integration-tests.sh                # Run using HTTP transport
 #   ./run-integration-tests.sh --tools session_end          # Filter to specific tools
 
@@ -39,21 +38,21 @@ export TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-30}"
 export URL_SCHEME="${URL_SCHEME:-http}"
 
 # Determine which modes to run.
-# By default, run default + annotation modes (monitoring is deprecated).
+# Annotation/audit/cache/SARIF tools are always enabled by default.
+# Monitoring mode is disabled by default (deprecated).
 # Use ENABLE_MONITORING_TOOLS=true to also run monitoring mode.
 RUN_DEFAULT_MODE=true
 RUN_MONITORING_MODE=false
-RUN_ANNOTATION_MODE=true
 
 if [ -n "${ENABLE_MONITORING_TOOLS+x}" ]; then
     if [ "$ENABLE_MONITORING_TOOLS" = "true" ]; then
         RUN_MONITORING_MODE=true
-        echo "🔧 Mode: Default + annotation + monitoring (ENABLE_MONITORING_TOOLS=true)"
+        echo "🔧 Mode: Default + monitoring (ENABLE_MONITORING_TOOLS=true)"
     else
-        echo "🔧 Mode: Default + annotation (monitoring explicitly disabled)"
+        echo "🔧 Mode: Default (monitoring explicitly disabled)"
     fi
 else
-    echo "🔧 Mode: Default + annotation (monitoring disabled by default)"
+    echo "🔧 Mode: Default (all tools except deprecated monitoring)"
 fi
 
 # Check if --no-install-packs was passed
@@ -163,13 +162,6 @@ fi
 
 if [ "$RUN_MONITORING_MODE" = true ]; then
     run_tests_in_mode "MONITORING MODE (session_* tools)" "true" "${EXTRA_ARGS[@]}"
-fi
-
-if [ "$RUN_ANNOTATION_MODE" = true ]; then
-    # Annotation mode enables annotation, audit, and cache tools
-    export ENABLE_ANNOTATION_TOOLS="true"
-    run_tests_in_mode "ANNOTATION MODE (annotation_*, audit_*, query_results_cache_* tools)" "false" "${EXTRA_ARGS[@]}"
-    unset ENABLE_ANNOTATION_TOOLS
 fi
 
 echo ""

@@ -99,6 +99,15 @@ func runIntegrationTests(cmd *cobra.Command, _ []string) error {
 	}
 	fmt.Printf("Working directory: %s\n", repoRoot)
 
+	// Set CODEQL_MCP_TMP_DIR so the MCP server subprocess uses the same
+	// tmp base as the Go runner's {{tmpdir}} placeholder (<repoRoot>/.tmp).
+	// Without this, the server defaults to <serverPkgRoot>/.tmp (i.e.
+	// server/.tmp/) which causes log directory validation failures.
+	tmpBase := filepath.Join(repoRoot, ".tmp")
+	if os.Getenv("CODEQL_MCP_TMP_DIR") == "" {
+		os.Setenv("CODEQL_MCP_TMP_DIR", tmpBase)
+	}
+
 	// Connect to MCP server
 	client := mcpclient.NewClient(mcpclient.Config{
 		Mode: MCPMode(),

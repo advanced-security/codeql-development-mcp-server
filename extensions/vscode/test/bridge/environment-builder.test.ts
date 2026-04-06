@@ -273,9 +273,9 @@ describe('EnvironmentBuilder', () => {
     expect(() => builder.dispose()).not.toThrow();
   });
 
-  it('should set ENABLE_ANNOTATION_TOOLS=true by default', async () => {
+  it('should not set ENABLE_ANNOTATION_TOOLS (server defaults to true)', async () => {
     const env = await builder.build();
-    expect(env.ENABLE_ANNOTATION_TOOLS).toBe('true');
+    expect(env.ENABLE_ANNOTATION_TOOLS).toBeUndefined();
   });
 
   it('should not overwrite MONITORING_STORAGE_LOCATION if already set in parent env', async () => {
@@ -304,33 +304,7 @@ describe('EnvironmentBuilder', () => {
     }
   });
 
-  it('should set ENABLE_ANNOTATION_TOOLS=false when setting is disabled', async () => {
-    const vscode = await import('vscode');
-    const originalGetConfig = vscode.workspace.getConfiguration;
-
-    try {
-      vscode.workspace.getConfiguration = () => ({
-        get: (_key: string, defaultVal?: any) => {
-          if (_key === 'enableAnnotationTools') return false;
-          if (_key === 'additionalDatabaseDirs') return [];
-          if (_key === 'additionalQueryRunResultsDirs') return [];
-          if (_key === 'additionalMrvaRunResultsDirs') return [];
-          return defaultVal;
-        },
-        has: () => false,
-        inspect: () => undefined as any,
-        update: () => Promise.resolve(),
-      }) as any;
-
-      builder.invalidate();
-      const env = await builder.build();
-      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
-    } finally {
-      vscode.workspace.getConfiguration = originalGetConfig;
-    }
-  });
-
-  it('should set MONITORING_STORAGE_LOCATION to scratch dir when annotations enabled with workspace', async () => {
+  it('should set MONITORING_STORAGE_LOCATION to scratch dir when workspace is open', async () => {
     const vscode = await import('vscode');
     const origFolders = vscode.workspace.workspaceFolders;
 
@@ -347,14 +321,14 @@ describe('EnvironmentBuilder', () => {
     }
   });
 
-  it('should allow additionalEnv to override ENABLE_ANNOTATION_TOOLS', async () => {
+  it('should allow additionalEnv to set custom environment variables', async () => {
     const vscode = await import('vscode');
     const originalGetConfig = vscode.workspace.getConfiguration;
 
     try {
       vscode.workspace.getConfiguration = () => ({
         get: (_key: string, defaultVal?: any) => {
-          if (_key === 'additionalEnv') return { ENABLE_ANNOTATION_TOOLS: 'false' };
+          if (_key === 'additionalEnv') return { MY_CUSTOM_VAR: 'custom-value' };
           if (_key === 'additionalDatabaseDirs') return [];
           if (_key === 'additionalQueryRunResultsDirs') return [];
           if (_key === 'additionalMrvaRunResultsDirs') return [];
@@ -367,29 +341,9 @@ describe('EnvironmentBuilder', () => {
 
       builder.invalidate();
       const env = await builder.build();
-      // additionalEnv comes after the default, so it should override
-      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
+      expect(env.MY_CUSTOM_VAR).toBe('custom-value');
     } finally {
       vscode.workspace.getConfiguration = originalGetConfig;
-    }
-  });
-
-  it('should preserve ENABLE_ANNOTATION_TOOLS from parent process environment', async () => {
-    const origValue = process.env.ENABLE_ANNOTATION_TOOLS;
-
-    try {
-      process.env.ENABLE_ANNOTATION_TOOLS = 'false';
-
-      builder.invalidate();
-      const env = await builder.build();
-      // Inherited process.env value should be preserved
-      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
-    } finally {
-      if (origValue === undefined) {
-        delete process.env.ENABLE_ANNOTATION_TOOLS;
-      } else {
-        process.env.ENABLE_ANNOTATION_TOOLS = origValue;
-      }
     }
   });
 });
