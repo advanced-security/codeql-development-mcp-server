@@ -68,6 +68,50 @@ This resource provides a complete reference of the default tools exposed by the 
 | `sarif_compare_alerts`   | Compare code locations of two SARIF alerts for overlap (sink, source, any-location, full-path modes) |
 | `sarif_diff_runs`        | Diff two SARIF files to find added, removed, and changed rules/results across analysis runs          |
 
+### `sarif_list_rules` Response Format
+
+Returns a JSON object with per-rule result counts and metadata:
+
+```json
+{
+  "totalRules": 3,
+  "totalResults": 15,
+  "rules": [
+    {
+      "ruleId": "js/sql-injection",
+      "resultCount": 8,
+      "name": "Database query built from user-controlled sources",
+      "kind": "path-problem",
+      "precision": "high",
+      "severity": "8.8",
+      "tags": ["security", "external/cwe/cwe-089"],
+      "tool": "CodeQL",
+      "toolVersion": "2.20.4"
+    }
+  ]
+}
+```
+
+| Field          | Type   | Description                                      |
+| -------------- | ------ | ------------------------------------------------ |
+| `totalRules`   | number | Total number of distinct rules in the SARIF file |
+| `totalResults` | number | Sum of `resultCount` across all rules            |
+| `rules[]`      | array  | Per-rule summaries (see below)                   |
+
+Each rule object:
+
+| Field         | Type     | Required | Description                                                                  |
+| ------------- | -------- | -------- | ---------------------------------------------------------------------------- |
+| `ruleId`      | string   | yes      | Rule identifier (matches the CodeQL query `@id`)                             |
+| `resultCount` | number   | yes      | Number of results (findings) for this rule; `0` if defined but not triggered |
+| `name`        | string   | no       | Display name (from `shortDescription.text`, `name`, or `id`)                 |
+| `kind`        | string   | no       | Query kind (`path-problem`, `problem`, etc.)                                 |
+| `precision`   | string   | no       | Precision level (`high`, `medium`, `low`, `very-high`)                       |
+| `severity`    | string   | no       | Security severity score (from `security-severity` property)                  |
+| `tags`        | string[] | no       | Rule tags (e.g., `security`, `external/cwe/cwe-089`)                         |
+| `tool`        | string   | no       | Tool driver name (e.g., `CodeQL`)                                            |
+| `toolVersion` | string   | no       | Tool driver version                                                          |
+
 ## Common Tool Workflows
 
 ### Create and Test a Query

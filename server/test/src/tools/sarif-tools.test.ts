@@ -54,12 +54,37 @@ function createTestSarif() {
           ] }] }],
         },
         {
+          ruleId: 'js/sql-injection',
+          ruleIndex: 0,
+          message: { text: 'SQL injection from request body.' },
+          locations: [{ physicalLocation: { artifactLocation: { uri: 'src/api.js' }, region: { startLine: 15, startColumn: 3, endColumn: 40 } } }],
+        },
+        {
           ruleId: 'js/xss',
           ruleIndex: 1,
           message: { text: 'XSS vulnerability.' },
           locations: [{ physicalLocation: { artifactLocation: { uri: 'src/views.js' }, region: { startLine: 30, startColumn: 10, endColumn: 50 } } }],
         },
       ],
+    }],
+  };
+}
+
+/** SARIF with a defined rule but zero results — validates resultCount: 0 */
+function createZeroResultsSarif() {
+  return {
+    version: '2.1.0',
+    runs: [{
+      tool: {
+        driver: {
+          name: 'CodeQL',
+          version: '2.25.1',
+          rules: [
+            { id: 'js/unused-variable', shortDescription: { text: 'Unused variable' } },
+          ],
+        },
+      },
+      results: [],
     }],
   };
 }
@@ -170,7 +195,7 @@ describe('SARIF Tools', () => {
         const parsed = JSON.parse(result.content[0].text);
 
         expect(parsed.ruleId).toBe('js/sql-injection');
-        expect(parsed.resultCount).toBe(1);
+        expect(parsed.resultCount).toBe(2);
         expect(parsed.extractedSarif.runs[0].tool.driver.rules).toHaveLength(1);
       });
 
@@ -212,15 +237,29 @@ describe('SARIF Tools', () => {
     });
 
     describe('sarif_list_rules', () => {
-      it('should list all rules with result counts', async () => {
+      it('should list all rules with per-rule result counts', async () => {
         const result = await handlers.sarif_list_rules({ sarifPath: testSarifPath });
         const parsed = JSON.parse(result.content[0].text);
 
         expect(parsed.totalRules).toBe(2);
-        expect(parsed.totalResults).toBe(2);
+        expect(parsed.totalResults).toBe(3);
         expect(parsed.rules[0].ruleId).toBe('js/sql-injection');
-        expect(parsed.rules[0].resultCount).toBe(1);
+        expect(parsed.rules[0].resultCount).toBe(2);
         expect(parsed.rules[1].ruleId).toBe('js/xss');
+        expect(parsed.rules[1].resultCount).toBe(1);
+      });
+
+      it('should return resultCount 0 for rules with no results', async () => {
+        const noResultsPath = join(testStorageDir, 'no-results.sarif');
+        writeFileSync(noResultsPath, JSON.stringify(createZeroResultsSarif()));
+
+        const result = await handlers.sarif_list_rules({ sarifPath: noResultsPath });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.totalRules).toBe(1);
+        expect(parsed.totalResults).toBe(0);
+        expect(parsed.rules[0].ruleId).toBe('js/unused-variable');
+        expect(parsed.rules[0].resultCount).toBe(0);
       });
     });
 
@@ -303,7 +342,7 @@ describe('SARIF Tools', () => {
 
       it('should detect changed result counts', async () => {
         const sarifB = createTestSarif();
-        sarifB.runs[0].results = [sarifB.runs[0].results[0]]; // remove XSS result
+        sarifB.runs[0].results = sarifB.runs[0].results.filter(r => r.ruleId !== 'js/xss');
         const pathB = join(testStorageDir, 'modified.sarif');
         writeFileSync(pathB, JSON.stringify(sarifB));
 
