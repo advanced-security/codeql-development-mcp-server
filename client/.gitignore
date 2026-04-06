@@ -1,8 +1,13 @@
-dist/
+# Go build artifacts
+gh-ql-mcp-client
+gh-ql-mcp-client-*
+coverage.out
+coverage.html
+
+# Downloaded SARIF files
+sarif-downloads/
+
+# Legacy JS artifacts
 node_modules/
+dist/
 *.log
-.coverage/
-coverage/
-.nyc_output/
-scratch/*
-!scratch/.gitkeep
