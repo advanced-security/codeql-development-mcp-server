@@ -167,17 +167,21 @@ describe('buildEnhancedToolSchema', () => {
     }
   });
 
-  it('should prefer kebab-case when both forms are provided', () => {
+  it('should reject duplicate when both kebab-case and camelCase forms are provided', () => {
     const schema = buildEnhancedToolSchema(shape);
     const result = schema.safeParse({
       database: '/path/to/db',
       'source-root': '/canonical/path',
       sourceRoot: '/alias/path',
     });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data['source-root']).toBe('/canonical/path');
-      expect(result.data).not.toHaveProperty('sourceRoot');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("unknown property 'sourceRoot' — did you mean 'source-root'?"),
+        ]),
+      );
     }
   });
 

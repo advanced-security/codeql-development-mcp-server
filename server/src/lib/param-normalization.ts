@@ -78,7 +78,7 @@ export function buildEnhancedToolSchema(
     .passthrough()
     .transform((data, ctx) => {
       const normalized: Record<string, unknown> = {};
-      const unknownEntries: Array<{ key: string; value: unknown }> = [];
+      const unknownEntries: Array<{ key: string; hint?: string }> = [];
 
       for (const [key, value] of Object.entries(data)) {
         if (knownKeys.has(key)) {
@@ -90,18 +90,17 @@ export function buildEnhancedToolSchema(
           if (suggestion && !(suggestion in data) && !(suggestion in normalized)) {
             // Silently normalize to the canonical kebab-case key
             normalized[suggestion] = value;
-          } else if (suggestion && (suggestion in data || suggestion in normalized)) {
-            // Both forms provided — prefer the canonical (kebab-case) key,
-            // silently ignore the alias
           } else {
-            unknownEntries.push({ key, value });
+            // Either no suggestion (truly unknown) or the canonical key is
+            // already present.  Capture the suggestion so the error message
+            // can include a "did you mean?" hint.
+            unknownEntries.push({ key, hint: suggestion });
           }
         }
       }
 
-      // Report truly unknown properties with "did you mean?" hints
-      for (const { key } of unknownEntries) {
-        const hint = suggestPropertyName(key, knownKeys);
+      // Report unknown / duplicate properties with "did you mean?" hints
+      for (const { key, hint } of unknownEntries) {
         const message = hint
           ? `unknown property '${key}' — did you mean '${hint}'?`
           : `unknown property '${key}'`;
