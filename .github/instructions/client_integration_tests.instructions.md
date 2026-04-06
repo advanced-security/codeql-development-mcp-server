@@ -14,7 +14,7 @@ The purpose of the entire `client/**` implementation is to provide integration t
 ## REQUIREMENTS
 
 - **ALWAYS run `npm run build-and-test` from the repo root directory and ensure it passes completely before committing any changes. This is MANDATORY and must be verified before every commit.**
-- **ALWAYS run `npm test` from the `client/` directory and ensure all integration tests pass before committing changes to integration tests.**
+- **ALWAYS run `make test` from the `client/` directory and ensure all integration tests pass before committing changes to integration tests.**
 - ALWAYS fix lint errors by running `npm run lint:fix` from the repo root directory before committing changes.
 - ALWAYS define "before" and "after" files for `monitoring-state.json`, plus any other files used as integration test inputs (before) and outputs (after). If a file is used as an input but is not modified by the MCP server tool under test, then `ex_tool/ex_test/before/example_file.ex` should have identical contents to `ex_tool/ex_test/after/example_file.ex`.
 - ALWAYS follow the structure for integration tests as described in the [client/integration-tests/README.md](../../client/integration-tests/README.md) file.

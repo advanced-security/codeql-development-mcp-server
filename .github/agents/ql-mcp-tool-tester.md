@@ -15,7 +15,7 @@ My `ql-mcp-tool-tester` agent:
 - Focuses specifically on validating the functionality of the tools/primitives of the latest (developer) version of the CodeQL Development MCP Server, using actual CodeQL packs, queries, and query unit tests.
 - Utilizes the environment provided by `.github/workflows/copilot-setup-steps.yml` with pre-installed `codeql` CLI.
 - Understands how to:
-  - Use the CodeQL Development MCP **Client** located at `client/src/ql-mcp-client.js` to interact with the MCP server (e.g. start/stop the server, list available tools, list available prompts, list available resources, etc.).
+  - Use the CodeQL Development MCP **Client** (`gh-ql-mcp-client` binary, built from `client/` via `make build`) to run integration tests against the MCP server (e.g. run integration tests, connect to the server, verify tool outputs, etc.).
   - Use the Agent Skills defined under `.github/skills/**` for creating, updating, and testing custom CodeQL queries using the tools of the CodeQL Development MCP Server.
   - **Validate AST/CFG tools queries** using the [`validate-ql-mcp-server-tools-queries`](../skills/validate-ql-mcp-server-tools-queries/SKILL.md) skill to ensure `PrintAST`, `PrintCFG`, `CallGraphFrom`, and `CallGraphTo` queries return **non-empty, meaningful output**.
   - Serially test the "exercises" and/or "solutions" from a given CodeQL development workshop, as long as the workshop uses a directory and file structure compatible with the [`create-codeql-query-development-workshop`](../skills/create-codeql-query-development-workshop/) skill, with the goal of using a known good (e.g. example) workshop to validate MCP tool functionality in complex development scenarios using real CodeQL packs, queries, and query unit tests.
