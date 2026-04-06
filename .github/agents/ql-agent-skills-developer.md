@@ -32,7 +32,7 @@ All command paths are relative to the root of the `advanced-security/codeql-deve
 Get the current list of all tools available in the CodeQL Development MCP Server:
 
 ```sh
-node client/src/ql-mcp-client.js list tools --format json
+gh-ql-mcp-client integration-tests --mode stdio --tools <tool_name> --format json
 ```
 
 ## References

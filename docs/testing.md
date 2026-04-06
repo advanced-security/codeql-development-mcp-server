@@ -6,13 +6,13 @@
 
 Every release of the CodeQL Development MCP Server is validated through four progressively broader layers of testing. Each layer builds on the previous one, moving from fast unit checks to real-world agentic validation.
 
-| Layer                            | Scope                                           | Framework                      | Location                                    |
-| -------------------------------- | ----------------------------------------------- | ------------------------------ | ------------------------------------------- |
-| 1a — Server unit tests           | MCP server TypeScript source code               | Vitest                         | `server/test/**/*.test.ts`                  |
-| 1b — Extension unit tests        | VS Code extension TypeScript source code        | Vitest                         | `extensions/vscode/test/**/*.test.ts`       |
-| 2a — MCP tool integration tests  | Individual MCP tools against a running server   | Custom MCP client              | `client/integration-tests/**`               |
-| 2b — Extension integration tests | Extension behaviour inside a VS Code host       | @vscode/test-cli + Mocha       | `extensions/vscode/test/suite/**/*.test.ts` |
-| 3 — Agentic validation           | End-to-end CodeQL workflows driven by AI agents | GitHub Copilot agents + skills | `.github/{agents,skills}/**`                |
+| Layer                            | Scope                                           | Framework                          | Location                                    |
+| -------------------------------- | ----------------------------------------------- | ---------------------------------- | ------------------------------------------- |
+| 1a — Server unit tests           | MCP server TypeScript source code               | Vitest                             | `server/test/**/*.test.ts`                  |
+| 1b — Extension unit tests        | VS Code extension TypeScript source code        | Vitest                             | `extensions/vscode/test/**/*.test.ts`       |
+| 2a — MCP tool integration tests  | Individual MCP tools against a running server   | Go MCP client (`gh-ql-mcp-client`) | `client/integration-tests/**`               |
+| 2b — Extension integration tests | Extension behaviour inside a VS Code host       | @vscode/test-cli + Mocha           | `extensions/vscode/test/suite/**/*.test.ts` |
+| 3 — Agentic validation           | End-to-end CodeQL workflows driven by AI agents | GitHub Copilot agents + skills     | `.github/{agents,skills}/**`                |
 
 ## Layer 1 — Unit Tests
 
@@ -38,17 +38,17 @@ Unit tests verify the VS Code extension's TypeScript code outside of the Extensi
 
 ### 2a — MCP tool integration tests
 
-Integration tests exercise individual MCP tools against a live server instance using the custom MCP client.
+Integration tests exercise individual MCP tools against a live server instance using the Go MCP client (`gh-ql-mcp-client`).
 
-- **Client**: `client/src/ql-mcp-client.js` — connects to the MCP server, invokes tools, and validates results.
-- **Transport modes**: The client supports both `stdio` (default) and `http` transport modes, controlled by the `MCP_MODE` environment variable. In `stdio` mode the client spawns the server as a child process via `StdioClientTransport`; in `http` mode it connects to a separately started HTTP server via `StreamableHTTPClientTransport`.
+- **Client**: `client/` — a Go binary built with Cobra, `mcp-go`, and `go-gh`. Connects to the MCP server, invokes tools, and validates results.
+- **Transport modes**: The client supports both `stdio` (spawns the server as a child process) and `http` (connects to a separately started HTTP server) transport modes, controlled by the `--mode` flag or `MCP_MODE` environment variable.
 - **Test data**: `client/integration-tests/primitives/tools/` — each test has `before/` and `after/` directories that define the initial fixture state and, for file-based tests, the expected final state.
-- **Run command**: `npm run test:integration:default -w client` (or `npm run test:client` from the repo root).
+- **Run command**: `make -C client test-integration` (or `npm run test:client` from the repo root).
 - **Key properties**:
   - Tests are deterministic and repeatable.
   - No mocks — tests use real CodeQL databases and queries bundled under `server/ql/`.
   - The default transport is `stdio`, matching the primary user experience.
-  - The `before/monitoring-state.json` file supplies tool arguments. For file-based tests, the integration-test runner diffs filesystem state from `before/` to `after/`; for monitoring-based tests, `after/` artifacts are generally not diffed and are only interpreted for specific validations (for example, `codeql_query_run` interpreted output).
+  - Tool parameters are resolved from `test-config.json`, `monitoring-state.json` embedded parameters, or tool-specific defaults built into the Go test runner (`client/internal/testing/params.go`).
 
 ### 2b — Extension integration tests
 
@@ -92,12 +92,14 @@ npm run test:server
 # Run extension unit tests + integration tests (1b + 2b)
 npm run test:vscode
 
-# Run only MCP tool integration tests (2a) - stdio mode (default)
-npm run test:client
+# Run only MCP tool integration tests (2a) - via Go client
+npm run test:client          # uses make -C client test
+make -C client test-unit     # Go unit tests only
+make -C client test-integration  # integration tests (builds binary, runs fixtures)
 
 # Run MCP tool integration tests with explicit transport mode
-MCP_MODE=stdio npm run test:client   # stdio transport (default)
-MCP_MODE=http npm run test:client    # HTTP transport
+MCP_MODE=stdio make -C client test-integration  # stdio transport (default)
+MCP_MODE=http make -C client test-integration   # HTTP transport
 
 # Run only extension integration tests (2b)
 npm run test:integration -w extensions/vscode
