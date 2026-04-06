@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	mcpclient "github.com/advanced-security/codeql-development-mcp-server/client/internal/mcp"
 	itesting "github.com/advanced-security/codeql-development-mcp-server/client/internal/testing"
@@ -37,16 +38,23 @@ func init() {
 	f.StringVar(&integrationTestsFlags.tools, "tools", "", "Comma-separated list of tool names to test")
 	f.StringVar(&integrationTestsFlags.tests, "tests", "", "Comma-separated list of test case names to run")
 	f.BoolVar(&integrationTestsFlags.noInstall, "no-install-packs", false, "Skip CodeQL pack installation")
-	f.IntVar(&integrationTestsFlags.timeout, "timeout", 30, "Per-tool-call timeout in seconds")
+	f.IntVar(&integrationTestsFlags.timeout, "timeout", 0, "Per-tool-call timeout in seconds (0 = use server defaults)")
 }
 
 // mcpToolCaller adapts the MCP client to the ToolCaller interface.
 type mcpToolCaller struct {
-	client *mcpclient.Client
+	client  *mcpclient.Client
+	timeout time.Duration
 }
 
 func (c *mcpToolCaller) CallToolRaw(name string, params map[string]any) ([]itesting.ContentBlock, bool, error) {
-	result, err := c.client.CallTool(context.Background(), name, params)
+	ctx := context.Background()
+	if c.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+	result, err := c.client.CallTool(ctx, name, params)
 	if err != nil {
 		return nil, false, err
 	}
@@ -115,10 +123,14 @@ func runIntegrationTests(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Create and run the test runner
-	runner := itesting.NewRunner(&mcpToolCaller{client: client}, itesting.RunnerOptions{
-		RepoRoot:    repoRoot,
-		FilterTools: filterTools,
-		FilterTests: filterTests,
+	runner := itesting.NewRunner(&mcpToolCaller{
+		client:  client,
+		timeout: time.Duration(integrationTestsFlags.timeout) * time.Second,
+	}, itesting.RunnerOptions{
+		RepoRoot:       repoRoot,
+		FilterTools:    filterTools,
+		FilterTests:    filterTests,
+		NoInstallPacks: integrationTestsFlags.noInstall,
 	})
 
 	allPassed, _ := runner.Run()

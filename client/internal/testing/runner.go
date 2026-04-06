@@ -38,9 +38,10 @@ type TestResult struct {
 
 // RunnerOptions configures the integration test runner.
 type RunnerOptions struct {
-	FilterTests []string
-	FilterTools []string
-	RepoRoot    string
+	FilterTests    []string
+	FilterTools    []string
+	NoInstallPacks bool
+	RepoRoot       string
 }
 
 // Runner discovers and executes integration tests.
@@ -54,7 +55,7 @@ type Runner struct {
 
 // NewRunner creates a new integration test runner.
 func NewRunner(caller ToolCaller, opts RunnerOptions) *Runner {
-	tmpBase := filepath.Join(opts.RepoRoot, ".tmp")
+	tmpBase := filepath.Join(opts.RepoRoot, "server", ".tmp")
 	return &Runner{
 		caller:  caller,
 		options: opts,
@@ -124,6 +125,12 @@ func (r *Runner) Run() (bool, []TestResult) {
 }
 
 func (r *Runner) runToolTests(toolName, testsDir string) {
+	// Skip codeql_pack_install when --no-install-packs is set
+	if r.options.NoInstallPacks && toolName == "codeql_pack_install" {
+		fmt.Printf("\n  %s (skipped: --no-install-packs)\n", toolName)
+		return
+	}
+
 	// Deprecated monitoring/session tools — skip entirely
 	if isDeprecatedTool(toolName) {
 		fmt.Printf("\n  %s (skipped: deprecated)\n", toolName)
@@ -224,6 +231,14 @@ func (r *Runner) runSingleTest(toolName, testCase, toolDir string) {
 
 		r.recordResult(toolName, testCase, false, fmt.Sprintf("tool returned error: %s", errText), elapsed)
 		fmt.Printf("    FAIL %s (tool error: %s) [%.1fs]\n", testCase, truncate(errText, 100), elapsed.Seconds())
+		return
+	}
+
+	// Validate non-empty response content — catches broken tools that
+	// return success with empty results.
+	if len(content) == 0 {
+		r.recordResult(toolName, testCase, false, "tool returned no content blocks", elapsed)
+		fmt.Printf("    FAIL %s (no content) [%.1fs]\n", testCase, elapsed.Seconds())
 		return
 	}
 

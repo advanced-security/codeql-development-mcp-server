@@ -116,3 +116,95 @@ func TestFindFilesByExt(t *testing.T) {
 		t.Errorf("found %d .txt files, want 1", len(txtFiles))
 	}
 }
+
+func TestIsSARIFTool(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"sarif_extract_rule", true},
+		{"sarif_list_rules", true},
+		{"sarif_compare_alerts", true},
+		{"sarif_diff_runs", true},
+		{"sarif_rule_to_markdown", true},
+		{"codeql_query_run", false},
+		{"validate_codeql_query", false},
+		{"codeql_pack_install", false},
+	}
+	for _, tt := range tests {
+		if got := isSARIFTool(tt.name); got != tt.want {
+			t.Errorf("isSARIFTool(%q) = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestBuildToolParams_SARIFToolWithConfig(t *testing.T) {
+	dir := t.TempDir()
+	testDir := filepath.Join(dir, "tools", "sarif_extract_rule", "extract_sql_injection")
+	beforeDir := filepath.Join(testDir, "before")
+	os.MkdirAll(beforeDir, 0o755)
+	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
+
+	// Write test-config.json with ruleId but no sarifPath
+	os.WriteFile(filepath.Join(testDir, "test-config.json"),
+		[]byte(`{"toolName":"sarif_extract_rule","arguments":{"ruleId":"js/sql-injection"}}`), 0o600)
+
+	// Write a SARIF file in before/
+	os.WriteFile(filepath.Join(beforeDir, "test-input.sarif"),
+		[]byte(`{"version":"2.1.0"}`), 0o600)
+
+	params, err := buildToolParams(dir, "sarif_extract_rule", "extract_sql_injection", testDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should have sarifPath injected from before/
+	sarifPath, ok := params["sarifPath"].(string)
+	if !ok || sarifPath == "" {
+		t.Error("expected sarifPath to be injected from before/ directory")
+	}
+
+	// Should still have ruleId from config
+	if params["ruleId"] != "js/sql-injection" {
+		t.Errorf("params[ruleId] = %v, want js/sql-injection", params["ruleId"])
+	}
+}
+
+func TestBuildToolParams_SARIFCompareAlertsWithConfig(t *testing.T) {
+	dir := t.TempDir()
+	testDir := filepath.Join(dir, "tools", "sarif_compare_alerts", "sink_overlap")
+	beforeDir := filepath.Join(testDir, "before")
+	os.MkdirAll(beforeDir, 0o755)
+	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
+
+	// Write test-config.json with alertA/alertB but no sarifPath
+	os.WriteFile(filepath.Join(testDir, "test-config.json"),
+		[]byte(`{"toolName":"sarif_compare_alerts","arguments":{"alertA":{"ruleId":"r1","resultIndex":0},"alertB":{"ruleId":"r2","resultIndex":0},"overlapMode":"sink"}}`), 0o600)
+
+	// Write a SARIF file in before/
+	os.WriteFile(filepath.Join(beforeDir, "test-input.sarif"),
+		[]byte(`{"version":"2.1.0"}`), 0o600)
+
+	params, err := buildToolParams(dir, "sarif_compare_alerts", "sink_overlap", testDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// alertA should have sarifPath injected
+	alertA, ok := params["alertA"].(map[string]any)
+	if !ok {
+		t.Fatal("expected alertA in params")
+	}
+	if alertA["sarifPath"] == nil || alertA["sarifPath"] == "" {
+		t.Error("expected sarifPath injected into alertA")
+	}
+
+	// alertB should have sarifPath injected
+	alertB, ok := params["alertB"].(map[string]any)
+	if !ok {
+		t.Fatal("expected alertB in params")
+	}
+	if alertB["sarifPath"] == nil || alertB["sarifPath"] == "" {
+		t.Error("expected sarifPath injected into alertB")
+	}
+}

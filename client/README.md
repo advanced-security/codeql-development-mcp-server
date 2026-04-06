@@ -39,6 +39,7 @@ gh ql-mcp-client <command> [flags]
 | `--format` | `text`      | Output format (`text`/`json`)         |
 
 Transport is configured via CLI flags. The CLI does not currently read `MCP_MODE`.
+
 ### Commands
 
 #### `code-scanning` (alias: `cs`)

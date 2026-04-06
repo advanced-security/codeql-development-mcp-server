@@ -28,7 +28,11 @@ func buildToolParams(repoRoot, toolName, testCase, testDir string) (map[string]a
 		if err := json.Unmarshal(configData, &config); err != nil {
 			return nil, fmt.Errorf("parse test-config.json: %w", err)
 		}
-		return config.Arguments, nil
+		// SARIF tools need derived path injection from before/ even when
+		// test-config.json provides base params — continue to tool-specific logic.
+		if !isSARIFTool(toolName) {
+			return config.Arguments, nil
+		}
 	}
 
 	// Check monitoring-state.json for embedded parameters
@@ -315,6 +319,12 @@ func buildToolParams(repoRoot, toolName, testCase, testDir string) (map[string]a
 	}
 
 	return params, nil
+}
+
+// isSARIFTool returns true for tools that need SARIF file path injection
+// from the before/ directory even when test-config.json provides base params.
+func isSARIFTool(name string) bool {
+	return strings.HasPrefix(name, "sarif_")
 }
 
 // findFilesByExt returns filenames in dir matching the given extension.
