@@ -103,7 +103,7 @@ Each rule object:
 | Field         | Type     | Required | Description                                                                  |
 | ------------- | -------- | -------- | ---------------------------------------------------------------------------- |
 | `ruleId`      | string   | yes      | Rule identifier (matches the CodeQL query `@id`)                             |
-| `resultCount` | number   | yes      | Number of results (findings) for this rule. `0` if defined but not triggered |
+| `resultCount` | number   | yes      | Number of results (findings) for this rule; `0` if defined but not triggered |
 | `name`        | string   | no       | Display name (from `shortDescription.text`, `name`, or `id`)                 |
 | `kind`        | string   | no       | Query kind (`path-problem`, `problem`, etc.)                                 |
 | `precision`   | string   | no       | Precision level (`high`, `medium`, `low`, `very-high`)                       |
