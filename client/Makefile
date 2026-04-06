@@ -25,7 +25,7 @@ test-unit:
 
 ## test-integration: Build binary and run integration tests via run-integration-tests.sh
 test-integration: build
-	ENABLE_ANNOTATION_TOOLS=true scripts/run-integration-tests.sh --no-install-packs
+	scripts/run-integration-tests.sh --no-install-packs
 
 ## test-verbose: Run all unit tests with verbose output
 test-verbose:

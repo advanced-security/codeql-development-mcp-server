@@ -40,8 +40,8 @@ Unit tests verify the VS Code extension's TypeScript code outside of the Extensi
 
 Integration tests exercise individual MCP tools against a live server instance using the Go MCP client (`gh-ql-mcp-client`).
 
-- **Client**: `client/` — a Go binary built with Cobra, `mcp-go`, and `go-gh`. Connects to the MCP server, invokes tools, and validates results.
-- **Transport modes**: The client supports both `stdio` (spawns the server as a child process) and `http` (connects to a separately started HTTP server) transport modes, controlled by the `--mode` flag or `MCP_MODE` environment variable.
+- **Client**: `client/` — a Go binary built with Cobra and `mcp-go`. Connects to the MCP server, invokes tools, and validates results.
+- **Transport modes**: The client supports both `stdio` (spawns the server as a child process) and `http` (connects to a separately started HTTP server) transport modes, controlled by the `--mode` flag.
 - **Test data**: `client/integration-tests/primitives/tools/` — each test has `before/` and `after/` directories that define the initial fixture state and, for file-based tests, the expected final state.
 - **Run command**: `make -C client test-integration` (or `npm run test:client` from the repo root).
 - **Key properties**:

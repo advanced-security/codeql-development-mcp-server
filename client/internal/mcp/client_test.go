@@ -72,6 +72,16 @@ func TestNewClient_NotConnected(t *testing.T) {
 	}
 }
 
+func TestClose_TimeoutReturnsError(t *testing.T) {
+	// Verify the timeout error message constant is correct
+	if CloseTimeoutErr == "" {
+		t.Fatal("CloseTimeoutErr should not be empty")
+	}
+	if CloseTimeoutErr != "MCP client close timed out after 3s; server subprocess may still be running" {
+		t.Errorf("CloseTimeoutErr = %q, want specific timeout message", CloseTimeoutErr)
+	}
+}
+
 func TestConstants(t *testing.T) {
 	if DefaultTimeout != 60*time.Second {
 		t.Errorf("DefaultTimeout = %v, want 60s", DefaultTimeout)

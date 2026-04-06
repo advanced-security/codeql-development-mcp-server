@@ -38,6 +38,7 @@ func TestRootCommand_Help(t *testing.T) {
 	wantSubstrings := []string{
 		"gh-ql-mcp-client",
 		"integration-tests",
+		"list",
 		"--mode",
 		"--host",
 		"--port",

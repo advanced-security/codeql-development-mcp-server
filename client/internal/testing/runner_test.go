@@ -190,3 +190,147 @@ func TestRunnerEmptyContentFails(t *testing.T) {
 	}
 	t.Error("mock_tool/basic result not found")
 }
+
+func TestValidateAssertions_NoConfig(t *testing.T) {
+	dir := t.TempDir()
+	// No test-config.json — should pass
+	result := validateAssertions(dir, []ContentBlock{{Text: "hello"}})
+	if result != "" {
+		t.Errorf("expected no error, got %q", result)
+	}
+}
+
+func TestValidateAssertions_NoAssertions(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{}}`), 0o600)
+
+	result := validateAssertions(dir, []ContentBlock{{Text: "hello"}})
+	if result != "" {
+		t.Errorf("expected no error when no assertions defined, got %q", result)
+	}
+}
+
+func TestValidateAssertions_ResponseContains_Pass(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["hello","world"]}}`), 0o600)
+
+	content := []ContentBlock{{Text: "hello world"}}
+	result := validateAssertions(dir, content)
+	if result != "" {
+		t.Errorf("expected pass, got %q", result)
+	}
+}
+
+func TestValidateAssertions_ResponseContains_Fail(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["missing"]}}`), 0o600)
+
+	content := []ContentBlock{{Text: "hello world"}}
+	result := validateAssertions(dir, content)
+	if result == "" {
+		t.Error("expected assertion failure for missing content")
+	}
+}
+
+func TestValidateAssertions_ResponseNotContains_Pass(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseNotContains":["error","fail"]}}`), 0o600)
+
+	content := []ContentBlock{{Text: "all good"}}
+	result := validateAssertions(dir, content)
+	if result != "" {
+		t.Errorf("expected pass, got %q", result)
+	}
+}
+
+func TestValidateAssertions_ResponseNotContains_Fail(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseNotContains":["error"]}}`), 0o600)
+
+	content := []ContentBlock{{Text: "some error happened"}}
+	result := validateAssertions(dir, content)
+	if result == "" {
+		t.Error("expected assertion failure for forbidden content")
+	}
+}
+
+func TestValidateAssertions_MinContentBlocks_Pass(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"minContentBlocks":2}}`), 0o600)
+
+	content := []ContentBlock{{Text: "block1"}, {Text: "block2"}}
+	result := validateAssertions(dir, content)
+	if result != "" {
+		t.Errorf("expected pass, got %q", result)
+	}
+}
+
+func TestValidateAssertions_MinContentBlocks_Fail(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"minContentBlocks":3}}`), 0o600)
+
+	content := []ContentBlock{{Text: "only one"}}
+	result := validateAssertions(dir, content)
+	if result == "" {
+		t.Error("expected assertion failure for insufficient content blocks")
+	}
+}
+
+func TestValidateAssertions_MultipleBlocks(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test-config.json"),
+		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["from block2"]}}`), 0o600)
+
+	content := []ContentBlock{{Text: "block1 text"}, {Text: "from block2"}}
+	result := validateAssertions(dir, content)
+	if result != "" {
+		t.Errorf("expected pass across multiple blocks, got %q", result)
+	}
+}
+
+func TestRunnerAssertionFailure(t *testing.T) {
+	caller := newMockCaller()
+	caller.results["mock_tool"] = mockResult{
+		content: []ContentBlock{{Type: "text", Text: "unexpected output"}},
+		isError: false,
+		err:     nil,
+	}
+
+	dir := t.TempDir()
+	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
+	toolDir := filepath.Join(testsDir, "mock_tool", "assertion_test")
+	os.MkdirAll(filepath.Join(toolDir, "before"), 0o755)
+	os.MkdirAll(filepath.Join(toolDir, "after"), 0o755)
+	os.WriteFile(filepath.Join(toolDir, "test-config.json"),
+		[]byte(`{"toolName":"mock_tool","arguments":{"key":"value"},"assertions":{"responseContains":["expected text"]}}`), 0o600)
+
+	runner := NewRunner(caller, RunnerOptions{RepoRoot: dir})
+	allPassed, results := runner.Run()
+
+	if allPassed {
+		t.Error("expected allPassed=false when assertion fails")
+	}
+
+	found := false
+	for _, r := range results {
+		if r.ToolName == "mock_tool" && r.TestName == "assertion_test" {
+			found = true
+			if r.Passed {
+				t.Error("expected test to fail")
+			}
+			if r.Error == "" {
+				t.Error("expected error message")
+			}
+		}
+	}
+	if !found {
+		t.Error("mock_tool/assertion_test result not found")
+	}
+}

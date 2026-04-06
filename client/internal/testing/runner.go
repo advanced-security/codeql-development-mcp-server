@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,8 +24,21 @@ type ContentBlock struct {
 
 // TestConfig represents a test-config.json fixture file.
 type TestConfig struct {
-	Arguments map[string]any `json:"arguments"`
-	ToolName  string         `json:"toolName"`
+	Arguments  map[string]any  `json:"arguments"`
+	Assertions *TestAssertions `json:"assertions,omitempty"`
+	ToolName   string          `json:"toolName"`
+}
+
+// TestAssertions defines expected properties of a tool's response.
+type TestAssertions struct {
+	// ResponseContains lists substrings that must appear in the concatenated
+	// response text. All must match for the test to pass.
+	ResponseContains []string `json:"responseContains,omitempty"`
+	// ResponseNotContains lists substrings that must NOT appear.
+	ResponseNotContains []string `json:"responseNotContains,omitempty"`
+	// MinContentBlocks is the minimum number of content blocks expected
+	// (0 means use the default check of at least 1).
+	MinContentBlocks int `json:"minContentBlocks,omitempty"`
 }
 
 // TestResult holds the outcome of a single integration test.
@@ -243,6 +257,13 @@ func (r *Runner) runSingleTest(toolName, testCase, toolDir string) {
 		return
 	}
 
+	// Validate assertions from test-config.json if present.
+	if assertErr := validateAssertions(testDir, content); assertErr != "" {
+		r.recordResult(toolName, testCase, false, assertErr, elapsed)
+		fmt.Printf("    FAIL %s (%s) [%.1fs]\n", testCase, truncate(assertErr, 100), elapsed.Seconds())
+		return
+	}
+
 	r.recordResult(toolName, testCase, true, "", elapsed)
 	fmt.Printf("    PASS %s [%.1fs]\n", testCase, elapsed.Seconds())
 }
@@ -287,6 +308,56 @@ func (r *Runner) printSummary() bool {
 
 	fmt.Println("===============================================================")
 	return failed == 0
+}
+
+// validateAssertions checks test-config.json assertions against the tool
+// response content. Returns an empty string on success, or a description
+// of the first assertion failure.
+func validateAssertions(testDir string, content []ContentBlock) string {
+	configPath := filepath.Join(testDir, "test-config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		// No test-config.json — skip assertion validation
+		return ""
+	}
+
+	var config TestConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Sprintf("invalid test-config.json: %v", err)
+	}
+	if config.Assertions == nil {
+		return ""
+	}
+
+	// Concatenate all text content blocks
+	var combined strings.Builder
+	for _, block := range content {
+		combined.WriteString(block.Text)
+		combined.WriteString("\n")
+	}
+	responseText := combined.String()
+
+	// Check MinContentBlocks
+	if config.Assertions.MinContentBlocks > 0 && len(content) < config.Assertions.MinContentBlocks {
+		return fmt.Sprintf("assertion failed: expected at least %d content blocks, got %d",
+			config.Assertions.MinContentBlocks, len(content))
+	}
+
+	// Check ResponseContains
+	for _, want := range config.Assertions.ResponseContains {
+		if !strings.Contains(responseText, want) {
+			return fmt.Sprintf("assertion failed: response does not contain %q", want)
+		}
+	}
+
+	// Check ResponseNotContains
+	for _, reject := range config.Assertions.ResponseNotContains {
+		if strings.Contains(responseText, reject) {
+			return fmt.Sprintf("assertion failed: response must not contain %q", reject)
+		}
+	}
+
+	return ""
 }
 
 // resolvePathPlaceholders replaces {{tmpdir}} in parameter values.

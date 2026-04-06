@@ -36,7 +36,6 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     env:
-      ENABLE_ANNOTATION_TOOLS: 'true'
       HTTP_HOST: 'localhost'
       HTTP_PORT: '3000'
       MCP_MODE: ${{ matrix.mcp-mode }}

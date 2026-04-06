@@ -26,6 +26,9 @@ const (
 
 	// ConnectTimeout is the timeout for establishing a connection.
 	ConnectTimeout = 30 * time.Second
+
+	// CloseTimeoutErr is the error message returned when Close times out.
+	CloseTimeoutErr = "MCP client close timed out after 3s; server subprocess may still be running"
 )
 
 // Config holds the configuration for connecting to an MCP server.
@@ -145,7 +148,7 @@ func (c *Client) Close() error {
 	case <-time.After(3 * time.Second):
 		// Close didn't complete in time; the process is likely stuck.
 		// This is expected with Node.js stdio servers.
-		return nil
+		return fmt.Errorf("%s", CloseTimeoutErr)
 	}
 }
 

@@ -1,6 +1,6 @@
 # gh-ql-mcp-client
 
-A Go CLI for managing Code Scanning alert lifecycles, combining GitHub's Code Scanning REST API (via `gh` auth) with the CodeQL Development MCP Server's SARIF analysis tools.
+A Go CLI for listing MCP server primitives, running MCP server integration tests, and (planned) managing Code Scanning alert lifecycles.
 
 Installable as a standalone binary or as a `gh` CLI extension (`gh ql-mcp-client`).
 
@@ -42,27 +42,20 @@ Transport is configured via CLI flags. The CLI does not currently read `MCP_MODE
 
 ### Commands
 
-#### `code-scanning` (alias: `cs`)
+#### `list`
 
-Interact with the GitHub Code Scanning REST API.
-
-```bash
-# List analyses for a repository
-gh-ql-mcp-client code-scanning list-analyses --repo owner/repo
-
-# List alerts with filters
-gh-ql-mcp-client code-scanning list-alerts --repo owner/repo --state open --severity high
-
-# Download a SARIF analysis
-gh-ql-mcp-client code-scanning download-analysis --repo owner/repo --analysis-id 12345
-```
-
-#### `sarif`
-
-SARIF analysis and alert comparison tools (delegates to MCP server tools).
+List MCP server primitives (tools, prompts, resources).
 
 ```bash
-gh-ql-mcp-client sarif --help
+# List all tools registered on the MCP server
+gh-ql-mcp-client list tools
+gh-ql-mcp-client list tools --format json
+
+# List all prompts
+gh-ql-mcp-client list prompts
+
+# List all resources
+gh-ql-mcp-client list resources
 ```
 
 #### `integration-tests`
@@ -96,9 +89,8 @@ make test-coverage   # Unit tests with coverage report
 | ----------------- | ------------------------------------------------------- | ---------------------------- |
 | `MCP_SERVER_URL`  | Override MCP server URL (http mode)                     | `http://localhost:3000/mcp`  |
 | `MCP_SERVER_PATH` | Override path to MCP server JS entry point (stdio mode) | Auto-detected from repo root |
-| `MCP_MODE`        | Transport mode (`stdio`/`http`)                         | `http`                       |
-| `HTTP_HOST`       | Server host                                             | `localhost`                  |
-| `HTTP_PORT`       | Server port                                             | `3000`                       |
+
+Transport mode is controlled by the `--mode` flag, which defaults to `stdio`. `MCP_SERVER_URL` is only used to override the server URL when running in `http` mode.
 
 ## Architecture
 
@@ -107,15 +99,14 @@ client/
 ├── main.go                     # Entry point
 ├── cmd/                        # Cobra CLI commands
 │   ├── root.go                 # Root command + global flags
-│   ├── code_scanning.go        # code-scanning subcommand group
-│   ├── code_scanning_*.go      # Individual code-scanning subcommands
-│   ├── sarif.go                # sarif subcommand group
+│   ├── list.go                 # list subcommand group (tools/prompts/resources)
+│   ├── helpers.go              # Shared CLI helpers
 │   └── integration_tests.go    # integration-tests command
 ├── internal/
-│   ├── github/                 # GitHub Code Scanning REST API client (via go-gh)
 │   ├── mcp/                    # MCP server client (via mcp-go)
 │   └── testing/                # Integration test runner and parameter builder
 ├── integration-tests/          # Test fixtures (before/after directories)
+├── scripts/                    # Shell scripts for test orchestration
 ├── Makefile                    # Build, test, lint, cross-compile targets
 └── go.mod                      # Go module definition
 ```

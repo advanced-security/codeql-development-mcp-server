@@ -1,6 +1,6 @@
 # gh-ql-mcp-client CLI Usage Guide
 
-This document describes how to use the `gh-ql-mcp-client` CLI for Code Scanning alert lifecycle management and MCP server integration testing.
+This document describes how to use the `gh-ql-mcp-client` CLI for MCP server integration testing and MCP primitive listing.
 
 ## Overview
 
@@ -15,84 +15,42 @@ gh ql-mcp-client <command> [flags]
 
 # Help for any command
 gh-ql-mcp-client --help
-gh-ql-mcp-client code-scanning --help
-gh-ql-mcp-client code-scanning list-alerts --help
+gh-ql-mcp-client list --help
+gh-ql-mcp-client integration-tests --help
 ```
 
 ## Commands
 
-### `code-scanning` (alias: `cs`)
+### `list`
 
-Interact with the GitHub Code Scanning REST API. Requires `gh` CLI authentication.
+List MCP server primitives (tools, prompts, resources).
 
-#### `list-analyses`
+#### `list tools`
 
-List Code Scanning analyses for a repository.
+List all tools registered on the MCP server.
 
 ```bash
-gh-ql-mcp-client code-scanning list-analyses --repo owner/repo
-gh-ql-mcp-client cs list-analyses --repo owner/repo --tool-name CodeQL --ref refs/heads/main
-gh-ql-mcp-client cs list-analyses --repo owner/repo --format json
+gh-ql-mcp-client list tools
+gh-ql-mcp-client list tools --format json
+gh-ql-mcp-client list tools --mode http --port 3000
 ```
 
-**Flags:**
+#### `list prompts`
 
-| Flag          | Description                                  |
-| ------------- | -------------------------------------------- |
-| `--repo`      | Repository in `owner/repo` format (required) |
-| `--ref`       | Git ref to filter by                         |
-| `--tool-name` | Tool name to filter by (e.g. `CodeQL`)       |
-| `--sarif-id`  | SARIF ID to filter by                        |
-| `--sort`      | Sort by (`created`)                          |
-| `--direction` | Sort direction (`asc`, `desc`)               |
-| `--per-page`  | Results per page (default: 30, max: 100)     |
-
-#### `list-alerts`
-
-List Code Scanning alerts for a repository.
+List all prompts registered on the MCP server.
 
 ```bash
-gh-ql-mcp-client code-scanning list-alerts --repo owner/repo
-gh-ql-mcp-client cs list-alerts --repo owner/repo --state open --severity high
-gh-ql-mcp-client cs list-alerts --repo owner/repo --tool-name CodeQL --format json
+gh-ql-mcp-client list prompts
+gh-ql-mcp-client list prompts --format json
 ```
 
-**Flags:**
+#### `list resources`
 
-| Flag          | Description                                                      |
-| ------------- | ---------------------------------------------------------------- |
-| `--repo`      | Repository in `owner/repo` format (required)                     |
-| `--ref`       | Git ref to filter by                                             |
-| `--state`     | Alert state: `open`, `closed`, `dismissed`, `fixed`              |
-| `--severity`  | Severity: `critical`, `high`, `medium`, `low`, `warning`, `note` |
-| `--tool-name` | Tool name to filter by                                           |
-| `--sort`      | Sort by (`created`, `updated`)                                   |
-| `--direction` | Sort direction (`asc`, `desc`)                                   |
-| `--per-page`  | Results per page (default: 30, max: 100)                         |
-
-#### `download-analysis`
-
-Download a Code Scanning analysis as SARIF.
+List all resources registered on the MCP server.
 
 ```bash
-gh-ql-mcp-client code-scanning download-analysis --repo owner/repo --analysis-id 12345
-gh-ql-mcp-client cs download-analysis --repo owner/repo --analysis-id 12345 --output my-results.sarif
-```
-
-**Flags:**
-
-| Flag            | Description                                                             |
-| --------------- | ----------------------------------------------------------------------- |
-| `--repo`        | Repository in `owner/repo` format (required)                            |
-| `--analysis-id` | Analysis ID to download (required)                                      |
-| `--output`      | Output file path (default: `sarif-downloads/<owner>_<repo>/<id>.sarif`) |
-
-### `sarif`
-
-SARIF analysis and alert comparison tools. These commands delegate to MCP server tools.
-
-```bash
-gh-ql-mcp-client sarif --help
+gh-ql-mcp-client list resources
+gh-ql-mcp-client list resources --format json
 ```
 
 ### `integration-tests`
@@ -129,10 +87,12 @@ These flags are available on all commands:
 
 | Flag       | Default     | Description                           |
 | ---------- | ----------- | ------------------------------------- |
-| `--mode`   | `http`      | MCP server transport (`stdio`/`http`) |
+| `--mode`   | `stdio`     | MCP server transport (`stdio`/`http`) |
 | `--host`   | `localhost` | MCP server host (http mode)           |
 | `--port`   | `3000`      | MCP server port (http mode)           |
 | `--format` | `text`      | Output format (`text`/`json`)         |
+
+Transport mode is controlled by the `--mode` flag, which defaults to `stdio`.
 
 ## Integration with Shell Scripts
 
@@ -155,8 +115,7 @@ The `client/scripts/run-integration-tests.sh` script builds the Go binary, start
 | ----------------- | ------------------------------------------------------- | ---------------------------- |
 | `MCP_SERVER_URL`  | Override MCP server URL (http mode)                     | `http://localhost:3000/mcp`  |
 | `MCP_SERVER_PATH` | Override path to MCP server JS entry point (stdio mode) | Auto-detected from repo root |
-| `MCP_MODE`        | Transport mode (`stdio`/`http`)                         | `http`                       |
-| `HTTP_HOST`       | Server host                                             | `localhost`                  |
-| `HTTP_PORT`       | Server port                                             | `3000`                       |
+
+Transport mode is controlled by the `--mode` flag (default: `stdio`). `MCP_SERVER_URL` is only used to override the server URL when running in `http` mode.
 
 Cobra provides built-in help and validation for all flags. Use `--help` on any command for details.

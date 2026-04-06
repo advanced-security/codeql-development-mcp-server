@@ -136,7 +136,11 @@ func runIntegrationTests(cmd *cobra.Command, _ []string) error {
 	allPassed, _ := runner.Run()
 
 	// Close the MCP client (and its stdio subprocess) before returning.
-	client.Close()
+	// The close may time out for stdio servers (Node.js doesn't always
+	// exit promptly) — log but don't fail the test run for this.
+	if err := client.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+	}
 
 	if !allPassed {
 		return fmt.Errorf("some integration tests failed")

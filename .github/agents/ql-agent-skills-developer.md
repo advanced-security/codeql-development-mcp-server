@@ -35,6 +35,22 @@ Get the current list of all tools available in the CodeQL Development MCP Server
 gh-ql-mcp-client list tools --format json
 ```
 
+### List QL MCP Server Prompts
+
+Get the current list of all prompts available in the CodeQL Development MCP Server:
+
+```sh
+gh-ql-mcp-client list prompts --format json
+```
+
+### List QL MCP Server Resources
+
+Get the current list of all resources available in the CodeQL Development MCP Server:
+
+```sh
+gh-ql-mcp-client list resources --format json
+```
+
 ## References
 
 - [`.github/skills/README.md`](../skills/README.md)
