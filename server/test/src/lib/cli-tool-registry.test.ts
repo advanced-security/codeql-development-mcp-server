@@ -186,7 +186,7 @@ describe('registerCLITool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockServer = {
-      tool: vi.fn()
+      registerTool: vi.fn()
     } as unknown as McpServer;
   });
 
@@ -204,18 +204,20 @@ describe('registerCLITool', () => {
 
     registerCLITool(mockServer, definition);
 
-    // The enhanced schema wraps the raw shape in a ZodEffects (passthrough + transform)
-    expect(mockServer.tool).toHaveBeenCalledWith(
+    // registerTool is called with (name, config, callback)
+    expect(mockServer.registerTool).toHaveBeenCalledWith(
       'test_codeql_tool',
-      'Test CodeQL tool',
-      expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
+      expect.objectContaining({
+        description: 'Test CodeQL tool',
+        inputSchema: expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
+      }),
       expect.any(Function)
     );
   });
 
   it('should register a QLT tool correctly', () => {
     const definition: CLIToolDefinition = {
-      name: 'test_qlt_tool', 
+      name: 'test_qlt_tool',
       description: 'Test QLT tool',
       command: 'qlt',
       subcommand: 'query generate',
@@ -227,11 +229,13 @@ describe('registerCLITool', () => {
 
     registerCLITool(mockServer, definition);
 
-    // The enhanced schema wraps the raw shape in a ZodEffects (passthrough + transform)
-    expect(mockServer.tool).toHaveBeenCalledWith(
+    // registerTool is called with (name, config, callback)
+    expect(mockServer.registerTool).toHaveBeenCalledWith(
       'test_qlt_tool',
-      'Test QLT tool',
-      expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
+      expect.objectContaining({
+        description: 'Test QLT tool',
+        inputSchema: expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
+      }),
       expect.any(Function)
     );
   });
@@ -251,7 +255,7 @@ describe('registerCLITool', () => {
     registerCLITool(mockServer, definition);
 
     // Verify the tool was registered
-    expect(mockServer.tool).toHaveBeenCalled();
+    expect(mockServer.registerTool).toHaveBeenCalled();
   });
 });
 
@@ -262,7 +266,7 @@ describe('registerCLITool handler behavior', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockServer = {
-      tool: vi.fn()
+      registerTool: vi.fn()
     } as unknown as McpServer;
     
     // Get the mocked function
@@ -284,7 +288,7 @@ describe('registerCLITool handler behavior', () => {
     registerCLITool(mockServer, definition);
     
     // Get the handler function that was registered
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     // Mock successful command execution
     executeCodeQLCommand.mockResolvedValueOnce({
@@ -321,7 +325,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: '{"languages": ["javascript"]}',
@@ -356,7 +360,7 @@ describe('registerCLITool handler behavior', () => {
     };
 
     registerCLITool(mockServer, definition);
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: '{"languages": ["javascript"]}',
@@ -396,7 +400,7 @@ describe('registerCLITool handler behavior', () => {
     };
 
     registerCLITool(mockServer, definition);
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     const result = await handler({ database: parentDir });
 
@@ -424,7 +428,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Database created successfully',
@@ -460,7 +464,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Analysis complete',
@@ -495,7 +499,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: '# Query Help\nThis is help content',
@@ -530,7 +534,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Interpreted',
@@ -579,7 +583,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Interpreted',
@@ -630,7 +634,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Interpreted',
@@ -666,7 +670,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Query completed',
@@ -696,7 +700,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: '{"results": []}',
@@ -732,7 +736,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Interpreted',
@@ -764,7 +768,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Info output',
@@ -794,7 +798,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'All tests passed',
@@ -826,7 +830,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'All tests passed',
@@ -863,7 +867,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: '{"columns":[]}',
@@ -896,7 +900,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Installed successfully',
@@ -929,7 +933,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'pack1\npack2',
@@ -965,7 +969,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Analysis complete',
@@ -1010,7 +1014,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Analysis complete',
@@ -1048,7 +1052,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Success',
@@ -1088,7 +1092,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Analysis complete',
@@ -1141,7 +1145,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Analysis complete',
@@ -1189,7 +1193,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
     
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
     
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: '',
@@ -1217,7 +1221,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     // Simulate passing an empty array as the file parameter
     const result = await handler({ file: [] as unknown as string });
@@ -1238,7 +1242,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     // Simulate passing a JSON-encoded empty array string
     const result = await handler({ file: '[]' });
@@ -1273,7 +1277,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
       stdout: 'Interpreted',
@@ -1317,7 +1321,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     const result = await handler({ file: '' });
     expect(result.isError).toBe(true);
@@ -1337,7 +1341,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     const result = await handler({ file: '   ' });
     expect(result.isError).toBe(true);
@@ -1359,7 +1363,7 @@ describe('registerCLITool handler behavior', () => {
 
     registerCLITool(mockServer, definition);
 
-    const handler = (mockServer.tool as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     const result = await handler({
       file: '/path/to/results.bqrs',

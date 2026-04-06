@@ -115,13 +115,17 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
   // produces actionable error messages for truly unknown keys.
   const enhancedSchema = buildEnhancedToolSchema(inputSchema);
 
-  server.tool(
+  server.registerTool(
     name,
-    description,
-    // The enhanced schema is a pre-built ZodEffects (passthrough + transform).
-    // The MCP SDK's getZodSchemaObject() detects it as a Zod schema instance
-    // and passes it through without re-wrapping.
-    enhancedSchema as unknown as Record<string, z.ZodTypeAny>,
+    {
+      description,
+      // The enhanced schema is a pre-built ZodEffects (passthrough + transform).
+      // Using registerTool() instead of tool() because the latter's argument
+      // parsing rejects ZodEffects as "unrecognized objects".  registerTool()
+      // passes inputSchema directly to getZodSchemaObject(), which correctly
+      // recognises any Zod schema instance.
+      inputSchema: enhancedSchema,
+    },
     async (params: Record<string, unknown>) => {
       // Track temporary directories for cleanup
       const tempDirsToCleanup: string[] = [];
