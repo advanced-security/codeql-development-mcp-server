@@ -58,49 +58,73 @@ npm run test
 
 #### Starting and Stopping the QL MCP Server for Client Integration Tests
 
-QL MCP Client integration tests require the QL MCP Server to be running. You can start the server in a separate terminal window using:
+QL MCP Client integration tests require the QL MCP Server to be running. You can start
+the server in a separate terminal window using the scripts in `client/scripts/`:
 
 ```bash
-## From the `client/` directory use `npm run server:start && npm run server:wait`.
-## From the root of the repository use:
-npm run server:start -w client && npm run server:wait -w client
+## Start the MCP server (HTTP mode) from the repository root:
+client/scripts/start-server.sh
+
+## Wait for the server to be ready:
+client/scripts/wait-for-server.sh
 ```
 
 To stop the server after running the integration tests, use:
 
 ```bash
-## From the `client/` directory use `npm run server:stop`.
-## From the root of the repository use:
-npm run server:stop -w client
+## Stop the MCP server:
+client/scripts/stop-server.sh
 ```
 
 #### Fixing Client Integration Tests for the QL MCP Server
 
-Client integration tests are executed via the `client/src/ql-mcp-client.js` script.
+Client integration tests are executed via the `gh-ql-mcp-client` binary (built from
+`client/` using `make build`).
 
-To get help on using the MCP Client script, including help for the `integration-tests` subcommand, run:
+To get help on using the MCP Client binary, including help for the `integration-tests`
+subcommand, run:
 
 ```bash
-node src/ql-mcp-client.js --help
+# From the client/ directory after running 'make build':
+./gh-ql-mcp-client --help
+./gh-ql-mcp-client integration-tests --help
 ```
 
-When focusing specifically on fixing client integration tests, it makes more sense to change directories to `cd client/` and then run the integration tests directly using `node src/ql-mcp-client.js integration-tests`.
-
-Because integration tests can be time-consuming, you can run specific tests or tools as needed using the following commands:
+When focusing specifically on fixing client integration tests, build the binary and then
+run the integration tests directly using `scripts/run-integration-tests.sh`:
 
 ```bash
-# Run all integration tests with default settings
-node src/ql-mcp-client.js integration-tests
+cd client/
+make build
+```
+
+Because integration tests can be time-consuming, you can run specific tests or tools as
+needed using the following commands:
+
+```bash
+# Run all integration tests with default settings (stdio mode)
+./gh-ql-mcp-client integration-tests
 
 # Run tests for specific tools
-node src/ql-mcp-client.js integration-tests --tools codeql_query_run
+./gh-ql-mcp-client integration-tests --tools codeql_query_run
 
 # Run specific tests for a tool with custom timeout
-node src/ql-mcp-client.js integration-tests --tools codeql_query_run --tests basic_query_run,javascript_tools_print_ast --timeout 600
+./gh-ql-mcp-client integration-tests --tools codeql_query_run --tests basic_query_run,javascript_tools_print_ast --timeout 600
+```
+
+Alternatively, use the orchestration script which handles server start/stop automatically:
+
+```bash
+# From the client/ directory:
+scripts/run-integration-tests.sh
+
+# Filter to specific tools:
+scripts/run-integration-tests.sh --tools codeql_query_run
 ```
 
 ## References
 
 - [`package.json`](../../package.json) - The main `package.json` file that defines the `scripts` for building and testing the MCP Server, with references to the `server/` and `client/` workspaces.
 - [`server/package.json`](../../server/package.json) - The `package.json` file in the `server/` workspace that defines the build and test scripts specific to the MCP Server.
-- [`client/package.json`](../../client/package.json) - The `package.json` file in the `client/` workspace that defines the integration test scripts for the MCP Client.
+- [`client/Makefile`](../../client/Makefile) - The `Makefile` in the `client/` workspace that defines the build and test targets for the Go MCP Client.
+- [`client/go.mod`](../../client/go.mod) - The Go module definition for the `gh-ql-mcp-client` binary.

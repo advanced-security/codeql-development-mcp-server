@@ -29,10 +29,22 @@ All command paths are relative to the root of the `advanced-security/codeql-deve
 
 ### List QL MCP Server Tools
 
-Get the current list of all tools available in the CodeQL Development MCP Server:
+Get the current list of all tools available in the CodeQL Development MCP Server by
+inspecting the MCP server source files:
 
 ```sh
-node client/src/ql-mcp-client.js list tools --format json
+grep -r 'server\.tool(' server/src/ --include='*.ts' -l
+```
+
+To interactively explore the live tool list, start the MCP server in HTTP mode and use
+the `gh-ql-mcp-client` integration-tests command (after `make -C client build`):
+
+```sh
+# Start the MCP server in HTTP mode
+npm run dev:http
+
+# In a separate terminal, run integration tests to exercise the tools
+cd client/ && ./gh-ql-mcp-client --mode http integration-tests
 ```
 
 ## References

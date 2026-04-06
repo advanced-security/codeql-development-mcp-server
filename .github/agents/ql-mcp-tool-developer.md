@@ -31,13 +31,13 @@ My `ql-mcp-tool-developer` agent:
 
 - Implements new tools in `server/src/` with TypeScript.
 - Creates comprehensive unit tests in `server/test/` for all new/modified tools.
-- Validates tool behavior with integration tests using `client/src/ql-mcp-client.js`.
+- Validates tool behavior with integration tests using the `gh-ql-mcp-client` binary (built from `client/` via `make build`).
 - Ensures tools properly handle errors and edge cases.
 - Documents tool parameters, return types, and usage patterns.
 - Tests MCP server functionality:
   - Runs unit tests: `npm test --workspace=server`.
   - Runs integration tests: `client/scripts/run-integration-tests.sh`.
-  - Manually validates tools using: `client/src/ql-mcp-client.js`.
+  - Manually validates tools using: `./gh-ql-mcp-client integration-tests` (from `client/`).
   - Verifies server startup/shutdown: `server/dist/codeql-development-mcp-server.js`.
 - Maintains server documentation:
   - Keeps `server/QL-MCP-SERVER.md` synchronized with tool changes.
