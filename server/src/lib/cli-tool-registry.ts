@@ -8,6 +8,7 @@ import { CLIExecutionResult, executeCodeQLCommand, executeQLTCommand } from './c
 import { readDatabaseMetadata, resolveDatabasePath } from './database-resolver';
 import { logger } from '../utils/logger';
 import { getOrCreateLogDirectory } from './log-directory-manager';
+import { buildEnhancedToolSchema } from './param-normalization';
 import { resolveQueryPath } from './query-resolver';
 import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
@@ -91,7 +92,14 @@ export const defaultCLIResultProcessor = (
 };
 
 /**
- * Register a CLI tool with the MCP server
+ * Register a CLI tool with the MCP server.
+ *
+ * The raw `inputSchema` shape is wrapped by {@link buildEnhancedToolSchema}
+ * so that:
+ *  - camelCase / snake_case variants of kebab-case keys are silently
+ *    normalised (e.g. `sourceRoot` → `source-root`);
+ *  - truly unknown properties are rejected with a helpful error that names
+ *    the unrecognized key and, where possible, suggests the correct name.
  */
 export function registerCLITool(server: McpServer, definition: CLIToolDefinition): void {
   const {
@@ -103,10 +111,17 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
     resultProcessor = defaultCLIResultProcessor
   } = definition;
 
+  // Build enhanced schema that normalises property-name variants and
+  // produces actionable error messages for truly unknown keys.
+  const enhancedSchema = buildEnhancedToolSchema(inputSchema);
+
   server.tool(
     name,
     description,
-    inputSchema,
+    // The enhanced schema is a pre-built ZodEffects (passthrough + transform).
+    // The MCP SDK's getZodSchemaObject() detects it as a Zod schema instance
+    // and passes it through without re-wrapping.
+    enhancedSchema as unknown as Record<string, z.ZodTypeAny>,
     async (params: Record<string, unknown>) => {
       // Track temporary directories for cleanup
       const tempDirsToCleanup: string[] = [];

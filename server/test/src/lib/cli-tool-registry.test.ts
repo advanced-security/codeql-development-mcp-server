@@ -204,10 +204,11 @@ describe('registerCLITool', () => {
 
     registerCLITool(mockServer, definition);
 
+    // The enhanced schema wraps the raw shape in a ZodEffects (passthrough + transform)
     expect(mockServer.tool).toHaveBeenCalledWith(
       'test_codeql_tool',
       'Test CodeQL tool',
-      definition.inputSchema,
+      expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
       expect.any(Function)
     );
   });
@@ -226,10 +227,11 @@ describe('registerCLITool', () => {
 
     registerCLITool(mockServer, definition);
 
+    // The enhanced schema wraps the raw shape in a ZodEffects (passthrough + transform)
     expect(mockServer.tool).toHaveBeenCalledWith(
       'test_qlt_tool',
       'Test QLT tool',
-      definition.inputSchema,
+      expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
       expect.any(Function)
     );
   });
