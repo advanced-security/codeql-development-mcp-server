@@ -1,5 +1,6 @@
 BINARY_NAME := gh-ql-mcp-client
 MODULE := github.com/advanced-security/codeql-development-mcp-server/client
+VERSION := $(shell grep 'Version = ' cmd/root.go | head -1 | sed 's/.*"\(.*\)"/\1/')
 
 # Disable CGO to avoid Xcode/C compiler dependency
 export CGO_ENABLED = 0
@@ -13,59 +14,35 @@ all: lint test build
 
 ## build: Build the binary for the current platform
 build:
-	@if [ -f go.mod ]; then \
-		go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) .; \
-	else \
-		echo "Go source not yet available — skipping build"; \
-	fi
+	go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) .
 
 ## test: Run unit tests and integration tests
 test: test-unit test-integration
 
 ## test-unit: Run Go unit tests only
 test-unit:
-	@if [ -f go.mod ]; then \
-		go test ./...; \
-	else \
-		echo "Go source not yet available — skipping unit tests"; \
-	fi
+	go test ./...
 
 ## test-integration: Build binary and run integration tests via run-integration-tests.sh
 test-integration: build
-	@if [ -f go.mod ]; then \
-		ENABLE_ANNOTATION_TOOLS=true scripts/run-integration-tests.sh --no-install-packs; \
-	else \
-		echo "Go source not yet available — skipping integration tests"; \
-	fi
+	ENABLE_ANNOTATION_TOOLS=true scripts/run-integration-tests.sh --no-install-packs
 
 ## test-verbose: Run all unit tests with verbose output
 test-verbose:
-	@if [ -f go.mod ]; then \
-		go test -v ./...; \
-	else \
-		echo "Go source not yet available — skipping verbose tests"; \
-	fi
+	go test -v ./...
 
 ## test-coverage: Run tests with coverage
 test-coverage:
-	@if [ -f go.mod ]; then \
-		go test -coverprofile=coverage.out ./...; \
-		go tool cover -html=coverage.out -o coverage.html; \
-	else \
-		echo "Go source not yet available — skipping coverage"; \
-	fi
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
 
 ## lint: Run linters
 lint:
-	@if [ -f go.mod ]; then \
-		if command -v golangci-lint > /dev/null 2>&1; then \
-			golangci-lint run ./...; \
-		else \
-			echo "golangci-lint not found, running go vet only"; \
-			go vet ./...; \
-		fi; \
+	@if command -v golangci-lint > /dev/null 2>&1; then \
+		golangci-lint run ./...; \
 	else \
-		echo "Go source not yet available — skipping lint"; \
+		echo "golangci-lint not found, running go vet only"; \
+		go vet ./...; \
 	fi
 
 ## clean: Remove build artifacts
@@ -74,31 +51,19 @@ clean:
 
 ## install: Install the binary to GOPATH/bin
 install:
-	@if [ -f go.mod ]; then \
-		go install -ldflags "$(LDFLAGS)" .; \
-	else \
-		echo "Go source not yet available — skipping install"; \
-	fi
+	go install -ldflags "$(LDFLAGS)" .
 
 ## build-all: Cross-compile for all supported platforms
 build-all:
-	@if [ -f go.mod ]; then \
-		GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-darwin-amd64 .; \
-		GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-darwin-arm64 .; \
-		GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-linux-amd64 .; \
-		GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-linux-arm64 .; \
-		GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-windows-amd64.exe .; \
-	else \
-		echo "Go source not yet available — skipping cross-compile"; \
-	fi
+	GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-darwin-amd64 .
+	GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-darwin-arm64 .
+	GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-linux-amd64 .
+	GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-linux-arm64 .
+	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME)-windows-amd64.exe .
 
 ## tidy: Tidy go.mod
 tidy:
-	@if [ -f go.mod ]; then \
-		go mod tidy; \
-	else \
-		echo "Go source not yet available — skipping tidy"; \
-	fi
+	go mod tidy
 
 ## help: Show this help
 help:
