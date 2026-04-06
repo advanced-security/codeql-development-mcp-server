@@ -36,6 +36,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     env:
+      ENABLE_ANNOTATION_TOOLS: 'true'
       HTTP_HOST: 'localhost'
       HTTP_PORT: '3000'
       MCP_MODE: ${{ matrix.mcp-mode }}
@@ -52,6 +53,12 @@ jobs:
           cache: 'npm'
           node-version-file: '.node-version'
 
+      - name: MCP Integration Tests - Setup Go environment
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: 'client/go.mod'
+          cache-dependency-path: 'client/go.sum'
+
       - name: MCP Integration Tests - Install OS dependencies (Ubuntu)
         if: runner.os == 'Linux'
         run: sudo apt-get install -y jq
@@ -60,8 +67,8 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install jq -y
 
-      - name: MCP Integration Tests - Install node dependencies for client and server workspaces
-        run: npm ci --workspace=client && npm ci --workspace=server
+      - name: MCP Integration Tests - Install node dependencies for server workspace
+        run: npm ci --workspace=server
 
       - name: MCP Integration Tests - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment
@@ -109,7 +116,7 @@ jobs:
       ## have a dedicated workflow (query-unit-tests.yml).
       - name: MCP Integration Tests - Run integration tests
         shell: bash
-        run: npm run test:integration --workspace=client
+        run: make -C client test-integration
 
       - name: MCP Integration Tests - Stop the background MCP server process
         if: always() && matrix.mcp-mode == 'http'
