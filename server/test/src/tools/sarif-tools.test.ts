@@ -70,6 +70,25 @@ function createTestSarif() {
   };
 }
 
+/** SARIF with a defined rule but zero results — validates resultCount: 0 */
+function createZeroResultsSarif() {
+  return {
+    version: '2.1.0',
+    runs: [{
+      tool: {
+        driver: {
+          name: 'CodeQL',
+          version: '2.25.1',
+          rules: [
+            { id: 'js/unused-variable', shortDescription: { text: 'Unused variable' } },
+          ],
+        },
+      },
+      results: [],
+    }],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -231,23 +250,8 @@ describe('SARIF Tools', () => {
       });
 
       it('should return resultCount 0 for rules with no results', async () => {
-        const noResultsSarif = {
-          version: '2.1.0',
-          runs: [{
-            tool: {
-              driver: {
-                name: 'CodeQL',
-                version: '2.25.1',
-                rules: [
-                  { id: 'js/unused-variable', shortDescription: { text: 'Unused variable' } },
-                ],
-              },
-            },
-            results: [],
-          }],
-        };
         const noResultsPath = join(testStorageDir, 'no-results.sarif');
-        writeFileSync(noResultsPath, JSON.stringify(noResultsSarif));
+        writeFileSync(noResultsPath, JSON.stringify(createZeroResultsSarif()));
 
         const result = await handlers.sarif_list_rules({ sarifPath: noResultsPath });
         const parsed = JSON.parse(result.content[0].text);
