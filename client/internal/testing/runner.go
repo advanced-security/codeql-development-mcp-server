@@ -55,7 +55,7 @@ type Runner struct {
 
 // NewRunner creates a new integration test runner.
 func NewRunner(caller ToolCaller, opts RunnerOptions) *Runner {
-	tmpBase := filepath.Join(opts.RepoRoot, "server", ".tmp")
+	tmpBase := filepath.Join(opts.RepoRoot, ".tmp")
 	return &Runner{
 		caller:  caller,
 		options: opts,
@@ -198,8 +198,9 @@ func (r *Runner) runSingleTest(toolName, testCase, toolDir string) {
 	// monitoring-state.json parameters, and tool-specific defaults — in that order.
 	params, err := buildToolParams(r.options.RepoRoot, toolName, testCase, testDir)
 	if err != nil {
-		r.recordResult(toolName, testCase, false, fmt.Sprintf("skipped: %v", err), 0)
-		fmt.Printf("    skip %s (%v)\n", testCase, err)
+		elapsed := time.Since(start)
+		r.recordResult(toolName, testCase, false, fmt.Sprintf("parameter resolution error: %v", err), elapsed)
+		fmt.Printf("    FAIL %s (parameter resolution error: %v) [%.1fs]\n", testCase, err, elapsed.Seconds())
 		return
 	}
 
@@ -295,15 +296,34 @@ func resolvePathPlaceholders(params map[string]any, tmpBase string) map[string]a
 	}
 	result := make(map[string]any, len(params))
 	for k, v := range params {
-		if s, ok := v.(string); ok && strings.Contains(s, "{{tmpdir}}") {
-			result[k] = strings.ReplaceAll(s, "{{tmpdir}}", tmpBase)
-		} else {
-			result[k] = v
-		}
+		result[k] = resolvePathPlaceholderValue(v, tmpBase)
 	}
 	return result
 }
 
+func resolvePathPlaceholderValue(value any, tmpBase string) any {
+	switch v := value.(type) {
+	case string:
+		if strings.Contains(v, "{{tmpdir}}") {
+			return strings.ReplaceAll(v, "{{tmpdir}}", tmpBase)
+		}
+		return v
+	case map[string]any:
+		result := make(map[string]any, len(v))
+		for key, nestedValue := range v {
+			result[key] = resolvePathPlaceholderValue(nestedValue, tmpBase)
+		}
+		return result
+	case []any:
+		result := make([]any, len(v))
+		for i, nestedValue := range v {
+			result[i] = resolvePathPlaceholderValue(nestedValue, tmpBase)
+		}
+		return result
+	default:
+		return value
+	}
+}
 func toolPriority(name string) int {
 	switch name {
 	case "codeql_pack_install":
