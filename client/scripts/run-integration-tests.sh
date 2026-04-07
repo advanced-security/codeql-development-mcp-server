@@ -3,26 +3,26 @@
 # Run integration tests - orchestrates the complete test workflow
 # This script mimics the GitHub Actions workflow for local execution
 #
-# By default, this script runs integration tests in BOTH modes:
-#   1. Default mode (monitoring tools disabled) - tests the user experience
-#   2. Monitoring mode (monitoring tools enabled) - tests session_* tools
+# By default, this script runs integration tests in DEFAULT mode, which
+# includes all annotation, audit, cache, and SARIF tools (always enabled).
+#
+# Monitoring mode (session_* tools) is disabled by default as those tools
+# are deprecated. Set ENABLE_MONITORING_TOOLS=true to also run monitoring tests.
 #
 # Environment Variables:
-#   MCP_MODE               - MCP transport mode (default: stdio, also: http)
-#   HTTP_HOST              - Server host for HTTP mode (default: localhost)
-#   HTTP_PORT              - Server port for HTTP mode (default: 3000)
-#   TIMEOUT_SECONDS        - Request timeout (default: 30)
-#   ENABLE_MONITORING_TOOLS - Force a specific mode instead of running both:
-#                            "true"  = only run with monitoring tools enabled
-#                            "false" = only run with monitoring tools disabled
-#                            unset   = run BOTH modes (default)
+#   MCP_MODE                - MCP transport mode (default: stdio, also: http)
+#   HTTP_HOST               - Server host for HTTP mode (default: localhost)
+#   HTTP_PORT               - Server port for HTTP mode (default: 3000)
+#   TIMEOUT_SECONDS         - Request timeout (default: 30)
+#   ENABLE_MONITORING_TOOLS - Enable monitoring mode in addition to defaults:
+#                             "true"  = also run monitoring mode
+#                             unset   = skip monitoring mode (default)
 #
 # Usage:
-#   ./run-integration-tests.sh                    # Run in BOTH modes (recommended)
-#   ENABLE_MONITORING_TOOLS=false ./run-integration-tests.sh  # Only default mode
-#   ENABLE_MONITORING_TOOLS=true ./run-integration-tests.sh   # Only monitoring mode
-#   MCP_MODE=http ./run-integration-tests.sh      # Run using HTTP transport
-#   ./run-integration-tests.sh --tools session_end            # Filter to specific tools
+#   ./run-integration-tests.sh                              # Default mode (all tools)
+#   ENABLE_MONITORING_TOOLS=true ./run-integration-tests.sh # Default + monitoring
+#   MCP_MODE=http ./run-integration-tests.sh                # Run using HTTP transport
+#   ./run-integration-tests.sh --tools session_end          # Filter to specific tools
 
 set -e
 
@@ -37,35 +37,22 @@ export HTTP_PORT="${HTTP_PORT:-3000}"
 export TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-30}"
 export URL_SCHEME="${URL_SCHEME:-http}"
 
-# Determine which modes to run
-# If ENABLE_MONITORING_TOOLS is explicitly set, run only that mode
-# Otherwise, run both modes
+# Determine which modes to run.
+# Annotation/audit/cache/SARIF tools are always enabled by default.
+# Monitoring mode is disabled by default (deprecated).
+# Use ENABLE_MONITORING_TOOLS=true to also run monitoring mode.
 RUN_DEFAULT_MODE=true
-RUN_MONITORING_MODE=true
-RUN_ANNOTATION_MODE=true
+RUN_MONITORING_MODE=false
 
 if [ -n "${ENABLE_MONITORING_TOOLS+x}" ]; then
-    # Variable is explicitly set (even if empty)
     if [ "$ENABLE_MONITORING_TOOLS" = "true" ]; then
-        RUN_DEFAULT_MODE=false
         RUN_MONITORING_MODE=true
-        RUN_ANNOTATION_MODE=false
-        echo "🔧 Mode: Monitoring tools ONLY (ENABLE_MONITORING_TOOLS=true)"
+        echo "🔧 Mode: Default + monitoring (ENABLE_MONITORING_TOOLS=true)"
     else
-        RUN_DEFAULT_MODE=true
-        RUN_MONITORING_MODE=false
-        RUN_ANNOTATION_MODE=false
-        echo "🔧 Mode: Default mode ONLY (ENABLE_MONITORING_TOOLS=false)"
-    fi
-elif [ -n "${ENABLE_ANNOTATION_TOOLS+x}" ]; then
-    if [ "$ENABLE_ANNOTATION_TOOLS" = "true" ]; then
-        RUN_DEFAULT_MODE=false
-        RUN_MONITORING_MODE=false
-        RUN_ANNOTATION_MODE=true
-        echo "🔧 Mode: Annotation tools ONLY (ENABLE_ANNOTATION_TOOLS=true)"
+        echo "🔧 Mode: Default (monitoring explicitly disabled)"
     fi
 else
-    echo "🔧 Mode: Running ALL modes (default + monitoring + annotation)"
+    echo "🔧 Mode: Default (all tools except deprecated monitoring)"
 fi
 
 # Check if --no-install-packs was passed
@@ -88,6 +75,11 @@ echo "📦 Building CodeQL MCP server bundle..."
 cd "$SERVER_DIR"
 npm run bundle
 
+# Step 1b: Build the Go client binary
+echo "📦 Building Go client binary..."
+cd "$CLIENT_DIR"
+make build
+
 # Step 2: Install CodeQL packs (only once for both modes, skip if --no-install-packs)
 if [ "$SKIP_PACK_INSTALL" = true ]; then
     echo "📦 Skipping CodeQL pack installation (--no-install-packs)"
@@ -95,6 +87,10 @@ else
     echo "📦 Installing CodeQL pack dependencies..."
     "$SERVER_DIR/scripts/install-packs.sh"
 fi
+
+# Step 3: Extract test databases used by integration tests
+echo "📦 Extracting test databases..."
+"$SERVER_DIR/scripts/extract-test-databases.sh"
 
 cd "$CLIENT_DIR"
 
@@ -130,9 +126,15 @@ run_tests_in_mode() {
         echo "📡 Using stdio transport (client spawns server directly)"
     fi
 
-    # Run the integration tests (skip pack installation since we already did it)
+    # Run the integration tests.
+    # Only forward --no-install-packs when the user explicitly requested it,
+    # so the codeql_pack_install fixture is still exercised by default.
     echo "🧪 Running tests..."
-    node src/ql-mcp-client.js integration-tests --no-install-packs "$@"
+    local client_args=(integration-tests --mode "$MCP_MODE")
+    if [ "$SKIP_PACK_INSTALL" = true ]; then
+        client_args+=(--no-install-packs)
+    fi
+    "$CLIENT_DIR/gh-ql-mcp-client" "${client_args[@]}" "$@"
 
     if [ "$MCP_MODE" = "http" ]; then
         # Stop the server before next mode
@@ -160,13 +162,6 @@ fi
 
 if [ "$RUN_MONITORING_MODE" = true ]; then
     run_tests_in_mode "MONITORING MODE (session_* tools)" "true" "${EXTRA_ARGS[@]}"
-fi
-
-if [ "$RUN_ANNOTATION_MODE" = true ]; then
-    # Annotation mode enables annotation, audit, and cache tools
-    export ENABLE_ANNOTATION_TOOLS="true"
-    run_tests_in_mode "ANNOTATION MODE (annotation_*, audit_*, query_results_cache_* tools)" "false" "${EXTRA_ARGS[@]}"
-    unset ENABLE_ANNOTATION_TOOLS
 fi
 
 echo ""

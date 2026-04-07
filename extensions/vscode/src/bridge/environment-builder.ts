@@ -147,22 +147,15 @@ export class EnvironmentBuilder extends DisposableObject {
     queryDirs.push(...userQueryDirs);
     env.CODEQL_QUERY_RUN_RESULTS_DIRS = queryDirs.join(delimiter);
 
-    // Annotation, audit, and cache tools — enabled by default (Design 5).
-    // The setting controls ENABLE_ANNOTATION_TOOLS and defaults
-    // MONITORING_STORAGE_LOCATION to the scratch directory so tools work
-    // out-of-the-box without manual env var configuration.
+    // Annotation, audit, cache, and SARIF tools are enabled by default on
+    // the server. The MONITORING_STORAGE_LOCATION env var tells the server
+    // where to place its SQLite store; default to the scratch directory so
+    // tools work out-of-the-box without manual env var configuration.
     // Respect values inherited from the extension host process environment;
-    // only apply defaults when not already defined there. The additionalEnv
-    // block below still overrides everything for advanced users.
-    const enableAnnotations = config.get<boolean>('enableAnnotationTools', true);
-    if (typeof process.env.ENABLE_ANNOTATION_TOOLS === 'string') {
-      env.ENABLE_ANNOTATION_TOOLS = process.env.ENABLE_ANNOTATION_TOOLS;
-    } else {
-      env.ENABLE_ANNOTATION_TOOLS = enableAnnotations ? 'true' : 'false';
-    }
+    // the additionalEnv block below still overrides everything for advanced users.
     if (typeof process.env.MONITORING_STORAGE_LOCATION === 'string') {
       env.MONITORING_STORAGE_LOCATION = process.env.MONITORING_STORAGE_LOCATION;
-    } else if (enableAnnotations && env.CODEQL_MCP_SCRATCH_DIR) {
+    } else if (env.CODEQL_MCP_SCRATCH_DIR) {
       env.MONITORING_STORAGE_LOCATION = env.CODEQL_MCP_SCRATCH_DIR;
     }
 

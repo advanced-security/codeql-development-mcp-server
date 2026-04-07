@@ -2,7 +2,7 @@
  * SARIF Analysis Tools — LLM-facing tools for rule-level SARIF extraction,
  * markdown visualization with Mermaid dataflow diagrams, and alert overlap analysis.
  *
- * Opt-in via ENABLE_ANNOTATION_TOOLS=true (same flag as annotations/audit/cache).
+ * Enabled by default alongside annotation tools.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -24,15 +24,6 @@ import { logger } from '../utils/logger';
  * Register all SARIF analysis tools with the MCP server.
  */
 export function registerSarifTools(server: McpServer): void {
-  const config = sessionDataManager.getConfig();
-
-  if (!config.enableAnnotationTools) {
-    logger.info(
-      'SARIF tools are disabled (opt-in). Set ENABLE_ANNOTATION_TOOLS=true to enable sarif_* tools.',
-    );
-    return;
-  }
-
   registerSarifExtractRuleTool(server);
   registerSarifListRulesTool(server);
   registerSarifRuleToMarkdownTool(server);

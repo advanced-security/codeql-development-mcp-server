@@ -9,14 +9,14 @@ description: 'Instructions for working with client-side integration tests for th
 
 This file contains instructions for working with test files in the `client/integration-tests/` directory of the `codeql-development-mcp-client` repository.
 
-The purpose of the entire `client/**` implementation is to provide integration tests for the MCP server primitives, as implemented in `server/src/**/*.ts` files. The `client/integration-tests/**` directory contains a directory structur that reflects the endpoints of the MCP server primitives under test, where a given parent test directory should contain child/leaf test subdirectories for expected contents of some file(s) "before" versus "after" calling the MCP server primitive (e.g. MCP server tool) under test.
+The purpose of the entire `client/**` implementation is to provide integration tests for the MCP server primitives, as implemented in `server/src/**/*.ts` files, and to serve as a Go CLI (`gh-ql-mcp-client`) for Code Scanning alert lifecycle management. The `client/integration-tests/**` directory contains a directory structure that reflects the endpoints of the MCP server primitives under test, where a given parent test directory should contain child/leaf test subdirectories for expected contents of some file(s) "before" versus "after" calling the MCP server primitive (e.g. MCP server tool) under test.
 
 ## REQUIREMENTS
 
 - **ALWAYS run `npm run build-and-test` from the repo root directory and ensure it passes completely before committing any changes. This is MANDATORY and must be verified before every commit.**
-- **ALWAYS run `npm test` from the `client/` directory and ensure all integration tests pass before committing changes to integration tests.**
+- **ALWAYS run `make -C client test` from the repo root directory and ensure all Go unit tests and integration tests pass before committing changes to integration tests.**
 - ALWAYS fix lint errors by running `npm run lint:fix` from the repo root directory before committing changes.
-- ALWAYS define "before" and "after" files for `monitoring-state.json`, plus any other files used as integration test inputs (before) and outputs (after). If a file is used as an input but is not modified by the MCP server tool under test, then `ex_tool/ex_test/before/example_file.ex` should have identical contents to `ex_tool/ex_test/after/example_file.ex`.
+- ALWAYS define `test-config.json` or `before/monitoring-state.json` (with embedded `parameters`) for each test case to supply tool arguments to the Go test runner.
 - ALWAYS follow the structure for integration tests as described in the [client/integration-tests/README.md](../../client/integration-tests/README.md) file.
 - ALWAYS obey the `Requirements for Integration Tests` as described in the [client/integration-tests/README.md](../../client/integration-tests/README.md) file.
 

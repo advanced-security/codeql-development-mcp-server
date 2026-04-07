@@ -30,28 +30,7 @@ describe('Audit Tools', () => {
   });
 
   describe('registerAuditTools', () => {
-    describe('opt-in behavior', () => {
-      it('should not register audit tools when enableAnnotationTools is false', () => {
-        vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
-          storageLocation: testStorageDir,
-          autoTrackSessions: true,
-          retentionDays: 90,
-          includeCallParameters: true,
-          includeCallResults: true,
-          maxActiveSessionsPerQuery: 3,
-          scoringFrequency: 'per_call',
-          archiveCompletedSessions: true,
-          enableAnnotationTools: false,
-          enableRecommendations: true,
-          enableMonitoringTools: false,
-        });
-
-        registerAuditTools(mockServer);
-
-        expect(mockServer.tool).not.toHaveBeenCalled();
-      });
-
-      it('should register audit tools when enableAnnotationTools is true', () => {
+    it('should always register all 4 audit tools', () => {
         vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
           storageLocation: testStorageDir,
           autoTrackSessions: true,
@@ -76,7 +55,6 @@ describe('Audit Tools', () => {
         expect(toolNames).toContain('audit_list_findings');
         expect(toolNames).toContain('audit_store_findings');
         expect(mockServer.tool).toHaveBeenCalledTimes(4);
-      });
     });
 
     describe('schema validation', () => {

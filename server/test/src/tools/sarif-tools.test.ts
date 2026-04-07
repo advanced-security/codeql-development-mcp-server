@@ -117,26 +117,7 @@ describe('SARIF Tools', () => {
   });
 
   describe('registerSarifTools', () => {
-    it('should not register tools when enableAnnotationTools is false', () => {
-      vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
-        storageLocation: testStorageDir,
-        autoTrackSessions: true,
-        retentionDays: 90,
-        includeCallParameters: true,
-        includeCallResults: true,
-        maxActiveSessionsPerQuery: 3,
-        scoringFrequency: 'per_call',
-        archiveCompletedSessions: true,
-        enableAnnotationTools: false,
-        enableRecommendations: true,
-        enableMonitoringTools: false,
-      });
-
-      registerSarifTools(mockServer);
-      expect(mockServer.tool).not.toHaveBeenCalled();
-    });
-
-    it('should register 5 SARIF tools when enableAnnotationTools is true', () => {
+    it('should always register all 5 SARIF tools', () => {
       vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
         storageLocation: testStorageDir,
         autoTrackSessions: true,

@@ -90,6 +90,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - `PackInstaller` uses consistent "download" terminology for `codeql pack download` operations with detailed per-language logging. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
 - `McpProvider.fireDidChange` debounces rapid-fire notifications and clears pending timers on dispose/restart. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
 - File watchers use relative paths in log messages and no longer trigger MCP definition changes for content-only file events. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
+- The earlier `codeql-mcp.enableAnnotationTools` setting is no longer applicable and has been removed from the extension as annotation tools are now enabled by default. ([#223](https://github.com/advanced-security/codeql-development-mcp-server/pull/223))
 
 #### Infrastructure & CI/CD
 

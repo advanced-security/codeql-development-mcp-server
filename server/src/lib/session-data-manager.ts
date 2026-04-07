@@ -387,5 +387,5 @@ function parseBoolEnv(envVar: string | undefined, defaultValue: boolean): boolea
 export const sessionDataManager = new SessionDataManager({
   storageLocation: process.env.MONITORING_STORAGE_LOCATION || join(getProjectTmpBase(), '.ql-mcp-tracking'),
   enableMonitoringTools: parseBoolEnv(process.env.ENABLE_MONITORING_TOOLS, false),
-  enableAnnotationTools: parseBoolEnv(process.env.ENABLE_ANNOTATION_TOOLS, false),
+  enableAnnotationTools: parseBoolEnv(process.env.ENABLE_ANNOTATION_TOOLS, true),
 });
