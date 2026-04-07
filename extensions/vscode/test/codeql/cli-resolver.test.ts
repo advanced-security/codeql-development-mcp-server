@@ -152,6 +152,44 @@ describe('CliResolver', () => {
     process.env.CODEQL_PATH = originalEnv;
   });
 
+  it('should discard in-flight resolution when invalidateCache is called during resolve', async () => {
+    const originalEnv = process.env.CODEQL_PATH;
+    process.env.CODEQL_PATH = '/stale/codeql';
+
+    // Make access slow — resolve will be in-flight when we invalidate
+    let accessResolve: (() => void) | undefined;
+    vi.mocked(access).mockImplementation(() => {
+      return new Promise<void>(resolve => {
+        accessResolve = resolve;
+      });
+    });
+
+    vi.mocked(execFile).mockImplementation(
+      (_cmd: any, _args: any, callback: any) => {
+        callback(null, 'CodeQL CLI 2.19.0\n', '');
+        return {} as any;
+      },
+    );
+
+    // Start resolution (will block on access)
+    const resolvePromise = resolver.resolve();
+
+    // Invalidate while resolution is in-flight
+    resolver.invalidateCache();
+
+    // Let the in-flight access complete
+    accessResolve!();
+
+    // The stale result should be discarded
+    const result = await resolvePromise;
+    expect(result).toBeUndefined();
+
+    // After invalidation, cachedPath should still be null (not set by stale resolve)
+    expect(resolver.getCliVersion()).toBeUndefined();
+
+    process.env.CODEQL_PATH = originalEnv;
+  });
+
   it('should return undefined when no CLI is found', async () => {
     const originalEnv = process.env.CODEQL_PATH;
     delete process.env.CODEQL_PATH;

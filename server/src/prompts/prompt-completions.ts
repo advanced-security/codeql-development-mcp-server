@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { getDatabaseBaseDirs } from '../lib/discovery-config';
 import { logger } from '../utils/logger';
 import { getUserWorkspaceDir } from '../utils/package-paths';
-import { SUPPORTED_LANGUAGES } from './workflow-prompts';
+import { SUPPORTED_LANGUAGES } from './constants';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Completion callbacks

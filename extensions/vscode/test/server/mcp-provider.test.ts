@@ -326,4 +326,44 @@ describe('McpProvider', () => {
       expect(listener).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('dispose', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should clear pending debounce timer on dispose', () => {
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+      // Trigger a debounced fireDidChange so the timer is pending
+      provider.fireDidChange();
+
+      // Dispose the provider — should clear the pending timer
+      provider.dispose();
+
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      clearTimeoutSpy.mockRestore();
+    });
+
+    it('should not fire debounced event after dispose', () => {
+      const listener = vi.fn();
+      provider.onDidChangeMcpServerDefinitions(listener);
+
+      // Schedule a debounced fire
+      provider.fireDidChange();
+
+      // Dispose before the timer fires
+      provider.dispose();
+
+      // Advance time past the debounce delay
+      vi.advanceTimersByTime(2_000);
+
+      // The listener should NOT have been called
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
 });

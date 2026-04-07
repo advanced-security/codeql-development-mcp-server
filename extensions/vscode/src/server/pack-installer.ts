@@ -167,7 +167,7 @@ export class PackInstaller extends DisposableObject {
     if (downloadEnabled && actualCliVersion && actualCliVersion !== targetCliVersion) {
       this.logger.info(
         `CodeQL CLI version ${actualCliVersion} differs from VSIX target ${targetCliVersion}. ` +
-        'Attempting to install compatible tool query packs...',
+        'Attempting to download compatible tool query packs...',
       );
       const downloaded = await this.downloadPacksForCliVersion(
         codeqlPath, actualCliVersion, languages,

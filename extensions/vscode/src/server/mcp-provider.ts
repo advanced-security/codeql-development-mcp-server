@@ -49,6 +49,14 @@ export class McpProvider
     this.push(this._onDidChange);
   }
 
+  override dispose(): void {
+    if (this._debounceTimer !== undefined) {
+      globalThis.clearTimeout(this._debounceTimer);
+      this._debounceTimer = undefined;
+    }
+    super.dispose();
+  }
+
   /**
    * Soft notification: tell VS Code that definitions may have changed.
    *

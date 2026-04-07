@@ -10,24 +10,14 @@ import { z } from 'zod';
 import { access } from 'fs/promises';
 import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
+import { SUPPORTED_LANGUAGES } from './constants';
 import { addCompletions, resolveLanguageFromPack } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
 
-/** Supported CodeQL languages for tools queries */
-export const SUPPORTED_LANGUAGES = [
-  'actions',
-  'cpp',
-  'csharp',
-  'go',
-  'java',
-  'javascript',
-  'python',
-  'ruby',
-  'rust',
-  'swift'
-] as const;
+// Re-export for backward compatibility with existing consumers and tests.
+export { SUPPORTED_LANGUAGES } from './constants';
 
 // ────────────────────────────────────────────────────────────────────────────
 // File-path resolution for prompt parameters
@@ -761,7 +751,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
           }
         }
         if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
         }
 
         const derivedName =
@@ -1030,7 +1020,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
           }
         }
         if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
         }
 
         let resolvedDatabasePath = databasePath;
@@ -1094,7 +1084,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
           }
         }
         if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
         }
 
         const contextSection = `## Query to Document
@@ -1211,7 +1201,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
           }
         }
         if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
         }
 
         let resolvedWorkspaceUri = workspaceUri;

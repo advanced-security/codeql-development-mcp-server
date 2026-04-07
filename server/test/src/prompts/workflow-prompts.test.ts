@@ -1967,6 +1967,8 @@ describe('Workflow Prompts', () => {
       });
       const text = result.messages[0].content.text;
       expect(text).toContain('Language could not be auto-derived');
+      expect(text).toContain('codeql/<lang>-all');
+      expect(text).toContain('codeql/<lang>-queries');
     });
   });
 });
