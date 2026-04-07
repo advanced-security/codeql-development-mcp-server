@@ -247,3 +247,142 @@ describe('patchValidateToolInput', () => {
     expect(result).toEqual({ foo: 'bar' });
   });
 });
+
+// ─── E2E with InMemoryTransport ──────────────────────────────────────────────
+
+describe('patchValidateToolInput (E2E with InMemoryTransport)', () => {
+  it('should report all missing fields in one response via MCP protocol', async () => {
+    const { InMemoryTransport } = await import('@modelcontextprotocol/sdk/inMemory.js');
+    const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+
+    const server = new McpServer({ name: 'e2e-test', version: '1.0.0' });
+    patchValidateToolInput(server);
+
+    server.tool(
+      'audit_store_findings',
+      'Store findings',
+      {
+        owner: z.string().describe('Owner.'),
+        repo: z.string().describe('Repo.'),
+        sourceLocation: z.string().describe('Path.'),
+      },
+      async ({ owner, repo, sourceLocation }) => ({
+        content: [{ type: 'text' as const, text: `${owner}/${repo}:${sourceLocation}` }],
+      }),
+    );
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    try {
+      // Call with no arguments — should report all three missing fields at once
+      const result = await client.callTool({
+        name: 'audit_store_findings',
+        arguments: {},
+      });
+
+      // The SDK converts McpError into a tool error result
+      expect(result.isError).toBe(true);
+      const text = (result.content as Array<{ type: string; text: string }>)
+        .map((c) => c.text)
+        .join('');
+      expect(text).toContain("'owner'");
+      expect(text).toContain("'repo'");
+      expect(text).toContain("'sourceLocation'");
+      expect(text).toContain('must have required properties:');
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  it('should report single missing field (singular) via MCP protocol', async () => {
+    const { InMemoryTransport } = await import('@modelcontextprotocol/sdk/inMemory.js');
+    const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+
+    const server = new McpServer({ name: 'e2e-test', version: '1.0.0' });
+    patchValidateToolInput(server);
+
+    server.tool(
+      'annotation_create',
+      'Create annotation',
+      {
+        category: z.string().describe('Cat.'),
+        entityKey: z.string().describe('Key.'),
+      },
+      async ({ category, entityKey }) => ({
+        content: [{ type: 'text' as const, text: `${category}:${entityKey}` }],
+      }),
+    );
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    try {
+      // Supply only one of two required fields
+      const result = await client.callTool({
+        name: 'annotation_create',
+        arguments: { category: 'note' },
+      });
+
+      expect(result.isError).toBe(true);
+      const text = (result.content as Array<{ type: string; text: string }>)
+        .map((c) => c.text)
+        .join('');
+      expect(text).toContain("must have required property 'entityKey'");
+      // Singular — should NOT contain "properties:"
+      expect(text).not.toContain('properties:');
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  it('should succeed when all required fields are provided', async () => {
+    const { InMemoryTransport } = await import('@modelcontextprotocol/sdk/inMemory.js');
+    const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+
+    const server = new McpServer({ name: 'e2e-test', version: '1.0.0' });
+    patchValidateToolInput(server);
+
+    server.tool(
+      'audit_store_findings',
+      'Store findings',
+      {
+        owner: z.string().describe('Owner.'),
+        repo: z.string().describe('Repo.'),
+      },
+      async ({ owner, repo }) => ({
+        content: [{ type: 'text' as const, text: `${owner}/${repo}` }],
+      }),
+    );
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    try {
+      const result = await client.callTool({
+        name: 'audit_store_findings',
+        arguments: { owner: 'octocat', repo: 'hello' },
+      });
+
+      expect(result.isError).toBeFalsy();
+      const text = (result.content as Array<{ type: string; text: string }>)
+        .map((c) => c.text)
+        .join('');
+      expect(text).toBe('octocat/hello');
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+});
