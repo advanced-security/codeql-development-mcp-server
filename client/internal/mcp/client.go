@@ -40,7 +40,7 @@ const (
 	ConnectTimeout = 30 * time.Second
 
 	// CloseTimeoutErr is the error message returned when Close times out.
-	CloseTimeoutErr = "MCP client close timed out after 3s; server subprocess may still be running"
+	CloseTimeoutErr = "MCP client close timed out after 3s; attempted to kill server subprocess"
 )
 
 // Config holds the configuration for connecting to an MCP server.

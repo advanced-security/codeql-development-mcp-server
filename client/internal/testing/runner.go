@@ -225,9 +225,14 @@ func (r *Runner) runSingleTest(toolName, testCase, toolDir string) {
 	// Resolve {{tmpdir}} placeholders in all params
 	params = resolvePathPlaceholders(params, r.tmpBase)
 
-	// Clean up stale interpretedOutput from prior test runs so that
-	// directory comparisons only see output from this invocation.
-	cleanStaleOutput(toolName, params, ".")
+	// Redirect bare relative output paths (output, interpretedOutput, outputDir)
+	// to a per-test directory under tmpBase so that tool invocations do not
+	// create artifacts in the process working directory (repo root).
+	params = rewriteRelativeOutputPaths(params, r.tmpBase, toolName, testCase)
+
+	// Clean up stale output files from prior runs of THIS test so that
+	// comparisons only see output produced by this invocation.
+	cleanStaleOutput(toolName, params, r.tmpBase)
 
 	// Call the tool (using server tool name which may differ from fixture dir name)
 	content, isError, callErr := r.caller.CallToolRaw(serverToolName, params)
@@ -444,10 +449,39 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+// rewriteRelativeOutputPaths rewrites bare relative file paths for the
+// "output", "interpretedOutput", and "outputDir" parameters to point inside a
+// per-test subdirectory of tmpBase. This prevents tool invocations from
+// creating artifacts in the process working directory (the repo root).
+//
+// Paths that are already absolute — whether constructed by buildToolParams or
+// resolved from a {{tmpdir}} placeholder — are left unchanged.
+func rewriteRelativeOutputPaths(params map[string]any, tmpBase, toolName, testCase string) map[string]any {
+	outDir := filepath.Join(tmpBase, "test-output", toolName, testCase)
+	result := make(map[string]any, len(params))
+	for k, v := range params {
+		switch k {
+		case "output", "interpretedOutput", "outputDir":
+			if s, ok := v.(string); ok && s != "" && !filepath.IsAbs(s) {
+				if err := os.MkdirAll(outDir, 0o750); err != nil {
+					fmt.Fprintf(os.Stderr, "  warning: cannot create output dir %s: %v\n", outDir, err)
+				}
+				result[k] = filepath.Join(outDir, filepath.Base(s))
+				continue
+			}
+		}
+		result[k] = v
+	}
+	return result
+}
+
 // cleanStaleOutput removes stale interpretedOutput files or directories from
 // prior codeql_query_run test invocations. This prevents stale results from
-// affecting directory comparisons. Only relative paths without directory
-// traversals are cleaned (CWE-22 prevention).
+// affecting directory comparisons.
+//
+// baseDir is used as the root for resolving relative paths. The function only
+// removes paths that resolve to within baseDir (CWE-22 prevention). Absolute
+// paths that are already within baseDir are cleaned directly.
 func cleanStaleOutput(toolName string, params map[string]any, baseDir string) {
 	if toolName != "codeql_query_run" {
 		return
@@ -461,17 +495,31 @@ func cleanStaleOutput(toolName string, params map[string]any, baseDir string) {
 		return
 	}
 
-	normalized := filepath.Clean(outputPath)
+	// Resolve to an absolute path.
+	var fullPath string
+	if filepath.IsAbs(outputPath) {
+		fullPath = outputPath
+	} else {
+		normalized := filepath.Clean(outputPath)
+		// Reject bare directory traversals in relative paths.
+		if normalized == ".." || strings.HasPrefix(normalized, ".."+string(filepath.Separator)) {
+			fmt.Fprintf(os.Stderr, "  Skipping interpretedOutput cleanup: unsafe path %q\n", outputPath)
+			return
+		}
+		fullPath = filepath.Join(baseDir, normalized)
+	}
 
-	// Reject absolute paths and directory traversals (CWE-22).
-	if filepath.IsAbs(normalized) ||
-		strings.HasPrefix(normalized, ".."+string(filepath.Separator)) ||
-		normalized == ".." {
-		fmt.Fprintf(os.Stderr, "  Skipping interpretedOutput cleanup: unsafe path %q\n", outputPath)
+	// Only remove paths within baseDir (CWE-22 prevention).
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return
+	}
+	rel, err := filepath.Rel(absBase, fullPath)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		fmt.Fprintf(os.Stderr, "  Skipping interpretedOutput cleanup: path %q is outside base dir\n", outputPath)
 		return
 	}
 
-	fullPath := filepath.Join(baseDir, normalized)
 	os.RemoveAll(fullPath)
 }
 

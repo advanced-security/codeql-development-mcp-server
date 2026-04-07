@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -39,6 +40,18 @@ func (h *hangCloser) ListPrompts(_ context.Context, _ mcp.ListPromptsRequest) (*
 
 func (h *hangCloser) ListResources(_ context.Context, _ mcp.ListResourcesRequest) (*mcp.ListResourcesResult, error) {
 	return nil, nil
+}
+
+// TestMain handles the subprocess helper mode used by
+// TestClose_KillsSubprocessOnTimeout. When GO_TEST_HANG_SUBPROCESS is set,
+// the process simply blocks forever, simulating a stuck MCP server on all
+// platforms (no dependency on an external `sleep` binary).
+func TestMain(m *testing.M) {
+	if os.Getenv("GO_TEST_HANG_SUBPROCESS") == "1" {
+		// Block forever so the parent test can verify force-kill behaviour.
+		select {}
+	}
+	os.Exit(m.Run())
 }
 
 func TestTimeoutForTool_CodeQLTools(t *testing.T) {
@@ -113,7 +126,7 @@ func TestClose_TimeoutReturnsError(t *testing.T) {
 	if CloseTimeoutErr == "" {
 		t.Fatal("CloseTimeoutErr should not be empty")
 	}
-	if CloseTimeoutErr != "MCP client close timed out after 3s; server subprocess may still be running" {
+	if CloseTimeoutErr != "MCP client close timed out after 3s; attempted to kill server subprocess" {
 		t.Errorf("CloseTimeoutErr = %q, want specific timeout message", CloseTimeoutErr)
 	}
 }
@@ -121,10 +134,17 @@ func TestClose_TimeoutReturnsError(t *testing.T) {
 func TestClose_KillsSubprocessOnTimeout(t *testing.T) {
 	t.Parallel()
 
-	// Start a long-running subprocess to simulate a stuck server.
-	proc := exec.Command("sleep", "60")
+	// Re-exec the current test binary as a subprocess that blocks forever.
+	// This avoids a dependency on an external `sleep` binary (not available
+	// on Windows) while still exercising the real process-kill path.
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatalf("cannot determine test executable: %v", err)
+	}
+	proc := exec.Command(exe, "-test.run=^$") // run no tests; just reach TestMain
+	proc.Env = append(os.Environ(), "GO_TEST_HANG_SUBPROCESS=1")
 	if err := proc.Start(); err != nil {
-		t.Skipf("cannot start subprocess for test: %v", err)
+		t.Fatalf("cannot start subprocess for test: %v", err)
 	}
 
 	hang := &hangCloser{released: make(chan struct{})}
@@ -135,17 +155,17 @@ func TestClose_KillsSubprocessOnTimeout(t *testing.T) {
 	}
 
 	start := time.Now()
-	err := c.Close()
+	closeErr := c.Close()
 	elapsed := time.Since(start)
 
 	// Release the hanging closer goroutine (cleanup).
 	close(hang.released)
 
-	if err == nil {
+	if closeErr == nil {
 		t.Fatal("Close() should return a timeout error, got nil")
 	}
-	if !strings.Contains(err.Error(), "timed out") {
-		t.Errorf("Close() error = %q; want a message containing 'timed out'", err.Error())
+	if !strings.Contains(closeErr.Error(), "timed out") {
+		t.Errorf("Close() error = %q; want a message containing 'timed out'", closeErr.Error())
 	}
 
 	// Elapsed time should be roughly the 3-second timeout window.
@@ -162,10 +182,9 @@ func TestClose_KillsSubprocessOnTimeout(t *testing.T) {
 
 	select {
 	case waitErr := <-waitCh:
-		// Process exited (possibly as a zombie until Wait() is called).
 		// A killed process returns an error from Wait().
 		if waitErr == nil {
-			t.Error("subprocess exited with success; expected it to be killed (non-zero exit)")
+			t.Error("subprocess exited cleanly; expected it to be killed (non-zero exit)")
 		}
 	case <-time.After(2 * time.Second):
 		_ = proc.Process.Kill()

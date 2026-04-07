@@ -38,7 +38,7 @@ func init() {
 	f.StringVar(&integrationTestsFlags.tools, "tools", "", "Comma-separated list of tool names to test")
 	f.StringVar(&integrationTestsFlags.tests, "tests", "", "Comma-separated list of test case names to run")
 	f.BoolVar(&integrationTestsFlags.noInstall, "no-install-packs", false, "Skip CodeQL pack installation")
-	f.IntVar(&integrationTestsFlags.timeout, "timeout", 0, "Per-tool-call timeout in seconds (0 = use server defaults)")
+	f.IntVar(&integrationTestsFlags.timeout, "timeout", 0, "Per-tool-call timeout in seconds (0 = use client defaults)")
 }
 
 // mcpToolCaller adapts the MCP client to the ToolCaller interface.

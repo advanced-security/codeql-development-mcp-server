@@ -3,6 +3,7 @@ package testing
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -63,6 +64,75 @@ func TestResolvePathPlaceholders(t *testing.T) {
 	}
 	if result["number"] != 42 {
 		t.Errorf("number = %v, want %v", result["number"], 42)
+	}
+}
+
+func TestRewriteRelativeOutputPaths(t *testing.T) {
+	dir := t.TempDir()
+
+	tests := []struct {
+		name       string
+		params     map[string]any
+		wantAbsKey string
+		wantBase   string
+	}{
+		{
+			name:       "relative output redirected to tmpBase",
+			params:     map[string]any{"output": "query-results.bqrs"},
+			wantAbsKey: "output",
+			wantBase:   filepath.Join(dir, "test-output", "codeql_query_run", "my_test"),
+		},
+		{
+			name:       "relative interpretedOutput redirected to tmpBase",
+			params:     map[string]any{"interpretedOutput": "query-results.sarif"},
+			wantAbsKey: "interpretedOutput",
+			wantBase:   filepath.Join(dir, "test-output", "codeql_query_run", "my_test"),
+		},
+		{
+			name:       "absolute output left unchanged",
+			params:     map[string]any{"output": filepath.Join(dir, "after", "output.txt")},
+			wantAbsKey: "",
+		},
+		{
+			name: "non-output keys left unchanged",
+			params: map[string]any{
+				"query":    "relative/query.ql",
+				"database": "relative/db",
+			},
+			wantAbsKey: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := rewriteRelativeOutputPaths(tt.params, dir, "codeql_query_run", "my_test")
+
+			if tt.wantAbsKey == "" {
+				// Verify output-related keys are unchanged (or non-existent)
+				for k, orig := range tt.params {
+					if got, ok := result[k]; !ok || got != orig {
+						t.Errorf("key %q: got %v, want %v (should be unchanged)", k, got, orig)
+					}
+				}
+				return
+			}
+
+			// Verify the key was rewritten to an absolute path under the expected base
+			got, ok := result[tt.wantAbsKey]
+			if !ok {
+				t.Fatalf("key %q missing from result", tt.wantAbsKey)
+			}
+			gotStr, ok := got.(string)
+			if !ok {
+				t.Fatalf("key %q is not a string: %T", tt.wantAbsKey, got)
+			}
+			if !filepath.IsAbs(gotStr) {
+				t.Errorf("rewritten path %q is not absolute", gotStr)
+			}
+			if !strings.HasPrefix(gotStr, tt.wantBase) {
+				t.Errorf("rewritten path %q does not start with expected base %q", gotStr, tt.wantBase)
+			}
+		})
 	}
 }
 
@@ -408,19 +478,42 @@ func TestCleanStaleOutputRelativeDir(t *testing.T) {
 	}
 }
 
-func TestCleanStaleOutputRejectsAbsolutePath(t *testing.T) {
+func TestCleanStaleOutputAbsolutePathWithinBase(t *testing.T) {
+	// After rewriteRelativeOutputPaths, interpretedOutput is an absolute path
+	// within tmpBase. cleanStaleOutput should clean those paths.
 	dir := t.TempDir()
-	absFile := filepath.Join(dir, "safe-file")
-	os.WriteFile(absFile, []byte("keep"), 0o600)
+	staleFile := filepath.Join(dir, "test-output", "query-results.sarif")
+	os.MkdirAll(filepath.Dir(staleFile), 0o755)
+	os.WriteFile(staleFile, []byte("stale"), 0o600)
 
 	params := map[string]any{
-		"interpretedOutput": absFile, // absolute path
+		"interpretedOutput": staleFile, // absolute path inside dir
 	}
 
 	cleanStaleOutput("codeql_query_run", params, dir)
 
-	if !fileExists(absFile) {
-		t.Error("absolute path should NOT be removed")
+	if fileExists(staleFile) {
+		t.Error("absolute path within base dir should be removed")
+	}
+}
+
+func TestCleanStaleOutputRejectsAbsolutePathOutsideBase(t *testing.T) {
+	// Absolute paths that are OUTSIDE baseDir must not be removed.
+	dir := t.TempDir()
+	outsideFile := filepath.Join(dir, "outside-file")
+	os.WriteFile(outsideFile, []byte("keep"), 0o600)
+
+	innerBase := filepath.Join(dir, "inner")
+	os.MkdirAll(innerBase, 0o755)
+
+	params := map[string]any{
+		"interpretedOutput": outsideFile, // absolute path OUTSIDE innerBase
+	}
+
+	cleanStaleOutput("codeql_query_run", params, innerBase)
+
+	if !fileExists(outsideFile) {
+		t.Error("absolute path outside base dir should NOT be removed")
 	}
 }
 

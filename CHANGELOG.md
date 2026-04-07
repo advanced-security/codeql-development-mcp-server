@@ -79,7 +79,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - `McpProvider.requestRestart()` now invalidates the environment cache and bumps a `+rN` revision suffix so VS Code reliably restarts the MCP server after configuration changes. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
 - Cached the extension version in the provider constructor to avoid repeated synchronous reads of `package.json`. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
 - New `codeql-mcp.enableAnnotationTools` setting (default: `true`) auto-sets `ENABLE_ANNOTATION_TOOLS` and `MONITORING_STORAGE_LOCATION` environment variables; `additionalEnv` overrides for advanced users. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
-- Simplified annotation tool environment: the extension no longer explicitly sets `ENABLE_ANNOTATION_TOOLS` since the server now defaults to `true`. ([#223](https://github.com/advanced-security/codeql-development-mcp-server/pull/223))
+- The earlier `codeql-mcp.enableAnnotationTools` setting is no longer applicable and has been removed from the extension as annotation tools are now enabled by default. ([#223](https://github.com/advanced-security/codeql-development-mcp-server/pull/223))
 
 #### Infrastructure & CI/CD
 
