@@ -435,4 +435,29 @@ describe('addCompletions', () => {
     const results = await completer('ja');
     expect(results).toEqual(['java', 'javascript']);
   });
+
+  it('should handle ZodEnum language fields (raw schema without toPermissiveShape)', () => {
+    // find_overlapping_queries and check_for_duplicated_code pass raw
+    // schema.shape (with ZodEnum) rather than toPermissiveShape() output.
+    const shape = {
+      language: z.enum(['go', 'java', 'python']).describe('Language'),
+      queryPath: z.string().describe('Path'),
+    };
+
+    const enhanced = addCompletions(shape);
+    expect(isCompletable(enhanced.language)).toBe(true);
+    expect(isCompletable(enhanced.queryPath)).toBe(true);
+    // Enum should be widened to string for the completable wrapper
+    expect(enhanced.language instanceof z.ZodString).toBe(true);
+  });
+
+  it('should handle optional ZodEnum fields', () => {
+    const shape = {
+      language: z.enum(['go', 'java']).optional().describe('Optional lang'),
+    };
+
+    const enhanced = addCompletions(shape);
+    expect(isCompletable(enhanced.language)).toBe(true);
+    expect(enhanced.language instanceof z.ZodOptional).toBe(true);
+  });
 });

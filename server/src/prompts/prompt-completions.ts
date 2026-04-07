@@ -254,18 +254,28 @@ const PARAMETER_COMPLETIONS: Record<string, CompleteCallback> = {
 };
 
 /**
- * Clone a Zod string (or optional-string) type, preserving its description.
+ * Clone a Zod string-like (or optional-string-like) type, preserving its
+ * description, so that `completable()` does not mutate shared schemas.
  *
- * This is necessary because `completable()` mutates the schema in-place,
- * and we must not mutate the canonical schema constants (e.g.
- * `explainCodeqlQuerySchema.shape.queryPath`).
+ * Handles `z.string()`, `z.enum()`, and their optional wrappers — the
+ * types used by the prompt parameters that have registered completers.
+ * Enum types are widened to `z.string()` (matching `toPermissiveShape`
+ * behaviour) since completable callbacks always return `string[]`.
  */
 function cloneStringType(zodType: z.ZodTypeAny): z.ZodTypeAny {
   const desc = zodType.description;
 
   if (zodType instanceof z.ZodOptional) {
+    const inner = zodType.unwrap();
+    if (!(inner instanceof z.ZodString) && !(inner instanceof z.ZodEnum)) {
+      throw new Error(`cloneStringType: expected ZodString or ZodEnum inside ZodOptional, got ${inner.constructor.name}`);
+    }
     const fresh = z.string().optional();
     return desc ? fresh.describe(desc) : fresh;
+  }
+
+  if (!(zodType instanceof z.ZodString) && !(zodType instanceof z.ZodEnum)) {
+    throw new Error(`cloneStringType: expected ZodString or ZodEnum, got ${zodType.constructor.name}`);
   }
 
   const fresh = z.string();
