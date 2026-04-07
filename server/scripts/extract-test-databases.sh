@@ -11,9 +11,10 @@ Usage: $0 [OPTIONS]
 
 Extract test databases for CodeQL queries associated with the MCP server.
 
-By default, only databases needed by client integration tests are extracted
-(currently: javascript/examples only). Query unit tests (codeql test run)
-auto-extract their own databases, so full extraction is rarely needed.
+By default, only a minimal set of databases for client integration tests is
+pre-extracted (currently: javascript/examples only). This is not an
+exhaustive list of databases the integration test suite may use; additional
+databases may be extracted on demand, so full extraction is rarely needed.
 
 OPTIONS:
     --scope <scope>    Extract databases for a specific use case
