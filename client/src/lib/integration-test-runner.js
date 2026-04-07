@@ -739,10 +739,11 @@ export class IntegrationTestRunner {
             if (!fs.existsSync(absoluteDbPath) && dbPath.endsWith(".testproj")) {
               // For paths like "test/ExpressSqlInjection/ExpressSqlInjection.testproj",
               // the test source directory is "test/ExpressSqlInjection"
-              const parts = dbPath.split(path.sep);
+              // Always split on "/" because fixture paths use forward slashes regardless of OS.
+              const parts = dbPath.split("/");
               const lastPart = parts[parts.length - 1];
               const testName = lastPart.replace(".testproj", "");
-              const parentDir = parts.slice(0, -1).join(path.sep);
+              const parentDir = parts.slice(0, -1).join("/");
 
               // Check if the parent directory name matches the test name
               const parentDirName = parts[parts.length - 2];
@@ -784,6 +785,28 @@ export class IntegrationTestRunner {
 
       // Call the tool with appropriate parameters (timeout is handled by this.callTool)
       this.logger.log(`Calling tool ${toolName}`);
+
+      // Clean up stale interpretedOutput from prior test runs so that
+      // directory comparisons only see output from this invocation.
+      if (toolName === "codeql_query_run" && params.interpretedOutput) {
+        const outputPath = String(params.interpretedOutput);
+        const normalizedOutput = path.normalize(outputPath);
+        // Safety: reject absolute paths and directory traversals to prevent
+        // accidental deletion of files outside the working directory (CWE-22).
+        if (
+          path.isAbsolute(normalizedOutput) ||
+          normalizedOutput.startsWith("..") ||
+          normalizedOutput.includes(`${path.sep}..`)
+        ) {
+          this.logger.log(`  Skipping interpretedOutput cleanup: unsafe path "${outputPath}"`);
+        } else {
+          try {
+            fs.rmSync(outputPath, { recursive: true, force: true });
+          } catch {
+            // Ignore — path may not exist yet
+          }
+        }
+      }
 
       const result = await this.callTool(toolName, params);
 
