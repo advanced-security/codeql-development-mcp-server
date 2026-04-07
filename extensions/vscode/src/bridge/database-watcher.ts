@@ -61,7 +61,7 @@ export class DatabaseWatcher extends DisposableObject {
     const dbRoot = ymlPath.replace(/\/codeql-database\.yml$/, '');
     if (!this.knownDatabases.has(dbRoot)) {
       this.knownDatabases.add(dbRoot);
-      this.logger.info(`Database discovered: ${dbRoot}`);
+      this.logger.info(`Database discovered: ${vscode.workspace.asRelativePath(dbRoot)}`);
       this._onDidChange.fire();
     }
   }
@@ -69,7 +69,7 @@ export class DatabaseWatcher extends DisposableObject {
   private handleDatabaseRemoved(ymlPath: string): void {
     const dbRoot = ymlPath.replace(/\/codeql-database\.yml$/, '');
     if (this.knownDatabases.delete(dbRoot)) {
-      this.logger.info(`Database removed: ${dbRoot}`);
+      this.logger.info(`Database removed: ${vscode.workspace.asRelativePath(dbRoot)}`);
       this._onDidChange.fire();
     }
   }

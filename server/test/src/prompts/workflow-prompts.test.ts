@@ -563,7 +563,7 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should accept missing language (auto-derivable from pack metadata)', () => {
+    it('should accept missing language (optional field)', () => {
       const result = explainCodeqlQuerySchema.safeParse({
         queryPath: '/q.ql',
       });
@@ -633,7 +633,7 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should accept missing language (auto-derivable from pack metadata)', () => {
+    it('should accept missing language (optional field)', () => {
       const result = documentCodeqlQuerySchema.safeParse({ queryPath: '/q.ql' });
       expect(result.success).toBe(true);
     });
@@ -698,7 +698,7 @@ describe('Workflow Prompts', () => {
       }
     });
 
-    it('should accept missing language (auto-derivable from pack metadata)', () => {
+    it('should accept missing language (optional field)', () => {
       const result = qlLspIterativeDevelopmentSchema.safeParse({ queryPath: '/q.ql' });
       expect(result.success).toBe(true);
     });

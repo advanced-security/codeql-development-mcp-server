@@ -456,23 +456,23 @@ describe('PackInstaller', () => {
       );
     });
 
-    it('should use install terminology (not download) in pack download logs', async () => {
+    it('should use download terminology in pack download logs', async () => {
       cliResolver.getCliVersion.mockReturnValue('2.24.1');
       serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
 
       await installer.installAll({ languages: ['javascript'] });
 
-      // Should say "Installing" and "Installed", not "Downloading" / "Downloaded"
+      // Should say "Downloading" and "Downloaded", not "Installing" / "Installed"
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Installing advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
+        expect.stringContaining('Downloading advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
       );
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Installed advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
+        expect.stringContaining('Downloaded advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
       );
-      // Should NOT use "Downloading" or "Downloaded" for individual packs
+      // Should NOT use "Installing" or "Installed" for individual packs
       for (const call of logger.info.mock.calls) {
-        expect(String(call[0])).not.toMatch(/^Downloading advanced-security/);
-        expect(String(call[0])).not.toMatch(/^Downloaded advanced-security/);
+        expect(String(call[0])).not.toMatch(/^Installing advanced-security/);
+        expect(String(call[0])).not.toMatch(/^Installed advanced-security/);
       }
     });
 

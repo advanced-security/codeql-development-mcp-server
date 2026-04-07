@@ -176,7 +176,7 @@ export class PackInstaller extends DisposableObject {
         return;
       }
       this.logger.info(
-        'Pack install did not succeed for all languages — falling back to bundled pack install.',
+        'Pack download did not succeed for all languages — falling back to bundled pack install.',
       );
     } else if (actualCliVersion && actualCliVersion === targetCliVersion) {
       this.logger.info(
@@ -210,7 +210,7 @@ export class PackInstaller extends DisposableObject {
     }
 
     this.logger.info(
-      `Installing ql-mcp tool query packs v${packVersion} for CodeQL CLI ${cliVersion}...`,
+      `Downloading ql-mcp tool query packs v${packVersion} for CodeQL CLI ${cliVersion}...`,
     );
 
     let allSucceeded = true;
@@ -218,20 +218,20 @@ export class PackInstaller extends DisposableObject {
     for (const lang of languages) {
       const packRef =
         `${PackInstaller.PACK_SCOPE}/ql-mcp-${lang}-tools-src@${packVersion}`;
-      this.logger.info(`Installing ${packRef}...`);
+      this.logger.info(`Downloading ${packRef}...`);
       try {
         await this.runCodeqlPackDownload(codeqlPath, packRef);
-        this.logger.info(`Installed ${packRef}.`);
+        this.logger.info(`Downloaded ${packRef}.`);
         successCount++;
       } catch (err) {
         this.logger.error(
-          `Failed to install ${packRef}: ${err instanceof Error ? err.message : String(err)}`,
+          `Failed to download ${packRef}: ${err instanceof Error ? err.message : String(err)}`,
         );
         allSucceeded = false;
       }
     }
     this.logger.info(
-      `Pack install complete: ${successCount}/${languages.length} languages succeeded.`,
+      `Pack download complete: ${successCount}/${languages.length} languages succeeded.`,
     );
     return allSucceeded;
   }
