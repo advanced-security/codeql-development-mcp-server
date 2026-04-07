@@ -434,4 +434,121 @@ describe('CliResolver', () => {
       expect(result).toBe(expectedPath);
     });
   });
+
+  describe('PATH resolution version detection', () => {
+    let originalEnv: string | undefined;
+
+    beforeEach(() => {
+      originalEnv = process.env.CODEQL_PATH;
+      delete process.env.CODEQL_PATH;
+    });
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.CODEQL_PATH;
+      } else {
+        process.env.CODEQL_PATH = originalEnv;
+      }
+    });
+
+    it('should detect CLI version when resolved via PATH', async () => {
+      // `which codeql` succeeds, then `codeql --version` returns version
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, callback: any) => {
+          const cmd = String(_cmd);
+          const args = Array.isArray(_args) ? _args : [];
+          if (cmd === 'which' || cmd === 'where') {
+            callback(null, '/usr/local/bin/codeql\n', '');
+          } else if (args.includes('--version')) {
+            callback(null, 'CodeQL CLI 2.24.1\n', '');
+          }
+          return {} as any;
+        },
+      );
+
+      vi.mocked(access).mockResolvedValue(undefined as any);
+
+      const result = await resolver.resolve();
+      expect(result).toBe('/usr/local/bin/codeql');
+      expect(resolver.getCliVersion()).toBe('2.24.1');
+    });
+
+    it('should fall through when PATH binary fails validation', async () => {
+      // `which codeql` returns a path, but --version fails
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, callback: any) => {
+          const cmd = String(_cmd);
+          if (cmd === 'which' || cmd === 'where') {
+            callback(null, '/broken/codeql\n', '');
+          } else {
+            callback(new Error('not a valid binary'), '', '');
+          }
+          return {} as any;
+        },
+      );
+
+      // access fails for everything (including known locations)
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'));
+
+      const result = await resolver.resolve();
+      expect(result).toBeUndefined();
+      expect(resolver.getCliVersion()).toBeUndefined();
+    });
+  });
+
+  describe('concurrent resolution', () => {
+    let originalEnv: string | undefined;
+
+    beforeEach(() => {
+      originalEnv = process.env.CODEQL_PATH;
+      process.env.CODEQL_PATH = '/usr/local/bin/codeql';
+    });
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.CODEQL_PATH;
+      } else {
+        process.env.CODEQL_PATH = originalEnv;
+      }
+    });
+
+    it('should not duplicate resolution work for concurrent calls', async () => {
+      vi.mocked(access).mockResolvedValue(undefined as any);
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, callback: any) => {
+          callback(null, 'CodeQL CLI 2.25.1\n', '');
+          return {} as any;
+        },
+      );
+
+      // Fire two concurrent resolve() calls
+      const [result1, result2] = await Promise.all([
+        resolver.resolve(),
+        resolver.resolve(),
+      ]);
+
+      expect(result1).toBe('/usr/local/bin/codeql');
+      expect(result2).toBe('/usr/local/bin/codeql');
+      // Should only validate once, not twice
+      expect(access).toHaveBeenCalledTimes(1);
+    });
+
+    it('should allow re-resolution after invalidateCache', async () => {
+      vi.mocked(access).mockResolvedValue(undefined as any);
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, callback: any) => {
+          callback(null, 'CodeQL CLI 2.25.1\n', '');
+          return {} as any;
+        },
+      );
+
+      await resolver.resolve();
+      resolver.invalidateCache();
+
+      const result = await resolver.resolve();
+      expect(result).toBe('/usr/local/bin/codeql');
+      // access called twice: once before invalidation, once after
+      expect(access).toHaveBeenCalledTimes(2);
+    });
+  });
 });

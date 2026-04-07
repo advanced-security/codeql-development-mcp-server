@@ -32,6 +32,7 @@ const KNOWN_LOCATIONS = [
 export class CliResolver extends DisposableObject {
   private cachedPath: string | undefined | null = null; // null = not yet resolved
   private cachedVersion: string | undefined;
+  private resolvePromise: Promise<string | undefined> | null = null;
 
   constructor(
     private readonly logger: Logger,
@@ -57,6 +58,21 @@ export class CliResolver extends DisposableObject {
       return this.cachedPath;
     }
 
+    // Return the in-flight promise if a resolution is already in progress
+    if (this.resolvePromise) {
+      return this.resolvePromise;
+    }
+
+    this.resolvePromise = this.doResolve();
+    try {
+      return await this.resolvePromise;
+    } finally {
+      this.resolvePromise = null;
+    }
+  }
+
+  /** Internal resolution logic. Called at most once per cache cycle. */
+  private async doResolve(): Promise<string | undefined> {
     this.logger.debug('Resolving CodeQL CLI path...');
 
     // Strategy 1: CODEQL_PATH env var
@@ -74,9 +90,13 @@ export class CliResolver extends DisposableObject {
     // Strategy 2: which/command -v
     const whichPath = await this.resolveFromPath();
     if (whichPath) {
-      this.logger.info(`CodeQL CLI found on PATH: ${whichPath}`);
-      this.cachedPath = whichPath;
-      return whichPath;
+      const validated = await this.validateBinary(whichPath);
+      if (validated) {
+        this.logger.info(`CodeQL CLI found on PATH: ${whichPath}`);
+        this.cachedPath = whichPath;
+        return whichPath;
+      }
+      this.logger.warn(`Found 'codeql' on PATH at '${whichPath}' but it failed validation.`);
     }
 
     // Strategy 3: vscode-codeql managed distribution
@@ -106,6 +126,7 @@ export class CliResolver extends DisposableObject {
   invalidateCache(): void {
     this.cachedPath = null;
     this.cachedVersion = undefined;
+    this.resolvePromise = null;
   }
 
   /** Check if a path exists and responds to `--version`. */

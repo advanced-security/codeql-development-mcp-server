@@ -374,4 +374,131 @@ describe('PackInstaller', () => {
       expect(args).toContain('install');
     });
   });
+
+  describe('installation logging', () => {
+    beforeEach(() => {
+      vi.mocked(access).mockResolvedValue(undefined);
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          cb(null, '', '');
+          return {} as any;
+        },
+      );
+    });
+
+    it('should log detected CLI version and target version when versions match', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Detected CodeQL CLI version: 2.25.1'),
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('target: 2.25.1'),
+      );
+    });
+
+    it('should log when CLI version is undefined', async () => {
+      cliResolver.getCliVersion.mockReturnValue(undefined);
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('could not be determined'),
+      );
+    });
+
+    it('should log versions match strategy', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('match'),
+      );
+    });
+
+    it('should log pack name during bundled install', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('ql-mcp-javascript-tools-src'),
+      );
+    });
+
+    it('should log installation summary with success count', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      await installer.installAll({ languages: ['javascript', 'python'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('2/2'),
+      );
+    });
+
+    it('should log install summary with success count for pack downloads', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript', 'python'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('2/2'),
+      );
+    });
+
+    it('should use install terminology (not download) in pack download logs', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      // Should say "Installing" and "Installed", not "Downloading" / "Downloaded"
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Installing advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Installed advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
+      );
+      // Should NOT use "Downloading" or "Downloaded" for individual packs
+      for (const call of logger.info.mock.calls) {
+        expect(String(call[0])).not.toMatch(/^Downloading advanced-security/);
+        expect(String(call[0])).not.toMatch(/^Downloaded advanced-security/);
+      }
+    });
+
+    it('should log partial failure count in bundled install summary', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      let callCount = 0;
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          callCount++;
+          if (callCount === 1) {
+            cb(new Error('pack install failed'), '', 'error');
+          } else {
+            cb(null, '', '');
+          }
+          return {} as any;
+        },
+      );
+
+      await installer.installAll({ languages: ['javascript', 'python'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('1/2'),
+      );
+    });
+  });
 });

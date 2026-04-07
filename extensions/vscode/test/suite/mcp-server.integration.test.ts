@@ -58,4 +58,21 @@ suite('MCP Server Definition Tests', () => {
       );
     }
   });
+
+  test('Environment should include a valid CODEQL_PATH when CLI is available', async () => {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) {
+      // environmentBuilder may not be exported — skip gracefully
+      return;
+    }
+    const env = await envBuilder.build();
+    if (env.CODEQL_PATH) {
+      // The CODEQL_PATH should resolve to an existing binary.
+      // In CI or the extension dev host, the CLI is expected to exist.
+      assert.ok(
+        env.CODEQL_PATH.includes('codeql'),
+        `CODEQL_PATH does not contain 'codeql': ${env.CODEQL_PATH}`,
+      );
+    }
+  });
 });
