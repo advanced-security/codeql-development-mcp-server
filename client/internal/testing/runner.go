@@ -223,6 +223,10 @@ func (r *Runner) runSingleTest(toolName, testCase, toolDir string) {
 	// Resolve {{tmpdir}} placeholders in all params
 	params = resolvePathPlaceholders(params, r.tmpBase)
 
+	// Clean up stale interpretedOutput from prior test runs so that
+	// directory comparisons only see output from this invocation.
+	cleanStaleOutput(toolName, params, ".")
+
 	// Call the tool (using server tool name which may differ from fixture dir name)
 	content, isError, callErr := r.caller.CallToolRaw(serverToolName, params)
 	elapsed := time.Since(start)
@@ -436,6 +440,37 @@ func normalizeToolName(dirName string) string {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// cleanStaleOutput removes stale interpretedOutput files or directories from
+// prior codeql_query_run test invocations. This prevents stale results from
+// affecting directory comparisons. Only relative paths without directory
+// traversals are cleaned (CWE-22 prevention).
+func cleanStaleOutput(toolName string, params map[string]any, baseDir string) {
+	if toolName != "codeql_query_run" {
+		return
+	}
+	outputVal, ok := params["interpretedOutput"]
+	if !ok {
+		return
+	}
+	outputPath, ok := outputVal.(string)
+	if !ok || outputPath == "" {
+		return
+	}
+
+	normalized := filepath.Clean(outputPath)
+
+	// Reject absolute paths and directory traversals (CWE-22).
+	if filepath.IsAbs(normalized) ||
+		strings.HasPrefix(normalized, ".."+string(filepath.Separator)) ||
+		normalized == ".." {
+		fmt.Fprintf(os.Stderr, "  Skipping interpretedOutput cleanup: unsafe path %q\n", outputPath)
+		return
+	}
+
+	fullPath := filepath.Join(baseDir, normalized)
+	os.RemoveAll(fullPath)
 }
 
 func truncate(s string, max int) string {

@@ -365,3 +365,98 @@ func TestRunnerAssertionFailure(t *testing.T) {
 		t.Error("mock_tool/assertion_test result not found")
 	}
 }
+
+func TestCleanStaleOutputRelativeFile(t *testing.T) {
+	dir := t.TempDir()
+	staleFile := filepath.Join(dir, "query-results.sarif")
+	os.WriteFile(staleFile, []byte("stale"), 0o600)
+
+	params := map[string]any{
+		"interpretedOutput": "query-results.sarif",
+	}
+
+	cleanStaleOutput("codeql_query_run", params, dir)
+
+	if fileExists(staleFile) {
+		t.Error("expected stale file to be removed")
+	}
+}
+
+func TestCleanStaleOutputRelativeDir(t *testing.T) {
+	dir := t.TempDir()
+	staleDir := filepath.Join(dir, "query-results")
+	os.MkdirAll(filepath.Join(staleDir, "subdir"), 0o755)
+	os.WriteFile(filepath.Join(staleDir, "subdir", "file.txt"), []byte("stale"), 0o600)
+
+	params := map[string]any{
+		"interpretedOutput": "query-results",
+	}
+
+	cleanStaleOutput("codeql_query_run", params, dir)
+
+	if fileExists(staleDir) {
+		t.Error("expected stale directory to be removed")
+	}
+}
+
+func TestCleanStaleOutputRejectsAbsolutePath(t *testing.T) {
+	dir := t.TempDir()
+	absFile := filepath.Join(dir, "safe-file")
+	os.WriteFile(absFile, []byte("keep"), 0o600)
+
+	params := map[string]any{
+		"interpretedOutput": absFile, // absolute path
+	}
+
+	cleanStaleOutput("codeql_query_run", params, dir)
+
+	if !fileExists(absFile) {
+		t.Error("absolute path should NOT be removed")
+	}
+}
+
+func TestCleanStaleOutputRejectsTraversal(t *testing.T) {
+	dir := t.TempDir()
+	parentFile := filepath.Join(dir, "parent-file")
+	os.WriteFile(parentFile, []byte("keep"), 0o600)
+
+	childDir := filepath.Join(dir, "child")
+	os.MkdirAll(childDir, 0o755)
+
+	params := map[string]any{
+		"interpretedOutput": "../parent-file",
+	}
+
+	cleanStaleOutput("codeql_query_run", params, childDir)
+
+	if !fileExists(parentFile) {
+		t.Error("traversal path should NOT be removed")
+	}
+}
+
+func TestCleanStaleOutputSkipsNonQueryRun(t *testing.T) {
+	dir := t.TempDir()
+	staleFile := filepath.Join(dir, "output.txt")
+	os.WriteFile(staleFile, []byte("keep"), 0o600)
+
+	params := map[string]any{
+		"interpretedOutput": "output.txt",
+	}
+
+	cleanStaleOutput("codeql_test_run", params, dir)
+
+	if !fileExists(staleFile) {
+		t.Error("non-codeql_query_run tool should not trigger cleanup")
+	}
+}
+
+func TestCleanStaleOutputSkipsWhenNoParam(t *testing.T) {
+	dir := t.TempDir()
+	params := map[string]any{
+		"query":    "example.ql",
+		"database": "/some/db",
+	}
+
+	// Should not panic or error — just no-op
+	cleanStaleOutput("codeql_query_run", params, dir)
+}
