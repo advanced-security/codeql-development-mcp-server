@@ -34,6 +34,20 @@ const MAX_SCAN_DEPTH = 8;
 /** Time-to-live for cached scan results, in milliseconds (5 seconds). */
 const CACHE_TTL_MS = 5_000;
 
+/**
+ * Directories to skip during recursive workspace scans.
+ * Centralised so that all completion providers use the same list.
+ */
+const SKIP_DIRS = new Set([
+  '.git',
+  '.github',
+  '.tmp',
+  'build',
+  'coverage',
+  'dist',
+  'node_modules',
+]);
+
 /** Cached scan results keyed by a workspace+type identifier. */
 interface CacheEntry {
   results: string[];
@@ -105,15 +119,7 @@ async function findFilesByExtension(
 
     if (entry.isDirectory()) {
       // Skip common non-CodeQL directories
-      if (
-        entry.name === 'node_modules'
-        || entry.name === '.git'
-        || entry.name === '.github'
-        || entry.name === '.tmp'
-        || entry.name === 'build'
-        || entry.name === 'coverage'
-        || entry.name === 'dist'
-      ) {
+      if (SKIP_DIRS.has(entry.name)) {
         continue;
       }
       await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results);
@@ -284,15 +290,7 @@ async function findDatabaseDirs(
 
   for (const entry of entries) {
     if (results.length >= MAX_FILE_COMPLETIONS) break;
-    if (
-      entry.isDirectory()
-      && entry.name !== 'node_modules'
-      && entry.name !== '.git'
-      && entry.name !== '.github'
-      && entry.name !== '.tmp'
-      && entry.name !== 'dist'
-      && entry.name !== 'coverage'
-    ) {
+    if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
       await findDatabaseDirs(join(dir, entry.name), _baseDir, maxDepth - 1, results);
     }
   }
@@ -330,7 +328,7 @@ export async function completePackRoot(value: string): Promise<string[]> {
 
       for (const entry of entries) {
         if (results.length >= MAX_FILE_COMPLETIONS) break;
-        if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git' && entry.name !== '.tmp') {
+        if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
           await scan(join(dir, entry.name), depth - 1);
         }
       }
@@ -405,6 +403,54 @@ export async function resolveLanguageFromPack(
   }
 
   return undefined;
+}
+
+/**
+ * Result of resolving an effective language for a prompt handler.
+ *
+ * `language` is the resolved language (explicit or auto-derived), or
+ * `undefined` when neither was available.
+ * `warning` is set when the language could not be auto-derived — the
+ * caller should add it to the prompt's warnings list.
+ */
+export interface EffectiveLanguageResult {
+  language: string | undefined;
+  warning?: string;
+}
+
+/**
+ * Resolve the effective language for a prompt handler.
+ *
+ * If `explicitLanguage` is provided, it is used directly.
+ * Otherwise, the language is auto-derived from the nearest
+ * `codeql-pack.yml` via `resolveLanguageFromPack()`.
+ *
+ * @param promptName       - Name of the prompt (for debug logging).
+ * @param explicitLanguage - The language value supplied by the user (may be undefined).
+ * @param resolvedQueryPath - Absolute path to the resolved query file.
+ * @returns The effective language and an optional warning string.
+ */
+export async function getEffectiveLanguage(
+  promptName: string,
+  explicitLanguage: string | undefined,
+  resolvedQueryPath: string,
+): Promise<EffectiveLanguageResult> {
+  if (explicitLanguage) {
+    return { language: explicitLanguage };
+  }
+
+  if (resolvedQueryPath) {
+    const derived = await resolveLanguageFromPack(resolvedQueryPath);
+    if (derived) {
+      logger.debug(`${promptName}: derived language '${derived}' from pack metadata`);
+      return { language: derived };
+    }
+  }
+
+  return {
+    language: undefined,
+    warning: '⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.',
+  };
 }
 
 // ────────────────────────────────────────────────────────────────────────────

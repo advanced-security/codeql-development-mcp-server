@@ -24,6 +24,7 @@ import {
   completePackRoot,
   completeQueryPath,
   completeSarifPath,
+  getEffectiveLanguage,
   resolveLanguageFromPack,
 } from '../../../src/prompts/prompt-completions';
 import {
@@ -589,6 +590,9 @@ describe('completeDatabasePath — default search paths', () => {
     vi.stubEnv('CODEQL_MCP_WORKSPACE', tmpDir);
     vi.stubEnv('CODEQL_DATABASES_BASE_DIRS', '');
     vi.stubEnv('HOME', fakeHome);
+    vi.stubEnv('HOMEDRIVE', '');
+    vi.stubEnv('HOMEPATH', fakeHome);
+    vi.stubEnv('USERPROFILE', fakeHome);
   });
 
   afterEach(() => {
@@ -703,8 +707,60 @@ describe('resolveLanguageFromPack', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Issue 2: Prompt schema field ordering — queryPath should precede language
+// getEffectiveLanguage — helper for auto-deriving language in prompt handlers
 // ─────────────────────────────────────────────────────────────────────────────
+
+describe('getEffectiveLanguage', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = createTestTempDir('get-effective-lang');
+    vi.stubEnv('CODEQL_MCP_WORKSPACE', tmpDir);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(tmpDir);
+  });
+
+  it('should return explicit language when provided', async () => {
+    const result = await getEffectiveLanguage('test_prompt', 'python', '/some/path.ql');
+    expect(result.language).toBe('python');
+    expect(result.warning).toBeUndefined();
+  });
+
+  it('should auto-derive language from pack metadata when not explicit', async () => {
+    const packDir = join(tmpDir, 'my-pack');
+    mkdirSync(packDir, { recursive: true });
+    writeFileSync(
+      join(packDir, 'codeql-pack.yml'),
+      'name: test/pack\nversion: 1.0.0\ndependencies:\n  codeql/javascript-all: "*"\n',
+    );
+    writeFileSync(join(packDir, 'Query.ql'), '');
+
+    const result = await getEffectiveLanguage('test_prompt', undefined, join(packDir, 'Query.ql'));
+    expect(result.language).toBe('javascript');
+    expect(result.warning).toBeUndefined();
+  });
+
+  it('should return warning when language cannot be derived', async () => {
+    const result = await getEffectiveLanguage('test_prompt', undefined, join(tmpDir, 'Query.ql'));
+    expect(result.language).toBeUndefined();
+    expect(result.warning).toContain('Language could not be auto-derived');
+  });
+
+  it('should return warning when resolvedQueryPath is empty', async () => {
+    const result = await getEffectiveLanguage('test_prompt', undefined, '');
+    expect(result.language).toBeUndefined();
+    expect(result.warning).toContain('Language could not be auto-derived');
+  });
+
+  it('should mention both -all and -queries in the warning', async () => {
+    const result = await getEffectiveLanguage('test_prompt', undefined, join(tmpDir, 'Query.ql'));
+    expect(result.warning).toContain('codeql/<lang>-all');
+    expect(result.warning).toContain('codeql/<lang>-queries');
+  });
+});
 
 describe('prompt schema field ordering', () => {
   it('explainCodeqlQuerySchema should list queryPath before language', () => {

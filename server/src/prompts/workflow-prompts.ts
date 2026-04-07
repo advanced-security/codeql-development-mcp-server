@@ -11,7 +11,7 @@ import { access } from 'fs/promises';
 import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { SUPPORTED_LANGUAGES } from './constants';
-import { addCompletions, resolveLanguageFromPack } from './prompt-completions';
+import { addCompletions, getEffectiveLanguage } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
@@ -743,16 +743,9 @@ export function registerWorkflowPrompts(server: McpServer): void {
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         // Auto-derive language from pack metadata when not explicitly provided
-        let effectiveLanguage = language;
-        if (!effectiveLanguage && resolvedQueryPath) {
-          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
-          if (effectiveLanguage) {
-            logger.debug(`workshop_creation_workflow: derived language '${effectiveLanguage}' from pack metadata`);
-          }
-        }
-        if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
-        }
+        const langResult = await getEffectiveLanguage('workshop_creation_workflow', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
 
         const derivedName =
           workshopName ||
@@ -1012,16 +1005,9 @@ export function registerWorkflowPrompts(server: McpServer): void {
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         // Auto-derive language from pack metadata when not explicitly provided
-        let effectiveLanguage = language;
-        if (!effectiveLanguage && resolvedQueryPath) {
-          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
-          if (effectiveLanguage) {
-            logger.debug(`explain_codeql_query: derived language '${effectiveLanguage}' from pack metadata`);
-          }
-        }
-        if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
-        }
+        const langResult = await getEffectiveLanguage('explain_codeql_query', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
 
         let resolvedDatabasePath = databasePath;
         if (databasePath) {
@@ -1076,16 +1062,9 @@ export function registerWorkflowPrompts(server: McpServer): void {
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         // Auto-derive language from pack metadata when not explicitly provided
-        let effectiveLanguage = language;
-        if (!effectiveLanguage && resolvedQueryPath) {
-          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
-          if (effectiveLanguage) {
-            logger.debug(`document_codeql_query: derived language '${effectiveLanguage}' from pack metadata`);
-          }
-        }
-        if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
-        }
+        const langResult = await getEffectiveLanguage('document_codeql_query', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
 
         const contextSection = `## Query to Document
 
@@ -1193,16 +1172,9 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         if (qpResult.warning) warnings.push(qpResult.warning);
 
         // Auto-derive language from pack metadata when not explicitly provided
-        let effectiveLanguage = language;
-        if (!effectiveLanguage && resolvedQueryPath) {
-          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
-          if (effectiveLanguage) {
-            logger.debug(`ql_lsp_iterative_development: derived language '${effectiveLanguage}' from pack metadata`);
-          }
-        }
-        if (!effectiveLanguage) {
-          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with either a `codeql/<lang>-all` or `codeql/<lang>-queries` dependency.');
-        }
+        const langResult = await getEffectiveLanguage('ql_lsp_iterative_development', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
 
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
