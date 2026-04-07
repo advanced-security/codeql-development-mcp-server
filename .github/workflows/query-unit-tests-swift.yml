@@ -2,7 +2,7 @@ name: Query Unit Tests - Swift (macOS)
 
 on:
   pull_request:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.codeql-version'
       - '.github/actions/setup-codeql-environment/**'
@@ -12,7 +12,7 @@ on:
       - 'server/scripts/install-packs.sh'
       - 'server/scripts/run-query-unit-tests.sh'
   push:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.codeql-version'
       - '.github/actions/setup-codeql-environment/**'

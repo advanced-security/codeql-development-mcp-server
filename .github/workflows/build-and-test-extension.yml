@@ -2,7 +2,7 @@ name: Build and Test Extension - CodeQL Development MCP Server
 
 on:
   pull_request:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.github/workflows/build-and-test-extension.yml'
       - '.node-version'
@@ -11,7 +11,7 @@ on:
       - 'server/ql/*/tools/src/**'
       - 'server/src/**'
   push:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.github/workflows/build-and-test-extension.yml'
       - '.node-version'
