@@ -529,6 +529,7 @@ describe('addCompletions', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Issue 3: completeQueryPath should skip non-essential directories
+// Uses the shared scan-exclude list (DEFAULT_SCAN_EXCLUDE_DIRS).
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('completeQueryPath — directory filtering', () => {
@@ -537,11 +538,14 @@ describe('completeQueryPath — directory filtering', () => {
   beforeEach(() => {
     tmpDir = createTestTempDir('complete-query-filter');
     vi.stubEnv('CODEQL_MCP_WORKSPACE', tmpDir);
+    vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', '');
+    clearCompletionCache();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
     cleanupTestTempDir(tmpDir);
+    clearCompletionCache();
   });
 
   it('should skip .github directory', async () => {
@@ -569,6 +573,60 @@ describe('completeQueryPath — directory filtering', () => {
     const covDir = join(tmpDir, 'coverage');
     mkdirSync(covDir, { recursive: true });
     writeFileSync(join(covDir, 'report.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+
+  it('should skip .codeql directory (compiled pack caches)', async () => {
+    const codeqlDir = join(tmpDir, '.codeql');
+    mkdirSync(codeqlDir, { recursive: true });
+    writeFileSync(join(codeqlDir, 'cached.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+
+  it('should skip vendor directory', async () => {
+    const vendorDir = join(tmpDir, 'vendor');
+    mkdirSync(vendorDir, { recursive: true });
+    writeFileSync(join(vendorDir, 'vendored.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+
+  it('should skip .vscode directory', async () => {
+    const vsDir = join(tmpDir, '.vscode');
+    mkdirSync(vsDir, { recursive: true });
+    writeFileSync(join(vsDir, 'snippet.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+
+  it('should skip target directory (Rust/Java build output)', async () => {
+    const targetDir = join(tmpDir, 'target');
+    mkdirSync(targetDir, { recursive: true });
+    writeFileSync(join(targetDir, 'generated.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+
+  it('should skip __pycache__ directory', async () => {
+    const pyDir = join(tmpDir, '__pycache__');
+    mkdirSync(pyDir, { recursive: true });
+    writeFileSync(join(pyDir, 'stray.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+
+  it('should skip out directory', async () => {
+    const outDir = join(tmpDir, 'out');
+    mkdirSync(outDir, { recursive: true });
+    writeFileSync(join(outDir, 'output.ql'), '');
 
     const result = await completeQueryPath('');
     expect(result).toEqual([]);

@@ -17,6 +17,7 @@ import { dirname, join, relative, sep } from 'path';
 import { completable } from '@modelcontextprotocol/sdk/server/completable.js';
 import { z } from 'zod';
 import { getDatabaseBaseDirs } from '../lib/discovery-config';
+import { getScanExcludeDirs } from '../lib/scan-exclude';
 import { logger } from '../utils/logger';
 import { getUserWorkspaceDir } from '../utils/package-paths';
 import { SUPPORTED_LANGUAGES } from './constants';
@@ -36,17 +37,10 @@ const CACHE_TTL_MS = 5_000;
 
 /**
  * Directories to skip during recursive workspace scans.
- * Centralised so that all completion providers use the same list.
+ * Uses the shared, configurable exclusion list from scan-exclude.ts.
+ * Computed once per module load; the env var is read at that time.
  */
-const SKIP_DIRS = new Set([
-  '.git',
-  '.github',
-  '.tmp',
-  'build',
-  'coverage',
-  'dist',
-  'node_modules',
-]);
+const SKIP_DIRS: Set<string> = getScanExcludeDirs();
 
 /** Cached scan results keyed by a workspace+type identifier. */
 interface CacheEntry {

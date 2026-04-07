@@ -166,6 +166,14 @@ export class EnvironmentBuilder extends DisposableObject {
       env.MONITORING_STORAGE_LOCATION = env.CODEQL_MCP_SCRATCH_DIR;
     }
 
+    // Scan exclusion directories for prompt completions and QL code search.
+    // The server reads CODEQL_MCP_SCAN_EXCLUDE_DIRS to merge with built-in
+    // defaults. The setting accepts additions and `!`-prefixed negations.
+    const scanExcludeDirs = config.get<string[]>('scanExcludeDirs', []);
+    if (scanExcludeDirs.length > 0) {
+      env.CODEQL_MCP_SCAN_EXCLUDE_DIRS = scanExcludeDirs.join(',');
+    }
+
     // User-configured additional environment variables (overrides above defaults)
     const additionalEnv = config.get<Record<string, string>>('additionalEnv', {});
     for (const [key, value] of Object.entries(additionalEnv)) {
