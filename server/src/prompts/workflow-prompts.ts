@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { access } from 'fs/promises';
 import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
+import { addCompletions } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
@@ -651,7 +652,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'test_driven_development',
     'Test-driven development workflow for CodeQL queries using MCP tools',
-    toPermissiveShape(testDrivenDevelopmentSchema.shape),
+    addCompletions(toPermissiveShape(testDrivenDevelopmentSchema.shape)),
     createSafePromptHandler(
       'test_driven_development',
       testDrivenDevelopmentSchema,
@@ -681,7 +682,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'tools_query_workflow',
     'Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure',
-    toPermissiveShape(toolsQueryWorkflowSchema.shape),
+    addCompletions(toPermissiveShape(toolsQueryWorkflowSchema.shape)),
     createSafePromptHandler(
       'tools_query_workflow',
       toolsQueryWorkflowSchema,
@@ -730,7 +731,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'workshop_creation_workflow',
     'Guide for creating CodeQL query development workshops from production-grade queries',
-    toPermissiveShape(workshopCreationWorkflowSchema.shape),
+    addCompletions(toPermissiveShape(workshopCreationWorkflowSchema.shape)),
     createSafePromptHandler(
       'workshop_creation_workflow',
       workshopCreationWorkflowSchema,
@@ -781,7 +782,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'ql_tdd_basic',
     'Test-driven CodeQL query development checklist - write tests first, implement query, iterate until tests pass',
-    toPermissiveShape(qlTddBasicSchema.shape),
+    addCompletions(toPermissiveShape(qlTddBasicSchema.shape)),
     createSafePromptHandler(
       'ql_tdd_basic',
       qlTddBasicSchema,
@@ -814,7 +815,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'ql_tdd_advanced',
     'Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis',
-    toPermissiveShape(qlTddAdvancedSchema.shape),
+    addCompletions(toPermissiveShape(qlTddAdvancedSchema.shape)),
     createSafePromptHandler(
       'ql_tdd_advanced',
       qlTddAdvancedSchema,
@@ -863,7 +864,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'sarif_rank_false_positives',
     'Analyze SARIF results to identify likely false positives in CodeQL query results',
-    toPermissiveShape(sarifRankSchema.shape),
+    addCompletions(toPermissiveShape(sarifRankSchema.shape)),
     createSafePromptHandler(
       'sarif_rank_false_positives',
       sarifRankSchema,
@@ -906,7 +907,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'sarif_rank_true_positives',
     'Analyze SARIF results to identify likely true positives in CodeQL query results',
-    toPermissiveShape(sarifRankSchema.shape),
+    addCompletions(toPermissiveShape(sarifRankSchema.shape)),
     createSafePromptHandler(
       'sarif_rank_true_positives',
       sarifRankSchema,
@@ -949,7 +950,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'run_query_and_summarize_false_positives',
     'Help a user figure out where their query may need improvement to have a lower false positive rate',
-    toPermissiveShape(describeFalsePositivesSchema.shape),
+    addCompletions(toPermissiveShape(describeFalsePositivesSchema.shape)),
     createSafePromptHandler(
       'run_query_and_summarize_false_positives',
       describeFalsePositivesSchema,
@@ -987,7 +988,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'explain_codeql_query',
     'Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams',
-    toPermissiveShape(explainCodeqlQuerySchema.shape),
+    addCompletions(toPermissiveShape(explainCodeqlQuerySchema.shape)),
     createSafePromptHandler(
       'explain_codeql_query',
       explainCodeqlQuerySchema,
@@ -1039,7 +1040,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'document_codeql_query',
     'Create or update documentation for a CodeQL query - generates standardized markdown documentation as a sibling file to the query',
-    toPermissiveShape(documentCodeqlQuerySchema.shape),
+    addCompletions(toPermissiveShape(documentCodeqlQuerySchema.shape)),
     createSafePromptHandler(
       'document_codeql_query',
       documentCodeqlQuerySchema,
@@ -1082,7 +1083,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'check_for_duplicated_code',
     'Check a .ql or .qll file for classes, predicates, and modules that duplicate definitions already available in the standard CodeQL libraries or shared project .qll files',
-    checkForDuplicatedCodeSchema.shape,
+    addCompletions(checkForDuplicatedCodeSchema.shape),
     async ({ queryPath, workspaceUri }) => {
       const template = loadPromptTemplate('check-for-duplicated-code.prompt.md');
 
@@ -1111,7 +1112,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
   server.prompt(
     'find_overlapping_queries',
     'Discover existing .ql query files and .qll library files whose content may overlap with a new query design, identifying reusable classes, predicates, and modules',
-    findOverlappingQueriesSchema.shape,
+    addCompletions(findOverlappingQueriesSchema.shape),
     async ({ queryDescription, language, packRoot }) => {
       const template = loadPromptTemplate('find-overlapping-queries.prompt.md');
 
@@ -1144,7 +1145,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
   server.prompt(
     'ql_lsp_iterative_development',
     'Iterative CodeQL query development using LSP tools for completion, navigation, and validation',
-    toPermissiveShape(qlLspIterativeDevelopmentSchema.shape),
+    addCompletions(toPermissiveShape(qlLspIterativeDevelopmentSchema.shape)),
     createSafePromptHandler(
       'ql_lsp_iterative_development',
       qlLspIterativeDevelopmentSchema,
@@ -1196,7 +1197,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
   server.prompt(
     'compare_overlapping_alerts',
     'Compare CodeQL SARIF alerts across rules, files, runs, databases, or CodeQL versions. Detect overlap, redundancy, and behavioral deviations.',
-    toPermissiveShape(compareOverlappingAlertsSchema.shape),
+    addCompletions(toPermissiveShape(compareOverlappingAlertsSchema.shape)),
     createSafePromptHandler(
       'compare_overlapping_alerts',
       compareOverlappingAlertsSchema,
