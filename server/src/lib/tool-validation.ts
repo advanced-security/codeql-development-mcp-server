@@ -90,11 +90,12 @@ function resolveZodSchema(inputSchema: unknown): z.ZodTypeAny | undefined {
   return undefined;
 }
 
-// ─── Prototype patch ─────────────────────────────────────────────────────────
+// ─── Instance patch ──────────────────────────────────────────────────────────
 
 /**
- * Patch `McpServer.prototype.validateToolInput` so that **all** validation
- * errors are reported in a single response instead of only the first one.
+ * Patch `validateToolInput` on the given McpServer **instance** so that
+ * **all** validation errors are reported in a single response instead of
+ * only the first one.
  *
  * Call this once after constructing the McpServer and before connecting
  * any transport.
@@ -102,6 +103,9 @@ function resolveZodSchema(inputSchema: unknown): z.ZodTypeAny | undefined {
 export function patchValidateToolInput(server: McpServer): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const instance = server as any;
+
+  // Capture the original so we can delegate for unrecognized schema types
+  const originalValidateToolInput = instance.validateToolInput.bind(instance);
 
   instance.validateToolInput = async function (
     tool: { inputSchema?: unknown },
@@ -114,8 +118,9 @@ export function patchValidateToolInput(server: McpServer): void {
 
     const schema = resolveZodSchema(tool.inputSchema);
     if (!schema) {
-      // Unrecognized schema type — fall back to no validation (same as SDK)
-      return args;
+      // Unrecognized schema type — delegate to the original SDK validation
+      // so mis-registered tools don't accidentally bypass input validation.
+      return originalValidateToolInput(tool, args, toolName);
     }
 
     const parseResult = await schema.safeParseAsync(args);

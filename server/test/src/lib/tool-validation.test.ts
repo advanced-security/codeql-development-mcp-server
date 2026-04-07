@@ -102,17 +102,17 @@ describe('formatAllValidationErrors', () => {
 describe('patchValidateToolInput', () => {
   it('should override validateToolInput on the server instance', () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
-     
+
     const original = (server as any).validateToolInput;
     patchValidateToolInput(server);
-     
+
     expect((server as any).validateToolInput).not.toBe(original);
   });
 
   it('should return undefined when tool has no inputSchema', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     patchValidateToolInput(server);
-     
+
     const result = await (server as any).validateToolInput({}, {}, 'test_tool');
     expect(result).toBeUndefined();
   });
@@ -123,7 +123,7 @@ describe('patchValidateToolInput', () => {
     const tool = {
       inputSchema: { owner: z.string(), repo: z.string() },
     };
-     
+
     const result = await (server as any).validateToolInput(
       tool,
       { owner: 'octocat', repo: 'hello-world' },
@@ -138,7 +138,7 @@ describe('patchValidateToolInput', () => {
     const tool = {
       inputSchema: z.object({ owner: z.string(), repo: z.string() }),
     };
-     
+
     const result = await (server as any).validateToolInput(
       tool,
       { owner: 'octocat', repo: 'hello-world' },
@@ -158,7 +158,7 @@ describe('patchValidateToolInput', () => {
       },
     };
     try {
-       
+
       await (server as any).validateToolInput(tool, {}, 'audit_store_findings');
       expect.fail('Should have thrown');
     } catch (error: unknown) {
@@ -181,7 +181,7 @@ describe('patchValidateToolInput', () => {
       }),
     };
     try {
-       
+
       await (server as any).validateToolInput(tool, {}, 'annotation_create');
       expect.fail('Should have thrown');
     } catch (error: unknown) {
@@ -200,7 +200,7 @@ describe('patchValidateToolInput', () => {
       inputSchema: { owner: z.string(), repo: z.string().optional() },
     };
     try {
-       
+
       await (server as any).validateToolInput(tool, {}, 'test_tool');
       expect.fail('Should have thrown');
     } catch (error: unknown) {
@@ -220,7 +220,7 @@ describe('patchValidateToolInput', () => {
       },
     };
     try {
-       
+
       await (server as any).validateToolInput(
         tool,
         { count: 'not-a-number' },
@@ -234,17 +234,16 @@ describe('patchValidateToolInput', () => {
     }
   });
 
-  it('should pass through args for unrecognized schema types', async () => {
+  it('should delegate to original validateToolInput for unrecognized schema types', async () => {
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     patchValidateToolInput(server);
     const tool = { inputSchema: 'not-a-zod-schema' };
-     
-    const result = await (server as any).validateToolInput(
-      tool,
-      { foo: 'bar' },
-      'test_tool',
-    );
-    expect(result).toEqual({ foo: 'bar' });
+
+    // The original SDK validateToolInput will attempt to parse and may
+    // throw or return — either way, validation is not silently skipped.
+    await expect(
+      (server as any).validateToolInput(tool, { foo: 'bar' }, 'test_tool'),
+    ).rejects.toThrow();
   });
 });
 
