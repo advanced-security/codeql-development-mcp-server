@@ -12,7 +12,7 @@ export CGO_ENABLED = 0
 # Build flags
 LDFLAGS := -s -w
 
-.PHONY: all build test test-unit test-integration test-integration-fast lint clean install build-all
+.PHONY: all build test test-unit test-integration test-integration-with-packs lint clean install build-all
 
 all: lint test build
 
@@ -27,13 +27,15 @@ test: test-unit test-integration
 test-unit:
 	go test ./...
 
-## test-integration: Build binary and run integration tests (including codeql_pack_install)
+## test-integration: Build binary and run integration tests, skipping pack installation
+## Pack installation is skipped by default. Use test-integration-with-packs to include it.
 test-integration: build
-	scripts/run-integration-tests.sh
-
-## test-integration-fast: Build binary and run integration tests, skipping pack installation
-test-integration-fast: build
 	scripts/run-integration-tests.sh --no-install-packs
+
+## test-integration-with-packs: Build binary and run integration tests including codeql_pack_install
+## Use this when CodeQL pack dependencies have not been installed in your dev environment.
+test-integration-with-packs: build
+	scripts/run-integration-tests.sh
 
 ## test-verbose: Run all unit tests with verbose output
 test-verbose:
