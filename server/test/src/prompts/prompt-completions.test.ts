@@ -18,6 +18,7 @@ import { join } from 'path';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import {
   addCompletions,
+  clearCompletionCache,
   completeLanguage,
   completeDatabasePath,
   completePackRoot,
@@ -28,6 +29,7 @@ import {
 import {
   documentCodeqlQuerySchema,
   explainCodeqlQuerySchema,
+  findOverlappingQueriesSchema,
   qlLspIterativeDevelopmentSchema,
   workshopCreationWorkflowSchema,
 } from '../../../src/prompts/workflow-prompts';
@@ -81,11 +83,13 @@ describe('completeQueryPath', () => {
   beforeEach(() => {
     tmpDir = createTestTempDir('complete-query');
     vi.stubEnv('CODEQL_MCP_WORKSPACE', tmpDir);
+    clearCompletionCache();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
     cleanupTestTempDir(tmpDir);
+    clearCompletionCache();
   });
 
   it('should find .ql files in workspace', async () => {
@@ -142,6 +146,36 @@ describe('completeQueryPath', () => {
 
     const result = await completeQueryPath('');
     expect(result).toEqual([]);
+  });
+
+  it('should return cached results on subsequent calls within TTL', async () => {
+    writeFileSync(join(tmpDir, 'First.ql'), '');
+
+    // First call populates cache
+    const result1 = await completeQueryPath('');
+    expect(result1).toContain('First.ql');
+
+    // Add a new file after first call
+    writeFileSync(join(tmpDir, 'Second.ql'), '');
+
+    // Second call within TTL should return cached results (no Second.ql)
+    const result2 = await completeQueryPath('');
+    expect(result2).toContain('First.ql');
+    expect(result2).not.toContain('Second.ql');
+  });
+
+  it('should return fresh results after cache is cleared', async () => {
+    writeFileSync(join(tmpDir, 'First.ql'), '');
+
+    const result1 = await completeQueryPath('');
+    expect(result1).toContain('First.ql');
+
+    writeFileSync(join(tmpDir, 'Second.ql'), '');
+    clearCompletionCache();
+
+    const result2 = await completeQueryPath('');
+    expect(result2).toContain('First.ql');
+    expect(result2).toContain('Second.ql');
   });
 });
 
@@ -443,7 +477,7 @@ describe('addCompletions', () => {
     expect(results).toEqual(['java', 'javascript']);
   });
 
-  it('should handle ZodEnum language fields (raw schema without toPermissiveShape)', () => {
+  it('should preserve ZodEnum language fields (raw schema without toPermissiveShape)', () => {
     // find_overlapping_queries and check_for_duplicated_code pass raw
     // schema.shape (with ZodEnum) rather than toPermissiveShape() output.
     const shape = {
@@ -454,11 +488,22 @@ describe('addCompletions', () => {
     const enhanced = addCompletions(shape);
     expect(isCompletable(enhanced.language)).toBe(true);
     expect(isCompletable(enhanced.queryPath)).toBe(true);
-    // Enum should be widened to string for the completable wrapper
-    expect(enhanced.language instanceof z.ZodString).toBe(true);
+    // Enum should be preserved (not widened to string) so validation is not weakened
+    expect(enhanced.language instanceof z.ZodEnum).toBe(true);
   });
 
-  it('should handle optional ZodEnum fields', () => {
+  it('should preserve enum values after addCompletions on ZodEnum', () => {
+    const shape = {
+      language: z.enum(['go', 'java', 'python']).describe('Language'),
+    };
+
+    const enhanced = addCompletions(shape);
+    // The enum values must still be enforced
+    const enumType = enhanced.language as z.ZodEnum<[string, ...string[]]>;
+    expect(enumType.options).toEqual(['go', 'java', 'python']);
+  });
+
+  it('should preserve optional ZodEnum fields', () => {
     const shape = {
       language: z.enum(['go', 'java']).optional().describe('Optional lang'),
     };
@@ -466,6 +511,18 @@ describe('addCompletions', () => {
     const enhanced = addCompletions(shape);
     expect(isCompletable(enhanced.language)).toBe(true);
     expect(enhanced.language instanceof z.ZodOptional).toBe(true);
+    // The inner type should still be an enum
+    const inner = (enhanced.language as z.ZodOptional<z.ZodEnum<[string, ...string[]]>>).unwrap();
+    expect(inner instanceof z.ZodEnum).toBe(true);
+    expect(inner.options).toEqual(['go', 'java']);
+  });
+
+  it('should preserve findOverlappingQueriesSchema language enum validation', () => {
+    // Regression: addCompletions must not widen the required ZodEnum language
+    // field in findOverlappingQueriesSchema to z.string()
+    const enhanced = addCompletions(findOverlappingQueriesSchema.shape);
+    expect(isCompletable(enhanced.language)).toBe(true);
+    expect(enhanced.language instanceof z.ZodEnum).toBe(true);
   });
 });
 

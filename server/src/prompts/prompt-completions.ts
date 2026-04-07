@@ -12,14 +12,14 @@
  */
 
 import { readdir, readFile } from 'fs/promises';
-import { dirname, join, relative, sep } from 'path';
 import { homedir } from 'os';
+import { dirname, join, relative, sep } from 'path';
 import { completable } from '@modelcontextprotocol/sdk/server/completable.js';
 import { z } from 'zod';
-import { getUserWorkspaceDir } from '../utils/package-paths';
-import { logger } from '../utils/logger';
-import { SUPPORTED_LANGUAGES } from './workflow-prompts';
 import { getDatabaseBaseDirs } from '../lib/discovery-config';
+import { logger } from '../utils/logger';
+import { getUserWorkspaceDir } from '../utils/package-paths';
+import { SUPPORTED_LANGUAGES } from './workflow-prompts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Completion callbacks
@@ -30,6 +30,43 @@ const MAX_FILE_COMPLETIONS = 50;
 
 /** Maximum directory depth when scanning for files. */
 const MAX_SCAN_DEPTH = 8;
+
+/** Time-to-live for cached scan results, in milliseconds (5 seconds). */
+const CACHE_TTL_MS = 5_000;
+
+/** Cached scan results keyed by a workspace+type identifier. */
+interface CacheEntry {
+  results: string[];
+  timestamp: number;
+}
+
+const scanCache = new Map<string, CacheEntry>();
+
+/**
+ * Clear all cached completion scan results.
+ * Exported for testing so that each test starts with a clean cache.
+ */
+export function clearCompletionCache(): void {
+  scanCache.clear();
+}
+
+/**
+ * Return cached scan results if still fresh, otherwise `undefined`.
+ */
+function getCachedResults(cacheKey: string): string[] | undefined {
+  const entry = scanCache.get(cacheKey);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL_MS) {
+    return entry.results;
+  }
+  return undefined;
+}
+
+/**
+ * Store scan results in the cache.
+ */
+function setCachedResults(cacheKey: string, results: string[]): void {
+  scanCache.set(cacheKey, { results, timestamp: Date.now() });
+}
 
 /**
  * Complete a `language` parameter by filtering SUPPORTED_LANGUAGES.
@@ -95,16 +132,22 @@ async function findFilesByExtension(
  */
 export async function completeQueryPath(value: string): Promise<string[]> {
   const workspace = getUserWorkspaceDir();
-  const results: string[] = [];
+  const cacheKey = `queryPath:${workspace}`;
+  let allResults = getCachedResults(cacheKey);
 
-  try {
-    await findFilesByExtension(workspace, workspace, ['.ql', '.qlref'], MAX_SCAN_DEPTH, results);
-  } catch (err) {
-    logger.debug(`completeQueryPath scan error: ${err}`);
+  if (!allResults) {
+    const results: string[] = [];
+    try {
+      await findFilesByExtension(workspace, workspace, ['.ql', '.qlref'], MAX_SCAN_DEPTH, results);
+    } catch (err) {
+      logger.debug(`completeQueryPath scan error: ${err}`);
+    }
+    allResults = results;
+    setCachedResults(cacheKey, allResults);
   }
 
   const lower = (value || '').toLowerCase();
-  const filtered = results
+  const filtered = allResults
     .filter(p => p.toLowerCase().includes(lower))
     .sort();
 
@@ -117,16 +160,22 @@ export async function completeQueryPath(value: string): Promise<string[]> {
  */
 export async function completeSarifPath(value: string): Promise<string[]> {
   const workspace = getUserWorkspaceDir();
-  const results: string[] = [];
+  const cacheKey = `sarifPath:${workspace}`;
+  let allResults = getCachedResults(cacheKey);
 
-  try {
-    await findFilesByExtension(workspace, workspace, ['.sarif', '.sarif.json'], MAX_SCAN_DEPTH, results);
-  } catch (err) {
-    logger.debug(`completeSarifPath scan error: ${err}`);
+  if (!allResults) {
+    const results: string[] = [];
+    try {
+      await findFilesByExtension(workspace, workspace, ['.sarif', '.sarif.json'], MAX_SCAN_DEPTH, results);
+    } catch (err) {
+      logger.debug(`completeSarifPath scan error: ${err}`);
+    }
+    allResults = results;
+    setCachedResults(cacheKey, allResults);
   }
 
   const lower = (value || '').toLowerCase();
-  const filtered = results
+  const filtered = allResults
     .filter(p => p.toLowerCase().includes(lower))
     .sort();
 
@@ -139,56 +188,62 @@ export async function completeSarifPath(value: string): Promise<string[]> {
  * locations, and workspace directories containing `codeql-database.yml`.
  */
 export async function completeDatabasePath(value: string): Promise<string[]> {
-  const baseDirs = getDatabaseBaseDirs();
-  const results: string[] = [];
-
-  // Add well-known default location: $HOME/codeql/databases/
-  const homeDbDir = join(homedir(), 'codeql', 'databases');
-  const allBaseDirs = baseDirs.includes(homeDbDir) ? baseDirs : [...baseDirs, homeDbDir];
-
-  for (const baseDir of allBaseDirs) {
-    if (results.length >= MAX_FILE_COMPLETIONS) break;
-
-    let entries;
-    try {
-      entries = await readdir(baseDir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
-      if (entry.isDirectory()) {
-        results.push(join(baseDir, entry.name));
-      }
-    }
-  }
-
-  // Scan the workspace for directories containing codeql-database.yml
   const workspace = getUserWorkspaceDir();
-  await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, results);
+  const baseDirs = getDatabaseBaseDirs();
+  const homeDbDir = join(homedir(), 'codeql', 'databases');
+  const cacheKey = `databasePath:${workspace}:${baseDirs.join(',')}`;
+  let allResults = getCachedResults(cacheKey);
 
-  // Also check the workspace for -db suffixed directories (legacy heuristic)
-  try {
-    const wsEntries = await readdir(workspace, { withFileTypes: true });
-    for (const entry of wsEntries) {
+  if (!allResults) {
+    const results: string[] = [];
+
+    // Add well-known default location: $HOME/codeql/databases/
+    const allBaseDirs = baseDirs.includes(homeDbDir) ? baseDirs : [...baseDirs, homeDbDir];
+
+    for (const baseDir of allBaseDirs) {
       if (results.length >= MAX_FILE_COMPLETIONS) break;
-      if (entry.isDirectory() && entry.name.endsWith('-db')) {
-        const fullPath = join(workspace, entry.name);
-        if (!results.includes(fullPath)) {
-          results.push(fullPath);
+
+      let entries;
+      try {
+        entries = await readdir(baseDir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+
+      for (const entry of entries) {
+        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (entry.isDirectory()) {
+          results.push(join(baseDir, entry.name));
         }
       }
     }
-  } catch {
-    // ignore
+
+    // Scan the workspace for directories containing codeql-database.yml
+    await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, results);
+
+    // Also check the workspace for -db suffixed directories (legacy heuristic)
+    try {
+      const wsEntries = await readdir(workspace, { withFileTypes: true });
+      for (const entry of wsEntries) {
+        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (entry.isDirectory() && entry.name.endsWith('-db')) {
+          const fullPath = join(workspace, entry.name);
+          if (!results.includes(fullPath)) {
+            results.push(fullPath);
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // Deduplicate
+    allResults = [...new Set(results)];
+    setCachedResults(cacheKey, allResults);
   }
 
-  // Deduplicate
-  const unique = [...new Set(results)];
-
   const lower = (value || '').toLowerCase();
-  const filtered = unique
+  const filtered = allResults
     .filter(p => {
       // Match against the full path or just the basename
       const lastSeg = p.split(sep).pop() ?? '';
@@ -249,42 +304,50 @@ async function findDatabaseDirs(
  */
 export async function completePackRoot(value: string): Promise<string[]> {
   const workspace = getUserWorkspaceDir();
-  const results: string[] = [];
+  const cacheKey = `packRoot:${workspace}`;
+  let allResults = getCachedResults(cacheKey);
 
-  async function scan(dir: string, depth: number): Promise<void> {
-    if (depth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+  if (!allResults) {
+    const results: string[] = [];
 
-    let entries;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
+    async function scan(dir: string, depth: number): Promise<void> {
+      if (depth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
 
-    // Check if this directory has a codeql-pack.yml
-    const hasPackYml = entries.some(
-      e => e.isFile() && e.name === 'codeql-pack.yml',
-    );
-    if (hasPackYml) {
-      results.push(relative(workspace, dir) || '.');
-    }
+      let entries;
+      try {
+        entries = await readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
 
-    for (const entry of entries) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
-      if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git' && entry.name !== '.tmp') {
-        await scan(join(dir, entry.name), depth - 1);
+      // Check if this directory has a codeql-pack.yml
+      const hasPackYml = entries.some(
+        e => e.isFile() && e.name === 'codeql-pack.yml',
+      );
+      if (hasPackYml) {
+        results.push(relative(workspace, dir) || '.');
+      }
+
+      for (const entry of entries) {
+        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git' && entry.name !== '.tmp') {
+          await scan(join(dir, entry.name), depth - 1);
+        }
       }
     }
-  }
 
-  try {
-    await scan(workspace, MAX_SCAN_DEPTH);
-  } catch (err) {
-    logger.debug(`completePackRoot scan error: ${err}`);
+    try {
+      await scan(workspace, MAX_SCAN_DEPTH);
+    } catch (err) {
+      logger.debug(`completePackRoot scan error: ${err}`);
+    }
+
+    allResults = results;
+    setCachedResults(cacheKey, allResults);
   }
 
   const lower = (value || '').toLowerCase();
-  const filtered = results
+  const filtered = allResults
     .filter(p => p.toLowerCase().includes(lower))
     .sort();
 
@@ -379,22 +442,31 @@ const PARAMETER_COMPLETIONS: Record<string, CompleteCallback> = {
  *
  * Handles `z.string()`, `z.enum()`, and their optional wrappers — the
  * types used by the prompt parameters that have registered completers.
- * Enum types are widened to `z.string()` (matching `toPermissiveShape`
- * behaviour) since completable callbacks always return `string[]`.
+ * Enum types are preserved as enums so that validation is not weakened
+ * when `addCompletions()` is applied to raw (non-permissive) schemas.
  */
 function cloneStringType(zodType: z.ZodTypeAny): z.ZodTypeAny {
   const desc = zodType.description;
 
   if (zodType instanceof z.ZodOptional) {
     const inner = zodType.unwrap();
-    if (!(inner instanceof z.ZodString) && !(inner instanceof z.ZodEnum)) {
+    if (inner instanceof z.ZodEnum) {
+      const fresh = z.enum(inner.options).optional();
+      return desc ? fresh.describe(desc) : fresh;
+    }
+    if (!(inner instanceof z.ZodString)) {
       throw new Error(`cloneStringType: expected ZodString or ZodEnum inside ZodOptional, got ${inner.constructor.name}`);
     }
     const fresh = z.string().optional();
     return desc ? fresh.describe(desc) : fresh;
   }
 
-  if (!(zodType instanceof z.ZodString) && !(zodType instanceof z.ZodEnum)) {
+  if (zodType instanceof z.ZodEnum) {
+    const fresh = z.enum(zodType.options);
+    return desc ? fresh.describe(desc) : fresh;
+  }
+
+  if (!(zodType instanceof z.ZodString)) {
     throw new Error(`cloneStringType: expected ZodString or ZodEnum, got ${zodType.constructor.name}`);
   }
 

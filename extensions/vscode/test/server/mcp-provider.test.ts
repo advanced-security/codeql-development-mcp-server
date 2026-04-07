@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 
 import { McpProvider } from '../../src/server/mcp-provider';
@@ -235,5 +235,95 @@ describe('McpProvider', () => {
 
   it('should be disposable', () => {
     expect(() => provider.dispose()).not.toThrow();
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // fireDidChange — debouncing
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('fireDidChange debouncing', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should debounce rapid calls into a single event', () => {
+      const listener = vi.fn();
+      provider.onDidChangeMcpServerDefinitions(listener);
+
+      // Fire 10 rapid calls
+      for (let i = 0; i < 10; i++) {
+        provider.fireDidChange();
+      }
+
+      // Before timer fires, no events should have been emitted
+      expect(listener).not.toHaveBeenCalled();
+
+      // After debounce period, exactly one event should fire
+      vi.runAllTimers();
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should coalesce events within the debounce window', () => {
+      const listener = vi.fn();
+      provider.onDidChangeMcpServerDefinitions(listener);
+
+      provider.fireDidChange();
+      vi.advanceTimersByTime(100);
+      provider.fireDidChange();
+      vi.advanceTimersByTime(100);
+      provider.fireDidChange();
+
+      // Still within debounce window — no events yet
+      expect(listener).not.toHaveBeenCalled();
+
+      // Let debounce timer complete
+      vi.runAllTimers();
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fire separate events for calls outside debounce window', () => {
+      const listener = vi.fn();
+      provider.onDidChangeMcpServerDefinitions(listener);
+
+      provider.fireDidChange();
+      vi.runAllTimers();
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // Second call well after first debounce completed
+      provider.fireDidChange();
+      vi.runAllTimers();
+      expect(listener).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not debounce requestRestart (fires immediately)', () => {
+      const listener = vi.fn();
+      provider.onDidChangeMcpServerDefinitions(listener);
+
+      provider.requestRestart();
+
+      // requestRestart should fire immediately without waiting for debounce
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should cancel pending debounced fire when requestRestart is called', () => {
+      const listener = vi.fn();
+      provider.onDidChangeMcpServerDefinitions(listener);
+
+      // Start a debounced fireDidChange
+      provider.fireDidChange();
+      expect(listener).not.toHaveBeenCalled();
+
+      // requestRestart should fire immediately and cancel the pending debounce
+      provider.requestRestart();
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // Running timers should NOT fire the debounced event again
+      vi.runAllTimers();
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
   });
 });

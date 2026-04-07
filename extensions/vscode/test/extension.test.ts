@@ -77,6 +77,7 @@ vi.mock('../src/bridge/database-watcher', () => ({
     const listeners: Function[] = [];
     return {
       onDidChange: (listener: Function) => { listeners.push(listener); return { dispose: () => {} }; },
+      _fire: () => { for (const fn of listeners) fn(); },
       getKnownDatabases: vi.fn().mockReturnValue(new Set()),
       dispose: vi.fn(),
     };
@@ -88,6 +89,7 @@ vi.mock('../src/bridge/query-results-watcher', () => ({
     const listeners: Function[] = [];
     return {
       onDidChange: (listener: Function) => { listeners.push(listener); return { dispose: () => {} }; },
+      _fire: () => { for (const fn of listeners) fn(); },
       dispose: vi.fn(),
     };
   }),
@@ -107,6 +109,8 @@ import { activate, deactivate } from '../src/extension';
 import * as vscode from 'vscode';
 import { McpProvider } from '../src/server/mcp-provider';
 import { EnvironmentBuilder } from '../src/bridge/environment-builder';
+import { DatabaseWatcher } from '../src/bridge/database-watcher';
+import { QueryResultsWatcher } from '../src/bridge/query-results-watcher';
 
 function createMockContext(): vscode.ExtensionContext {
   return {
@@ -207,5 +211,43 @@ describe('Extension', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('should NOT call fireDidChange when database watcher fires', async () => {
+    await activate(ctx);
+
+    const dbWatcherInstance = vi.mocked(DatabaseWatcher).mock.results[0]?.value;
+    const mcpProviderInstance = vi.mocked(McpProvider).mock.results[0]?.value;
+    const envBuilderInstance = vi.mocked(EnvironmentBuilder).mock.results[0]?.value;
+
+    mcpProviderInstance.fireDidChange.mockClear();
+    mcpProviderInstance.requestRestart.mockClear();
+    envBuilderInstance.invalidate.mockClear();
+
+    // Simulate a database watcher event (e.g. codeql-database.yml created)
+    dbWatcherInstance._fire();
+
+    expect(mcpProviderInstance.fireDidChange).not.toHaveBeenCalled();
+    expect(mcpProviderInstance.requestRestart).not.toHaveBeenCalled();
+    expect(envBuilderInstance.invalidate).not.toHaveBeenCalled();
+  });
+
+  it('should NOT call fireDidChange when query results watcher fires', async () => {
+    await activate(ctx);
+
+    const queryWatcherInstance = vi.mocked(QueryResultsWatcher).mock.results[0]?.value;
+    const mcpProviderInstance = vi.mocked(McpProvider).mock.results[0]?.value;
+    const envBuilderInstance = vi.mocked(EnvironmentBuilder).mock.results[0]?.value;
+
+    mcpProviderInstance.fireDidChange.mockClear();
+    mcpProviderInstance.requestRestart.mockClear();
+    envBuilderInstance.invalidate.mockClear();
+
+    // Simulate a query results watcher event (e.g. .bqrs file created)
+    queryWatcherInstance._fire();
+
+    expect(mcpProviderInstance.fireDidChange).not.toHaveBeenCalled();
+    expect(mcpProviderInstance.requestRestart).not.toHaveBeenCalled();
+    expect(envBuilderInstance.invalidate).not.toHaveBeenCalled();
   });
 });

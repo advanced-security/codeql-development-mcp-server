@@ -33,6 +33,12 @@ export class McpProvider
    */
   private readonly _extensionVersion: string;
 
+  /**
+   * Handle for the pending debounced `fireDidChange()` timer.
+   * Used to coalesce rapid file-system events into a single notification.
+   */
+  private _debounceTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
+
   constructor(
     private readonly serverManager: ServerManager,
     private readonly envBuilder: EnvironmentBuilder,
@@ -51,9 +57,18 @@ export class McpProvider
    * will NOT restart the server. Use for lightweight updates (file watcher
    * events, extension changes, background install completion) where the
    * running server can continue with its current environment.
+   *
+   * Debounced: rapid-fire calls (e.g. from file-system watchers during
+   * a build) are coalesced into a single notification after a short delay.
    */
   fireDidChange(): void {
-    this._onDidChange.fire();
+    if (this._debounceTimer !== undefined) {
+      globalThis.clearTimeout(this._debounceTimer);
+    }
+    this._debounceTimer = globalThis.setTimeout(() => {
+      this._debounceTimer = undefined;
+      this._onDidChange.fire();
+    }, 1_000);
   }
 
   /**
@@ -68,6 +83,11 @@ export class McpProvider
    * Use for changes that require a server restart (configuration changes).
    */
   requestRestart(): void {
+    // Cancel any pending debounced fireDidChange — the restart supersedes it.
+    if (this._debounceTimer !== undefined) {
+      globalThis.clearTimeout(this._debounceTimer);
+      this._debounceTimer = undefined;
+    }
     this.envBuilder.invalidate();
     this._revision++;
     this.logger.info(

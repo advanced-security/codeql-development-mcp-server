@@ -248,7 +248,8 @@ export const toolsQueryWorkflowSchema = z.object({
  * Schema for workshop_creation_workflow prompt parameters.
  * Uses z.coerce.number() for numStages to handle string inputs from VSCode slash commands.
  *
- * - `queryPath` and `language` are **required**.
+ * - `queryPath` is **required**.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  * - `workshopName` and `numStages` are optional.
  */
 export const workshopCreationWorkflowSchema = z.object({
@@ -335,7 +336,8 @@ export const describeFalsePositivesSchema = z.object({
 /**
  * Schema for explain_codeql_query prompt parameters.
  *
- * - `queryPath` and `language` are **required**.
+ * - `queryPath` is **required**.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  * - `databasePath` is optional – a database may also be derived from tests.
  */
 export const explainCodeqlQuerySchema = z.object({
@@ -355,7 +357,8 @@ export const explainCodeqlQuerySchema = z.object({
 /**
  * Schema for document_codeql_query prompt parameters.
  *
- * - `queryPath` and `language` are **required**.
+ * - `queryPath` is **required**.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  */
 export const documentCodeqlQuerySchema = z.object({
   queryPath: z
@@ -441,7 +444,8 @@ export const findOverlappingQueriesSchema = z.object({
 /**
  * Schema for ql_lsp_iterative_development prompt parameters.
  *
- * - `language` and `queryPath` are **required** – LSP tools need both.
+ * - `queryPath` is **required** – LSP tools need it.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  * - `workspaceUri` is optional – defaults to the pack root.
  */
 export const qlLspIterativeDevelopmentSchema = z.object({

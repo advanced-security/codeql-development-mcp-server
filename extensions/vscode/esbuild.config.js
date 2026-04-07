@@ -37,6 +37,7 @@ const testSuiteConfig = {
     'test/suite/bridge.integration.test.ts',
     'test/suite/copydb-e2e.integration.test.ts',
     'test/suite/extension.integration.test.ts',
+    'test/suite/file-watcher-stability.integration.test.ts',
     'test/suite/mcp-completion-e2e.integration.test.ts',
     'test/suite/mcp-prompt-e2e.integration.test.ts',
     'test/suite/mcp-resource-e2e.integration.test.ts',

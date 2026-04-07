@@ -349,7 +349,7 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should accept missing language (auto-derivable from pack metadata)', () => {
+    it('should accept missing language (optional field)', () => {
       const result = workshopCreationWorkflowSchema.safeParse({
         queryPath: '/path/to/query.ql'
       });
