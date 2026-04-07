@@ -3,6 +3,7 @@ set -euo pipefail
 
 ## Parse command line arguments
 LANGUAGE=""
+SCOPE=""
 
 usage() {
 	cat << EOF
@@ -10,12 +11,18 @@ Usage: $0 [OPTIONS]
 
 Extract test databases for CodeQL queries associated with the MCP server.
 
+By default, only databases needed by client integration tests are extracted
+(currently: javascript/examples only). Query unit tests (codeql test run)
+auto-extract their own databases, so full extraction is rarely needed.
+
 OPTIONS:
-    --language <lang>  Extract databases only for the specified language
+    --scope <scope>    Extract databases for a specific use case
+                       Valid values:
+                         integration  - Only databases needed by client integration tests (default)
+                         all          - All test databases for all languages
+    --language <lang>  Extract databases only for the specified language (implies --scope all)
                        Valid values: actions, cpp, csharp, go, java, javascript, python, ruby, rust, swift
     -h, --help         Show this help message
-
-By default, the script extracts databases for all supported languages.
 EOF
 }
 
@@ -23,6 +30,10 @@ while [[ $# -gt 0 ]]; do
 	case $1 in
 		--language)
 			LANGUAGE="$2"
+			shift 2
+			;;
+		--scope)
+			SCOPE="$2"
 			shift 2
 			;;
 		-h|--help)
@@ -36,6 +47,18 @@ while [[ $# -gt 0 ]]; do
 			;;
 	esac
 done
+
+## Validate scope if provided
+if [ -n "${SCOPE}" ]; then
+	case "${SCOPE}" in
+		integration|all) ;;
+		*)
+			echo "Error: Invalid scope '${SCOPE}'" >&2
+			echo "Valid scopes: integration, all" >&2
+			exit 1
+			;;
+	esac
+fi
 
 ## Validate language if provided
 VALID_LANGUAGES=("actions" "cpp" "csharp" "go" "java" "javascript" "python" "ruby" "rust" "swift")
@@ -91,7 +114,14 @@ extract_test_databases() {
 	done < <(find "${_base_dir}/test" -mindepth 1 -maxdepth 1 -type d -print0)
 }
 
-## Extract test databases for integration tests.
+## Extract test databases based on scope and language filters.
+##
+## Default (no flags): only databases needed by client integration tests
+##   (currently just server/ql/javascript/examples).
+## --scope all: all languages × examples + tools.
+## --language: filter to a single language (implies --scope all).
+
+# --language implies --scope all for that language
 if [ -n "${LANGUAGE}" ]; then
 	echo "Extracting test databases for language: ${LANGUAGE}"
 	# Special handling for JavaScript which has both examples and tools
@@ -101,7 +131,7 @@ if [ -n "${LANGUAGE}" ]; then
 	if [ -d "server/ql/${LANGUAGE}/tools" ]; then
 		extract_test_databases "server/ql/${LANGUAGE}/tools"
 	fi
-else
+elif [ "${SCOPE}" = "all" ]; then
 	echo "Extracting test databases for all languages..."
 	for lang in "${VALID_LANGUAGES[@]}"; do
 		# Special handling for JavaScript which has both examples and tools
@@ -112,6 +142,9 @@ else
 			extract_test_databases "server/ql/${lang}/tools"
 		fi
 	done
+else
+	echo "Extracting test databases for integration tests only..."
+	extract_test_databases "server/ql/javascript/examples"
 fi
 
 echo "INFO: Test database extraction complete!"

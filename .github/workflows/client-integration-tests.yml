@@ -93,6 +93,8 @@ jobs:
         run: ./server/scripts/install-packs.sh
 
       ## Extract test databases used in the integration tests.
+      ## Defaults to integration scope (javascript/examples only).
+      ## Query unit tests auto-extract their own databases via `codeql test run`.
       - name: MCP Integration Tests - Extract test databases
         shell: bash
         run: ./server/scripts/extract-test-databases.sh

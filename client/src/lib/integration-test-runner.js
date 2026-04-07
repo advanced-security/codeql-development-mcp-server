@@ -785,6 +785,16 @@ export class IntegrationTestRunner {
       // Call the tool with appropriate parameters (timeout is handled by this.callTool)
       this.logger.log(`Calling tool ${toolName}`);
 
+      // Clean up stale interpretedOutput from prior test runs so that
+      // directory comparisons only see output from this invocation.
+      if (toolName === "codeql_query_run" && params.interpretedOutput) {
+        try {
+          fs.rmSync(params.interpretedOutput, { recursive: true, force: true });
+        } catch {
+          // Ignore — path may not exist yet
+        }
+      }
+
       const result = await this.callTool(toolName, params);
 
       // For monitoring tests, we primarily check if the tool executed successfully
