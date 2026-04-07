@@ -1084,8 +1084,8 @@ export class IntegrationTestRunner {
         throw new Error(`Test directory ${beforeDir} not found for ${toolName}/${testCase}`);
       }
     } else if (toolName === "codeql_resolve_queries") {
-      // Use the test case directory as the queries path
-      params.path = beforeDir;
+      // Use the static examples directory which already contains installed QL packs
+      params.directory = path.join(staticPath, "src");
     } else if (toolName === "codeql_resolve_tests") {
       // Use the test case directory as the tests path
       params.tests = [beforeDir];

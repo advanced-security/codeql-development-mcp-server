@@ -12,20 +12,27 @@ describe('registerCodeQLTools', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockServer = {
-      tool: vi.fn()
+      tool: vi.fn(),
+      registerTool: vi.fn()
     } as unknown as McpServer;
   });
 
   it('should register all CodeQL tools including helpers and CLI tools', () => {
     registerCodeQLTools(mockServer);
 
-    // Verify multiple tools are registered
+    // Verify multiple tools are registered (via both tool() and registerTool())
     expect(mockServer.tool).toHaveBeenCalled();
-    
+    expect(mockServer.registerTool).toHaveBeenCalled();
+
     // Check that specific tools are registered with correct names
-    const toolCalls = (mockServer.tool as any).mock.calls;
-    const toolNames = toolCalls.map((call: any) => call[0]);
-    
+    // tool() calls use (name, description, schema, handler)
+    const directToolCalls = (mockServer.tool as any).mock.calls;
+    const directToolNames = directToolCalls.map((call: any) => call[0]);
+    // registerTool() calls use (name, config, handler)
+    const cliToolCalls = (mockServer.registerTool as any).mock.calls;
+    const cliToolNames = cliToolCalls.map((call: any) => call[0]);
+    const toolNames = [...directToolNames, ...cliToolNames];
+
     // High-level helper tools
     expect(toolNames).toContain('validate_codeql_query');
     expect(toolNames).toContain('create_codeql_query');
@@ -40,15 +47,17 @@ describe('registerCodeQLTools', () => {
 
     // CLI tools
     expect(toolNames).toContain('codeql_resolve_files');
-    
+
     // explain_codeql_query has been converted to a prompt, so it should NOT be in the tool list
     expect(toolNames).not.toContain('explain_codeql_query');
     // rank_sarif_results has been removed in favor of SARIF prompts
     expect(toolNames).not.toContain('rank_sarif_results');
-    
-    // Total tools registered: 2 high-level helpers + 12 specialized tools + 24 CLI tools = 38
+
+    // Total tools registered: 14 via server.tool() + 24 via server.registerTool() = 38
     // (codeql_lsp_diagnostics moved to registerLSPTools in tools/lsp/)
-    expect(mockServer.tool).toHaveBeenCalledTimes(38);
+    const totalRegistered = (mockServer.tool as any).mock.calls.length +
+      (mockServer.registerTool as any).mock.calls.length;
+    expect(totalRegistered).toBe(38);
   });
 
   it('should register validate_codeql_query with correct parameters', () => {
@@ -100,11 +109,12 @@ describe('registerCodeQLTools', () => {
   it('should register codeql_resolve_files as a CLI tool', () => {
     registerCodeQLTools(mockServer);
 
-    const resolveFilesCall = (mockServer.tool as any).mock.calls.find(
+    // CLI tools are registered via registerTool() with (name, config, handler) signature
+    const resolveFilesCall = (mockServer.registerTool as any).mock.calls.find(
       (call: any) => call[0] === 'codeql_resolve_files'
     );
 
     expect(resolveFilesCall).toBeDefined();
-    expect(resolveFilesCall[1]).toContain('Find files');
+    expect(resolveFilesCall[1].description).toContain('Find files');
   });
 });
