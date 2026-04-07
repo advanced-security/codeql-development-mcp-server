@@ -129,15 +129,15 @@ func TestRunnerWithMockCaller(t *testing.T) {
 func TestRunnerNoInstallPacks(t *testing.T) {
 	caller := newMockCaller()
 
-	// Create a valid repo root with an empty fixtures directory
+	// Create a repo root with a codeql_pack_install fixture directory
 	dir := t.TempDir()
 	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
-	os.MkdirAll(testsDir, 0o755)
+	// Create the fixture dir so the runner encounters it and records a skip
+	os.MkdirAll(filepath.Join(testsDir, "codeql_pack_install"), 0o755)
 
 	opts := RunnerOptions{
 		RepoRoot:       dir,
 		NoInstallPacks: true,
-		FilterTools:    []string{"codeql_pack_install"},
 	}
 
 	runner := NewRunner(caller, opts)
@@ -145,13 +145,22 @@ func TestRunnerNoInstallPacks(t *testing.T) {
 		t.Fatal("NewRunner returned nil")
 	}
 
-	// codeql_pack_install should be skipped — no results
+	// codeql_pack_install should be skipped — one skipped result recorded
 	allPassed, results := runner.Run()
 	if !allPassed {
-		t.Error("expected allPassed=true when pack install is skipped")
+		t.Error("expected allPassed=true when only skipped results")
 	}
-	if len(results) != 0 {
-		t.Errorf("expected 0 results (skipped), got %d", len(results))
+	if len(results) != 1 {
+		t.Fatalf("expected 1 skipped result, got %d", len(results))
+	}
+	if results[0].ToolName != "codeql_pack_install" {
+		t.Errorf("expected skipped result for codeql_pack_install, got %q", results[0].ToolName)
+	}
+	if results[0].Error != "skipped: --no-install-packs" {
+		t.Errorf("unexpected skip reason: %q", results[0].Error)
+	}
+	if results[0].Passed {
+		t.Error("skipped result should have Passed=false")
 	}
 }
 

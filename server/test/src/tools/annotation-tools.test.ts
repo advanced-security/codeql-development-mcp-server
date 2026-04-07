@@ -1,5 +1,5 @@
 /**
- * Tests for annotation tools — registration gating and handler behavior.
+ * Tests for annotation tools — registration and handler behavior.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

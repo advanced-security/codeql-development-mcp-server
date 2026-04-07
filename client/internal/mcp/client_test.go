@@ -1,9 +1,45 @@
 package mcp
 
 import (
+	"context"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/mark3labs/mcp-go/mcp"
 )
+
+// hangCloser is a stub innerClient whose Close() blocks until released.
+// It satisfies the innerClient interface to allow timeout-path testing.
+type hangCloser struct {
+	released chan struct{}
+}
+
+func (h *hangCloser) Close() error {
+	<-h.released
+	return nil
+}
+
+func (h *hangCloser) Initialize(_ context.Context, _ mcp.InitializeRequest) (*mcp.InitializeResult, error) {
+	return nil, nil
+}
+
+func (h *hangCloser) CallTool(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return nil, nil
+}
+
+func (h *hangCloser) ListTools(_ context.Context, _ mcp.ListToolsRequest) (*mcp.ListToolsResult, error) {
+	return nil, nil
+}
+
+func (h *hangCloser) ListPrompts(_ context.Context, _ mcp.ListPromptsRequest) (*mcp.ListPromptsResult, error) {
+	return nil, nil
+}
+
+func (h *hangCloser) ListResources(_ context.Context, _ mcp.ListResourcesRequest) (*mcp.ListResourcesResult, error) {
+	return nil, nil
+}
 
 func TestTimeoutForTool_CodeQLTools(t *testing.T) {
 	codeqlTools := []string{
@@ -79,6 +115,61 @@ func TestClose_TimeoutReturnsError(t *testing.T) {
 	}
 	if CloseTimeoutErr != "MCP client close timed out after 3s; server subprocess may still be running" {
 		t.Errorf("CloseTimeoutErr = %q, want specific timeout message", CloseTimeoutErr)
+	}
+}
+
+func TestClose_KillsSubprocessOnTimeout(t *testing.T) {
+	t.Parallel()
+
+	// Start a long-running subprocess to simulate a stuck server.
+	proc := exec.Command("sleep", "60")
+	if err := proc.Start(); err != nil {
+		t.Skipf("cannot start subprocess for test: %v", err)
+	}
+
+	hang := &hangCloser{released: make(chan struct{})}
+
+	c := &Client{
+		inner:     hang,
+		serverCmd: proc,
+	}
+
+	start := time.Now()
+	err := c.Close()
+	elapsed := time.Since(start)
+
+	// Release the hanging closer goroutine (cleanup).
+	close(hang.released)
+
+	if err == nil {
+		t.Fatal("Close() should return a timeout error, got nil")
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Errorf("Close() error = %q; want a message containing 'timed out'", err.Error())
+	}
+
+	// Elapsed time should be roughly the 3-second timeout window.
+	if elapsed > 5*time.Second {
+		t.Errorf("Close() took %v, expected ~3s", elapsed)
+	}
+
+	// proc.Wait() should return quickly if the process was killed.
+	// Use a channel with timeout to avoid hanging the test if Kill() failed.
+	waitCh := make(chan error, 1)
+	go func() {
+		waitCh <- proc.Wait()
+	}()
+
+	select {
+	case waitErr := <-waitCh:
+		// Process exited (possibly as a zombie until Wait() is called).
+		// A killed process returns an error from Wait().
+		if waitErr == nil {
+			t.Error("subprocess exited with success; expected it to be killed (non-zero exit)")
+		}
+	case <-time.After(2 * time.Second):
+		_ = proc.Process.Kill()
+		t.Error("subprocess did not exit after Close() timeout; expected force-kill")
 	}
 }
 

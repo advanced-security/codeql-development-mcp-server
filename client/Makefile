@@ -12,7 +12,7 @@ export CGO_ENABLED = 0
 # Build flags
 LDFLAGS := -s -w
 
-.PHONY: all build test test-unit test-integration lint clean install build-all
+.PHONY: all build test test-unit test-integration test-integration-fast lint clean install build-all
 
 all: lint test build
 
@@ -27,8 +27,12 @@ test: test-unit test-integration
 test-unit:
 	go test ./...
 
-## test-integration: Build binary and run integration tests via run-integration-tests.sh
+## test-integration: Build binary and run integration tests (including codeql_pack_install)
 test-integration: build
+	scripts/run-integration-tests.sh
+
+## test-integration-fast: Build binary and run integration tests, skipping pack installation
+test-integration-fast: build
 	scripts/run-integration-tests.sh --no-install-packs
 
 ## test-verbose: Run all unit tests with verbose output

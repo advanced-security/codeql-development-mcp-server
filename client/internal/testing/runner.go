@@ -144,12 +144,14 @@ func (r *Runner) runToolTests(toolName, testsDir string) {
 	// Skip codeql_pack_install when --no-install-packs is set
 	if r.options.NoInstallPacks && toolName == "codeql_pack_install" {
 		fmt.Printf("\n  %s (skipped: --no-install-packs)\n", toolName)
+		r.recordResult(toolName, "", false, "skipped: --no-install-packs", 0)
 		return
 	}
 
 	// Deprecated monitoring/session tools — skip entirely
 	if isDeprecatedTool(toolName) {
 		fmt.Printf("\n  %s (skipped: deprecated)\n", toolName)
+		r.recordResult(toolName, "", false, "skipped: deprecated", 0)
 		return
 	}
 

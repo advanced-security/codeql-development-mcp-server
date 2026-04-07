@@ -10,8 +10,20 @@ import (
 	"time"
 
 	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
+
+// innerClient is satisfied by *mcpclient.Client and allows the Close() timeout
+// path to be tested without a live MCP server.
+type innerClient interface {
+	Initialize(context.Context, mcp.InitializeRequest) (*mcp.InitializeResult, error)
+	Close() error
+	CallTool(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error)
+	ListTools(context.Context, mcp.ListToolsRequest) (*mcp.ListToolsResult, error)
+	ListPrompts(context.Context, mcp.ListPromptsRequest) (*mcp.ListPromptsResult, error)
+	ListResources(context.Context, mcp.ListResourcesRequest) (*mcp.ListResourcesResult, error)
+}
 
 const (
 	// ModeStdio spawns the MCP server as a child process.
@@ -40,8 +52,9 @@ type Config struct {
 
 // Client wraps an MCP client with convenience methods for tool calls.
 type Client struct {
-	inner  *mcpclient.Client
-	config Config
+	inner     innerClient
+	config    Config
+	serverCmd *exec.Cmd // stdio mode only; retained so Close() can force-kill on timeout
 }
 
 // NewClient creates a new MCP client with the given config but does not connect.
@@ -67,14 +80,27 @@ func (c *Client) connectStdio(ctx context.Context) error {
 		return fmt.Errorf("cannot locate MCP server: %w", err)
 	}
 
-	client, err := mcpclient.NewStdioMCPClient(
+	// Capture the spawned exec.Cmd so Close() can force-kill the process on timeout.
+	var spawnedCmd *exec.Cmd
+	cmdFunc := func(spawnCtx context.Context, command string, env []string, args []string) (*exec.Cmd, error) {
+		cmd := exec.CommandContext(spawnCtx, command, args...)
+		if len(env) > 0 {
+			cmd.Env = append(os.Environ(), env...)
+		}
+		spawnedCmd = cmd
+		return cmd, nil
+	}
+
+	client, err := mcpclient.NewStdioMCPClientWithOptions(
 		"node", nil,
-		serverPath,
+		[]string{serverPath},
+		transport.WithCommandFunc(cmdFunc),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create stdio MCP client: %w", err)
 	}
 	c.inner = client
+	c.serverCmd = spawnedCmd
 
 	initCtx, cancel := context.WithTimeout(ctx, ConnectTimeout)
 	defer cancel()
@@ -135,8 +161,8 @@ func (c *Client) Close() error {
 
 	// For stdio transport, closing stdin signals the server to exit.
 	// However, the Node.js server may not exit immediately, so we
-	// run Close in a goroutine with a timeout and kill the process
-	// if it doesn't exit within 3 seconds.
+	// run Close in a goroutine with a timeout and force-kill the
+	// subprocess if it doesn't exit within 3 seconds.
 	done := make(chan error, 1)
 	go func() {
 		done <- c.inner.Close()
@@ -146,8 +172,10 @@ func (c *Client) Close() error {
 	case err := <-done:
 		return err
 	case <-time.After(3 * time.Second):
-		// Close didn't complete in time; the process is likely stuck.
-		// This is expected with Node.js stdio servers.
+		// Close didn't complete in time; force-kill the subprocess.
+		if c.serverCmd != nil && c.serverCmd.Process != nil {
+			_ = c.serverCmd.Process.Kill()
+		}
 		return fmt.Errorf("%s", CloseTimeoutErr)
 	}
 }
