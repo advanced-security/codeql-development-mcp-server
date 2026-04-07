@@ -179,7 +179,7 @@ describe('buildEnhancedToolSchema', () => {
       const messages = result.error.issues.map((i) => i.message);
       expect(messages).toEqual(
         expect.arrayContaining([
-          expect.stringContaining("unknown property 'sourceRoot' — did you mean 'source-root'?"),
+          expect.stringContaining("duplicate property: both 'sourceRoot' and its canonical form 'source-root' were provided; use only 'source-root'"),
         ]),
       );
     }
@@ -216,10 +216,9 @@ describe('buildEnhancedToolSchema', () => {
     }
   });
 
-  it('should include a "did you mean?" hint for unrecognized properties similar to known ones', () => {
-    // Provide a key that is NOT a direct camelCase/snake_case/kebab-case
-    // conversion of any known key — but IS a conversion in the OTHER direction.
-    // Example: the schema has camelCase "queryName" and the user sends "query-name"
+  it('should normalize kebab-case to camelCase when schema uses camelCase keys', () => {
+    // The schema has camelCase "queryName" and the user sends "query-name";
+    // normalization should silently convert to the canonical camelCase key.
     const camelSchema = buildEnhancedToolSchema({
       queryName: z.string().optional(),
     });

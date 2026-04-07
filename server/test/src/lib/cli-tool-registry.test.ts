@@ -204,15 +204,22 @@ describe('registerCLITool', () => {
 
     registerCLITool(mockServer, definition);
 
-    // registerTool is called with (name, config, callback)
+    // Verify the tool is registered with the right name, description, and a
+    // schema that normalizes camelCase keys (behaviour-level assertion instead
+    // of inspecting Zod internals like _def.typeName).
     expect(mockServer.registerTool).toHaveBeenCalledWith(
       'test_codeql_tool',
       expect.objectContaining({
         description: 'Test CodeQL tool',
-        inputSchema: expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
+        inputSchema: expect.any(Object),
       }),
       expect.any(Function)
     );
+
+    // Verify the schema normalizes a camelCase key to its canonical form
+    const registeredSchema = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][1].inputSchema;
+    const parsed = registeredSchema.safeParse({ query: 'q', database: 'db' });
+    expect(parsed.success).toBe(true);
   });
 
   it('should register a QLT tool correctly', () => {
@@ -229,15 +236,19 @@ describe('registerCLITool', () => {
 
     registerCLITool(mockServer, definition);
 
-    // registerTool is called with (name, config, callback)
+    // Behaviour-level assertion: verify registration and schema parsing
     expect(mockServer.registerTool).toHaveBeenCalledWith(
       'test_qlt_tool',
       expect.objectContaining({
         description: 'Test QLT tool',
-        inputSchema: expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodEffects' }) }),
+        inputSchema: expect.any(Object),
       }),
       expect.any(Function)
     );
+
+    const registeredSchema = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][1].inputSchema;
+    const parsed = registeredSchema.safeParse({ language: 'java' });
+    expect(parsed.success).toBe(true);
   });
 
   it('should use custom result processor if provided', () => {

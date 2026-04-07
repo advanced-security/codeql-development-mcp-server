@@ -78,7 +78,7 @@ export function buildEnhancedToolSchema(
     .passthrough()
     .transform((data, ctx) => {
       const normalized: Record<string, unknown> = {};
-      const unknownEntries: Array<{ key: string; hint?: string }> = [];
+      const unknownEntries: Array<{ key: string; hint?: string; isDuplicate: boolean }> = [];
 
       for (const [key, value] of Object.entries(data)) {
         if (knownKeys.has(key)) {
@@ -93,17 +93,20 @@ export function buildEnhancedToolSchema(
           } else {
             // Either no suggestion (truly unknown) or the canonical key is
             // already present.  Capture the suggestion so the error message
-            // can include a "did you mean?" hint.
-            unknownEntries.push({ key, hint: suggestion });
+            // can include a helpful hint.
+            const isDuplicate = !!suggestion && (suggestion in data || suggestion in normalized);
+            unknownEntries.push({ key, hint: suggestion, isDuplicate });
           }
         }
       }
 
-      // Report unknown / duplicate properties with "did you mean?" hints
-      for (const { key, hint } of unknownEntries) {
-        const message = hint
-          ? `unknown property '${key}' — did you mean '${hint}'?`
-          : `unknown property '${key}'`;
+      // Report unknown / duplicate properties with actionable messages
+      for (const { key, hint, isDuplicate } of unknownEntries) {
+        const message = isDuplicate && hint
+          ? `duplicate property: both '${key}' and its canonical form '${hint}' were provided; use only '${hint}'`
+          : hint
+            ? `unknown property '${key}' — did you mean '${hint}'?`
+            : `unknown property '${key}'`;
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message,
