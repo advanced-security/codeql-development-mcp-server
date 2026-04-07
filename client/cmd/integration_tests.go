@@ -10,7 +10,6 @@ import (
 
 	mcpclient "github.com/advanced-security/codeql-development-mcp-server/client/internal/mcp"
 	itesting "github.com/advanced-security/codeql-development-mcp-server/client/internal/testing"
-	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/spf13/cobra"
 )
 
@@ -47,38 +46,29 @@ type mcpToolCaller struct {
 	timeout time.Duration
 }
 
-func (c *mcpToolCaller) CallToolRaw(name string, params map[string]any) ([]itesting.ContentBlock, bool, error) {
+func (c *mcpToolCaller) CallToolRaw(name string, params map[string]any) ([]mcpclient.ContentBlock, bool, error) {
 	ctx := context.Background()
 	if c.timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, c.timeout)
 		defer cancel()
 	}
-	result, err := c.client.CallTool(ctx, name, params)
+
+	result, err := mcpclient.CallTool(ctx, c.client, name, params)
 	if err != nil {
 		return nil, false, err
 	}
 
-	var blocks []itesting.ContentBlock
-	for _, item := range result.Content {
-		if textContent, ok := item.(mcp.TextContent); ok {
-			blocks = append(blocks, itesting.ContentBlock{
-				Type: "text",
-				Text: textContent.Text,
-			})
-		}
-	}
-
-	return blocks, result.IsError, nil
+	return result.Content, result.IsError, nil
 }
 
 func (c *mcpToolCaller) ListToolNames() ([]string, error) {
-	tools, err := c.client.ListTools(context.Background())
+	infos, err := mcpclient.ListTools(context.Background(), c.client)
 	if err != nil {
 		return nil, err
 	}
-	names := make([]string, len(tools))
-	for i, t := range tools {
+	names := make([]string, len(infos))
+	for i, t := range infos {
 		names[i] = t.Name
 	}
 	return names, nil

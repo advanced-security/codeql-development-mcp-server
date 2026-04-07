@@ -42,6 +42,14 @@ func (h *hangCloser) ListResources(_ context.Context, _ mcp.ListResourcesRequest
 	return nil, nil
 }
 
+func (h *hangCloser) GetPrompt(_ context.Context, _ mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	return nil, nil
+}
+
+func (h *hangCloser) ReadResource(_ context.Context, _ mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+	return nil, nil
+}
+
 // TestMain handles the subprocess helper mode used by
 // TestClose_KillsSubprocessOnTimeout. When GO_TEST_HANG_SUBPROCESS is set,
 // the process simply blocks forever, simulating a stuck MCP server on all
