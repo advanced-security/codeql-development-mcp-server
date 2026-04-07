@@ -2,9 +2,9 @@ name: Lint and Format - CodeQL Development MCP Server
 
 on:
   pull_request:
-    branches: ['main']
+    branches: ['main', 'next']
   push:
-    branches: ['main']
+    branches: ['main', 'next']
   workflow_dispatch:
 
 permissions:
