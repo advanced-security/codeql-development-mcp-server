@@ -1,6 +1,6 @@
 module github.com/advanced-security/codeql-development-mcp-server/client
 
-go 1.25.8
+go 1.25.6
 
 require (
 	github.com/mark3labs/mcp-go v0.47.0

@@ -1,8 +1,7 @@
 /**
  * Annotation Tools — general-purpose notes and bookmarks on any entity.
  *
- * Enabled by default. Can be disabled via ENABLE_ANNOTATION_TOOLS=false.
- * Uses the shared SqliteStore from the session data manager.
+ * Always registered. Uses the shared SqliteStore from the session data manager.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';

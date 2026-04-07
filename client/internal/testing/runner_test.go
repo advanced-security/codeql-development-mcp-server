@@ -101,8 +101,13 @@ func TestTruncate(t *testing.T) {
 func TestRunnerWithMockCaller(t *testing.T) {
 	caller := newMockCaller()
 
+	// Create a valid repo root with an empty fixtures directory
+	dir := t.TempDir()
+	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
+	os.MkdirAll(testsDir, 0o755)
+
 	opts := RunnerOptions{
-		RepoRoot:    "/nonexistent",
+		RepoRoot:    dir,
 		FilterTools: []string{"nonexistent_tool"},
 	}
 
@@ -111,9 +116,8 @@ func TestRunnerWithMockCaller(t *testing.T) {
 		t.Fatal("NewRunner returned nil")
 	}
 
-	// Running with nonexistent directory should not panic
+	// Running with no matching tool dirs = all passed (vacuously true)
 	allPassed, results := runner.Run()
-	// No tests found = all passed (vacuously true)
 	if !allPassed {
 		t.Error("expected allPassed=true when no tests found")
 	}
@@ -125,8 +129,13 @@ func TestRunnerWithMockCaller(t *testing.T) {
 func TestRunnerNoInstallPacks(t *testing.T) {
 	caller := newMockCaller()
 
+	// Create a valid repo root with an empty fixtures directory
+	dir := t.TempDir()
+	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
+	os.MkdirAll(testsDir, 0o755)
+
 	opts := RunnerOptions{
-		RepoRoot:       "/nonexistent",
+		RepoRoot:       dir,
 		NoInstallPacks: true,
 		FilterTools:    []string{"codeql_pack_install"},
 	}
@@ -292,6 +301,28 @@ func TestValidateAssertions_MultipleBlocks(t *testing.T) {
 	result := validateAssertions(dir, content)
 	if result != "" {
 		t.Errorf("expected pass across multiple blocks, got %q", result)
+	}
+}
+
+func TestRunnerMissingFixturesDirFails(t *testing.T) {
+	caller := newMockCaller()
+
+	// Point to a repo root that exists but has no client/integration-tests/primitives/tools
+	dir := t.TempDir()
+
+	opts := RunnerOptions{
+		RepoRoot: dir,
+	}
+
+	runner := NewRunner(caller, opts)
+	allPassed, results := runner.Run()
+
+	// A missing fixtures directory must be treated as a hard failure
+	if allPassed {
+		t.Error("expected allPassed=false when fixtures directory is missing")
+	}
+	if len(results) == 0 {
+		t.Error("expected at least one failure result for missing fixtures directory")
 	}
 }
 

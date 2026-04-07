@@ -196,7 +196,7 @@ export const MonitoringConfigSchema = z.object({
   archiveCompletedSessions: z.boolean().default(true),
   enableRecommendations: z.boolean().default(true),
   enableMonitoringTools: z.boolean().default(false), // Opt-in: session_* tools disabled by default for end-users
-  enableAnnotationTools: z.boolean().default(false), // Opt-in: annotation_* and audit_* tools disabled by default
+  enableAnnotationTools: z.boolean().default(false), // Controls auto-caching behavior in result-processor; tools are always registered
 });
 
 export type MonitoringConfig = z.infer<typeof MonitoringConfigSchema>;

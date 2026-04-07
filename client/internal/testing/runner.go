@@ -95,8 +95,10 @@ func (r *Runner) Run() (bool, []TestResult) {
 
 	entries, err := os.ReadDir(testsDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "No integration tests directory found: %v\n", err)
-		return true, nil
+		errMsg := fmt.Sprintf("integration tests directory not found: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errMsg)
+		r.recordResult("(fixtures)", "", false, errMsg, 0)
+		return r.printSummary(), r.results
 	}
 
 	var toolDirs []string

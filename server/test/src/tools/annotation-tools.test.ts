@@ -59,6 +59,35 @@ describe('Annotation Tools', () => {
       expect(mockServer.tool).toHaveBeenCalledTimes(6);
     });
 
+    it('should register all 6 annotation tools even when enableAnnotationTools is false', () => {
+      vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
+        storageLocation: testStorageDir,
+        autoTrackSessions: true,
+        retentionDays: 90,
+        includeCallParameters: true,
+        includeCallResults: true,
+        maxActiveSessionsPerQuery: 3,
+        scoringFrequency: 'per_call',
+        archiveCompletedSessions: true,
+        enableAnnotationTools: false,
+        enableRecommendations: true,
+        enableMonitoringTools: false,
+      });
+
+      registerAnnotationTools(mockServer);
+
+      const toolCalls = (mockServer.tool as any).mock.calls;
+      const toolNames = toolCalls.map((call: any) => call[0]);
+
+      expect(toolNames).toContain('annotation_create');
+      expect(toolNames).toContain('annotation_delete');
+      expect(toolNames).toContain('annotation_get');
+      expect(toolNames).toContain('annotation_list');
+      expect(toolNames).toContain('annotation_search');
+      expect(toolNames).toContain('annotation_update');
+      expect(mockServer.tool).toHaveBeenCalledTimes(6);
+    });
+
     describe('tool schema validation', () => {
       beforeEach(() => {
         vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({

@@ -150,7 +150,7 @@ func buildToolParams(repoRoot, toolName, testCase, testDir string) (map[string]a
 		params["query"] = filepath.Join(beforeDir, qlFiles[0])
 
 	case "codeql_resolve_queries":
-		params["path"] = beforeDir
+		params["directory"] = beforeDir
 
 	case "codeql_resolve_tests":
 		params["tests"] = []string{beforeDir}

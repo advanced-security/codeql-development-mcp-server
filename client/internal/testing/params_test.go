@@ -65,6 +65,25 @@ func TestBuildToolParams_ValidateCodeqlQuery(t *testing.T) {
 	}
 }
 
+func TestBuildToolParams_ResolveQueries_UsesDirectoryKey(t *testing.T) {
+	dir := t.TempDir()
+	testDir := filepath.Join(dir, "tools", "codeql_resolve_queries", "resolve_queries")
+	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
+	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
+
+	params, err := buildToolParams(dir, "codeql_resolve_queries", "resolve_queries", testDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// The server schema expects "directory", not "path"
+	if _, ok := params["directory"]; !ok {
+		t.Errorf("expected params to contain 'directory' key, got keys: %v", params)
+	}
+	if _, ok := params["path"]; ok {
+		t.Errorf("params should NOT contain 'path' key for codeql_resolve_queries; use 'directory' instead")
+	}
+}
+
 func TestBuildToolParams_ResolveLanguages(t *testing.T) {
 	dir := t.TempDir()
 	testDir := filepath.Join(dir, "tools", "codeql_resolve_languages", "list_languages")
