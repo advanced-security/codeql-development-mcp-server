@@ -30,28 +30,7 @@ describe('Cache Tools', () => {
   });
 
   describe('registerCacheTools', () => {
-    describe('opt-in behavior', () => {
-      it('should not register cache tools when enableAnnotationTools is false', () => {
-        vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
-          storageLocation: testStorageDir,
-          autoTrackSessions: true,
-          retentionDays: 90,
-          includeCallParameters: true,
-          includeCallResults: true,
-          maxActiveSessionsPerQuery: 3,
-          scoringFrequency: 'per_call',
-          archiveCompletedSessions: true,
-          enableAnnotationTools: false,
-          enableRecommendations: true,
-          enableMonitoringTools: false,
-        });
-
-        registerCacheTools(mockServer);
-
-        expect(mockServer.tool).not.toHaveBeenCalled();
-      });
-
-      it('should register cache tools when enableAnnotationTools is true', () => {
+    it('should always register all 4 cache tools', () => {
         vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
           storageLocation: testStorageDir,
           autoTrackSessions: true,
@@ -76,7 +55,6 @@ describe('Cache Tools', () => {
         expect(toolNames).toContain('query_results_cache_lookup');
         expect(toolNames).toContain('query_results_cache_retrieve');
         expect(mockServer.tool).toHaveBeenCalledTimes(4);
-      });
     });
 
     describe('schema validation', () => {

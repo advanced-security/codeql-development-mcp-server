@@ -118,7 +118,8 @@ extract_test_databases() {
 ## Extract test databases based on scope and language filters.
 ##
 ## Default (no flags): only databases needed by client integration tests
-##   (currently just server/ql/javascript/examples).
+##   (javascript/examples + tools databases for languages with integration
+##   test fixtures).
 ## --scope all: all languages × examples + tools.
 ## --language: filter to a single language (implies --scope all).
 
@@ -145,7 +146,16 @@ elif [ "${SCOPE}" = "all" ]; then
 	done
 else
 	echo "Extracting test databases for integration tests only..."
+	# Extract javascript/examples for default codeql_query_run parameters
 	extract_test_databases "server/ql/javascript/examples"
+	# Extract tools databases for all languages — the Go integration tests
+	# include codeql_query_run test cases that reference tools/test databases
+	# for cpp, javascript, python, and rust.
+	for lang in "${VALID_LANGUAGES[@]}"; do
+		if [ -d "server/ql/${lang}/tools" ]; then
+			extract_test_databases "server/ql/${lang}/tools"
+		fi
+	done
 fi
 
 echo "INFO: Test database extraction complete!"

@@ -2,7 +2,7 @@
  * Query Results Cache Tools — LLM-facing tools for cached query result
  * lookup, retrieval (with subset selection), clearing, and comparison.
  *
- * Opt-in via ENABLE_ANNOTATION_TOOLS=true (same flag as annotations/audit).
+ * Enabled by default alongside annotation tools.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -14,15 +14,6 @@ import { logger } from '../utils/logger';
  * Register all query results cache tools with the MCP server.
  */
 export function registerCacheTools(server: McpServer): void {
-  const config = sessionDataManager.getConfig();
-
-  if (!config.enableAnnotationTools) {
-    logger.info(
-      'Cache tools are disabled (opt-in). Set ENABLE_ANNOTATION_TOOLS=true to enable query_results_cache_* tools.',
-    );
-    return;
-  }
-
   registerQueryResultsCacheLookupTool(server);
   registerQueryResultsCacheRetrieveTool(server);
   registerQueryResultsCacheClearTool(server);
