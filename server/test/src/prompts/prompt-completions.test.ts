@@ -23,7 +23,14 @@ import {
   completePackRoot,
   completeQueryPath,
   completeSarifPath,
+  resolveLanguageFromPack,
 } from '../../../src/prompts/prompt-completions';
+import {
+  documentCodeqlQuerySchema,
+  explainCodeqlQuerySchema,
+  qlLspIterativeDevelopmentSchema,
+  workshopCreationWorkflowSchema,
+} from '../../../src/prompts/workflow-prompts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // completeLanguage
@@ -459,5 +466,230 @@ describe('addCompletions', () => {
     const enhanced = addCompletions(shape);
     expect(isCompletable(enhanced.language)).toBe(true);
     expect(enhanced.language instanceof z.ZodOptional).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue 3: completeQueryPath should skip non-essential directories
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('completeQueryPath — directory filtering', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = createTestTempDir('complete-query-filter');
+    vi.stubEnv('CODEQL_MCP_WORKSPACE', tmpDir);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(tmpDir);
+  });
+
+  it('should skip .github directory', async () => {
+    const ghDir = join(tmpDir, '.github', 'skills', 'workshop', 'examples');
+    mkdirSync(ghDir, { recursive: true });
+    writeFileSync(join(ghDir, 'Workshop.ql'), '');
+
+    writeFileSync(join(tmpDir, 'TopLevel.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toContain('TopLevel.ql');
+    expect(result).not.toContain(join('.github', 'skills', 'workshop', 'examples', 'Workshop.ql'));
+  });
+
+  it('should skip dist directory', async () => {
+    const distDir = join(tmpDir, 'dist');
+    mkdirSync(distDir, { recursive: true });
+    writeFileSync(join(distDir, 'bundled.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+
+  it('should skip coverage directory', async () => {
+    const covDir = join(tmpDir, 'coverage');
+    mkdirSync(covDir, { recursive: true });
+    writeFileSync(join(covDir, 'report.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue 1: completeDatabasePath should scan well-known default locations
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('completeDatabasePath — default search paths', () => {
+  let tmpDir: string;
+  let fakeHome: string;
+
+  beforeEach(() => {
+    tmpDir = createTestTempDir('complete-db-defaults');
+    fakeHome = join(tmpDir, 'fakehome');
+    mkdirSync(fakeHome, { recursive: true });
+    vi.stubEnv('CODEQL_MCP_WORKSPACE', tmpDir);
+    vi.stubEnv('CODEQL_DATABASES_BASE_DIRS', '');
+    vi.stubEnv('HOME', fakeHome);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(tmpDir);
+  });
+
+  it('should find databases under $HOME/codeql/databases/', async () => {
+    const dbDir = join(fakeHome, 'codeql', 'databases', 'my-js-db');
+    mkdirSync(dbDir, { recursive: true });
+
+    const result = await completeDatabasePath('');
+    expect(result).toContain(join(fakeHome, 'codeql', 'databases', 'my-js-db'));
+  });
+
+  it('should find databases with codeql-database.yml in workspace subdirs', async () => {
+    const dbDir = join(tmpDir, 'my-project-database');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), 'primaryLanguage: javascript');
+
+    const result = await completeDatabasePath('');
+    expect(result).toContain(join(tmpDir, 'my-project-database'));
+  });
+
+  it('should include .testproj directories from workspace', async () => {
+    const testprojDir = join(tmpDir, 'test', 'MyQuery.testproj');
+    mkdirSync(testprojDir, { recursive: true });
+    writeFileSync(join(testprojDir, 'codeql-database.yml'), 'primaryLanguage: cpp');
+
+    const result = await completeDatabasePath('');
+    expect(result).toContain(join(tmpDir, 'test', 'MyQuery.testproj'));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue 2: resolveLanguageFromPack — derive language from codeql-pack.yml
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('resolveLanguageFromPack', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = createTestTempDir('resolve-lang');
+  });
+
+  afterEach(() => {
+    cleanupTestTempDir(tmpDir);
+  });
+
+  it('should resolve language from codeql/<lang>-all dependency', async () => {
+    const packDir = join(tmpDir, 'my-pack');
+    mkdirSync(packDir, { recursive: true });
+    writeFileSync(join(packDir, 'codeql-pack.yml'),
+      'name: test/pack\nversion: 1.0.0\ndependencies:\n  codeql/javascript-all: "*"\n');
+    writeFileSync(join(packDir, 'Query.ql'), '');
+
+    const lang = await resolveLanguageFromPack(join(packDir, 'Query.ql'));
+    expect(lang).toBe('javascript');
+  });
+
+  it('should resolve cpp from codeql/cpp-all dependency', async () => {
+    const packDir = join(tmpDir, 'cpp-pack');
+    mkdirSync(packDir, { recursive: true });
+    writeFileSync(join(packDir, 'codeql-pack.yml'),
+      'name: test/cpp\nversion: 1.0.0\ndependencies:\n  codeql/cpp-all: 1.0.0\n');
+    writeFileSync(join(packDir, 'Query.ql'), '');
+
+    const lang = await resolveLanguageFromPack(join(packDir, 'Query.ql'));
+    expect(lang).toBe('cpp');
+  });
+
+  it('should search parent directories for codeql-pack.yml', async () => {
+    const packDir = join(tmpDir, 'my-pack');
+    const subDir = join(packDir, 'src', 'queries');
+    mkdirSync(subDir, { recursive: true });
+    writeFileSync(join(packDir, 'codeql-pack.yml'),
+      'name: test/pack\nversion: 1.0.0\ndependencies:\n  codeql/python-all: "*"\n');
+    writeFileSync(join(subDir, 'Query.ql'), '');
+
+    const lang = await resolveLanguageFromPack(join(subDir, 'Query.ql'));
+    expect(lang).toBe('python');
+  });
+
+  it('should return undefined when no codeql-pack.yml found', async () => {
+    writeFileSync(join(tmpDir, 'Query.ql'), '');
+
+    const lang = await resolveLanguageFromPack(join(tmpDir, 'Query.ql'));
+    expect(lang).toBeUndefined();
+  });
+
+  it('should return undefined when pack has no language-specific dependency', async () => {
+    const packDir = join(tmpDir, 'generic-pack');
+    mkdirSync(packDir, { recursive: true });
+    writeFileSync(join(packDir, 'codeql-pack.yml'),
+      'name: test/generic\nversion: 1.0.0\nlibrary: true\n');
+    writeFileSync(join(packDir, 'Lib.qll'), '');
+
+    const lang = await resolveLanguageFromPack(join(packDir, 'Lib.qll'));
+    expect(lang).toBeUndefined();
+  });
+
+  it('should resolve language from codeql/<lang>-queries dependency', async () => {
+    const packDir = join(tmpDir, 'queries-dep-pack');
+    mkdirSync(packDir, { recursive: true });
+    writeFileSync(join(packDir, 'codeql-pack.yml'),
+      'name: test/pack\nversion: 1.0.0\ndependencies:\n  codeql/java-queries: "*"\n');
+    writeFileSync(join(packDir, 'Query.ql'), '');
+
+    const lang = await resolveLanguageFromPack(join(packDir, 'Query.ql'));
+    expect(lang).toBe('java');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue 2: Prompt schema field ordering — queryPath should precede language
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('prompt schema field ordering', () => {
+  it('explainCodeqlQuerySchema should list queryPath before language', () => {
+    const keys = Object.keys(explainCodeqlQuerySchema.shape);
+    const qpIdx = keys.indexOf('queryPath');
+    const langIdx = keys.indexOf('language');
+    expect(qpIdx).toBeLessThan(langIdx);
+  });
+
+  it('documentCodeqlQuerySchema should list queryPath before language', () => {
+    const keys = Object.keys(documentCodeqlQuerySchema.shape);
+    const qpIdx = keys.indexOf('queryPath');
+    const langIdx = keys.indexOf('language');
+    expect(qpIdx).toBeLessThan(langIdx);
+  });
+
+  it('workshopCreationWorkflowSchema should list queryPath before language', () => {
+    const keys = Object.keys(workshopCreationWorkflowSchema.shape);
+    const qpIdx = keys.indexOf('queryPath');
+    const langIdx = keys.indexOf('language');
+    expect(qpIdx).toBeLessThan(langIdx);
+  });
+
+  it('qlLspIterativeDevelopmentSchema should list queryPath before language', () => {
+    const keys = Object.keys(qlLspIterativeDevelopmentSchema.shape);
+    const qpIdx = keys.indexOf('queryPath');
+    const langIdx = keys.indexOf('language');
+    expect(qpIdx).toBeLessThan(langIdx);
+  });
+
+  it('explainCodeqlQuerySchema language should be optional', () => {
+    const langField = explainCodeqlQuerySchema.shape.language;
+    expect(langField.isOptional()).toBe(true);
+  });
+
+  it('documentCodeqlQuerySchema language should be optional', () => {
+    const langField = documentCodeqlQuerySchema.shape.language;
+    expect(langField.isOptional()).toBe(true);
+  });
+
+  it('workshopCreationWorkflowSchema language should be optional', () => {
+    const langField = workshopCreationWorkflowSchema.shape.language;
+    expect(langField.isOptional()).toBe(true);
   });
 });

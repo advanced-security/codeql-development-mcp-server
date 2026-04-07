@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { access } from 'fs/promises';
 import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
-import { addCompletions } from './prompt-completions';
+import { addCompletions, resolveLanguageFromPack } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
@@ -257,7 +257,8 @@ export const workshopCreationWorkflowSchema = z.object({
     .describe('Path to the production-grade CodeQL query (.ql or .qlref)'),
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language of the query'),
+    .optional()
+    .describe('Programming language of the query (auto-derived from pack metadata when omitted)'),
   workshopName: z
     .string()
     .optional()
@@ -338,16 +339,17 @@ export const describeFalsePositivesSchema = z.object({
  * - `databasePath` is optional – a database may also be derived from tests.
  */
 export const explainCodeqlQuerySchema = z.object({
+  queryPath: z
+    .string()
+    .describe('Path to the CodeQL query file (.ql or .qlref)'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language of the query (auto-derived from pack metadata when omitted)'),
   databasePath: z
     .string()
     .optional()
     .describe('Path to a CodeQL database for profiling'),
-  language: z
-    .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language of the query'),
-  queryPath: z
-    .string()
-    .describe('Path to the CodeQL query file (.ql or .qlref)'),
 });
 
 /**
@@ -356,12 +358,13 @@ export const explainCodeqlQuerySchema = z.object({
  * - `queryPath` and `language` are **required**.
  */
 export const documentCodeqlQuerySchema = z.object({
-  language: z
-    .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language of the query'),
   queryPath: z
     .string()
     .describe('Path to the CodeQL query file (.ql or .qlref)'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language of the query (auto-derived from pack metadata when omitted)'),
 });
 
 /**
@@ -442,12 +445,13 @@ export const findOverlappingQueriesSchema = z.object({
  * - `workspaceUri` is optional – defaults to the pack root.
  */
 export const qlLspIterativeDevelopmentSchema = z.object({
-  language: z
-    .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language for the query'),
   queryPath: z
     .string()
     .describe('Path to the query file being developed'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language for the query (auto-derived from pack metadata when omitted)'),
   workspaceUri: z
     .string()
     .optional()
@@ -744,6 +748,18 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        let effectiveLanguage = language;
+        if (!effectiveLanguage && resolvedQueryPath) {
+          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
+          if (effectiveLanguage) {
+            logger.debug(`workshop_creation_workflow: derived language '${effectiveLanguage}' from pack metadata`);
+          }
+        }
+        if (!effectiveLanguage) {
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+        }
+
         const derivedName =
           workshopName ||
           basename(resolvedQueryPath)
@@ -754,7 +770,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const contextSection = buildWorkshopContext(
           resolvedQueryPath,
-          language,
+          effectiveLanguage ?? 'unknown',
           derivedName,
           numStages
         );
@@ -1001,6 +1017,18 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        let effectiveLanguage = language;
+        if (!effectiveLanguage && resolvedQueryPath) {
+          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
+          if (effectiveLanguage) {
+            logger.debug(`explain_codeql_query: derived language '${effectiveLanguage}' from pack metadata`);
+          }
+        }
+        if (!effectiveLanguage) {
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+        }
+
         let resolvedDatabasePath = databasePath;
         if (databasePath) {
           const dbResult = await resolvePromptFilePath(databasePath);
@@ -1011,7 +1039,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         let contextSection = '## Query to Explain\n\n';
         contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
-        contextSection += `- **Language**: ${language}\n`;
+        contextSection += `- **Language**: ${effectiveLanguage ?? 'unknown'}\n`;
         if (resolvedDatabasePath) {
           contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
         }
@@ -1053,10 +1081,22 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        let effectiveLanguage = language;
+        if (!effectiveLanguage && resolvedQueryPath) {
+          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
+          if (effectiveLanguage) {
+            logger.debug(`document_codeql_query: derived language '${effectiveLanguage}' from pack metadata`);
+          }
+        }
+        if (!effectiveLanguage) {
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+        }
+
         const contextSection = `## Query to Document
 
 - **Query Path**: ${resolvedQueryPath}
-- **Language**: ${language}
+- **Language**: ${effectiveLanguage ?? 'unknown'}
 
 `;
 
@@ -1158,6 +1198,18 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        let effectiveLanguage = language;
+        if (!effectiveLanguage && resolvedQueryPath) {
+          effectiveLanguage = await resolveLanguageFromPack(resolvedQueryPath) as typeof language;
+          if (effectiveLanguage) {
+            logger.debug(`ql_lsp_iterative_development: derived language '${effectiveLanguage}' from pack metadata`);
+          }
+        }
+        if (!effectiveLanguage) {
+          warnings.push('⚠ **Language could not be auto-derived.** Please provide the `language` parameter or ensure the query is inside a CodeQL pack with a `codeql/<lang>-all` dependency.');
+        }
+
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
           const wsResult = await resolvePromptFilePath(workspaceUri);
@@ -1167,7 +1219,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         }
 
         let contextSection = '## Your Development Context\n\n';
-        contextSection += `- **Language**: ${language}\n`;
+        contextSection += `- **Language**: ${effectiveLanguage ?? 'unknown'}\n`;
         contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
         if (resolvedWorkspaceUri) {
           contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}\n`;
