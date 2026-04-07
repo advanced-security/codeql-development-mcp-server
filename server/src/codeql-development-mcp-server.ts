@@ -22,6 +22,7 @@ import { registerAuditTools } from './tools/audit-tools';
 import { registerCacheTools } from './tools/cache-tools';
 import { registerSarifTools } from './tools/sarif-tools';
 import { sessionDataManager } from './lib/session-data-manager';
+import { patchValidateToolInput } from './lib/tool-validation';
 import { resolveCodeQLBinary, validateCodeQLBinaryReachable } from './lib/cli-executor';
 import { initServerManager, shutdownServerManager } from './lib/server-manager';
 import { packageRootDir } from './utils/package-paths';
@@ -59,6 +60,10 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
     name: PACKAGE_NAME,
     version: VERSION,
   });
+
+  // Override the SDK's default one-at-a-time error reporting so that all
+  // validation violations are surfaced in a single response.
+  patchValidateToolInput(server);
 
   // Register CodeQL tools (legacy high-level helpers)
   registerCodeQLTools(server);
