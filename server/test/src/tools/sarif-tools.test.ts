@@ -117,7 +117,7 @@ describe('SARIF Tools', () => {
   });
 
   describe('registerSarifTools', () => {
-    it('should always register all 5 SARIF tools', () => {
+    it('should register all 7 SARIF tools', () => {
       vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
         storageLocation: testStorageDir,
         autoTrackSessions: true,
@@ -133,14 +133,16 @@ describe('SARIF Tools', () => {
       });
 
       registerSarifTools(mockServer);
-      expect(mockServer.tool).toHaveBeenCalledTimes(5);
+      expect(mockServer.tool).toHaveBeenCalledTimes(7);
 
       const toolNames = (mockServer.tool as any).mock.calls.map((call: any) => call[0]);
+      expect(toolNames).toContain('sarif_compare_alerts');
+      expect(toolNames).toContain('sarif_deduplicate_rules');
+      expect(toolNames).toContain('sarif_diff_runs');
       expect(toolNames).toContain('sarif_extract_rule');
       expect(toolNames).toContain('sarif_list_rules');
       expect(toolNames).toContain('sarif_rule_to_markdown');
-      expect(toolNames).toContain('sarif_compare_alerts');
-      expect(toolNames).toContain('sarif_diff_runs');
+      expect(toolNames).toContain('sarif_store');
     });
   });
 
@@ -343,6 +345,61 @@ describe('SARIF Tools', () => {
           sarifPathB: testSarifPath,
         });
         expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+      });
+    });
+
+    describe('sarif_store', () => {
+      let mockPutCacheEntry: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        mockPutCacheEntry = vi.fn();
+        vi.spyOn(sessionDataManager, 'getStore').mockReturnValue({
+          putCacheEntry: mockPutCacheEntry,
+        } as any);
+      });
+
+      it('should store SARIF from file path and return cache key', async () => {
+        const result = await handlers.sarif_store({ sarifPath: testSarifPath });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.cacheKey).toBeDefined();
+        expect(parsed.cacheKey).toMatch(/^sarif-store-/);
+        expect(parsed.source).toBe('file');
+        expect(parsed.resultCount).toBe(3);
+        expect(parsed.ruleCount).toBe(2);
+        expect(parsed.toolName).toBe('CodeQL');
+        expect(mockPutCacheEntry).toHaveBeenCalledTimes(1);
+      });
+
+      it('should store SARIF from inline content', async () => {
+        const content = JSON.stringify(createTestSarif());
+        const result = await handlers.sarif_store({ sarifContent: content });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.cacheKey).toMatch(/^sarif-store-/);
+        expect(parsed.source).toBe('inline');
+        expect(parsed.resultCount).toBe(3);
+        expect(mockPutCacheEntry).toHaveBeenCalledTimes(1);
+      });
+
+      it('should store SARIF with label', async () => {
+        const result = await handlers.sarif_store({
+          label: 'my-analysis',
+          sarifPath: testSarifPath,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.label).toBe('my-analysis');
+      });
+
+      it('should return error when neither content nor path provided', async () => {
+        const result = await handlers.sarif_store({});
+        expect(result.content[0].text).toContain('Either sarifContent or sarifPath is required');
+      });
+
+      it('should return error for invalid SARIF content', async () => {
+        const result = await handlers.sarif_store({ sarifContent: '{"not": "sarif"}' });
+        expect(result.content[0].text).toContain('Invalid SARIF');
       });
     });
   });

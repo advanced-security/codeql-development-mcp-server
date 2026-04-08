@@ -24,12 +24,11 @@ var (
 // rootCmd is the top-level command for the CLI.
 var rootCmd = &cobra.Command{
 	Use:   "gh-ql-mcp-client",
-	Short: "CodeQL Development MCP Client — integration test runner and CLI",
-	Long: `gh-ql-mcp-client is a CLI for running integration tests against a
-CodeQL Development MCP Server.
+	Short: "CodeQL Development MCP Client — Code Scanning alert lifecycle management",
+	Long: `gh-ql-mcp-client is a CLI for managing Code Scanning alert lifecycles.
 
-It connects to a CodeQL Development MCP Server via stdio or HTTP transport
-and runs integration test fixtures from client/integration-tests/.
+It connects to a CodeQL Development MCP Server to leverage SARIF analysis tools
+and uses GitHub's Code Scanning REST API (via gh auth) for alert operations.
 
 Use as a gh extension:  gh ql-mcp-client <command> [flags]
 Use standalone:         gh-ql-mcp-client <command> [flags]`,

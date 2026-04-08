@@ -20,6 +20,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - **Annotation, audit, cache, and SARIF tools are now always enabled** — Removed the `ENABLE_ANNOTATION_TOOLS` opt-in gate; all annotation, audit, query result cache, and SARIF analysis tools are registered by default. The `ENABLE_ANNOTATION_TOOLS` environment variable no longer controls tool availability; when set to `false`, it only disables the related auto-caching behaviour in result processing. ([#223](https://github.com/advanced-security/codeql-development-mcp-server/pull/223))
 - **Go-based `ql-mcp-client` rewrite** — Replaced the Node.js `ql-mcp-client.js` integration test runner with a Go CLI (`gh-ql-mcp-client`) built with Cobra and `mcp-go`. Adds `list tools/prompts/resources` commands and assertion-based integration test validation. ([#223](https://github.com/advanced-security/codeql-development-mcp-server/pull/223))
+- **Code Scanning lifecycle management** — Added `code-scanning list-analyses`, `list-alerts`, and `download-analysis` subcommands to `gh-ql-mcp-client` with GitHub REST API integration via `go-gh`. Added `sarif` parent subcommand for SARIF delegation workflows. Enhanced SARIF tools with `sarif_store` (session cache ingest), `sarif_deduplicate_rules` (cross-file rule deduplication), and `partialFingerprints` overlap mode with automatic fallback.
 - **Persistent MRVA workflow state and caching** — Introduced a new `SqliteStore` backend plus annotation, audit, and query result cache tools to support the next phase of MCP-assisted CodeQL development and `seclab-taskflow-agent` integration. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
 - **Rust language support** — Added first-class Rust support with `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`, and `CallGraphFromTo` queries, bringing the total supported languages to 10. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - **Bug fixes and design improvements from recent evaluation sessions** — Fixed 5 bugs across `bqrs_interpret`, `bqrs_info`, `annotation_search`, `audit_add_notes`, and `query_results_cache_compare`; added `database_analyze` auto-caching and per-database mutex serialization; auto-enabled annotation tools in VS Code extension. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
@@ -35,6 +36,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 | `audit_store_findings`, `audit_list_findings`, `audit_add_notes`, `audit_clear_repo`                                     | Repo-keyed audit tools for MRVA finding management and triage workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                  |
 | `query_results_cache_lookup`, `query_results_cache_retrieve`, `query_results_cache_clear`, `query_results_cache_compare` | Query result cache tools for lookup, subset retrieval, cache clearing, and cross-database comparison. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                     |
 | `sarif_list_rules`, `sarif_extract_rule`, `sarif_rule_to_markdown`, `sarif_compare_alerts`, `sarif_diff_runs`            | SARIF analysis tools for rule discovery, per-rule extraction, Mermaid dataflow visualization, alert overlap comparison, and cross-run behavioral diffing. ([#204](https://github.com/advanced-security/codeql-development-mcp-server/pull/204)) |
+| `sarif_store`, `sarif_deduplicate_rules`                                                                                 | SARIF session cache ingest and cross-file rule deduplication tools. `sarif_compare_alerts` enhanced with `partialFingerprints` overlap mode with automatic fallback to full-path comparison.                                                    |
 
 #### MCP Server Resources
 
@@ -58,6 +60,8 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - Added Rust coverage to CI and release workflows, including query unit tests and VSIX bundling. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - Added client integration tests for the new Rust queries and for the annotation, audit, and cache tool suites, including an MRVA triage workflow end-to-end test. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169), [#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+- Added `code-scanning` and `sarif` subcommand groups to `gh-ql-mcp-client` with GitHub REST API client integration via `go-gh` for Code Scanning alert lifecycle management.
+- Added `gh` extension packaging support with cross-compilation targets for `darwin/amd64`, `darwin/arm64`, `linux/amd64`, `linux/arm64`, `windows/amd64`.
 
 ### Changed
 
