@@ -189,7 +189,7 @@ describe('SARIF Tools', () => {
 
       it('should return error when no sarifPath or cacheKey provided', async () => {
         const result = await handlers.sarif_extract_rule({ ruleId: 'js/sql-injection' });
-        expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+        expect(result.content[0].text).toContain('No SARIF source provided');
       });
 
       it('should return error for invalid file path', async () => {
@@ -344,7 +344,7 @@ describe('SARIF Tools', () => {
         const result = await handlers.sarif_diff_runs({
           sarifPathB: testSarifPath,
         });
-        expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+        expect(result.content[0].text).toContain('No SARIF source provided');
       });
     });
 
@@ -500,7 +500,7 @@ describe('SARIF Tools', () => {
         const result = await handlers.sarif_deduplicate_rules({
           sarifPathB: testSarifPath,
         });
-        expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+        expect(result.content[0].text).toContain('No SARIF source provided');
       });
     });
   });

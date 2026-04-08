@@ -18,6 +18,7 @@ import {
   sarifRuleToMarkdown,
 } from '../lib/sarif-utils';
 import { sessionDataManager } from '../lib/session-data-manager';
+import type { SarifResult, SarifRule } from '../types/sarif';
 import type { SarifDocument } from '../types/sarif';
 import { logger } from '../utils/logger';
 
@@ -56,7 +57,7 @@ function loadSarif(
   const { cacheKey, inlineContent, sarifPath } = opts;
 
   if (!sarifPath && !cacheKey && !inlineContent) {
-    return { error: 'Either sarifPath or cacheKey is required.' };
+    return { error: 'No SARIF source provided.' };
   }
 
   let content: string;
@@ -298,6 +299,12 @@ function registerSarifCompareAlertsTool(server: McpServer): void {
       if (overlap.pathSimilarity !== undefined) {
         response.pathSimilarity = overlap.pathSimilarity;
       }
+      if (overlap.fingerprintMatch !== undefined) {
+        response.fingerprintMatch = overlap.fingerprintMatch;
+      }
+      if (overlap.matchedFingerprints !== undefined) {
+        response.matchedFingerprints = overlap.matchedFingerprints;
+      }
 
       return {
         content: [{
@@ -468,17 +475,40 @@ function registerSarifDeduplicateRulesTool(server: McpServer): void {
         unmatchedB: number;
       }> = [];
 
+      // Precompute per-rule extracted results to avoid redundant filtering in the pairwise loop
+      type RuleData = {
+        results: SarifResult[];
+        ruleObj: SarifRule | { id: string };
+      };
+      const ruleDataA = new Map<string, RuleData>();
+      for (const rA of rulesA) {
+        if (rA.resultCount === 0) continue;
+        const extracted = extractRuleFromSarif(loadedA.sarif!, rA.ruleId);
+        ruleDataA.set(rA.ruleId, {
+          results: extracted.runs[0]?.results ?? [],
+          ruleObj: extracted.runs[0]?.tool.driver.rules?.[0] ?? { id: rA.ruleId },
+        });
+      }
+      const ruleDataB = new Map<string, RuleData>();
+      for (const rB of rulesB) {
+        if (rB.resultCount === 0) continue;
+        const extracted = extractRuleFromSarif(loadedB.sarif!, rB.ruleId);
+        ruleDataB.set(rB.ruleId, {
+          results: extracted.runs[0]?.results ?? [],
+          ruleObj: extracted.runs[0]?.tool.driver.rules?.[0] ?? { id: rB.ruleId },
+        });
+      }
+
       // Compare each rule in A against each rule in B
       for (const rA of rulesA) {
+        const dataA = ruleDataA.get(rA.ruleId);
+        if (!dataA) continue;
         for (const rB of rulesB) {
-          if (rA.resultCount === 0 || rB.resultCount === 0) continue;
+          const dataB = ruleDataB.get(rB.ruleId);
+          if (!dataB) continue;
 
-          const extractedA = extractRuleFromSarif(loadedA.sarif!, rA.ruleId);
-          const extractedB = extractRuleFromSarif(loadedB.sarif!, rB.ruleId);
-          const resultsA = extractedA.runs[0]?.results ?? [];
-          const resultsB = extractedB.runs[0]?.results ?? [];
-          const ruleObjA = extractedA.runs[0]?.tool.driver.rules?.[0] ?? { id: rA.ruleId };
-          const ruleObjB = extractedB.runs[0]?.tool.driver.rules?.[0] ?? { id: rB.ruleId };
+          const { results: resultsA, ruleObj: ruleObjA } = dataA;
+          const { results: resultsB, ruleObj: ruleObjB } = dataB;
 
           // Full-path location overlap
           const overlaps = findOverlappingAlerts(resultsA, ruleObjA, resultsB, ruleObjB, 'full-path');
