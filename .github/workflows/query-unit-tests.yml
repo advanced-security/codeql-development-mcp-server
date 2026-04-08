@@ -2,7 +2,7 @@ name: Query Unit Tests - CodeQL Development MCP Server
 
 on:
   pull_request:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.codeql-version'
       - '.gitmodules'
@@ -16,7 +16,7 @@ on:
       - 'server/scripts/install-packs.sh'
       - 'server/scripts/run-query-unit-tests.sh'
   push:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.codeql-version'
       - '.gitmodules'

@@ -12,6 +12,7 @@ import { closeSync, createReadStream, fstatSync, lstatSync, openSync, readdirSyn
 import { basename, extname, join, resolve } from 'path';
 import { createInterface } from 'readline';
 import { z } from 'zod';
+import { getScanExcludeDirs } from '../../lib/scan-exclude';
 import { logger } from '../../utils/logger';
 
 // ---------------------------------------------------------------------------
@@ -30,8 +31,11 @@ const MAX_CONTEXT_LINES = 50;
 /** Maximum allowed value for `maxResults`. */
 const MAX_MAX_RESULTS = 10_000;
 
-/** Directory names to skip during traversal (compiled pack caches, deps). */
-const SKIP_DIRS = new Set(['.codeql', 'node_modules', '.git']);
+/**
+ * Directory names to skip during traversal.
+ * Uses the shared, configurable exclusion list from scan-exclude.ts.
+ */
+const SKIP_DIRS: Set<string> = getScanExcludeDirs();
 
 // ---------------------------------------------------------------------------
 // Types

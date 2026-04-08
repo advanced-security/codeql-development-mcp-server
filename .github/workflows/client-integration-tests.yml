@@ -2,7 +2,7 @@ name: QL MCP Client Integration Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, next]
     paths:
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/client-integration-tests.yml'
@@ -11,7 +11,7 @@ on:
       - 'client/**'
       - 'server/**'
   pull_request:
-    branches: [main]
+    branches: [main, next]
     paths:
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/client-integration-tests.yml'

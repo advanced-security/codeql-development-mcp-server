@@ -2,13 +2,13 @@ name: Build Server - CodeQL Development MCP Server
 
 on:
   pull_request:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.github/workflows/build-server.yml'
       - '.node-version'
       - 'server/**'
   push:
-    branches: ['main']
+    branches: ['main', 'next']
     paths:
       - '.github/workflows/build-server.yml'
       - '.node-version'

@@ -82,6 +82,11 @@ export const workspace = {
   onDidCreateFiles: noopReturn({ dispose: noop }),
   onDidSaveTextDocument: noopReturn({ dispose: noop }),
   fs: { stat: noop, readFile: noop, readDirectory: noop },
+  asRelativePath: (pathOrUri: any) => {
+    const p = typeof pathOrUri === 'string' ? pathOrUri : pathOrUri?.fsPath ?? String(pathOrUri);
+    return p;
+  },
+  updateWorkspaceFolders: () => true,
 };
 
 export const window = {

@@ -124,8 +124,7 @@ export class ServerManager extends DisposableObject {
     // VSIX bundle or monorepo server is present — no npm install required.
     if (this.getBundledQlRoot()) {
       this.logger.info(
-        `Using bundled server (v${this.getExtensionVersion()}). ` +
-        'No npm install required.',
+        `Bundled server ready (v${this.getExtensionVersion()}).`,
       );
       return false;
     }

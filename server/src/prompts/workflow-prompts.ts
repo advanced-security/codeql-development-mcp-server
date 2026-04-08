@@ -10,23 +10,14 @@ import { z } from 'zod';
 import { access } from 'fs/promises';
 import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
+import { SUPPORTED_LANGUAGES } from './constants';
+import { addCompletions, getEffectiveLanguage } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
 import { logger } from '../utils/logger';
 
-/** Supported CodeQL languages for tools queries */
-export const SUPPORTED_LANGUAGES = [
-  'actions',
-  'cpp',
-  'csharp',
-  'go',
-  'java',
-  'javascript',
-  'python',
-  'ruby',
-  'rust',
-  'swift'
-] as const;
+// Re-export for backward compatibility with existing consumers and tests.
+export { SUPPORTED_LANGUAGES } from './constants';
 
 // ────────────────────────────────────────────────────────────────────────────
 // File-path resolution for prompt parameters
@@ -247,7 +238,8 @@ export const toolsQueryWorkflowSchema = z.object({
  * Schema for workshop_creation_workflow prompt parameters.
  * Uses z.coerce.number() for numStages to handle string inputs from VSCode slash commands.
  *
- * - `queryPath` and `language` are **required**.
+ * - `queryPath` is **required**.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  * - `workshopName` and `numStages` are optional.
  */
 export const workshopCreationWorkflowSchema = z.object({
@@ -256,7 +248,8 @@ export const workshopCreationWorkflowSchema = z.object({
     .describe('Path to the production-grade CodeQL query (.ql or .qlref)'),
   language: z
     .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language of the query'),
+    .optional()
+    .describe('Programming language of the query (auto-derived from pack metadata when omitted)'),
   workshopName: z
     .string()
     .optional()
@@ -333,34 +326,38 @@ export const describeFalsePositivesSchema = z.object({
 /**
  * Schema for explain_codeql_query prompt parameters.
  *
- * - `queryPath` and `language` are **required**.
+ * - `queryPath` is **required**.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  * - `databasePath` is optional – a database may also be derived from tests.
  */
 export const explainCodeqlQuerySchema = z.object({
+  queryPath: z
+    .string()
+    .describe('Path to the CodeQL query file (.ql or .qlref)'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language of the query (auto-derived from pack metadata when omitted)'),
   databasePath: z
     .string()
     .optional()
     .describe('Path to a CodeQL database for profiling'),
-  language: z
-    .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language of the query'),
-  queryPath: z
-    .string()
-    .describe('Path to the CodeQL query file (.ql or .qlref)'),
 });
 
 /**
  * Schema for document_codeql_query prompt parameters.
  *
- * - `queryPath` and `language` are **required**.
+ * - `queryPath` is **required**.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  */
 export const documentCodeqlQuerySchema = z.object({
-  language: z
-    .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language of the query'),
   queryPath: z
     .string()
     .describe('Path to the CodeQL query file (.ql or .qlref)'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language of the query (auto-derived from pack metadata when omitted)'),
 });
 
 /**
@@ -437,16 +434,18 @@ export const findOverlappingQueriesSchema = z.object({
 /**
  * Schema for ql_lsp_iterative_development prompt parameters.
  *
- * - `language` and `queryPath` are **required** – LSP tools need both.
+ * - `queryPath` is **required** – LSP tools need it.
+ * - `language` is optional – auto-derived from pack metadata when omitted.
  * - `workspaceUri` is optional – defaults to the pack root.
  */
 export const qlLspIterativeDevelopmentSchema = z.object({
-  language: z
-    .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language for the query'),
   queryPath: z
     .string()
     .describe('Path to the query file being developed'),
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .optional()
+    .describe('Programming language for the query (auto-derived from pack metadata when omitted)'),
   workspaceUri: z
     .string()
     .optional()
@@ -651,7 +650,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'test_driven_development',
     'Test-driven development workflow for CodeQL queries using MCP tools',
-    toPermissiveShape(testDrivenDevelopmentSchema.shape),
+    addCompletions(toPermissiveShape(testDrivenDevelopmentSchema.shape)),
     createSafePromptHandler(
       'test_driven_development',
       testDrivenDevelopmentSchema,
@@ -681,7 +680,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'tools_query_workflow',
     'Guide for using built-in tools queries (PrintAST, PrintCFG, CallGraphFrom, CallGraphTo) to understand code structure',
-    toPermissiveShape(toolsQueryWorkflowSchema.shape),
+    addCompletions(toPermissiveShape(toolsQueryWorkflowSchema.shape)),
     createSafePromptHandler(
       'tools_query_workflow',
       toolsQueryWorkflowSchema,
@@ -730,7 +729,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'workshop_creation_workflow',
     'Guide for creating CodeQL query development workshops from production-grade queries',
-    toPermissiveShape(workshopCreationWorkflowSchema.shape),
+    addCompletions(toPermissiveShape(workshopCreationWorkflowSchema.shape)),
     createSafePromptHandler(
       'workshop_creation_workflow',
       workshopCreationWorkflowSchema,
@@ -743,6 +742,11 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        const langResult = await getEffectiveLanguage('workshop_creation_workflow', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
+
         const derivedName =
           workshopName ||
           basename(resolvedQueryPath)
@@ -753,7 +757,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         const contextSection = buildWorkshopContext(
           resolvedQueryPath,
-          language,
+          effectiveLanguage ?? 'unknown',
           derivedName,
           numStages
         );
@@ -781,7 +785,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'ql_tdd_basic',
     'Test-driven CodeQL query development checklist - write tests first, implement query, iterate until tests pass',
-    toPermissiveShape(qlTddBasicSchema.shape),
+    addCompletions(toPermissiveShape(qlTddBasicSchema.shape)),
     createSafePromptHandler(
       'ql_tdd_basic',
       qlTddBasicSchema,
@@ -814,7 +818,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'ql_tdd_advanced',
     'Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis',
-    toPermissiveShape(qlTddAdvancedSchema.shape),
+    addCompletions(toPermissiveShape(qlTddAdvancedSchema.shape)),
     createSafePromptHandler(
       'ql_tdd_advanced',
       qlTddAdvancedSchema,
@@ -863,7 +867,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'sarif_rank_false_positives',
     'Analyze SARIF results to identify likely false positives in CodeQL query results',
-    toPermissiveShape(sarifRankSchema.shape),
+    addCompletions(toPermissiveShape(sarifRankSchema.shape)),
     createSafePromptHandler(
       'sarif_rank_false_positives',
       sarifRankSchema,
@@ -906,7 +910,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'sarif_rank_true_positives',
     'Analyze SARIF results to identify likely true positives in CodeQL query results',
-    toPermissiveShape(sarifRankSchema.shape),
+    addCompletions(toPermissiveShape(sarifRankSchema.shape)),
     createSafePromptHandler(
       'sarif_rank_true_positives',
       sarifRankSchema,
@@ -949,7 +953,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'run_query_and_summarize_false_positives',
     'Help a user figure out where their query may need improvement to have a lower false positive rate',
-    toPermissiveShape(describeFalsePositivesSchema.shape),
+    addCompletions(toPermissiveShape(describeFalsePositivesSchema.shape)),
     createSafePromptHandler(
       'run_query_and_summarize_false_positives',
       describeFalsePositivesSchema,
@@ -987,7 +991,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'explain_codeql_query',
     'Generate detailed explanation of a CodeQL query for workshop learning content - uses MCP tools to gather context and produces both verbal explanations and mermaid evaluation diagrams',
-    toPermissiveShape(explainCodeqlQuerySchema.shape),
+    addCompletions(toPermissiveShape(explainCodeqlQuerySchema.shape)),
     createSafePromptHandler(
       'explain_codeql_query',
       explainCodeqlQuerySchema,
@@ -1000,6 +1004,11 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        const langResult = await getEffectiveLanguage('explain_codeql_query', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
+
         let resolvedDatabasePath = databasePath;
         if (databasePath) {
           const dbResult = await resolvePromptFilePath(databasePath);
@@ -1010,7 +1019,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
 
         let contextSection = '## Query to Explain\n\n';
         contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
-        contextSection += `- **Language**: ${language}\n`;
+        contextSection += `- **Language**: ${effectiveLanguage ?? 'unknown'}\n`;
         if (resolvedDatabasePath) {
           contextSection += `- **Database Path**: ${resolvedDatabasePath}\n`;
         }
@@ -1039,7 +1048,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'document_codeql_query',
     'Create or update documentation for a CodeQL query - generates standardized markdown documentation as a sibling file to the query',
-    toPermissiveShape(documentCodeqlQuerySchema.shape),
+    addCompletions(toPermissiveShape(documentCodeqlQuerySchema.shape)),
     createSafePromptHandler(
       'document_codeql_query',
       documentCodeqlQuerySchema,
@@ -1052,10 +1061,15 @@ export function registerWorkflowPrompts(server: McpServer): void {
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        const langResult = await getEffectiveLanguage('document_codeql_query', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
+
         const contextSection = `## Query to Document
 
 - **Query Path**: ${resolvedQueryPath}
-- **Language**: ${language}
+- **Language**: ${effectiveLanguage ?? 'unknown'}
 
 `;
 
@@ -1082,7 +1096,7 @@ export function registerWorkflowPrompts(server: McpServer): void {
   server.prompt(
     'check_for_duplicated_code',
     'Check a .ql or .qll file for classes, predicates, and modules that duplicate definitions already available in the standard CodeQL libraries or shared project .qll files',
-    checkForDuplicatedCodeSchema.shape,
+    addCompletions(checkForDuplicatedCodeSchema.shape),
     async ({ queryPath, workspaceUri }) => {
       const template = loadPromptTemplate('check-for-duplicated-code.prompt.md');
 
@@ -1111,7 +1125,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
   server.prompt(
     'find_overlapping_queries',
     'Discover existing .ql query files and .qll library files whose content may overlap with a new query design, identifying reusable classes, predicates, and modules',
-    findOverlappingQueriesSchema.shape,
+    addCompletions(findOverlappingQueriesSchema.shape),
     async ({ queryDescription, language, packRoot }) => {
       const template = loadPromptTemplate('find-overlapping-queries.prompt.md');
 
@@ -1144,7 +1158,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
   server.prompt(
     'ql_lsp_iterative_development',
     'Iterative CodeQL query development using LSP tools for completion, navigation, and validation',
-    toPermissiveShape(qlLspIterativeDevelopmentSchema.shape),
+    addCompletions(toPermissiveShape(qlLspIterativeDevelopmentSchema.shape)),
     createSafePromptHandler(
       'ql_lsp_iterative_development',
       qlLspIterativeDevelopmentSchema,
@@ -1157,6 +1171,11 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         const resolvedQueryPath = qpResult.resolvedPath;
         if (qpResult.warning) warnings.push(qpResult.warning);
 
+        // Auto-derive language from pack metadata when not explicitly provided
+        const langResult = await getEffectiveLanguage('ql_lsp_iterative_development', language, resolvedQueryPath);
+        const effectiveLanguage = langResult.language as typeof language;
+        if (langResult.warning) warnings.push(langResult.warning);
+
         let resolvedWorkspaceUri = workspaceUri;
         if (workspaceUri) {
           const wsResult = await resolvePromptFilePath(workspaceUri);
@@ -1166,7 +1185,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
         }
 
         let contextSection = '## Your Development Context\n\n';
-        contextSection += `- **Language**: ${language}\n`;
+        contextSection += `- **Language**: ${effectiveLanguage ?? 'unknown'}\n`;
         contextSection += `- **Query Path**: ${resolvedQueryPath}\n`;
         if (resolvedWorkspaceUri) {
           contextSection += `- **Workspace URI**: ${resolvedWorkspaceUri}\n`;
@@ -1196,7 +1215,7 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
   server.prompt(
     'compare_overlapping_alerts',
     'Compare CodeQL SARIF alerts across rules, files, runs, databases, or CodeQL versions. Detect overlap, redundancy, and behavioral deviations.',
-    toPermissiveShape(compareOverlappingAlertsSchema.shape),
+    addCompletions(toPermissiveShape(compareOverlappingAlertsSchema.shape)),
     createSafePromptHandler(
       'compare_overlapping_alerts',
       compareOverlappingAlertsSchema,
