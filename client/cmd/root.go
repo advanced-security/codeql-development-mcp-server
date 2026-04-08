@@ -51,7 +51,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&mcpMode, "mode", "stdio", "MCP server transport mode (stdio or http)")
 	rootCmd.PersistentFlags().StringVar(&mcpHost, "host", "localhost", "MCP server host (http mode)")
 	rootCmd.PersistentFlags().IntVar(&mcpPort, "port", 3000, "MCP server port (http mode)")
-	rootCmd.PersistentFlags().StringVar(&outputFmt, "format", "text", "Output format (text or json)")
+	rootCmd.PersistentFlags().StringVar(&outputFmt, "format", "text", "Output format (text, json, or markdown)")
 }
 
 // MCPMode returns the configured MCP transport mode.

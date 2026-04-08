@@ -20,9 +20,11 @@ type innerClient interface {
 	Initialize(context.Context, mcp.InitializeRequest) (*mcp.InitializeResult, error)
 	Close() error
 	CallTool(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error)
+	GetPrompt(context.Context, mcp.GetPromptRequest) (*mcp.GetPromptResult, error)
 	ListTools(context.Context, mcp.ListToolsRequest) (*mcp.ListToolsResult, error)
 	ListPrompts(context.Context, mcp.ListPromptsRequest) (*mcp.ListPromptsResult, error)
 	ListResources(context.Context, mcp.ListResourcesRequest) (*mcp.ListResourcesResult, error)
+	ReadResource(context.Context, mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error)
 }
 
 const (
@@ -231,6 +233,31 @@ func (c *Client) ListResources(ctx context.Context) ([]mcp.Resource, error) {
 		return nil, err
 	}
 	return result.Resources, nil
+}
+
+// GetPrompt retrieves a prompt by name with the given arguments.
+func (c *Client) GetPrompt(ctx context.Context, name string, args map[string]string) (*mcp.GetPromptResult, error) {
+	if c.inner == nil {
+		return nil, fmt.Errorf("MCP client not connected")
+	}
+
+	req := mcp.GetPromptRequest{}
+	req.Params.Name = name
+	req.Params.Arguments = args
+
+	return c.inner.GetPrompt(ctx, req)
+}
+
+// ReadResource reads a resource by URI.
+func (c *Client) ReadResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
+	if c.inner == nil {
+		return nil, fmt.Errorf("MCP client not connected")
+	}
+
+	req := mcp.ReadResourceRequest{}
+	req.Params.URI = uri
+
+	return c.inner.ReadResource(ctx, req)
 }
 
 // timeoutForTool returns the appropriate timeout for a given tool name.
