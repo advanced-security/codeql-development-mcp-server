@@ -8,18 +8,14 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	mcpprim "github.com/advanced-security/codeql-development-mcp-server/client/internal/mcp"
 )
 
 // ToolCaller is the interface for making MCP tool calls.
 type ToolCaller interface {
-	CallToolRaw(name string, params map[string]any) ([]ContentBlock, bool, error)
+	CallToolRaw(name string, params map[string]any) ([]mcpprim.ContentBlock, bool, error)
 	ListToolNames() ([]string, error)
-}
-
-// ContentBlock represents a single content block in an MCP tool response.
-type ContentBlock struct {
-	Text string `json:"text"`
-	Type string `json:"type"`
 }
 
 // TestConfig represents a test-config.json fixture file.
@@ -326,7 +322,7 @@ func (r *Runner) printSummary() bool {
 // validateAssertions checks test-config.json assertions against the tool
 // response content. Returns an empty string on success, or a description
 // of the first assertion failure.
-func validateAssertions(testDir string, content []ContentBlock) string {
+func validateAssertions(testDir string, content []mcpprim.ContentBlock) string {
 	configPath := filepath.Join(testDir, "test-config.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {

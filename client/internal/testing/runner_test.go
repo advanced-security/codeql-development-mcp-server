@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	mcpprim "github.com/advanced-security/codeql-development-mcp-server/client/internal/mcp"
 )
 
 // mockCaller implements ToolCaller for tests.
@@ -19,7 +21,7 @@ type mockCall struct {
 }
 
 type mockResult struct {
-	content []ContentBlock
+	content []mcpprim.ContentBlock
 	err     error
 	isError bool
 }
@@ -30,12 +32,12 @@ func newMockCaller() *mockCaller {
 	}
 }
 
-func (m *mockCaller) CallToolRaw(name string, params map[string]any) ([]ContentBlock, bool, error) {
+func (m *mockCaller) CallToolRaw(name string, params map[string]any) ([]mcpprim.ContentBlock, bool, error) {
 	m.calls = append(m.calls, mockCall{name: name, params: params})
 	if r, ok := m.results[name]; ok {
 		return r.content, r.isError, r.err
 	}
-	return []ContentBlock{{Type: "text", Text: "ok"}}, false, nil
+	return []mcpprim.ContentBlock{{Type: "text", Text: "ok"}}, false, nil
 }
 
 func (m *mockCaller) ListToolNames() ([]string, error) {
@@ -238,7 +240,7 @@ func TestRunnerEmptyContentFails(t *testing.T) {
 	caller := newMockCaller()
 	// Return empty content blocks for mock_tool
 	caller.results["mock_tool"] = mockResult{
-		content: []ContentBlock{},
+		content: []mcpprim.ContentBlock{},
 		isError: false,
 		err:     nil,
 	}
@@ -282,7 +284,7 @@ func TestRunnerEmptyContentFails(t *testing.T) {
 func TestValidateAssertions_NoConfig(t *testing.T) {
 	dir := t.TempDir()
 	// No test-config.json — should pass
-	result := validateAssertions(dir, []ContentBlock{{Text: "hello"}})
+	result := validateAssertions(dir, []mcpprim.ContentBlock{{Text: "hello"}})
 	if result != "" {
 		t.Errorf("expected no error, got %q", result)
 	}
@@ -293,7 +295,7 @@ func TestValidateAssertions_NoAssertions(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{}}`), 0o600)
 
-	result := validateAssertions(dir, []ContentBlock{{Text: "hello"}})
+	result := validateAssertions(dir, []mcpprim.ContentBlock{{Text: "hello"}})
 	if result != "" {
 		t.Errorf("expected no error when no assertions defined, got %q", result)
 	}
@@ -304,7 +306,7 @@ func TestValidateAssertions_ResponseContains_Pass(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["hello","world"]}}`), 0o600)
 
-	content := []ContentBlock{{Text: "hello world"}}
+	content := []mcpprim.ContentBlock{{Text: "hello world"}}
 	result := validateAssertions(dir, content)
 	if result != "" {
 		t.Errorf("expected pass, got %q", result)
@@ -316,7 +318,7 @@ func TestValidateAssertions_ResponseContains_Fail(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["missing"]}}`), 0o600)
 
-	content := []ContentBlock{{Text: "hello world"}}
+	content := []mcpprim.ContentBlock{{Text: "hello world"}}
 	result := validateAssertions(dir, content)
 	if result == "" {
 		t.Error("expected assertion failure for missing content")
@@ -328,7 +330,7 @@ func TestValidateAssertions_ResponseNotContains_Pass(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseNotContains":["error","fail"]}}`), 0o600)
 
-	content := []ContentBlock{{Text: "all good"}}
+	content := []mcpprim.ContentBlock{{Text: "all good"}}
 	result := validateAssertions(dir, content)
 	if result != "" {
 		t.Errorf("expected pass, got %q", result)
@@ -340,7 +342,7 @@ func TestValidateAssertions_ResponseNotContains_Fail(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseNotContains":["error"]}}`), 0o600)
 
-	content := []ContentBlock{{Text: "some error happened"}}
+	content := []mcpprim.ContentBlock{{Text: "some error happened"}}
 	result := validateAssertions(dir, content)
 	if result == "" {
 		t.Error("expected assertion failure for forbidden content")
@@ -352,7 +354,7 @@ func TestValidateAssertions_MinContentBlocks_Pass(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"minContentBlocks":2}}`), 0o600)
 
-	content := []ContentBlock{{Text: "block1"}, {Text: "block2"}}
+	content := []mcpprim.ContentBlock{{Text: "block1"}, {Text: "block2"}}
 	result := validateAssertions(dir, content)
 	if result != "" {
 		t.Errorf("expected pass, got %q", result)
@@ -364,7 +366,7 @@ func TestValidateAssertions_MinContentBlocks_Fail(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"minContentBlocks":3}}`), 0o600)
 
-	content := []ContentBlock{{Text: "only one"}}
+	content := []mcpprim.ContentBlock{{Text: "only one"}}
 	result := validateAssertions(dir, content)
 	if result == "" {
 		t.Error("expected assertion failure for insufficient content blocks")
@@ -376,7 +378,7 @@ func TestValidateAssertions_MultipleBlocks(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["from block2"]}}`), 0o600)
 
-	content := []ContentBlock{{Text: "block1 text"}, {Text: "from block2"}}
+	content := []mcpprim.ContentBlock{{Text: "block1 text"}, {Text: "from block2"}}
 	result := validateAssertions(dir, content)
 	if result != "" {
 		t.Errorf("expected pass across multiple blocks, got %q", result)
@@ -408,7 +410,7 @@ func TestRunnerMissingFixturesDirFails(t *testing.T) {
 func TestRunnerAssertionFailure(t *testing.T) {
 	caller := newMockCaller()
 	caller.results["mock_tool"] = mockResult{
-		content: []ContentBlock{{Type: "text", Text: "unexpected output"}},
+		content: []mcpprim.ContentBlock{{Type: "text", Text: "unexpected output"}},
 		isError: false,
 		err:     nil,
 	}
