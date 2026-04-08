@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,7 @@ Subcommands:
 func parseArgs(args []string) (map[string]string, error) {
 	result := make(map[string]string, len(args))
 	for _, a := range args {
-		key, value, found := cutString(a, "=")
+		key, value, found := strings.Cut(a, "=")
 		if !found || key == "" {
 			return nil, fmt.Errorf("invalid argument %q: expected key=value format", a)
 		}
@@ -34,23 +35,13 @@ func parseArgs(args []string) (map[string]string, error) {
 func parseArgsAny(args []string) (map[string]any, error) {
 	result := make(map[string]any, len(args))
 	for _, a := range args {
-		key, value, found := cutString(a, "=")
+		key, value, found := strings.Cut(a, "=")
 		if !found || key == "" {
 			return nil, fmt.Errorf("invalid argument %q: expected key=value format", a)
 		}
 		result[key] = value
 	}
 	return result, nil
-}
-
-// cutString splits s around the first instance of sep.
-func cutString(s, sep string) (before, after string, found bool) {
-	for i := 0; i+len(sep) <= len(s); i++ {
-		if s[i:i+len(sep)] == sep {
-			return s[:i], s[i+len(sep):], true
-		}
-	}
-	return s, "", false
 }
 
 func init() {

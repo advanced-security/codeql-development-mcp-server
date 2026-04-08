@@ -65,5 +65,8 @@ func outputToolResult(result *mcpclient.ToolResult) error {
 	default:
 		fmt.Fprint(os.Stdout, mcpclient.FormatToolResultText(result))
 	}
+	if result.IsError {
+		return fmt.Errorf("tool returned error")
+	}
 	return nil
 }
