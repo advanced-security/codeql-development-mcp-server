@@ -268,6 +268,10 @@ func FormatPromptMessagesMarkdown(pm *PromptMessages) string {
 }
 
 // extractContentText extracts the text from an MCP Content interface value.
+// MCP prompt messages use the Content interface which can be TextContent,
+// ImageContent, AudioContent, or EmbeddedResource. This function handles
+// TextContent directly and falls back to JSON serialization for other types
+// (e.g., image or audio content), preserving the data for the caller.
 func extractContentText(content mcp.Content) string {
 	if tc, ok := content.(mcp.TextContent); ok {
 		return tc.Text
