@@ -402,5 +402,106 @@ describe('SARIF Tools', () => {
         expect(result.content[0].text).toContain('Invalid SARIF');
       });
     });
+
+    describe('sarif_deduplicate_rules', () => {
+      it('should detect duplicate rules across two SARIF files with overlapping results', async () => {
+        // Create SARIF B with same rule and matching codeFlow locations to A.
+        // Both results must have codeFlows for full-path overlap to detect them.
+        const sarifB = {
+          version: '2.1.0',
+          runs: [{
+            tool: {
+              driver: {
+                name: 'CodeQL',
+                version: '2.25.1',
+                rules: [
+                  { id: 'js/sql-injection-v2', shortDescription: { text: 'SQL injection (v2)' } },
+                ],
+              },
+            },
+            results: [
+              {
+                ruleId: 'js/sql-injection-v2',
+                ruleIndex: 0,
+                message: { text: 'SQL injection from user input.' },
+                locations: [{ physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42, startColumn: 5, endColumn: 38 } } }],
+                codeFlows: [{ threadFlows: [{ locations: [
+                  { location: { physicalLocation: { artifactLocation: { uri: 'src/handler.js' }, region: { startLine: 10 } }, message: { text: 'req.query.id' } } },
+                  { location: { physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42 } }, message: { text: 'query(...)' } } },
+                ] }] }],
+              },
+            ],
+          }],
+        };
+        const pathB = join(testStorageDir, 'dedup-b.sarif');
+        writeFileSync(pathB, JSON.stringify(sarifB));
+
+        // Use a low threshold since only the codeFlow result will match (1 of 2 in A)
+        const result = await handlers.sarif_deduplicate_rules({
+          sarifPathA: testSarifPath,
+          sarifPathB: pathB,
+          overlapThreshold: 0.3,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.summary.totalRulesA).toBe(2);
+        expect(parsed.summary.totalRulesB).toBe(1);
+        expect(parsed.duplicateGroups.length).toBeGreaterThan(0);
+
+        // The js/sql-injection (A) vs js/sql-injection-v2 (B) pair should be detected
+        const sqlPair = parsed.duplicateGroups.find(
+          (g: any) => g.ruleIdA === 'js/sql-injection' && g.ruleIdB === 'js/sql-injection-v2',
+        );
+        expect(sqlPair).toBeDefined();
+        expect(sqlPair.overlapScore).toBeGreaterThan(0);
+        expect(sqlPair.matchedAlerts).toBeGreaterThan(0);
+        expect(sqlPair.totalA).toBe(2);
+        expect(sqlPair.totalB).toBe(1);
+      });
+
+      it('should return empty groups when no rules overlap', async () => {
+        // Create SARIF B with completely different rule and locations
+        const sarifB = {
+          version: '2.1.0',
+          runs: [{
+            tool: {
+              driver: {
+                name: 'CodeQL',
+                version: '2.25.1',
+                rules: [
+                  { id: 'py/command-injection', shortDescription: { text: 'Command injection' } },
+                ],
+              },
+            },
+            results: [
+              {
+                ruleId: 'py/command-injection',
+                ruleIndex: 0,
+                message: { text: 'Command injection.' },
+                locations: [{ physicalLocation: { artifactLocation: { uri: 'src/run.py' }, region: { startLine: 100, startColumn: 1, endColumn: 20 } } }],
+              },
+            ],
+          }],
+        };
+        const pathB = join(testStorageDir, 'dedup-none.sarif');
+        writeFileSync(pathB, JSON.stringify(sarifB));
+
+        const result = await handlers.sarif_deduplicate_rules({
+          sarifPathA: testSarifPath,
+          sarifPathB: pathB,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.summary.overlapThreshold).toBe(0.8);
+        expect(parsed.duplicateGroups).toHaveLength(0);
+      });
+
+      it('should return error when sarifPathA is missing', async () => {
+        const result = await handlers.sarif_deduplicate_rules({
+          sarifPathB: testSarifPath,
+        });
+        expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+      });
+    });
   });
 });

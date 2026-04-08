@@ -495,6 +495,11 @@ function registerSarifDeduplicateRulesTool(server: McpServer): void {
             }
           }
 
+          // Overlap scoring: We use the higher of two matching strategies:
+          // 1. Location-based: `overlaps.length` from full-path structural comparison
+          // 2. Fingerprint-based: `matchedAIndices.size` from partialFingerprints
+          // The score is Jaccard-like: matchedAlerts / (totalA + totalB - matchedAlerts).
+          // We cap matchedAlerts at min(totalA, totalB) so unmatched counts stay non-negative.
           const matchedAlerts = Math.max(overlaps.length, matchedAIndices.size);
           const minResults = Math.min(resultsA.length, resultsB.length);
           // Cap matched alerts at the smaller set size to avoid negative unmatched counts

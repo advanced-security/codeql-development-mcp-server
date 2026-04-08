@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"sync"
 
 	ghapi "github.com/cli/go-gh/v2/pkg/api"
 )
 
 // Client wraps the go-gh REST client for Code Scanning API calls.
 type Client struct {
-	rest      *ghapi.RESTClient
-	sarifRest *ghapi.RESTClient // lazily initialized; uses Accept: application/sarif+json
+	rest         *ghapi.RESTClient
+	sarifRest    *ghapi.RESTClient // lazily initialized; uses Accept: application/sarif+json
+	sarifOnce    sync.Once
+	sarifInitErr error
 }
 
 // NewClient creates a new GitHub API client using gh auth credentials.
@@ -32,22 +35,21 @@ func NewClient() (*Client, error) {
 }
 
 // sarifClient returns or lazily creates a REST client with Accept: application/sarif+json.
+// Uses sync.Once to prevent data races from concurrent goroutines.
 func (c *Client) sarifClient() (*ghapi.RESTClient, error) {
-	if c.sarifRest != nil {
-		return c.sarifRest, nil
-	}
-	sarifOpts := ghapi.ClientOptions{
-		Headers: map[string]string{
-			"Accept":               "application/sarif+json",
-			"X-GitHub-Api-Version": "2022-11-28",
-		},
-	}
-	client, err := ghapi.NewRESTClient(sarifOpts)
-	if err != nil {
-		return nil, fmt.Errorf("create SARIF client: %w", err)
-	}
-	c.sarifRest = client
-	return c.sarifRest, nil
+	c.sarifOnce.Do(func() {
+		sarifOpts := ghapi.ClientOptions{
+			Headers: map[string]string{
+				"Accept":               "application/sarif+json",
+				"X-GitHub-Api-Version": "2022-11-28",
+			},
+		}
+		c.sarifRest, c.sarifInitErr = ghapi.NewRESTClient(sarifOpts)
+		if c.sarifInitErr != nil {
+			c.sarifInitErr = fmt.Errorf("create SARIF client: %w", c.sarifInitErr)
+		}
+	})
+	return c.sarifRest, c.sarifInitErr
 }
 
 // ListAnalysesOptions configures the list analyses request.
