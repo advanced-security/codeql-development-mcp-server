@@ -4,6 +4,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -101,6 +102,15 @@ func (c *Client) connectStdio(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create stdio MCP client: %w", err)
 	}
+
+	// Drain the server's stderr in a background goroutine to prevent the
+	// subprocess from blocking on a full pipe buffer. On Windows the default
+	// pipe buffer is ~4 KB; once it fills, any write to stderr blocks the
+	// entire Node.js event loop, causing all subsequent tool calls to hang.
+	if stderr, ok := mcpclient.GetStderr(client); ok {
+		go func() { _, _ = io.Copy(io.Discard, stderr) }()
+	}
+
 	c.inner = client
 	c.serverCmd = spawnedCmd
 
