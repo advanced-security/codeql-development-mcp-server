@@ -9,6 +9,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { readFileSync } from 'fs';
 import { z } from 'zod';
 import {
+  computeFingerprintOverlap,
   computeLocationOverlap,
   diffSarifRules,
   extractRuleFromSarif,
@@ -17,6 +18,7 @@ import {
   sarifRuleToMarkdown,
 } from '../lib/sarif-utils';
 import { sessionDataManager } from '../lib/session-data-manager';
+import type { SarifResult, SarifRule } from '../types/sarif';
 import type { SarifDocument } from '../types/sarif';
 import { logger } from '../utils/logger';
 
@@ -28,7 +30,9 @@ export function registerSarifTools(server: McpServer): void {
   registerSarifListRulesTool(server);
   registerSarifRuleToMarkdownTool(server);
   registerSarifCompareAlertsTool(server);
+  registerSarifDeduplicateRulesTool(server);
   registerSarifDiffRunsTool(server);
+  registerSarifStoreTool(server);
 
   logger.info('Registered SARIF analysis tools');
 }
@@ -37,17 +41,30 @@ export function registerSarifTools(server: McpServer): void {
 // Shared helper: load SARIF from file path or cache key
 // ---------------------------------------------------------------------------
 
+/** Options for loading SARIF content from one of several sources. */
+interface LoadSarifOptions {
+  /** Cache key to retrieve SARIF from the session cache. */
+  cacheKey?: string;
+  /** Raw SARIF JSON string (e.g. from an API response). */
+  inlineContent?: string;
+  /** Path to a SARIF file on disk. */
+  sarifPath?: string;
+}
+
 function loadSarif(
-  sarifPath?: string,
-  cacheKey?: string,
+  opts: LoadSarifOptions,
 ): { error?: string; sarif?: SarifDocument } {
-  if (!sarifPath && !cacheKey) {
-    return { error: 'Either sarifPath or cacheKey is required.' };
+  const { cacheKey, inlineContent, sarifPath } = opts;
+
+  if (!sarifPath && !cacheKey && !inlineContent) {
+    return { error: 'No SARIF source provided.' };
   }
 
   let content: string;
 
-  if (cacheKey) {
+  if (inlineContent) {
+    content = inlineContent;
+  } else if (cacheKey) {
     const store = sessionDataManager.getStore();
     const cached = store.getCacheContent(cacheKey);
     if (!cached) {
@@ -97,7 +114,7 @@ function registerSarifExtractRuleTool(server: McpServer): void {
       sarifPath: z.string().optional().describe('Path to the SARIF file.'),
     },
     async ({ sarifPath, cacheKey, ruleId }) => {
-      const loaded = loadSarif(sarifPath, cacheKey);
+      const loaded = loadSarif({ sarifPath, cacheKey });
       if (loaded.error) {
         return { content: [{ type: 'text' as const, text: loaded.error }] };
       }
@@ -142,7 +159,7 @@ function registerSarifListRulesTool(server: McpServer): void {
       sarifPath: z.string().optional().describe('Path to the SARIF file.'),
     },
     async ({ sarifPath, cacheKey }) => {
-      const loaded = loadSarif(sarifPath, cacheKey);
+      const loaded = loadSarif({ sarifPath, cacheKey });
       if (loaded.error) {
         return { content: [{ type: 'text' as const, text: loaded.error }] };
       }
@@ -177,7 +194,7 @@ function registerSarifRuleToMarkdownTool(server: McpServer): void {
       sarifPath: z.string().optional().describe('Path to the SARIF file.'),
     },
     async ({ sarifPath, cacheKey, ruleId }) => {
-      const loaded = loadSarif(sarifPath, cacheKey);
+      const loaded = loadSarif({ sarifPath, cacheKey });
       if (loaded.error) {
         return { content: [{ type: 'text' as const, text: loaded.error }] };
       }
@@ -217,24 +234,24 @@ function registerSarifCompareAlertsTool(server: McpServer): void {
 
   server.tool(
     'sarif_compare_alerts',
-    'Compare code locations of two SARIF alerts to detect overlap. Supports sink, source, any-location, and full-path comparison modes.',
+    'Compare code locations of two SARIF alerts to detect overlap. Supports sink, source, any-location, full-path, and fingerprint comparison modes.',
     {
       alertA: alertSpecSchema.describe('First alert to compare.'),
       alertB: alertSpecSchema.describe('Second alert to compare.'),
-      overlapMode: z.enum(['sink', 'source', 'any-location', 'full-path'])
+      overlapMode: z.enum(['sink', 'source', 'any-location', 'full-path', 'fingerprint'])
         .optional()
         .default('sink')
-        .describe('Comparison mode: "sink" (primary locations), "source" (first dataflow step), "any-location" (all locations), "full-path" (structural path similarity).'),
+        .describe('Comparison mode: "sink" (primary locations), "source" (first dataflow step), "any-location" (all locations), "full-path" (structural path similarity), "fingerprint" (partialFingerprints match, falls back to full-path).'),
     },
     async ({ alertA, alertB, overlapMode }) => {
       // Load SARIF for alert A
-      const loadedA = loadSarif(alertA.sarifPath, alertA.cacheKey);
+      const loadedA = loadSarif({ sarifPath: alertA.sarifPath, cacheKey: alertA.cacheKey });
       if (loadedA.error) {
         return { content: [{ type: 'text' as const, text: `Alert A: ${loadedA.error}` }] };
       }
 
       // Load SARIF for alert B (may be same or different source)
-      const loadedB = loadSarif(alertB.sarifPath, alertB.cacheKey);
+      const loadedB = loadSarif({ sarifPath: alertB.sarifPath, cacheKey: alertB.cacheKey });
       if (loadedB.error) {
         return { content: [{ type: 'text' as const, text: `Alert B: ${loadedB.error}` }] };
       }
@@ -282,6 +299,12 @@ function registerSarifCompareAlertsTool(server: McpServer): void {
       if (overlap.pathSimilarity !== undefined) {
         response.pathSimilarity = overlap.pathSimilarity;
       }
+      if (overlap.fingerprintMatch !== undefined) {
+        response.fingerprintMatch = overlap.fingerprintMatch;
+      }
+      if (overlap.matchedFingerprints !== undefined) {
+        response.matchedFingerprints = overlap.matchedFingerprints;
+      }
 
       return {
         content: [{
@@ -310,12 +333,12 @@ function registerSarifDiffRunsTool(server: McpServer): void {
       sarifPathB: z.string().optional().describe('Path to the second (comparison) SARIF file.'),
     },
     async ({ sarifPathA, sarifPathB, cacheKeyA, cacheKeyB, labelA, labelB }) => {
-      const loadedA = loadSarif(sarifPathA, cacheKeyA);
+      const loadedA = loadSarif({ sarifPath: sarifPathA, cacheKey: cacheKeyA });
       if (loadedA.error) {
         return { content: [{ type: 'text' as const, text: `Run A: ${loadedA.error}` }] };
       }
 
-      const loadedB = loadSarif(sarifPathB, cacheKeyB);
+      const loadedB = loadSarif({ sarifPath: sarifPathB, cacheKey: cacheKeyB });
       if (loadedB.error) {
         return { content: [{ type: 'text' as const, text: `Run B: ${loadedB.error}` }] };
       }
@@ -336,6 +359,220 @@ function registerSarifDiffRunsTool(server: McpServer): void {
   );
 }
 
+// ---------------------------------------------------------------------------
+// sarif_store
+// ---------------------------------------------------------------------------
+
+function registerSarifStoreTool(server: McpServer): void {
+  server.tool(
+    'sarif_store',
+    'Store SARIF content in the session cache for use by other sarif_* tools. Returns a cache key that can be passed to sarifPath/cacheKey parameters of other tools.',
+    {
+      label: z.string().optional().describe('Human-readable label for this SARIF (e.g. "dubbo-java-2025-03").'),
+      sarifContent: z.string().optional().describe('SARIF JSON content as a string (alternative to sarifPath).'),
+      sarifPath: z.string().optional().describe('Path to a SARIF file on disk.'),
+    },
+    async ({ sarifContent, sarifPath, label }) => {
+      if (!sarifContent && !sarifPath) {
+        return { content: [{ type: 'text' as const, text: 'Either sarifContent or sarifPath is required.' }] };
+      }
+
+      let content: string;
+      if (sarifPath) {
+        try {
+          content = readFileSync(sarifPath, 'utf8');
+        } catch {
+          return { content: [{ type: 'text' as const, text: `Failed to read SARIF file: ${sarifPath}` }] };
+        }
+      } else {
+        content = sarifContent!;
+      }
+
+      // Validate SARIF structure
+      const loaded = loadSarif({ inlineContent: content });
+      if (loaded.error) {
+        return { content: [{ type: 'text' as const, text: loaded.error }] };
+      }
+
+      // Generate a deterministic cache key from content hash
+      const { createHash } = await import('crypto');
+      const hash = createHash('sha256').update(content).digest('hex').slice(0, 16);
+      const cacheKey = `sarif-store-${hash}`;
+
+      // Count results for metadata
+      const sarif = loaded.sarif!;
+      const resultCount = sarif.runs[0]?.results?.length ?? 0;
+      const ruleCount = sarif.runs[0]?.tool.driver.rules?.length ?? 0;
+      const toolName = sarif.runs[0]?.tool.driver.name ?? 'unknown';
+
+      const store = sessionDataManager.getStore();
+      store.putCacheEntry({
+        cacheKey,
+        codeqlVersion: sarif.runs[0]?.tool.driver.version ?? 'unknown',
+        databasePath: sarifPath ?? 'inline',
+        language: 'sarif',
+        outputFormat: 'sarif',
+        queryName: 'sarif_store',
+        queryPath: sarifPath ?? 'inline',
+        resultContent: content,
+        resultCount,
+      });
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            cacheKey,
+            label: label ?? null,
+            resultCount,
+            ruleCount,
+            source: sarifPath ? 'file' : 'inline',
+            toolName,
+          }, null, 2),
+        }],
+      };
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// sarif_deduplicate_rules
+// ---------------------------------------------------------------------------
+
+function registerSarifDeduplicateRulesTool(server: McpServer): void {
+  server.tool(
+    'sarif_deduplicate_rules',
+    'Identify duplicate alerts across two SARIF files by comparing rules pairwise. Uses fingerprint matching first, then full-path location overlap as fallback. Useful for cleanup after query changes or pack upgrades.',
+    {
+      cacheKeyA: z.string().optional().describe('Cache key for the first SARIF.'),
+      cacheKeyB: z.string().optional().describe('Cache key for the second SARIF.'),
+      overlapThreshold: z.number().min(0).max(1).optional().default(0.8)
+        .describe('Minimum overlap score (0-1) to consider a rule pair as duplicates. Default: 0.8.'),
+      sarifPathA: z.string().optional().describe('Path to the first SARIF file.'),
+      sarifPathB: z.string().optional().describe('Path to the second SARIF file.'),
+    },
+    async ({ sarifPathA, sarifPathB, cacheKeyA, cacheKeyB, overlapThreshold }) => {
+      const loadedA = loadSarif({ sarifPath: sarifPathA, cacheKey: cacheKeyA });
+      if (loadedA.error) {
+        return { content: [{ type: 'text' as const, text: `SARIF A: ${loadedA.error}` }] };
+      }
+      const loadedB = loadSarif({ sarifPath: sarifPathB, cacheKey: cacheKeyB });
+      if (loadedB.error) {
+        return { content: [{ type: 'text' as const, text: `SARIF B: ${loadedB.error}` }] };
+      }
+
+      const rulesA = listSarifRules(loadedA.sarif!);
+      const rulesB = listSarifRules(loadedB.sarif!);
+
+      const duplicateGroups: Array<{
+        matchedAlerts: number;
+        overlapScore: number;
+        ruleIdA: string;
+        ruleIdB: string;
+        totalA: number;
+        totalB: number;
+        unmatchedA: number;
+        unmatchedB: number;
+      }> = [];
+
+      // Precompute per-rule extracted results to avoid redundant filtering in the pairwise loop
+      type RuleData = {
+        results: SarifResult[];
+        ruleObj: SarifRule | { id: string };
+      };
+      const ruleDataA = new Map<string, RuleData>();
+      for (const rA of rulesA) {
+        if (rA.resultCount === 0) continue;
+        const extracted = extractRuleFromSarif(loadedA.sarif!, rA.ruleId);
+        ruleDataA.set(rA.ruleId, {
+          results: extracted.runs[0]?.results ?? [],
+          ruleObj: extracted.runs[0]?.tool.driver.rules?.[0] ?? { id: rA.ruleId },
+        });
+      }
+      const ruleDataB = new Map<string, RuleData>();
+      for (const rB of rulesB) {
+        if (rB.resultCount === 0) continue;
+        const extracted = extractRuleFromSarif(loadedB.sarif!, rB.ruleId);
+        ruleDataB.set(rB.ruleId, {
+          results: extracted.runs[0]?.results ?? [],
+          ruleObj: extracted.runs[0]?.tool.driver.rules?.[0] ?? { id: rB.ruleId },
+        });
+      }
+
+      // Compare each rule in A against each rule in B
+      for (const rA of rulesA) {
+        const dataA = ruleDataA.get(rA.ruleId);
+        if (!dataA) continue;
+        for (const rB of rulesB) {
+          const dataB = ruleDataB.get(rB.ruleId);
+          if (!dataB) continue;
+
+          const { results: resultsA, ruleObj: ruleObjA } = dataA;
+          const { results: resultsB, ruleObj: ruleObjB } = dataB;
+
+          // Full-path location overlap
+          const overlaps = findOverlappingAlerts(resultsA, ruleObjA, resultsB, ruleObjB, 'full-path');
+
+          // Fingerprint matching — count unique A-side results that match any B-side result
+          const matchedAIndices = new Set<number>();
+          for (let ai = 0; ai < resultsA.length; ai++) {
+            for (const rResultB of resultsB) {
+              const fpResult = computeFingerprintOverlap(resultsA[ai], rResultB);
+              if (fpResult.fingerprintMatch) {
+                matchedAIndices.add(ai);
+                break; // one match per A result is enough
+              }
+            }
+          }
+
+          // Overlap scoring: We use the higher of two matching strategies:
+          // 1. Location-based: `overlaps.length` from full-path structural comparison
+          // 2. Fingerprint-based: `matchedAIndices.size` from partialFingerprints
+          // The score is Jaccard-like: matchedAlerts / (totalA + totalB - matchedAlerts).
+          // We cap matchedAlerts at min(totalA, totalB) so unmatched counts stay non-negative.
+          const matchedAlerts = Math.max(overlaps.length, matchedAIndices.size);
+          const minResults = Math.min(resultsA.length, resultsB.length);
+          // Cap matched alerts at the smaller set size to avoid negative unmatched counts
+          const cappedMatched = Math.min(matchedAlerts, minResults);
+          const totalUnique = resultsA.length + resultsB.length - cappedMatched;
+          const overlapScore = totalUnique > 0 ? cappedMatched / totalUnique : 0;
+
+          if (overlapScore >= (overlapThreshold ?? 0.8)) {
+            duplicateGroups.push({
+              matchedAlerts: cappedMatched,
+              overlapScore: Math.round(overlapScore * 1000) / 1000,
+              ruleIdA: rA.ruleId,
+              ruleIdB: rB.ruleId,
+              totalA: resultsA.length,
+              totalB: resultsB.length,
+              unmatchedA: Math.max(0, resultsA.length - cappedMatched),
+              unmatchedB: Math.max(0, resultsB.length - cappedMatched),
+            });
+          }
+        }
+      }
+
+      // Sort by overlap score descending
+      duplicateGroups.sort((a, b) => b.overlapScore - a.overlapScore);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            duplicateGroups,
+            summary: {
+              duplicatePairsFound: duplicateGroups.length,
+              overlapThreshold: overlapThreshold ?? 0.8,
+              totalRulesA: rulesA.length,
+              totalRulesB: rulesB.length,
+            },
+          }, null, 2),
+        }],
+      };
+    },
+  );
+}
+
 /**
  * Batch compare — find all overlapping alerts between two rules.
  * This is an internal helper used by the compare_overlapping_alerts prompt.
@@ -344,7 +581,7 @@ export function findOverlappingAlertsBetweenRules(
   sarif: SarifDocument,
   ruleIdA: string,
   ruleIdB: string,
-  mode: 'any-location' | 'full-path' | 'sink' | 'source' = 'sink',
+  mode: 'any-location' | 'fingerprint' | 'full-path' | 'sink' | 'source' = 'sink',
 ) {
   const extractedA = extractRuleFromSarif(sarif, ruleIdA);
   const extractedB = extractRuleFromSarif(sarif, ruleIdB);
