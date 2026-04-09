@@ -409,10 +409,10 @@ function registerSarifStoreTool(server: McpServer): void {
       store.putCacheEntry({
         cacheKey,
         codeqlVersion: sarif.runs[0]?.tool.driver.version ?? 'unknown',
-        databasePath: label ?? 'sarif-store',
+        databasePath: sarifPath ?? 'inline',
         language: 'sarif',
         outputFormat: 'sarif',
-        queryName: label ?? 'sarif-store',
+        queryName: 'sarif_store',
         queryPath: sarifPath ?? 'inline',
         resultContent: content,
         resultCount,
