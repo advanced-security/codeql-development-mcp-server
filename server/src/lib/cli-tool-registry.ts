@@ -459,8 +459,28 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
 
           case 'codeql_query_compile':
+            // Handle query parameter as positional argument
+            if (query) {
+              positionalArgs = [...positionalArgs, query as string];
+            }
+            // Enable --dump-dil by default unless the user explicitly set
+            // dump-dil to false or passed --no-dump-dil / --dump-dil in
+            // additionalArgs (which takes precedence).
+            if (options['dump-dil'] === undefined) {
+              const pending = Array.isArray(options.additionalArgs)
+                ? options.additionalArgs as string[]
+                : [];
+              const hasDilOverride = pending.some(
+                arg => arg === '--no-dump-dil' || arg === '--dump-dil'
+              );
+              if (!hasDilOverride) {
+                options['dump-dil'] = true;
+              }
+            }
+            break;
+
           case 'codeql_resolve_metadata':
-            // Handle query parameter as positional argument for query compilation and metadata tools
+            // Handle query parameter as positional argument for metadata tools
             if (query) {
               positionalArgs = [...positionalArgs, query as string];
             }
