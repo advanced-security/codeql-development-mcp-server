@@ -13,6 +13,8 @@ export const codeqlQueryCompileTool: CLIToolDefinition = {
   inputSchema: {
     query: z.string().describe('Path to the CodeQL query file (.ql)'),
     database: z.string().optional().describe('Path to the CodeQL database'),
+    'dump-dil': z.boolean().optional()
+      .describe('Print the optimized DIL intermediate representation to standard output while compiling. Enabled by default; pass false or --no-dump-dil to disable.'),
     library: z.string().optional().describe('Path to query library'),
     output: z.string().optional().describe('Output file path'),
     warnings: z.enum(['hide', 'show', 'error']).optional()
@@ -22,6 +24,7 @@ export const codeqlQueryCompileTool: CLIToolDefinition = {
   },
   examples: [
     'codeql query compile --database=/path/to/db MyQuery.ql',
+    'codeql query compile --dump-dil --database=/path/to/db MyQuery.ql',
     'codeql query compile --library=/path/to/lib --output=compiled.qlo MyQuery.ql'
   ]
 };
