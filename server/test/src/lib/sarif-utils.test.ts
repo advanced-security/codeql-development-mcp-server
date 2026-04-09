@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  computeFingerprintOverlap,
   computeLocationOverlap,
   decomposeSarifByRule,
   diffSarifRules,
@@ -1222,5 +1223,170 @@ describe('getRuleDisplayName', () => {
       id: 'js/sql-injection',
     };
     expect(getRuleDisplayName(rule)).toBe('js/sql-injection');
+  });
+});
+
+describe('computeFingerprintOverlap', () => {
+  it('should detect matching fingerprints', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(true);
+    expect(overlap.fingerprintMatch).toBe(true);
+    expect(overlap.matchedFingerprints).toEqual({ primaryLocationLineHash: 'abc123' });
+    expect(overlap.overlapMode).toBe('fingerprint');
+  });
+
+  it('should detect non-matching fingerprints', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: { primaryLocationLineHash: 'def456' },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(false);
+    expect(overlap.fingerprintMatch).toBe(false);
+  });
+
+  it('should return no match when fingerprints are absent', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(false);
+    expect(overlap.fingerprintMatch).toBe(false);
+  });
+
+  it('should return no match when one result has empty fingerprints', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: {},
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(false);
+  });
+
+  it('should match on multiple shared fingerprint keys', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: {
+        primaryLocationLineHash: 'abc123',
+        primaryLocationStartColumnFingerprint: 'xyz789',
+      },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: {
+        primaryLocationLineHash: 'abc123',
+        primaryLocationStartColumnFingerprint: 'xyz789',
+      },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(true);
+    expect(Object.keys(overlap.matchedFingerprints!)).toHaveLength(2);
+  });
+});
+
+describe('computeLocationOverlap fingerprint mode', () => {
+  it('should use fingerprint matching and fall back to full-path', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+
+    const overlap = computeLocationOverlap(resultA, resultB, 'fingerprint');
+
+    expect(overlap.overlaps).toBe(true);
+    expect(overlap.overlapMode).toBe('fingerprint');
+    expect(overlap.fingerprintMatch).toBe(true);
+  });
+
+  it('should fall back to full-path when fingerprints are absent', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      codeFlows: [{ threadFlows: [{ locations: [
+        { location: { physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42 } } } },
+      ] }] }],
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      codeFlows: [{ threadFlows: [{ locations: [
+        { location: { physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42 } } } },
+      ] }] }],
+    };
+
+    const overlap = computeLocationOverlap(resultA, resultB, 'fingerprint');
+
+    // Falls back to full-path since no fingerprints
+    expect(overlap.overlaps).toBe(true);
+    expect(overlap.overlapMode).toBe('full-path');
   });
 });

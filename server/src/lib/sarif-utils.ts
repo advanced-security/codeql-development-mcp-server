@@ -16,7 +16,7 @@ import type { SarifDocument, SarifResult, SarifRule } from '../types/sarif';
 // ---------------------------------------------------------------------------
 
 /** Overlap analysis mode */
-export type OverlapMode = 'any-location' | 'full-path' | 'sink' | 'source';
+export type OverlapMode = 'any-location' | 'fingerprint' | 'full-path' | 'sink' | 'source';
 
 /** A shared location between two alerts */
 export interface SharedLocation {
@@ -29,6 +29,8 @@ export interface SharedLocation {
 
 /** Result of comparing two SARIF results for location overlap */
 export interface OverlapResult {
+  fingerprintMatch?: boolean;
+  matchedFingerprints?: Record<string, string>;
   overlaps: boolean;
   overlapMode: OverlapMode;
   pathSimilarity?: number;
@@ -677,6 +679,45 @@ export function diffSarifRules(sarifA: SarifDocument, sarifB: SarifDocument): Sa
 // ---------------------------------------------------------------------------
 
 /**
+ * Compare two SARIF results by their partialFingerprints.
+ * Returns a match result if both have fingerprints with at least one shared key
+ * whose values are equal. Returns no match if fingerprints are absent.
+ */
+export function computeFingerprintOverlap(
+  resultA: SarifResult,
+  resultB: SarifResult,
+): OverlapResult {
+  const fpA = resultA.partialFingerprints;
+  const fpB = resultB.partialFingerprints;
+
+  if (!fpA || !fpB || Object.keys(fpA).length === 0 || Object.keys(fpB).length === 0) {
+    return {
+      fingerprintMatch: false,
+      overlaps: false,
+      overlapMode: 'fingerprint',
+      sharedLocations: [],
+    };
+  }
+
+  const matchedFingerprints: Record<string, string> = {};
+  for (const key of Object.keys(fpA)) {
+    if (key in fpB && fpA[key] === fpB[key]) {
+      matchedFingerprints[key] = fpA[key];
+    }
+  }
+
+  const hasMatch = Object.keys(matchedFingerprints).length > 0;
+
+  return {
+    fingerprintMatch: hasMatch,
+    matchedFingerprints: hasMatch ? matchedFingerprints : undefined,
+    overlaps: hasMatch,
+    overlapMode: 'fingerprint',
+    sharedLocations: [],
+  };
+}
+
+/**
  * Compute location overlap between two SARIF results.
  */
 export function computeLocationOverlap(
@@ -688,6 +729,14 @@ export function computeLocationOverlap(
   let locsB: NormalizedLocation[];
 
   switch (mode) {
+    case 'fingerprint': {
+      const fpResult = computeFingerprintOverlap(resultA, resultB);
+      if (fpResult.fingerprintMatch) {
+        return fpResult;
+      }
+      // Fall back to full-path when fingerprints are absent or don't match
+      return computeLocationOverlap(resultA, resultB, 'full-path');
+    }
     case 'sink':
       locsA = extractPrimaryLocations(resultA);
       locsB = extractPrimaryLocations(resultB);
