@@ -13,7 +13,7 @@ import { resolveQueryPath } from './query-resolver';
 import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs';
-import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
+import { delimiter, dirname, basename, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
 
@@ -556,6 +556,13 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
+        // Set up log directory for compile runs to persist DIL output
+        let compileLogDir: string | undefined;
+        if (name === 'codeql_query_compile' && options['dump-dil'] !== false) {
+          compileLogDir = getOrCreateLogDirectory(customLogDir as string | undefined);
+          logger.info(`Using log directory for ${name}: ${compileLogDir}`);
+        }
+
         // Extract additionalArgs from options so they are passed as raw CLI
         // arguments instead of being transformed into --additionalArgs=value
         // by buildCodeQLArgs.
@@ -717,8 +724,29 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           cacheDatabaseAnalyzeResults({ ...params, database: resolvedDb, output: options.output, format: options.format }, logger);
         }
 
+        // Post-execution: persist DIL output to a .dil file for codeql_query_compile
+        let dilFilePath: string | undefined;
+        if (name === 'codeql_query_compile' && result.success && compileLogDir && result.stdout) {
+          try {
+            const queryBaseName = query
+              ? basename(query as string, '.ql')
+              : 'query';
+            dilFilePath = join(compileLogDir, `${queryBaseName}.dil`);
+            writeFileSync(dilFilePath, result.stdout, 'utf8');
+            logger.info(`Saved DIL output to ${dilFilePath}`);
+          } catch (dilError) {
+            logger.warn(`Failed to save DIL output: ${dilError}`);
+            dilFilePath = undefined;
+          }
+        }
+
         // Process the result
-        const processedResult = resultProcessor(result, params);
+        let processedResult = resultProcessor(result, params);
+
+        // Append DIL file path to the response for codeql_query_compile
+        if (dilFilePath) {
+          processedResult += `\n\nDIL file: ${dilFilePath}`;
+        }
 
         return {
           content: [{
