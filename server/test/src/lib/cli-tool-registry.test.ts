@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
 import {
@@ -705,6 +705,10 @@ describe('registerCLITool handler behavior', () => {
     expect(existsSync(dilFilePath)).toBe(true);
     const fileContent = readFileSync(dilFilePath, 'utf8');
     expect(fileContent).toBe(dilContent);
+
+    // Clean up generated .dil file and its containing log directory
+    const dilDir = dirname(dilFilePath);
+    rmSync(dilDir, { recursive: true, force: true });
   });
 
   it('should not save DIL file when dump-dil is explicitly false for codeql_query_compile', async () => {
@@ -733,6 +737,35 @@ describe('registerCLITool handler behavior', () => {
     const result = await handler({ query: '/path/to/MyQuery.ql', 'dump-dil': false });
 
     // Response should NOT contain DIL file path since dump-dil is disabled
+    expect(result.content[0].text).not.toContain('DIL file:');
+  });
+
+  it('should not save DIL file when --no-dump-dil is in additionalArgs for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    const result = await handler({ query: '/path/to/MyQuery.ql', additionalArgs: ['--no-dump-dil'] });
+
+    // Response should NOT contain DIL file path since --no-dump-dil disables DIL
     expect(result.content[0].text).not.toContain('DIL file:');
   });
 

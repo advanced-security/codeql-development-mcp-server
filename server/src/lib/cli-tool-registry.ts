@@ -556,11 +556,20 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
-        // Set up log directory for compile runs to persist DIL output
+        // Set up log directory for compile runs to persist DIL output.
+        // Compute an effective "dump-dil enabled" flag that accounts for
+        // both `dump-dil: false` and `--no-dump-dil` in `additionalArgs`.
         let compileLogDir: string | undefined;
-        if (name === 'codeql_query_compile' && options['dump-dil'] !== false) {
-          compileLogDir = getOrCreateLogDirectory(customLogDir as string | undefined);
-          logger.info(`Using log directory for ${name}: ${compileLogDir}`);
+        if (name === 'codeql_query_compile') {
+          const pendingArgs = Array.isArray(options.additionalArgs)
+            ? options.additionalArgs as string[]
+            : [];
+          const effectiveDumpDilDisabled = options['dump-dil'] === false
+            || pendingArgs.includes('--no-dump-dil');
+          if (!effectiveDumpDilDisabled) {
+            compileLogDir = getOrCreateLogDirectory(customLogDir as string | undefined);
+            logger.info(`Using log directory for ${name}: ${compileLogDir}`);
+          }
         }
 
         // Extract additionalArgs from options so they are passed as raw CLI
