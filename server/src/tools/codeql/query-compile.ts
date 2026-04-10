@@ -7,7 +7,7 @@ import { CLIToolDefinition } from '../../lib/cli-tool-registry';
 
 export const codeqlQueryCompileTool: CLIToolDefinition = {
   name: 'codeql_query_compile',
-  description: 'Compile and validate CodeQL queries',
+  description: 'Compile and validate CodeQL queries. By default, produces a .dil file containing the optimized DIL intermediate representation alongside the compilation output.',
   command: 'codeql',
   subcommand: 'query compile',
   inputSchema: {
@@ -16,6 +16,8 @@ export const codeqlQueryCompileTool: CLIToolDefinition = {
     'dump-dil': z.boolean().optional()
       .describe('Print the optimized DIL intermediate representation to standard output while compiling. Enabled by default; pass false or --no-dump-dil to disable.'),
     library: z.string().optional().describe('Path to query library'),
+    logDir: z.string().optional()
+      .describe('Directory to write the .dil file. If not provided, a unique log directory is created automatically.'),
     output: z.string().optional().describe('Output file path'),
     warnings: z.enum(['hide', 'show', 'error']).optional()
       .describe('How to handle compilation warnings'),

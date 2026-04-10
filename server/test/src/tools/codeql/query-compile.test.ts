@@ -23,6 +23,7 @@ describe('Query Compile Tool', () => {
       expect(schema).toHaveProperty('database');
       expect(schema).toHaveProperty('dump-dil');
       expect(schema).toHaveProperty('library');
+      expect(schema).toHaveProperty('logDir');
       expect(schema).toHaveProperty('output');
       expect(schema).toHaveProperty('warnings');
       expect(schema).toHaveProperty('verbose');
@@ -33,6 +34,12 @@ describe('Query Compile Tool', () => {
       const dumpDil = codeqlQueryCompileTool.inputSchema['dump-dil'];
       expect(dumpDil).toBeDefined();
       expect(dumpDil.isOptional()).toBe(true);
+    });
+
+    it('should have logDir as optional string parameter', () => {
+      const logDir = codeqlQueryCompileTool.inputSchema['logDir'];
+      expect(logDir).toBeDefined();
+      expect(logDir.isOptional()).toBe(true);
     });
 
     it('should have examples', () => {

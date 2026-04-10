@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
@@ -664,6 +664,76 @@ describe('registerCLITool handler behavior', () => {
     expect(options['dump-dil']).toBeUndefined();
     // The explicit --dump-dil from additionalArgs should be passed through
     expect(positionalArgs).toContain('--dump-dil');
+  });
+
+  it('should save DIL output to a .dil file for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    const dilContent = 'DIL:\n  predicate#abc123\n    SCAN table\n    SELECT col1, col2';
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: dilContent,
+      stderr: '',
+      success: true
+    });
+
+    const result = await handler({ query: '/path/to/MyQuery.ql' });
+
+    // Response should contain the DIL file path
+    expect(result.content[0].text).toContain('DIL file:');
+    expect(result.content[0].text).toContain('MyQuery.dil');
+
+    // Extract the DIL file path from the response
+    const match = result.content[0].text.match(/DIL file: (.+)/);
+    expect(match).not.toBeNull();
+    const dilFilePath = match![1];
+
+    // Verify the .dil file was created with the correct content
+    expect(existsSync(dilFilePath)).toBe(true);
+    const fileContent = readFileSync(dilFilePath, 'utf8');
+    expect(fileContent).toBe(dilContent);
+  });
+
+  it('should not save DIL file when dump-dil is explicitly false for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    const result = await handler({ query: '/path/to/MyQuery.ql', 'dump-dil': false });
+
+    // Response should NOT contain DIL file path since dump-dil is disabled
+    expect(result.content[0].text).not.toContain('DIL file:');
   });
 
   it('should pass format to CLI for codeql_bqrs_interpret', async () => {
