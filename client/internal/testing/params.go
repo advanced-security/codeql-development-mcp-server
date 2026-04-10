@@ -290,6 +290,27 @@ func buildToolParams(repoRoot, toolName, testCase, testDir string) (map[string]a
 			}
 		}
 
+	case "sarif_diff_by_commits":
+		sarifFiles := findFilesByExt(beforeDir, ".sarif")
+		if len(sarifFiles) > 0 {
+			params["sarifPath"] = filepath.Join(beforeDir, sarifFiles[0])
+		}
+		// Merge refRange, repoPath, and granularity from test-config.json
+		if configData, err := os.ReadFile(configPath); err == nil {
+			var cfg TestConfig
+			if json.Unmarshal(configData, &cfg) == nil {
+				if refRange, ok := cfg.Arguments["refRange"]; ok {
+					params["refRange"] = refRange
+				}
+				if repoPath, ok := cfg.Arguments["repoPath"]; ok {
+					params["repoPath"] = repoPath
+				}
+				if granularity, ok := cfg.Arguments["granularity"]; ok {
+					params["granularity"] = granularity
+				}
+			}
+		}
+
 	case "sarif_diff_runs":
 		sarifFiles := findFilesByExt(beforeDir, ".sarif")
 		sort.Strings(sarifFiles)
