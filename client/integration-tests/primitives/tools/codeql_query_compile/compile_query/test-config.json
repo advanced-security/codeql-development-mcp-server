@@ -1,7 +1,7 @@
 {
   "toolName": "codeql_query_compile",
   "arguments": {
-    "query": "test_query.ql"
+    "query": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql"
   },
   "assertions": {
     "responseContains": ["DIL file:", ".dil"]
