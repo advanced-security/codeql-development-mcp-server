@@ -60,14 +60,14 @@ This resource provides a complete reference of the default tools exposed by the 
 
 ## SARIF Analysis Tools
 
-| Tool                      | Description                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `sarif_compare_alerts`    | Compare code locations of two SARIF alerts for overlap (sink, source, any-location, full-path modes) |
-| `sarif_diff_by_commits`   | Correlate SARIF results with a git diff to classify findings as "new" or "pre-existing"              |
-| `sarif_diff_runs`         | Diff two SARIF files to find added, removed, and changed rules/results across analysis runs          |
-| `sarif_extract_rule`      | Extract all data for a specific rule from multi-rule SARIF. Returns a valid SARIF JSON subset        |
-| `sarif_list_rules`        | List all rules in a SARIF file with result counts, severity, precision, and tags                     |
-| `sarif_rule_to_markdown`  | Convert per-rule SARIF data to markdown with Mermaid dataflow diagrams                               |
+| Tool                     | Description                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `sarif_compare_alerts`   | Compare code locations of two SARIF alerts for overlap (sink, source, any-location, full-path modes) |
+| `sarif_diff_by_commits`  | Correlate SARIF results with a git diff to classify findings as "new" or "pre-existing"              |
+| `sarif_diff_runs`        | Diff two SARIF files to find added, removed, and changed rules/results across analysis runs          |
+| `sarif_extract_rule`     | Extract all data for a specific rule from multi-rule SARIF. Returns a valid SARIF JSON subset        |
+| `sarif_list_rules`       | List all rules in a SARIF file with result counts, severity, precision, and tags                     |
+| `sarif_rule_to_markdown` | Convert per-rule SARIF data to markdown with Mermaid dataflow diagrams                               |
 
 ### `sarif_list_rules` Response Format
 
