@@ -556,27 +556,39 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
-        // Compute an effective "dump-dil enabled" flag for codeql_query_compile
-        // that accounts for both `dump-dil: false` and `--no-dump-dil` in
-        // `additionalArgs`.  The log directory is created lazily post-success
-        // to avoid leaving empty directories behind on compilation failures.
-        let effectiveDumpDilEnabled = false;
-        if (name === 'codeql_query_compile') {
-          const pendingArgs = Array.isArray(options.additionalArgs)
-            ? options.additionalArgs as string[]
-            : [];
-          const effectiveDumpDilDisabled = options['dump-dil'] === false
-            || pendingArgs.includes('--no-dump-dil');
-          effectiveDumpDilEnabled = !effectiveDumpDilDisabled;
-        }
-
         // Extract additionalArgs from options so they are passed as raw CLI
         // arguments instead of being transformed into --additionalArgs=value
         // by buildCodeQLArgs.
-        const rawAdditionalArgs = Array.isArray(options.additionalArgs)
+        let rawAdditionalArgs = Array.isArray(options.additionalArgs)
           ? options.additionalArgs as string[]
           : [];
         delete options.additionalArgs;
+
+        // Normalize dump-dil handling so explicit raw CLI flags in
+        // `additionalArgs` take precedence over the named parameter and the
+        // CLI does not receive conflicting duplicates.
+        const lastDumpDilFlag = [...rawAdditionalArgs].reverse().find(
+          (arg) => arg === '--dump-dil' || arg === '--no-dump-dil',
+        );
+        if (lastDumpDilFlag === '--dump-dil') {
+          options['dump-dil'] = true;
+        } else if (lastDumpDilFlag === '--no-dump-dil') {
+          options['dump-dil'] = false;
+        }
+        if (lastDumpDilFlag !== undefined) {
+          rawAdditionalArgs = rawAdditionalArgs.filter(
+            (arg) => arg !== '--dump-dil' && arg !== '--no-dump-dil',
+          );
+        }
+
+        // Compute an effective "dump-dil enabled" flag for codeql_query_compile
+        // from the normalized effective CLI options. The log directory is
+        // created lazily post-success to avoid leaving empty directories
+        // behind on compilation failures.
+        let effectiveDumpDilEnabled = false;
+        if (name === 'codeql_query_compile') {
+          effectiveDumpDilEnabled = options['dump-dil'] !== false;
+        }
 
         // For tools with post-execution processing (query run, test run,
         // database analyze), certain CLI flags are set internally and their
