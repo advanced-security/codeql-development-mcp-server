@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
@@ -529,6 +529,306 @@ describe('registerCLITool handler behavior', () => {
       ['/path/to/query.ql'],
       undefined
     );
+  });
+
+  it('should enable --dump-dil by default for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    await handler({ query: '/path/to/query.ql' });
+
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1] as Record<string, unknown>;
+
+    // --dump-dil should be enabled by default
+    expect(options['dump-dil']).toBe(true);
+  });
+
+  it('should respect dump-dil: false for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    await handler({ query: '/path/to/query.ql', 'dump-dil': false });
+
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1] as Record<string, unknown>;
+
+    // --dump-dil should not be injected when explicitly disabled;
+    // buildCodeQLArgs skips false booleans so --dump-dil won't appear on CLI
+    expect(options['dump-dil']).toBe(false);
+  });
+
+  it('should not inject --dump-dil when --no-dump-dil is in additionalArgs for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    await handler({ query: '/path/to/query.ql', additionalArgs: ['--no-dump-dil'] });
+
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1] as Record<string, unknown>;
+    const positionalArgs = call[2] as string[];
+
+    // --dump-dil should not be in options when --no-dump-dil is in additionalArgs
+    expect(options['dump-dil']).toBeUndefined();
+    // --no-dump-dil should be passed through in the positional/additional args
+    expect(positionalArgs).toContain('--no-dump-dil');
+  });
+
+  it('should not inject --dump-dil when --dump-dil is already in additionalArgs for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    await handler({ query: '/path/to/query.ql', additionalArgs: ['--dump-dil'] });
+
+    const call = executeCodeQLCommand.mock.calls[0];
+    const options = call[1] as Record<string, unknown>;
+    const positionalArgs = call[2] as string[];
+
+    // --dump-dil should not be duplicated in options when already in additionalArgs
+    expect(options['dump-dil']).toBeUndefined();
+    // The explicit --dump-dil from additionalArgs should be passed through
+    expect(positionalArgs).toContain('--dump-dil');
+  });
+
+  it('should save DIL output to a .dil file for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    const dilContent = 'DIL:\n  predicate#abc123\n    SCAN table\n    SELECT col1, col2';
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: dilContent,
+      stderr: '',
+      success: true
+    });
+
+    const codeqlQueryLogDir = createTestTempDir('codeql-query-log-dir');
+    const originalCodeqlQueryLogDir = process.env.CODEQL_QUERY_LOG_DIR;
+    process.env.CODEQL_QUERY_LOG_DIR = codeqlQueryLogDir;
+
+    try {
+      const result = await handler({ query: '/path/to/MyQuery.ql' });
+
+      // Response should contain the DIL file path
+      expect(result.content[0].text).toContain('DIL file:');
+      expect(result.content[0].text).toContain('MyQuery.dil');
+
+      // Extract the DIL file path from the response
+      const match = result.content[0].text.match(/DIL file: (.+)/);
+      expect(match).not.toBeNull();
+      const dilFilePath = match![1];
+
+      // Verify the .dil file was created with the correct content
+      expect(existsSync(dilFilePath)).toBe(true);
+      expect(dilFilePath.startsWith(`${codeqlQueryLogDir}/`) || dilFilePath.startsWith(`${codeqlQueryLogDir}\\`)).toBe(true);
+      const fileContent = readFileSync(dilFilePath, 'utf8');
+      expect(fileContent).toBe(dilContent);
+    } finally {
+      if (originalCodeqlQueryLogDir === undefined) {
+        delete process.env.CODEQL_QUERY_LOG_DIR;
+      } else {
+        process.env.CODEQL_QUERY_LOG_DIR = originalCodeqlQueryLogDir;
+      }
+
+      rmSync(codeqlQueryLogDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should not save DIL file when dump-dil is explicitly false for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    const result = await handler({ query: '/path/to/MyQuery.ql', 'dump-dil': false });
+
+    // Response should NOT contain DIL file path since dump-dil is disabled
+    expect(result.content[0].text).not.toContain('DIL file:');
+  });
+
+  it('should not leave empty log directory when codeql_query_compile fails', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    // Simulate compilation failure
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: '',
+      stderr: 'Compilation error: syntax error',
+      success: false,
+      exitCode: 1
+    });
+
+    const codeqlQueryLogDir = createTestTempDir('codeql-query-log-dir');
+    const originalCodeqlQueryLogDir = process.env.CODEQL_QUERY_LOG_DIR;
+    process.env.CODEQL_QUERY_LOG_DIR = codeqlQueryLogDir;
+
+    try {
+      const result = await handler({ query: '/path/to/MyQuery.ql' });
+
+      // Should report failure
+      expect(result.isError).toBe(true);
+
+      // No new subdirectories should be created inside the log dir
+      // since DIL persistence is deferred to post-success
+      const { readdirSync } = await import('fs');
+      const entries = readdirSync(codeqlQueryLogDir);
+      expect(entries).toHaveLength(0);
+    } finally {
+      if (originalCodeqlQueryLogDir === undefined) {
+        delete process.env.CODEQL_QUERY_LOG_DIR;
+      } else {
+        process.env.CODEQL_QUERY_LOG_DIR = originalCodeqlQueryLogDir;
+      }
+
+      rmSync(codeqlQueryLogDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should not save DIL file when --no-dump-dil is in additionalArgs for codeql_query_compile', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: 'Compilation successful',
+      stderr: '',
+      success: true
+    });
+
+    const result = await handler({ query: '/path/to/MyQuery.ql', additionalArgs: ['--no-dump-dil'] });
+
+    // Response should NOT contain DIL file path since --no-dump-dil disables DIL
+    expect(result.content[0].text).not.toContain('DIL file:');
   });
 
   it('should pass format to CLI for codeql_bqrs_interpret', async () => {
