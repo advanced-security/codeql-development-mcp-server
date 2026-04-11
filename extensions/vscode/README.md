@@ -4,8 +4,8 @@ A VS Code extension that automatically installs, configures, and manages the [Co
 
 ## Prerequisites
 
-- **VS Code** `^1.109.0`
-- **Node.js** `>=24.13.0`
+- **VS Code** `^1.115.0`
+- **Node.js** `>=25.6.0`
 - **[CodeQL for VS Code](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-codeql)** — declared as an `extensionDependency` and must be installed first.
 
 ## Installation
