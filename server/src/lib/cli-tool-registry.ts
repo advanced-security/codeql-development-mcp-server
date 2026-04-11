@@ -13,7 +13,7 @@ import { resolveQueryPath } from './query-resolver';
 import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs';
-import { delimiter, dirname, basename, isAbsolute, join, resolve } from 'path';
+import { basename, delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
 
@@ -556,20 +556,18 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
-        // Set up log directory for compile runs to persist DIL output.
-        // Compute an effective "dump-dil enabled" flag that accounts for
-        // both `dump-dil: false` and `--no-dump-dil` in `additionalArgs`.
-        let compileLogDir: string | undefined;
+        // Compute an effective "dump-dil enabled" flag for codeql_query_compile
+        // that accounts for both `dump-dil: false` and `--no-dump-dil` in
+        // `additionalArgs`.  The log directory is created lazily post-success
+        // to avoid leaving empty directories behind on compilation failures.
+        let effectiveDumpDilEnabled = false;
         if (name === 'codeql_query_compile') {
           const pendingArgs = Array.isArray(options.additionalArgs)
             ? options.additionalArgs as string[]
             : [];
           const effectiveDumpDilDisabled = options['dump-dil'] === false
             || pendingArgs.includes('--no-dump-dil');
-          if (!effectiveDumpDilDisabled) {
-            compileLogDir = getOrCreateLogDirectory(customLogDir as string | undefined);
-            logger.info(`Using log directory for ${name}: ${compileLogDir}`);
-          }
+          effectiveDumpDilEnabled = !effectiveDumpDilDisabled;
         }
 
         // Extract additionalArgs from options so they are passed as raw CLI
@@ -733,10 +731,14 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           cacheDatabaseAnalyzeResults({ ...params, database: resolvedDb, output: options.output, format: options.format }, logger);
         }
 
-        // Post-execution: persist DIL output to a .dil file for codeql_query_compile
+        // Post-execution: persist DIL output to a .dil file for codeql_query_compile.
+        // The log directory is created lazily here (only on success with output)
+        // to avoid leaving empty directories behind on compilation failures.
         let dilFilePath: string | undefined;
-        if (name === 'codeql_query_compile' && result.success && compileLogDir && result.stdout) {
+        if (name === 'codeql_query_compile' && result.success && effectiveDumpDilEnabled && result.stdout) {
           try {
+            const compileLogDir = getOrCreateLogDirectory(customLogDir as string | undefined);
+            logger.info(`Using log directory for ${name}: ${compileLogDir}`);
             const queryBaseName = query
               ? basename(query as string, '.ql')
               : 'query';

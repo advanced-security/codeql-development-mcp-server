@@ -42,6 +42,15 @@ describe('Query Compile Tool', () => {
       expect(logDir.isOptional()).toBe(true);
     });
 
+    it('should have logDir description matching the pattern used by other CLI tools', () => {
+      const logDir = codeqlQueryCompileTool.inputSchema['logDir'];
+      const description = logDir.description;
+      // Must mention CODEQL_QUERY_LOG_DIR env var like query-run, test-run, database-analyze
+      expect(description).toContain('CODEQL_QUERY_LOG_DIR');
+      // Must mention the default path
+      expect(description).toContain('.tmp/query-logs');
+    });
+
     it('should have examples', () => {
       expect(codeqlQueryCompileTool.examples).toBeDefined();
       expect(codeqlQueryCompileTool.examples!.length).toBeGreaterThan(0);

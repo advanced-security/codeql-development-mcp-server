@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
 import {
@@ -690,25 +690,36 @@ describe('registerCLITool handler behavior', () => {
       success: true
     });
 
-    const result = await handler({ query: '/path/to/MyQuery.ql' });
+    const codeqlQueryLogDir = createTestTempDir('codeql-query-log-dir');
+    const originalCodeqlQueryLogDir = process.env.CODEQL_QUERY_LOG_DIR;
+    process.env.CODEQL_QUERY_LOG_DIR = codeqlQueryLogDir;
 
-    // Response should contain the DIL file path
-    expect(result.content[0].text).toContain('DIL file:');
-    expect(result.content[0].text).toContain('MyQuery.dil');
+    try {
+      const result = await handler({ query: '/path/to/MyQuery.ql' });
 
-    // Extract the DIL file path from the response
-    const match = result.content[0].text.match(/DIL file: (.+)/);
-    expect(match).not.toBeNull();
-    const dilFilePath = match![1];
+      // Response should contain the DIL file path
+      expect(result.content[0].text).toContain('DIL file:');
+      expect(result.content[0].text).toContain('MyQuery.dil');
 
-    // Verify the .dil file was created with the correct content
-    expect(existsSync(dilFilePath)).toBe(true);
-    const fileContent = readFileSync(dilFilePath, 'utf8');
-    expect(fileContent).toBe(dilContent);
+      // Extract the DIL file path from the response
+      const match = result.content[0].text.match(/DIL file: (.+)/);
+      expect(match).not.toBeNull();
+      const dilFilePath = match![1];
 
-    // Clean up generated .dil file and its containing log directory
-    const dilDir = dirname(dilFilePath);
-    rmSync(dilDir, { recursive: true, force: true });
+      // Verify the .dil file was created with the correct content
+      expect(existsSync(dilFilePath)).toBe(true);
+      expect(dilFilePath.startsWith(`${codeqlQueryLogDir}/`) || dilFilePath.startsWith(`${codeqlQueryLogDir}\\`)).toBe(true);
+      const fileContent = readFileSync(dilFilePath, 'utf8');
+      expect(fileContent).toBe(dilContent);
+    } finally {
+      if (originalCodeqlQueryLogDir === undefined) {
+        delete process.env.CODEQL_QUERY_LOG_DIR;
+      } else {
+        process.env.CODEQL_QUERY_LOG_DIR = originalCodeqlQueryLogDir;
+      }
+
+      rmSync(codeqlQueryLogDir, { recursive: true, force: true });
+    }
   });
 
   it('should not save DIL file when dump-dil is explicitly false for codeql_query_compile', async () => {
@@ -738,6 +749,57 @@ describe('registerCLITool handler behavior', () => {
 
     // Response should NOT contain DIL file path since dump-dil is disabled
     expect(result.content[0].text).not.toContain('DIL file:');
+  });
+
+  it('should not leave empty log directory when codeql_query_compile fails', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    // Simulate compilation failure
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: '',
+      stderr: 'Compilation error: syntax error',
+      success: false,
+      exitCode: 1
+    });
+
+    const codeqlQueryLogDir = createTestTempDir('codeql-query-log-dir');
+    const originalCodeqlQueryLogDir = process.env.CODEQL_QUERY_LOG_DIR;
+    process.env.CODEQL_QUERY_LOG_DIR = codeqlQueryLogDir;
+
+    try {
+      const result = await handler({ query: '/path/to/MyQuery.ql' });
+
+      // Should report failure
+      expect(result.isError).toBe(true);
+
+      // No new subdirectories should be created inside the log dir
+      // since DIL persistence is deferred to post-success
+      const { readdirSync } = await import('fs');
+      const entries = readdirSync(codeqlQueryLogDir);
+      expect(entries).toHaveLength(0);
+    } finally {
+      if (originalCodeqlQueryLogDir === undefined) {
+        delete process.env.CODEQL_QUERY_LOG_DIR;
+      } else {
+        process.env.CODEQL_QUERY_LOG_DIR = originalCodeqlQueryLogDir;
+      }
+
+      rmSync(codeqlQueryLogDir, { recursive: true, force: true });
+    }
   });
 
   it('should not save DIL file when --no-dump-dil is in additionalArgs for codeql_query_compile', async () => {

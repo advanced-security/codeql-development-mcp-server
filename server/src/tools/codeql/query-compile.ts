@@ -17,7 +17,7 @@ export const codeqlQueryCompileTool: CLIToolDefinition = {
       .describe('Print the optimized DIL intermediate representation to standard output while compiling. Enabled by default; pass false or --no-dump-dil to disable.'),
     library: z.string().optional().describe('Path to query library'),
     logDir: z.string().optional()
-      .describe('Directory to write the .dil file. If not provided, a unique log directory is created automatically.'),
+      .describe('Custom directory for compilation DIL output (overrides CODEQL_QUERY_LOG_DIR environment variable). If not provided, uses CODEQL_QUERY_LOG_DIR or defaults to .tmp/query-logs/<unique-id>'),
     output: z.string().optional().describe('Output file path'),
     warnings: z.enum(['hide', 'show', 'error']).optional()
       .describe('How to handle compilation warnings'),
