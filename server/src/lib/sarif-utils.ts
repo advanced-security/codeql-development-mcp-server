@@ -946,7 +946,7 @@ export function diffSarifByCommits(
     }
 
     const classified: ClassifiedResult = {
-      file: normalizeUri(uri),
+      file: matchingDiff ? matchingDiff.path : normalizeUri(uri),
       line: startLine,
       resultIndex: i,
       ruleId: result.ruleId,
