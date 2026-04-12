@@ -227,3 +227,40 @@ func TestBuildToolParams_SARIFCompareAlertsWithConfig(t *testing.T) {
 		t.Error("expected sarifPath injected into alertB")
 	}
 }
+
+func TestBuildToolParams_SARIFDiffByCommitsWithConfig(t *testing.T) {
+	dir := t.TempDir()
+	testDir := filepath.Join(dir, "tools", "sarif_diff_by_commits", "file_level_classification")
+	beforeDir := filepath.Join(testDir, "before")
+	os.MkdirAll(beforeDir, 0o755)
+	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
+
+	// Write test-config.json with refRange and granularity but no sarifPath
+	os.WriteFile(filepath.Join(testDir, "test-config.json"),
+		[]byte(`{"toolName":"sarif_diff_by_commits","arguments":{"refRange":"HEAD..HEAD","granularity":"file"}}`), 0o600)
+
+	// Write a SARIF file in before/
+	os.WriteFile(filepath.Join(beforeDir, "results.sarif"),
+		[]byte(`{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"CodeQL","rules":[]}},"results":[]}]}`), 0o600)
+
+	params, err := buildToolParams(dir, "sarif_diff_by_commits", "file_level_classification", testDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should have sarifPath injected from before/
+	sarifPath, ok := params["sarifPath"].(string)
+	if !ok || sarifPath == "" {
+		t.Error("expected sarifPath to be injected from before/ directory")
+	}
+
+	// Should have refRange from config
+	if params["refRange"] != "HEAD..HEAD" {
+		t.Errorf("params[refRange] = %v, want HEAD..HEAD", params["refRange"])
+	}
+
+	// Should have granularity from config
+	if params["granularity"] != "file" {
+		t.Errorf("params[granularity] = %v, want file", params["granularity"])
+	}
+}

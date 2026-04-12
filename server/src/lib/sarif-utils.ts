@@ -87,6 +87,52 @@ export interface SarifDiffResult {
   unchangedRules: SarifRuleSummary[];
 }
 
+/** A file changed in a git diff, with optional line ranges. */
+export interface DiffFileEntry {
+  /** Changed line ranges (hunks). Empty array means file-level only. */
+  hunks: Array<{ startLine: number; lineCount: number }>;
+  /** File path relative to the repository root. */
+  path: string;
+}
+
+/** Granularity for matching SARIF results against a git diff. */
+export type DiffGranularity = 'file' | 'line';
+
+/** A SARIF result classified by its relationship to a git diff. */
+export interface ClassifiedResult {
+  /** File path of the primary location. */
+  file: string;
+  /** Line number of the primary location (if available). */
+  line?: number;
+  /** Original result index in the SARIF run. */
+  resultIndex: number;
+  /** The rule ID that produced this result. */
+  ruleId: string;
+}
+
+/** Result of partitioning SARIF results by git diff overlap. */
+export interface SarifDiffByCommitsResult {
+  /** Granularity used for the classification. */
+  granularity: DiffGranularity;
+  /** Results whose primary location is in a file (and optionally line range) touched by the diff. */
+  newResults: ClassifiedResult[];
+  /** Results whose primary location is NOT in a changed file/line. */
+  preExistingResults: ClassifiedResult[];
+  /** Summary statistics. */
+  summary: {
+    /** Number of files in the diff. */
+    diffFileCount: number;
+    /** Git ref range used. */
+    refRange: string;
+    /** Total SARIF results examined. */
+    totalResults: number;
+    /** Number of results classified as new. */
+    totalNew: number;
+    /** Number of results classified as pre-existing. */
+    totalPreExisting: number;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // SARIF rule helpers
 // ---------------------------------------------------------------------------
@@ -811,4 +857,118 @@ export function findOverlappingAlerts(
   }
 
   return overlaps;
+}
+
+// ---------------------------------------------------------------------------
+// SARIF-to-git-diff correlation
+// ---------------------------------------------------------------------------
+
+/**
+ * Check whether a SARIF URI matches a diff file path.
+ *
+ * SARIF URIs may be absolute (`file:///…`) or relative (`src/db.js`),
+ * while git diff paths are always relative to the repo root (e.g. `src/db.js`).
+ * We normalize both and use suffix matching so that cross-environment
+ * comparisons work (e.g. CI vs local).
+ */
+function diffPathMatchesSarifUri(diffPath: string, sarifUri: string): boolean {
+  return urisMatch(diffPath, sarifUri);
+}
+
+/**
+ * Check whether a line number falls within any of a file's changed hunks.
+ */
+function lineInHunks(line: number, hunks: Array<{ startLine: number; lineCount: number }>): boolean {
+  for (const hunk of hunks) {
+    const hunkEnd = hunk.startLine + Math.max(hunk.lineCount - 1, 0);
+    if (line >= hunk.startLine && line <= hunkEnd) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Partition SARIF results into "new" (touched by the diff) vs "pre-existing"
+ * based on file-level or line-level overlap with a set of changed files.
+ *
+ * This is a pure function — git operations are the caller's responsibility.
+ *
+ * @param sarif       The SARIF document to classify.
+ * @param diffFiles   Files changed in the git diff (with optional hunk info).
+ * @param refRange    Git ref range string for metadata (e.g. "main..HEAD").
+ * @param granularity 'file' (default) matches any result in a changed file;
+ *                    'line' additionally checks that the result's primary
+ *                    location line falls within a changed hunk.
+ */
+export function diffSarifByCommits(
+  sarif: SarifDocument,
+  diffFiles: DiffFileEntry[],
+  refRange: string,
+  granularity: DiffGranularity = 'file',
+): SarifDiffByCommitsResult {
+  const results = sarif.runs[0]?.results ?? [];
+
+  const newResults: ClassifiedResult[] = [];
+  const preExistingResults: ClassifiedResult[] = [];
+
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    const primaryLoc = result.locations?.[0]?.physicalLocation;
+    const uri = primaryLoc?.artifactLocation?.uri;
+
+    if (!uri) {
+      // No location info — classify as pre-existing (conservative)
+      preExistingResults.push({
+        file: '<unknown>',
+        resultIndex: i,
+        ruleId: result.ruleId,
+      });
+      continue;
+    }
+
+    const startLine = primaryLoc?.region?.startLine;
+
+    // Find matching diff file
+    const matchingDiff = diffFiles.find(df => diffPathMatchesSarifUri(df.path, uri));
+
+    let isNew = false;
+    if (matchingDiff) {
+      if (granularity === 'file') {
+        isNew = true;
+      } else if (startLine !== undefined && matchingDiff.hunks.length > 0) {
+        isNew = lineInHunks(startLine, matchingDiff.hunks);
+      } else if (matchingDiff.hunks.length === 0) {
+        // No hunk info available — treat as file-level match
+        isNew = true;
+      }
+      // else: line granularity requested but no startLine on the result → pre-existing
+    }
+
+    const classified: ClassifiedResult = {
+      file: normalizeUri(uri),
+      line: startLine,
+      resultIndex: i,
+      ruleId: result.ruleId,
+    };
+
+    if (isNew) {
+      newResults.push(classified);
+    } else {
+      preExistingResults.push(classified);
+    }
+  }
+
+  return {
+    granularity,
+    newResults,
+    preExistingResults,
+    summary: {
+      diffFileCount: diffFiles.length,
+      refRange,
+      totalNew: newResults.length,
+      totalPreExisting: preExistingResults.length,
+      totalResults: results.length,
+    },
+  };
 }
