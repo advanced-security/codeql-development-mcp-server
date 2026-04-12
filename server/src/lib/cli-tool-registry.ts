@@ -575,8 +575,11 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           const lastDumpDilFlag = [...rawAdditionalArgs].reverse().find(
             (arg) => arg === '--dump-dil' || arg === '--no-dump-dil',
           );
-          if (lastDumpDilFlag === '--dump-dil') options['dump-dil'] = true;
-          else if (lastDumpDilFlag === '--no-dump-dil') options['dump-dil'] = false;
+          if (lastDumpDilFlag === '--dump-dil') {
+            options['dump-dil'] = true;
+          } else if (lastDumpDilFlag === '--no-dump-dil') {
+            options['dump-dil'] = false;
+          }
           if (lastDumpDilFlag !== undefined) {
             rawAdditionalArgs = rawAdditionalArgs.filter(
               (arg) => arg !== '--dump-dil' && arg !== '--no-dump-dil',

@@ -955,7 +955,7 @@ describe('registerCLITool handler behavior', () => {
     const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
 
     executeCodeQLCommand.mockResolvedValueOnce({
-      stdout: 'DIL output here',
+      stdout: '',
       stderr: '',
       success: true
     });
