@@ -1550,6 +1550,8 @@ describe('diffSarifByCommits', () => {
       const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
 
       expect(result.newResults).toHaveLength(1);
+      // When matched, file should use the diff path, not the normalized URI
+      expect(result.newResults[0].file).toBe('src/db.js');
     });
   });
 
@@ -1650,6 +1652,26 @@ describe('diffSarifByCommits', () => {
       expect(newResult.file).toBe('src/db.js');
       expect(newResult.line).toBe(42);
       expect(newResult.resultIndex).toBe(0);
+    });
+
+    it('should use normalized URI as file when result does not match any diff entry', () => {
+      const sarif: SarifDocument = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'CodeQL', rules: [{ id: 'r1' }] } },
+          results: [{
+            ruleId: 'r1',
+            message: { text: 'result' },
+            locations: [{ physicalLocation: { artifactLocation: { uri: 'file:///home/user/project/src/unmatched.js' }, region: { startLine: 1 } } }],
+          }],
+        }],
+      };
+      const diffFiles: DiffFileEntry[] = [{ path: 'src/other.js', hunks: [] }];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.preExistingResults).toHaveLength(1);
+      expect(result.preExistingResults[0].file).toBe('home/user/project/src/unmatched.js');
     });
 
     it('should default granularity to file when not specified', () => {

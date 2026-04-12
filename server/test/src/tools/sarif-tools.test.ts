@@ -11,6 +11,13 @@ import { registerSarifTools } from '../../../src/tools/sarif-tools';
 import { sessionDataManager } from '../../../src/lib/session-data-manager';
 import { createProjectTempDir } from '../../../src/utils/temp-dir';
 
+// Module-scope mock for cli-executor so the dynamic import in the handler
+// always resolves to the same controllable mock (prevents module-cache flakiness).
+const mockExecuteCLICommand = vi.fn();
+vi.mock('../../../src/lib/cli-executor', () => ({
+  executeCLICommand: mockExecuteCLICommand,
+}));
+
 // ---------------------------------------------------------------------------
 // Test fixtures
 // ---------------------------------------------------------------------------
@@ -507,20 +514,17 @@ describe('SARIF Tools', () => {
 
     describe('sarif_diff_by_commits', () => {
       it('should classify results as new when their files appear in git diff', async () => {
-        // Mock executeCLICommand to return a simulated git diff output
-        vi.doMock('../../../src/lib/cli-executor', () => ({
-          executeCLICommand: vi.fn().mockResolvedValue({
-            success: true,
-            stdout: [
-              'diff --git a/src/db.js b/src/db.js',
-              '--- a/src/db.js',
-              '+++ b/src/db.js',
-              '@@ -40,5 +40,5 @@',
-              ' some context',
-            ].join('\n'),
-            stderr: '',
-          }),
-        }));
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -40,5 +40,5 @@',
+            ' some context',
+          ].join('\n'),
+          stderr: '',
+        });
 
         const result = await handlers.sarif_diff_by_commits({
           sarifPath: testSarifPath,
@@ -538,18 +542,16 @@ describe('SARIF Tools', () => {
       });
 
       it('should classify all results as pre-existing when diff has no matching files', async () => {
-        vi.doMock('../../../src/lib/cli-executor', () => ({
-          executeCLICommand: vi.fn().mockResolvedValue({
-            success: true,
-            stdout: [
-              'diff --git a/unrelated.txt b/unrelated.txt',
-              '--- a/unrelated.txt',
-              '+++ b/unrelated.txt',
-              '@@ -1,1 +1,1 @@',
-            ].join('\n'),
-            stderr: '',
-          }),
-        }));
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/unrelated.txt b/unrelated.txt',
+            '--- a/unrelated.txt',
+            '+++ b/unrelated.txt',
+            '@@ -1,1 +1,1 @@',
+          ].join('\n'),
+          stderr: '',
+        });
 
         const result = await handlers.sarif_diff_by_commits({
           sarifPath: testSarifPath,
@@ -569,14 +571,12 @@ describe('SARIF Tools', () => {
       });
 
       it('should return error when git diff fails', async () => {
-        vi.doMock('../../../src/lib/cli-executor', () => ({
-          executeCLICommand: vi.fn().mockResolvedValue({
-            success: false,
-            stdout: '',
-            stderr: 'fatal: bad revision',
-            error: 'fatal: bad revision',
-          }),
-        }));
+        mockExecuteCLICommand.mockResolvedValue({
+          success: false,
+          stdout: '',
+          stderr: 'fatal: bad revision',
+          error: 'fatal: bad revision',
+        });
 
         const result = await handlers.sarif_diff_by_commits({
           sarifPath: testSarifPath,
@@ -586,18 +586,16 @@ describe('SARIF Tools', () => {
       });
 
       it('should support line-level granularity', async () => {
-        vi.doMock('../../../src/lib/cli-executor', () => ({
-          executeCLICommand: vi.fn().mockResolvedValue({
-            success: true,
-            stdout: [
-              'diff --git a/src/db.js b/src/db.js',
-              '--- a/src/db.js',
-              '+++ b/src/db.js',
-              '@@ -42,1 +42,1 @@',
-            ].join('\n'),
-            stderr: '',
-          }),
-        }));
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -42,1 +42,1 @@',
+          ].join('\n'),
+          stderr: '',
+        });
 
         const result = await handlers.sarif_diff_by_commits({
           sarifPath: testSarifPath,
@@ -611,6 +609,22 @@ describe('SARIF Tools', () => {
         const newInDb = parsed.newResults.filter((r: any) => r.file === 'src/db.js');
         expect(newInDb).toHaveLength(1);
         expect(newInDb[0].line).toBe(42);
+      });
+
+      it('should return error for refRange starting with a dash', async () => {
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: '--option-injection',
+        });
+        expect(result.content[0].text).toContain('Invalid refRange');
+      });
+
+      it('should return error for refRange containing whitespace', async () => {
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main HEAD',
+        });
+        expect(result.content[0].text).toContain('Invalid refRange');
       });
     });
   });

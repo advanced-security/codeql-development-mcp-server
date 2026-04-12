@@ -373,6 +373,16 @@ function registerSarifDiffByCommitsTool(server: McpServer): void {
       sarifPath: z.string().optional().describe('Path to the SARIF file.'),
     },
     async ({ sarifPath, cacheKey, refRange, repoPath, granularity }) => {
+      // Validate refRange to prevent git option injection
+      if (/^\s*-/.test(refRange) || /\s/.test(refRange)) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: 'Invalid refRange: must not start with "-" or contain whitespace.',
+          }],
+        };
+      }
+
       // Load SARIF
       const loaded = loadSarif({ sarifPath, cacheKey });
       if (loaded.error) {
