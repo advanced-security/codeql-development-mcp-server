@@ -1065,29 +1065,43 @@ describe('registerCLITool handler behavior', () => {
     registerCLITool(mockServer, definition);
 
     const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+    const originalQueryLogDir = process.env.CODEQL_QUERY_LOG_DIR;
+    const queryLogDir = createTestTempDir('codeql-query-compile-dump-dil-logs');
 
-    executeCodeQLCommand.mockResolvedValueOnce({
-      stdout: 'DIL output here',
-      stderr: '',
-      success: true
-    });
+    process.env.CODEQL_QUERY_LOG_DIR = queryLogDir;
 
-    await handler({
-      query: '/path/to/query.ql',
-      additionalArgs: ['--threads=4', '--dump-dil', '--warnings=show']
-    });
+    try {
+      executeCodeQLCommand.mockResolvedValueOnce({
+        stdout: 'DIL output here',
+        stderr: '',
+        success: true
+      });
 
-    const call = executeCodeQLCommand.mock.calls[0];
-    const options = call[1] as Record<string, unknown>;
-    const positionalArgs = call[2] as string[];
+      await handler({
+        query: '/path/to/query.ql',
+        additionalArgs: ['--threads=4', '--dump-dil', '--warnings=show']
+      });
 
-    // dump-dil should be normalized into options
-    expect(options['dump-dil']).toBe(true);
+      const call = executeCodeQLCommand.mock.calls[0];
+      const options = call[1] as Record<string, unknown>;
+      const positionalArgs = call[2] as string[];
 
-    // --dump-dil should be filtered, but other args preserved
-    expect(positionalArgs).not.toContain('--dump-dil');
-    expect(positionalArgs).toContain('--threads=4');
-    expect(positionalArgs).toContain('--warnings=show');
+      // dump-dil should be normalized into options
+      expect(options['dump-dil']).toBe(true);
+
+      // --dump-dil should be filtered, but other args preserved
+      expect(positionalArgs).not.toContain('--dump-dil');
+      expect(positionalArgs).toContain('--threads=4');
+      expect(positionalArgs).toContain('--warnings=show');
+    } finally {
+      if (originalQueryLogDir === undefined) {
+        delete process.env.CODEQL_QUERY_LOG_DIR;
+      } else {
+        process.env.CODEQL_QUERY_LOG_DIR = originalQueryLogDir;
+      }
+
+      rmSync(queryLogDir, { force: true, recursive: true });
+    }
   });
 
   it('should pass format to CLI for codeql_bqrs_interpret', async () => {
