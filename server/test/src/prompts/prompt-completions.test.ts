@@ -269,6 +269,33 @@ describe('completeDatabasePath', () => {
     const result = await completeDatabasePath('');
     expect(result).toContain(join(tmpDir, 'project-db'));
   });
+
+  it('should respect CODEQL_MCP_SCAN_EXCLUDE_DIRS for database scanning', async () => {
+    // Create a database inside an excluded directory
+    const excludedDir = join(tmpDir, 'custom-excluded');
+    const dbInExcluded = join(excludedDir, 'my-db');
+    mkdirSync(dbInExcluded, { recursive: true });
+    writeFileSync(join(dbInExcluded, 'codeql-database.yml'), 'primaryLanguage: javascript');
+
+    // Create a database outside excluded directories
+    const normalDb = join(tmpDir, 'normal-db');
+    mkdirSync(normalDb, { recursive: true });
+    writeFileSync(join(normalDb, 'codeql-database.yml'), 'primaryLanguage: python');
+
+    // Without exclusion: both should be found
+    vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', '');
+    clearCompletionCache();
+    const before = await completeDatabasePath('');
+    expect(before).toContain(join(tmpDir, 'normal-db'));
+    expect(before).toContain(dbInExcluded);
+
+    // Now exclude custom-excluded — database inside should not be found
+    vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', 'custom-excluded');
+    clearCompletionCache();
+    const after = await completeDatabasePath('');
+    expect(after).toContain(join(tmpDir, 'normal-db'));
+    expect(after).not.toContain(dbInExcluded);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -782,6 +809,15 @@ describe('resolveLanguageFromPack', () => {
 
     const lang = await resolveLanguageFromPack(join(packDir, 'Query.ql'));
     expect(lang).toBe('java');
+  });
+
+  it('should terminate when reaching filesystem root without finding pack', async () => {
+    // Use the real filesystem root — no codeql-pack.yml should exist there
+    const rootDir = '/';
+    const deepPath = join(rootDir, 'nonexistent-dir', 'Query.ql');
+
+    const lang = await resolveLanguageFromPack(deepPath);
+    expect(lang).toBeUndefined();
   });
 });
 

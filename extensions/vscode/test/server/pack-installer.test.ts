@@ -542,5 +542,25 @@ describe('PackInstaller', () => {
         expect.stringContaining('1/2'),
       );
     });
+
+    it('should handle attemptCount === 0 when all languages are skipped', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      // All pack directories are missing → all languages skipped
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'));
+
+      await installer.installAll({ languages: ['javascript', 'python', 'go'] });
+
+      const summaryCall = logger.info.mock.calls.find(
+        (call: any[]) => typeof call[0] === 'string' && call[0].includes('pack install complete'),
+      );
+      expect(summaryCall).toBeDefined();
+      const summaryMsg = summaryCall![0] as string;
+      // Should NOT log "0/0 languages succeeded"
+      expect(summaryMsg).not.toContain('0/0');
+      // Should indicate no packs were found
+      expect(summaryMsg).toContain('no bundled packs found');
+    });
   });
 });

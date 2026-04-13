@@ -274,10 +274,16 @@ export class PackInstaller extends DisposableObject {
       }
     }
     const attemptCount = languages.length - skippedCount;
-    const skippedSuffix = skippedCount > 0 ? `, ${skippedCount} skipped` : '';
-    this.logger.info(
-      `Bundled pack install complete: ${successCount}/${attemptCount} languages succeeded${skippedSuffix}.`,
-    );
+    if (attemptCount === 0) {
+      this.logger.info(
+        `Bundled pack install complete: no bundled packs found, ${skippedCount} skipped.`,
+      );
+    } else {
+      const skippedSuffix = skippedCount > 0 ? `, ${skippedCount} skipped` : '';
+      this.logger.info(
+        `Bundled pack install complete: ${successCount}/${attemptCount} languages succeeded${skippedSuffix}.`,
+      );
+    }
   }
 
   /** Run `codeql pack install` for a single pack directory. */

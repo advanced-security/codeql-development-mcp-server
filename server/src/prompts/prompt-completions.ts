@@ -268,8 +268,11 @@ async function findDatabaseDirs(
   _baseDir: string,
   maxDepth: number,
   results: string[],
+  skipDirs?: Set<string>,
 ): Promise<void> {
   if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+
+  const excluded = skipDirs ?? getSkipDirs();
 
   let entries;
   try {
@@ -289,8 +292,8 @@ async function findDatabaseDirs(
 
   for (const entry of entries) {
     if (results.length >= MAX_FILE_COMPLETIONS) break;
-    if (entry.isDirectory() && !getSkipDirs().has(entry.name)) {
-      await findDatabaseDirs(join(dir, entry.name), _baseDir, maxDepth - 1, results);
+    if (entry.isDirectory() && !excluded.has(entry.name)) {
+      await findDatabaseDirs(join(dir, entry.name), _baseDir, maxDepth - 1, results, excluded);
     }
   }
 }
@@ -306,6 +309,8 @@ export async function completePackRoot(value: string): Promise<string[]> {
 
   if (!allResults) {
     const results: string[] = [];
+
+    const excluded = getSkipDirs();
 
     async function scan(dir: string, depth: number): Promise<void> {
       if (depth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
@@ -327,7 +332,7 @@ export async function completePackRoot(value: string): Promise<string[]> {
 
       for (const entry of entries) {
         if (results.length >= MAX_FILE_COMPLETIONS) break;
-        if (entry.isDirectory() && !getSkipDirs().has(entry.name)) {
+        if (entry.isDirectory() && !excluded.has(entry.name)) {
           await scan(join(dir, entry.name), depth - 1);
         }
       }
@@ -377,7 +382,6 @@ export async function resolveLanguageFromPack(
   queryFilePath: string,
 ): Promise<string | undefined> {
   let dir = dirname(queryFilePath);
-  const root = dirname(dir) === dir ? dir : undefined; // filesystem root guard
 
   // Walk up at most 20 levels (safety limit)
   for (let i = 0; i < 20; i++) {
@@ -397,7 +401,7 @@ export async function resolveLanguageFromPack(
     }
 
     const parent = dirname(dir);
-    if (parent === dir || parent === root) break;
+    if (parent === dir) break; // reached filesystem root
     dir = parent;
   }
 
