@@ -1,14 +1,45 @@
 package testing
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
+// projectTmpDir creates a temporary directory under the project-local .tmp/
+// directory instead of the OS temp directory (avoids CWE-377/CWE-378).
+// Registers t.Cleanup to remove the directory after the test.
+func projectTmpDir(t *testing.T, name string) string {
+	t.Helper()
+	// Walk up from this test file to find the repo root (contains codeql-workspace.yml)
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	dir := filepath.Dir(thisFile)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "codeql-workspace.yml")); err == nil {
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("could not find repo root (codeql-workspace.yml)")
+		}
+		dir = parent
+	}
+	tmpBase := filepath.Join(dir, ".tmp", fmt.Sprintf("test-params-%s-%d", name, os.Getpid()))
+	if err := os.MkdirAll(tmpBase, 0o755); err != nil {
+		t.Fatalf("create project tmp dir: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(tmpBase) })
+	return tmpBase
+}
+
 func TestBuildToolParams_TestConfig(t *testing.T) {
 	// Create a temp test fixture with test-config.json
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "test-config")
 	testDir := filepath.Join(dir, "tools", "my_tool", "my_test")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -25,7 +56,7 @@ func TestBuildToolParams_TestConfig(t *testing.T) {
 }
 
 func TestBuildToolParams_MonitoringStateParams(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "monitoring-state")
 	testDir := filepath.Join(dir, "tools", "codeql_lsp_completion", "basic")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -46,7 +77,7 @@ func TestBuildToolParams_MonitoringStateParams(t *testing.T) {
 }
 
 func TestBuildToolParams_ValidateCodeqlQuery(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "validate-query")
 	testDir := filepath.Join(dir, "tools", "validate_codeql_query", "syntax_validation")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -66,7 +97,7 @@ func TestBuildToolParams_ValidateCodeqlQuery(t *testing.T) {
 }
 
 func TestBuildToolParams_ResolveQueries_UsesDirectoryKey(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "resolve-queries")
 	testDir := filepath.Join(dir, "tools", "codeql_resolve_queries", "resolve_queries")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -85,7 +116,7 @@ func TestBuildToolParams_ResolveQueries_UsesDirectoryKey(t *testing.T) {
 }
 
 func TestBuildToolParams_ResolveLanguages(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "resolve-languages")
 	testDir := filepath.Join(dir, "tools", "codeql_resolve_languages", "list_languages")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -103,7 +134,7 @@ func TestBuildToolParams_ResolveLanguages(t *testing.T) {
 }
 
 func TestBuildToolParams_UnknownTool(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "unknown-tool")
 	testDir := filepath.Join(dir, "tools", "unknown_tool_xyz", "test1")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -117,7 +148,7 @@ func TestBuildToolParams_UnknownTool(t *testing.T) {
 }
 
 func TestFindFilesByExt(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "find-files")
 	os.WriteFile(filepath.Join(dir, "a.ql"), []byte(""), 0o600)
 	os.WriteFile(filepath.Join(dir, "b.ql"), []byte(""), 0o600)
 	os.WriteFile(filepath.Join(dir, "c.txt"), []byte(""), 0o600)
@@ -158,7 +189,7 @@ func TestIsSARIFTool(t *testing.T) {
 }
 
 func TestBuildToolParams_SARIFToolWithConfig(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "sarif-tool-config")
 	testDir := filepath.Join(dir, "tools", "sarif_extract_rule", "extract_sql_injection")
 	beforeDir := filepath.Join(testDir, "before")
 	os.MkdirAll(beforeDir, 0o755)
@@ -190,7 +221,7 @@ func TestBuildToolParams_SARIFToolWithConfig(t *testing.T) {
 }
 
 func TestBuildToolParams_SARIFCompareAlertsWithConfig(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "sarif-compare-alerts")
 	testDir := filepath.Join(dir, "tools", "sarif_compare_alerts", "sink_overlap")
 	beforeDir := filepath.Join(testDir, "before")
 	os.MkdirAll(beforeDir, 0o755)
@@ -225,5 +256,42 @@ func TestBuildToolParams_SARIFCompareAlertsWithConfig(t *testing.T) {
 	}
 	if alertB["sarifPath"] == nil || alertB["sarifPath"] == "" {
 		t.Error("expected sarifPath injected into alertB")
+	}
+}
+
+func TestBuildToolParams_SARIFDiffByCommitsWithConfig(t *testing.T) {
+	dir := projectTmpDir(t, "sarif-diff-by-commits")
+	testDir := filepath.Join(dir, "tools", "sarif_diff_by_commits", "file_level_classification")
+	beforeDir := filepath.Join(testDir, "before")
+	os.MkdirAll(beforeDir, 0o755)
+	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
+
+	// Write test-config.json with refRange and granularity but no sarifPath
+	os.WriteFile(filepath.Join(testDir, "test-config.json"),
+		[]byte(`{"toolName":"sarif_diff_by_commits","arguments":{"refRange":"HEAD..HEAD","granularity":"file"}}`), 0o600)
+
+	// Write a SARIF file in before/
+	os.WriteFile(filepath.Join(beforeDir, "results.sarif"),
+		[]byte(`{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"CodeQL","rules":[]}},"results":[]}]}`), 0o600)
+
+	params, err := buildToolParams(dir, "sarif_diff_by_commits", "file_level_classification", testDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should have sarifPath injected from before/
+	sarifPath, ok := params["sarifPath"].(string)
+	if !ok || sarifPath == "" {
+		t.Error("expected sarifPath to be injected from before/ directory")
+	}
+
+	// Should have refRange from config
+	if params["refRange"] != "HEAD..HEAD" {
+		t.Errorf("params[refRange] = %v, want HEAD..HEAD", params["refRange"])
+	}
+
+	// Should have granularity from config
+	if params["granularity"] != "file" {
+		t.Errorf("params[granularity] = %v, want file", params["granularity"])
 	}
 }
