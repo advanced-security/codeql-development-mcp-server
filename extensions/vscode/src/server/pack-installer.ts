@@ -247,6 +247,7 @@ export class PackInstaller extends DisposableObject {
   ): Promise<void> {
     const qlRoot = this.getQlpackRoot();
     let successCount = 0;
+    let skippedCount = 0;
 
     for (const lang of languages) {
       const packDir = join(qlRoot, 'ql', lang, 'tools', 'src');
@@ -257,6 +258,7 @@ export class PackInstaller extends DisposableObject {
         await access(packDir, constants.R_OK);
       } catch {
         this.logger.debug(`Pack directory not found, skipping: ${packDir}`);
+        skippedCount++;
         continue;
       }
 
@@ -271,8 +273,10 @@ export class PackInstaller extends DisposableObject {
         );
       }
     }
+    const attemptCount = languages.length - skippedCount;
+    const skippedSuffix = skippedCount > 0 ? `, ${skippedCount} skipped` : '';
     this.logger.info(
-      `Bundled pack install complete: ${successCount}/${languages.length} languages succeeded.`,
+      `Bundled pack install complete: ${successCount}/${attemptCount} languages succeeded${skippedSuffix}.`,
     );
   }
 

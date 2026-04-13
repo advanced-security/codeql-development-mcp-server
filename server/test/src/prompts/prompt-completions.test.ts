@@ -631,6 +631,27 @@ describe('completeQueryPath — directory filtering', () => {
     const result = await completeQueryPath('');
     expect(result).toEqual([]);
   });
+
+  it('should respect CODEQL_MCP_SCAN_EXCLUDE_DIRS changes after module load', async () => {
+    // Custom directory that is NOT in the default exclusion list
+    const customDir = join(tmpDir, 'custom-build');
+    mkdirSync(customDir, { recursive: true });
+    writeFileSync(join(customDir, 'Query.ql'), '');
+    writeFileSync(join(tmpDir, 'TopLevel.ql'), '');
+
+    // Without exclusion: custom-build should be found
+    vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', '');
+    clearCompletionCache();
+    const before = await completeQueryPath('');
+    expect(before).toContain(join('custom-build', 'Query.ql'));
+
+    // Now exclude custom-build via env var — should be respected
+    vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', 'custom-build');
+    clearCompletionCache();
+    const after = await completeQueryPath('');
+    expect(after).not.toContain(join('custom-build', 'Query.ql'));
+    expect(after).toContain('TopLevel.ql');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

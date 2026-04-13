@@ -38,9 +38,11 @@ const CACHE_TTL_MS = 5_000;
 /**
  * Directories to skip during recursive workspace scans.
  * Uses the shared, configurable exclusion list from scan-exclude.ts.
- * Computed once per module load; the env var is read at that time.
+ * Resolved at traversal time so that env var changes take effect.
  */
-const SKIP_DIRS: Set<string> = getScanExcludeDirs();
+function getSkipDirs(): Set<string> {
+  return getScanExcludeDirs();
+}
 
 /** Cached scan results keyed by a workspace+type identifier. */
 interface CacheEntry {
@@ -96,8 +98,11 @@ async function findFilesByExtension(
   extensions: string[],
   maxDepth: number,
   results: string[],
+  skipDirs?: Set<string>,
 ): Promise<void> {
   if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+
+  const excluded = skipDirs ?? getSkipDirs();
 
   let entries;
   try {
@@ -113,10 +118,10 @@ async function findFilesByExtension(
 
     if (entry.isDirectory()) {
       // Skip common non-CodeQL directories
-      if (SKIP_DIRS.has(entry.name)) {
+      if (excluded.has(entry.name)) {
         continue;
       }
-      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results);
+      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results, excluded);
     } else if (entry.isFile()) {
       const lower = entry.name.toLowerCase();
       if (extensions.some(ext => lower.endsWith(ext))) {
@@ -284,7 +289,7 @@ async function findDatabaseDirs(
 
   for (const entry of entries) {
     if (results.length >= MAX_FILE_COMPLETIONS) break;
-    if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
+    if (entry.isDirectory() && !getSkipDirs().has(entry.name)) {
       await findDatabaseDirs(join(dir, entry.name), _baseDir, maxDepth - 1, results);
     }
   }
@@ -322,7 +327,7 @@ export async function completePackRoot(value: string): Promise<string[]> {
 
       for (const entry of entries) {
         if (results.length >= MAX_FILE_COMPLETIONS) break;
-        if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
+        if (entry.isDirectory() && !getSkipDirs().has(entry.name)) {
           await scan(join(dir, entry.name), depth - 1);
         }
       }
