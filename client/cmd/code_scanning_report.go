@@ -8,8 +8,9 @@ import (
 	"sort"
 	"time"
 
-	gh "github.com/advanced-security/codeql-development-mcp-server/client/internal/github"
 	"github.com/spf13/cobra"
+
+	gh "github.com/advanced-security/codeql-development-mcp-server/client/internal/github"
 )
 
 // ---------------------------------------------------------------------------
@@ -179,7 +180,7 @@ func init() {
 	f.StringVar(&reportFlags.repo, "repo", "", "Repository in owner/repo format (required)")
 	f.StringVar(&reportFlags.ref, "ref", "", "Git ref to filter by (e.g. refs/heads/main)")
 	f.StringVar(&reportFlags.toolName, "tool-name", "", "Tool name to filter by (e.g. CodeQL)")
-	f.StringVar(&reportFlags.state, "state", "", "Alert state filter: open, closed, dismissed, fixed")
+	f.StringVar(&reportFlags.state, "state", "", "Alert state filter: open, dismissed, fixed")
 	f.StringVar(&reportFlags.output, "output", "", "Output file path (default: <owner>_<repo>.cs-report.json)")
 	f.BoolVar(&reportFlags.includeSarif, "include-sarif", false, "Also download SARIF files for each analysis")
 	f.IntVar(&reportFlags.perPage, "per-page", 100, "Results per page for API calls (max 100)")

@@ -129,3 +129,29 @@ func TestBuildAssessReport_Summary(t *testing.T) {
 		t.Error("expected at least 1 keep recommendation")
 	}
 }
+
+func TestBuildAssessReport_ReviewCountSeparateFromKeep(t *testing.T) {
+	// Alert 1 is open with an overlap to a dismissed alert -> "review"
+	// Alert 2 is dismissed -> "keep-dismissed"
+	// Alert 3 is open, no overlaps -> "keep"
+	alerts := []alertEntry{
+		{Number: 1, State: "open", Rule: ruleEntry{ID: "js/sql-injection-v2"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+		{Number: 2, State: "dismissed", Rule: ruleEntry{ID: "js/sql-injection"}, Location: locationEntry{Path: "src/db.js", StartLine: 42},
+			DismissedReason: strPtr("false positive")},
+		{Number: 3, State: "open", Rule: ruleEntry{ID: "js/xss"}, Location: locationEntry{Path: "src/views.js", StartLine: 30}},
+	}
+
+	report := buildReport("test/repo", nil, alerts)
+	assessed := assessAlerts(alerts)
+	assessReport := buildAssessReport(report, assessed)
+
+	if assessReport.Summary.ReviewCount != 1 {
+		t.Errorf("reviewCount = %d, want 1", assessReport.Summary.ReviewCount)
+	}
+	if assessReport.Summary.KeepCount != 1 {
+		t.Errorf("keepCount = %d, want 1 (only pure keep, not review)", assessReport.Summary.KeepCount)
+	}
+	if assessReport.Summary.KeepDismissed != 1 {
+		t.Errorf("keepDismissedCount = %d, want 1", assessReport.Summary.KeepDismissed)
+	}
+}

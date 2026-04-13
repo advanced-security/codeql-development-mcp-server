@@ -37,6 +37,7 @@ type assessSummary struct {
 	KeepDismissed    int `json:"keepDismissedCount"`
 	KeepFixed        int `json:"keepFixedCount"`
 	DiscardCount     int `json:"discardCount"`
+	ReviewCount      int `json:"reviewCount"`
 	ChurnRiskCount   int `json:"churnRiskCount"`
 	OverlapPairCount int `json:"overlapPairCount"`
 }
@@ -147,7 +148,7 @@ func buildAssessReport(baseReport codeScanningReport, assessed []assessedAlert) 
 		case "discard":
 			summary.DiscardCount++
 		case "review":
-			summary.KeepCount++ // counted as keep until user decides
+			summary.ReviewCount++
 		}
 		if a.ChurnRisk != "" {
 			summary.ChurnRiskCount++

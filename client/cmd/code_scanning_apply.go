@@ -6,8 +6,9 @@ import (
 	"os"
 	"time"
 
-	gh "github.com/advanced-security/codeql-development-mcp-server/client/internal/github"
 	"github.com/spf13/cobra"
+
+	gh "github.com/advanced-security/codeql-development-mcp-server/client/internal/github"
 )
 
 // ---------------------------------------------------------------------------

@@ -228,8 +228,3 @@ func TestBuildReport_JSONRoundTripWithDismissal(t *testing.T) {
 		t.Error("dismissedBy lost in JSON roundtrip")
 	}
 }
-
-// strPtr returns a pointer to s.
-func strPtr(s string) *string {
-	return &s
-}
