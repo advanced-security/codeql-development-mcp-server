@@ -374,4 +374,193 @@ describe('PackInstaller', () => {
       expect(args).toContain('install');
     });
   });
+
+  describe('installation logging', () => {
+    beforeEach(() => {
+      vi.mocked(access).mockResolvedValue(undefined);
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          cb(null, '', '');
+          return {} as any;
+        },
+      );
+    });
+
+    it('should log detected CLI version and target version when versions match', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Detected CodeQL CLI version: 2.25.1'),
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('target: 2.25.1'),
+      );
+    });
+
+    it('should log when CLI version is undefined', async () => {
+      cliResolver.getCliVersion.mockReturnValue(undefined);
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('could not be determined'),
+      );
+    });
+
+    it('should log versions match strategy', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('match'),
+      );
+    });
+
+    it('should log pack name during bundled install', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('ql-mcp-javascript-tools-src'),
+      );
+    });
+
+    it('should log installation summary with success count', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      await installer.installAll({ languages: ['javascript', 'python'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('2/2'),
+      );
+    });
+
+    it('should log install summary with success count for pack downloads', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript', 'python'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('2/2'),
+      );
+    });
+
+    it('should report attemptCount (not languages.length) when packs are skipped', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      // Only javascript pack dir exists; python and go are missing
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path).includes('/javascript/')) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      await installer.installAll({ languages: ['javascript', 'python', 'go'] });
+
+      // Summary should say 1/1 (succeeded/attempted), not 1/3
+      const summaryCall = logger.info.mock.calls.find(
+        (call: any[]) => typeof call[0] === 'string' && call[0].includes('Bundled pack install complete'),
+      );
+      expect(summaryCall).toBeDefined();
+      const summaryMsg = summaryCall![0] as string;
+      expect(summaryMsg).toContain('1/1');
+      expect(summaryMsg).not.toContain('1/3');
+    });
+
+    it('should mention skipped count in summary when packs are missing', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      // Only javascript pack dir exists; python and go are missing
+      vi.mocked(access).mockImplementation((path: any) => {
+        if (String(path).includes('/javascript/')) return Promise.resolve(undefined as any);
+        return Promise.reject(new Error('ENOENT'));
+      });
+
+      await installer.installAll({ languages: ['javascript', 'python', 'go'] });
+
+      const summaryCall = logger.info.mock.calls.find(
+        (call: any[]) => typeof call[0] === 'string' && call[0].includes('Bundled pack install complete'),
+      );
+      expect(summaryCall).toBeDefined();
+      const summaryMsg = summaryCall![0] as string;
+      expect(summaryMsg).toMatch(/2 skipped/);
+    });
+
+    it('should use download terminology in pack download logs', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.24.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1-next.1');
+
+      await installer.installAll({ languages: ['javascript'] });
+
+      // Should say "Downloading" and "Downloaded", not "Installing" / "Installed"
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Downloading advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Downloaded advanced-security/ql-mcp-javascript-tools-src@2.24.1'),
+      );
+      // Should NOT use "Installing" or "Installed" for individual packs
+      for (const call of logger.info.mock.calls) {
+        expect(String(call[0])).not.toMatch(/^Installing advanced-security/);
+        expect(String(call[0])).not.toMatch(/^Installed advanced-security/);
+      }
+    });
+
+    it('should log partial failure count in bundled install summary', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      let callCount = 0;
+      vi.mocked(execFile).mockImplementation(
+        (_cmd: any, _args: any, _opts: any, callback: any) => {
+          const cb = typeof _opts === 'function' ? _opts : callback;
+          callCount++;
+          if (callCount === 1) {
+            cb(new Error('pack install failed'), '', 'error');
+          } else {
+            cb(null, '', '');
+          }
+          return {} as any;
+        },
+      );
+
+      await installer.installAll({ languages: ['javascript', 'python'] });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('1/2'),
+      );
+    });
+
+    it('should handle attemptCount === 0 when all languages are skipped', async () => {
+      cliResolver.getCliVersion.mockReturnValue('2.25.1');
+      serverManager.getExtensionVersion.mockReturnValue('2.25.1');
+
+      // All pack directories are missing → all languages skipped
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'));
+
+      await installer.installAll({ languages: ['javascript', 'python', 'go'] });
+
+      const summaryCall = logger.info.mock.calls.find(
+        (call: any[]) => typeof call[0] === 'string' && call[0].includes('pack install complete'),
+      );
+      expect(summaryCall).toBeDefined();
+      const summaryMsg = summaryCall![0] as string;
+      // Should NOT log "0/0 languages succeeded"
+      expect(summaryMsg).not.toContain('0/0');
+      // Should indicate no packs were found
+      expect(summaryMsg).toContain('no bundled packs found');
+    });
+  });
 });

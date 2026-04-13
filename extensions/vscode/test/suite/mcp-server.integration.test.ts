@@ -7,6 +7,7 @@
  */
 
 import * as assert from 'assert';
+import * as path from 'path';
 import * as vscode from 'vscode';
 
 const EXTENSION_ID = 'advanced-security.vscode-codeql-development-mcp-server';
@@ -57,5 +58,27 @@ suite('MCP Server Definition Tests', () => {
         'CODEQL_PATH is set but empty',
       );
     }
+  });
+
+  test('Environment should include a valid CODEQL_PATH when CLI is available', async function () {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) {
+      // environmentBuilder may not be exported — skip gracefully
+      this.skip();
+      return;
+    }
+    const env = await envBuilder.build();
+    if (!env.CODEQL_PATH) {
+      // Skip explicitly when the CLI is unavailable instead of passing silently.
+      this.skip();
+      return;
+    }
+    // The CODEQL_PATH should resolve to an existing binary.
+    // In CI or the extension dev host, the CLI is expected to exist.
+    const basename = path.basename(env.CODEQL_PATH).toLowerCase();
+    assert.ok(
+      basename === 'codeql' || basename === 'codeql.exe',
+      `CODEQL_PATH basename is not 'codeql' or 'codeql.exe': ${env.CODEQL_PATH}`,
+    );
   });
 });

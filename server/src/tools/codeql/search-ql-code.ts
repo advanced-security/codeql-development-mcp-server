@@ -12,6 +12,7 @@ import { closeSync, createReadStream, fstatSync, lstatSync, openSync, readdirSyn
 import { basename, extname, join, resolve } from 'path';
 import { createInterface } from 'readline';
 import { z } from 'zod';
+import { getScanExcludeDirs } from '../../lib/scan-exclude';
 import { logger } from '../../utils/logger';
 
 // ---------------------------------------------------------------------------
@@ -30,8 +31,14 @@ const MAX_CONTEXT_LINES = 50;
 /** Maximum allowed value for `maxResults`. */
 const MAX_MAX_RESULTS = 10_000;
 
-/** Directory names to skip during traversal (compiled pack caches, deps). */
-const SKIP_DIRS = new Set(['.codeql', 'node_modules', '.git']);
+/**
+ * Directory names to skip during traversal.
+ * Uses the shared, configurable exclusion list from scan-exclude.ts.
+ * Resolved at traversal time so that env var changes take effect.
+ */
+function getSkipDirs(): Set<string> {
+  return getScanExcludeDirs();
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,6 +76,7 @@ function collectFiles(
 ): string[] {
   const files: string[] = [];
   const visitedDirs = new Set<string>();
+  const skipDirs = getSkipDirs();
 
   function walk(p: string): void {
     if (fileCount.value >= MAX_FILES_TRAVERSED) return;
@@ -91,7 +99,7 @@ function collectFiles(
       fileCount.value++;
     } else if (stat.isDirectory()) {
       // Skip well-known directories that mirror source or contain deps
-      if (SKIP_DIRS.has(basename(p))) return;
+      if (skipDirs.has(basename(p))) return;
 
       // Track visited directories by real path to prevent cycles
       let realPath: string;

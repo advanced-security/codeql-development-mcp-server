@@ -48,16 +48,14 @@ export async function activate(
       const queryWatcher = new QueryResultsWatcher(storagePaths, logger);
       disposables.push(dbWatcher, queryWatcher);
 
-      // When databases or query results change, rebuild the environment and
-      // notify the MCP provider that the server definition has changed.
-      dbWatcher.onDidChange(() => {
-        envBuilder.invalidate();
-        mcpProvider.fireDidChange();
-      });
-      queryWatcher.onDidChange(() => {
-        envBuilder.invalidate();
-        mcpProvider.fireDidChange();
-      });
+      // File-content changes (new databases, query results) do NOT require
+      // a new MCP server definition.  The running server discovers files on
+      // its own through filesystem scanning at tool invocation time.  The
+      // definition only needs to change when the server binary, workspace
+      // folder registration, or configuration changes.
+      //
+      // The watchers are still useful: they log file events for debugging
+      // and DatabaseWatcher tracks known databases internally.
     } catch (err) {
       logger.warn(
         `Failed to initialize file watchers: ${err instanceof Error ? err.message : String(err)}`,

@@ -346,4 +346,35 @@ describe('EnvironmentBuilder', () => {
       vscode.workspace.getConfiguration = originalGetConfig;
     }
   });
+
+  it('should set CODEQL_MCP_SCAN_EXCLUDE_DIRS when scanExcludeDirs setting is non-empty', async () => {
+    const vscode = await import('vscode');
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'scanExcludeDirs') return ['custom-build', '!dist'];
+          if (_key === 'additionalDatabaseDirs') return [];
+          if (_key === 'additionalQueryRunResultsDirs') return [];
+          if (_key === 'additionalMrvaRunResultsDirs') return [];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      expect(env.CODEQL_MCP_SCAN_EXCLUDE_DIRS).toBe('custom-build,!dist');
+    } finally {
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should not set CODEQL_MCP_SCAN_EXCLUDE_DIRS when scanExcludeDirs is empty', async () => {
+    const env = await builder.build();
+    expect(env.CODEQL_MCP_SCAN_EXCLUDE_DIRS).toBeUndefined();
+  });
 });
