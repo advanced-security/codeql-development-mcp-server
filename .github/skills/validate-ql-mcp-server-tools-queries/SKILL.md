@@ -329,7 +329,7 @@ All `logger.info/warn/error/debug` methods write to **stderr** (`console.error`)
 
 ### CODEQL_PATH Environment Variable
 
-The MCP server resolves the CodeQL CLI binary at startup via `resolveCodeQLBinary()` in `server/src/lib/cli-executor.ts`. When `CODEQL_PATH` is set to an absolute path pointing to a valid `codeql` binary, the server uses that binary for all CodeQL CLI operations instead of searching `PATH`. This is validated per-OS in `.github/workflows/client-integration-tests.yml` (`codeql-path-tests` job).
+The MCP server resolves the CodeQL CLI binary at startup via `resolveCodeQLBinary()` in `server/src/lib/cli-executor.ts`. When `CODEQL_PATH` is set to an absolute path pointing to a valid `codeql` binary, the server uses that binary for all CodeQL CLI operations instead of searching `PATH`. This is validated per-OS in `.github/workflows/build-and-test-client.yml` (`codeql-path-tests` job).
 
 ### STDIO Transport and stdin EOF
 
