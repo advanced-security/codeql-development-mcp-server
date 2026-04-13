@@ -11,12 +11,14 @@ import { z } from 'zod';
 import {
   computeFingerprintOverlap,
   computeLocationOverlap,
+  diffSarifByCommits,
   diffSarifRules,
   extractRuleFromSarif,
   findOverlappingAlerts,
   listSarifRules,
   sarifRuleToMarkdown,
 } from '../lib/sarif-utils';
+import type { DiffFileEntry, DiffGranularity } from '../lib/sarif-utils';
 import { sessionDataManager } from '../lib/session-data-manager';
 import type { SarifResult, SarifRule } from '../types/sarif';
 import type { SarifDocument } from '../types/sarif';
@@ -26,12 +28,13 @@ import { logger } from '../utils/logger';
  * Register all SARIF analysis tools with the MCP server.
  */
 export function registerSarifTools(server: McpServer): void {
+  registerSarifCompareAlertsTool(server);
+  registerSarifDeduplicateRulesTool(server);
+  registerSarifDiffByCommitsTool(server);
+  registerSarifDiffRunsTool(server);
   registerSarifExtractRuleTool(server);
   registerSarifListRulesTool(server);
   registerSarifRuleToMarkdownTool(server);
-  registerSarifCompareAlertsTool(server);
-  registerSarifDeduplicateRulesTool(server);
-  registerSarifDiffRunsTool(server);
   registerSarifStoreTool(server);
 
   logger.info('Registered SARIF analysis tools');
@@ -310,6 +313,109 @@ function registerSarifCompareAlertsTool(server: McpServer): void {
         content: [{
           type: 'text' as const,
           text: JSON.stringify(response, null, 2),
+        }],
+      };
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// sarif_diff_by_commits
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse the output of `git diff --unified=0 --diff-filter=ACMR --no-color`
+ * into structured DiffFileEntry objects with hunk information.
+ *
+ * The unified diff format marks file headers with `--- a/path` / `+++ b/path`
+ * and hunk headers with `@@ -oldStart,oldCount +newStart,newCount @@`.
+ * We extract the new-side ("+") start/count from each hunk header.
+ */
+function parseGitDiffOutput(diffOutput: string): DiffFileEntry[] {
+  const files: DiffFileEntry[] = [];
+  let currentFile: DiffFileEntry | null = null;
+
+  for (const line of diffOutput.split(/\r?\n/)) {
+    // New file header: +++ b/path/to/file
+    if (line.startsWith('+++ b/')) {
+      if (currentFile) files.push(currentFile);
+      currentFile = { hunks: [], path: line.substring(6) };
+      continue;
+    }
+
+    // Hunk header: @@ -old +newStart,newCount @@  or  @@ -old +newStart @@
+    if (currentFile && line.startsWith('@@')) {
+      const match = line.match(/@@ [^ ]+ \+(\d+)(?:,(\d+))? @@/);
+      if (match) {
+        currentFile.hunksParsed = true;
+        const startLine = parseInt(match[1], 10);
+        const lineCount = match[2] !== undefined ? parseInt(match[2], 10) : 1;
+        if (lineCount > 0) {
+          currentFile.hunks.push({ startLine, lineCount });
+        }
+      }
+    }
+  }
+  if (currentFile) files.push(currentFile);
+
+  return files;
+}
+
+function registerSarifDiffByCommitsTool(server: McpServer): void {
+  server.tool(
+    'sarif_diff_by_commits',
+    'Correlate SARIF results with a git diff to classify findings as "new" (introduced in the diff) or "pre-existing". Accepts a SARIF file and a git ref range (e.g. "main..HEAD"). Supports file-level or line-level granularity.',
+    {
+      cacheKey: z.string().optional().describe('Cache key to read SARIF from (alternative to sarifPath).'),
+      granularity: z.enum(['file', 'line']).optional().default('file')
+        .describe('Matching granularity: "file" classifies any result in a changed file as new; "line" additionally checks that the result line falls within a changed hunk. Default: "file".'),
+      refRange: z.string().describe('Git ref range for the diff (e.g. "main..HEAD", "abc123..def456"). Passed directly to `git diff`.'),
+      repoPath: z.string().optional().describe('Path to the git repository. Defaults to the current working directory.'),
+      sarifPath: z.string().optional().describe('Path to the SARIF file.'),
+    },
+    async ({ sarifPath, cacheKey, refRange, repoPath, granularity }) => {
+      // Validate refRange to prevent git option injection
+      if (/^\s*-/.test(refRange) || /\s/.test(refRange)) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: 'Invalid refRange: must not start with "-" or contain whitespace.',
+          }],
+        };
+      }
+
+      // Load SARIF
+      const loaded = loadSarif({ sarifPath, cacheKey });
+      if (loaded.error) {
+        return { content: [{ type: 'text' as const, text: loaded.error }] };
+      }
+
+      // Run git diff to get changed files with hunk info
+      const { executeCLICommand } = await import('../lib/cli-executor');
+      const gitArgs = ['diff', '--unified=0', '--diff-filter=ACMR', '--no-color', refRange];
+      const gitResult = await executeCLICommand({
+        args: gitArgs,
+        command: 'git',
+        cwd: repoPath,
+      });
+
+      if (!gitResult.success) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `git diff failed: ${gitResult.error ?? gitResult.stderr}`,
+          }],
+        };
+      }
+
+      const diffFiles = parseGitDiffOutput(gitResult.stdout);
+      const g = granularity as DiffGranularity;
+      const result = diffSarifByCommits(loaded.sarif!, diffFiles, refRange, g);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2),
         }],
       };
     },
