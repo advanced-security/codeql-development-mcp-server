@@ -1,10 +1,41 @@
 package testing
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
+
+// projectTmpDir creates a temporary directory under the project-local .tmp/
+// directory instead of the OS temp directory (avoids CWE-377/CWE-378).
+// Registers t.Cleanup to remove the directory after the test.
+func projectTmpDir(t *testing.T, name string) string {
+	t.Helper()
+	// Walk up from this test file to find the repo root (contains codeql-workspace.yml)
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	dir := filepath.Dir(thisFile)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "codeql-workspace.yml")); err == nil {
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("could not find repo root (codeql-workspace.yml)")
+		}
+		dir = parent
+	}
+	tmpBase := filepath.Join(dir, ".tmp", fmt.Sprintf("test-params-%s-%d", name, os.Getpid()))
+	if err := os.MkdirAll(tmpBase, 0o755); err != nil {
+		t.Fatalf("create project tmp dir: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(tmpBase) })
+	return tmpBase
+}
 
 func TestBuildToolParams_TestConfig(t *testing.T) {
 	// Create a temp test fixture with test-config.json
@@ -229,7 +260,7 @@ func TestBuildToolParams_SARIFCompareAlertsWithConfig(t *testing.T) {
 }
 
 func TestBuildToolParams_SARIFDiffByCommitsWithConfig(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "sarif-diff-by-commits")
 	testDir := filepath.Join(dir, "tools", "sarif_diff_by_commits", "file_level_classification")
 	beforeDir := filepath.Join(testDir, "before")
 	os.MkdirAll(beforeDir, 0o755)

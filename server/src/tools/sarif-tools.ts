@@ -335,7 +335,7 @@ function parseGitDiffOutput(diffOutput: string): DiffFileEntry[] {
   const files: DiffFileEntry[] = [];
   let currentFile: DiffFileEntry | null = null;
 
-  for (const line of diffOutput.split('\n')) {
+  for (const line of diffOutput.split(/\r?\n/)) {
     // New file header: +++ b/path/to/file
     if (line.startsWith('+++ b/')) {
       if (currentFile) files.push(currentFile);

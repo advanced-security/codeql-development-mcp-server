@@ -626,6 +626,33 @@ describe('SARIF Tools', () => {
         });
         expect(result.content[0].text).toContain('Invalid refRange');
       });
+
+      it('should correctly parse git diff output with CRLF line endings', async () => {
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -40,5 +40,5 @@',
+            ' some context',
+          ].join('\r\n'),
+          stderr: '',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main..HEAD',
+          granularity: 'file',
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.granularity).toBe('file');
+        expect(parsed.summary.totalResults).toBe(3);
+        // src/db.js must match despite CRLF — path should not contain \r
+        const newFiles = parsed.newResults.map((r: any) => r.file);
+        expect(newFiles).toContain('src/db.js');
+      });
     });
   });
 });
