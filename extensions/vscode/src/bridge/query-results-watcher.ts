@@ -26,7 +26,7 @@ export class QueryResultsWatcher extends DisposableObject {
     const bqrsWatcher = vscode.workspace.createFileSystemWatcher('**/*.bqrs');
     this.push(bqrsWatcher);
     bqrsWatcher.onDidCreate((uri) => {
-      this.logger.info(`Query result (BQRS) created: ${uri.fsPath}`);
+      this.logger.info(`Query result (BQRS) created: ${vscode.workspace.asRelativePath(uri)}`);
       this._onDidChange.fire();
     });
 
@@ -36,7 +36,7 @@ export class QueryResultsWatcher extends DisposableObject {
     );
     this.push(sarifWatcher);
     sarifWatcher.onDidCreate((uri) => {
-      this.logger.info(`Query result (SARIF) created: ${uri.fsPath}`);
+      this.logger.info(`Query result (SARIF) created: ${vscode.workspace.asRelativePath(uri)}`);
       this._onDidChange.fire();
     });
 

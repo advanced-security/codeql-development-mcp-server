@@ -32,6 +32,14 @@ const KNOWN_LOCATIONS = [
 export class CliResolver extends DisposableObject {
   private cachedPath: string | undefined | null = null; // null = not yet resolved
   private cachedVersion: string | undefined;
+  private resolvePromise: Promise<string | undefined> | null = null;
+
+  /**
+   * Monotonically increasing generation counter, bumped by `invalidateCache()`.
+   * Used to discard results from in-flight `doResolve()` calls that started
+   * before the most recent invalidation.
+   */
+  private _generation = 0;
 
   constructor(
     private readonly logger: Logger,
@@ -57,12 +65,42 @@ export class CliResolver extends DisposableObject {
       return this.cachedPath;
     }
 
+    // Return the in-flight promise if a resolution is already in progress
+    if (this.resolvePromise) {
+      return this.resolvePromise;
+    }
+
+    this.resolvePromise = this.doResolve();
+    try {
+      return await this.resolvePromise;
+    } finally {
+      this.resolvePromise = null;
+    }
+  }
+
+  /** Internal resolution logic. Called at most once per cache cycle. */
+  private async doResolve(): Promise<string | undefined> {
+    const startGeneration = this._generation;
     this.logger.debug('Resolving CodeQL CLI path...');
+
+    /**
+     * Check whether the cache was invalidated while an async operation
+     * was in flight.  If so, discard any version that `validateBinary()`
+     * may have written and bail out immediately.
+     */
+    const isStale = (): boolean => {
+      if (this._generation !== startGeneration) {
+        this.cachedVersion = undefined;
+        return true;
+      }
+      return false;
+    };
 
     // Strategy 1: CODEQL_PATH env var
     const envPath = process.env.CODEQL_PATH;
     if (envPath) {
       const validated = await this.validateBinary(envPath);
+      if (isStale()) return undefined;
       if (validated) {
         this.logger.info(`CodeQL CLI found via CODEQL_PATH: ${envPath}`);
         this.cachedPath = envPath;
@@ -73,14 +111,21 @@ export class CliResolver extends DisposableObject {
 
     // Strategy 2: which/command -v
     const whichPath = await this.resolveFromPath();
+    if (isStale()) return undefined;
     if (whichPath) {
-      this.logger.info(`CodeQL CLI found on PATH: ${whichPath}`);
-      this.cachedPath = whichPath;
-      return whichPath;
+      const validated = await this.validateBinary(whichPath);
+      if (isStale()) return undefined;
+      if (validated) {
+        this.logger.info(`CodeQL CLI found on PATH: ${whichPath}`);
+        this.cachedPath = whichPath;
+        return whichPath;
+      }
+      this.logger.warn(`Found 'codeql' on PATH at '${whichPath}' but it failed validation.`);
     }
 
     // Strategy 3: vscode-codeql managed distribution
     const distPath = await this.resolveFromVsCodeDistribution();
+    if (isStale()) return undefined;
     if (distPath) {
       this.logger.info(`CodeQL CLI found via vscode-codeql distribution: ${distPath}`);
       this.cachedPath = distPath;
@@ -90,6 +135,7 @@ export class CliResolver extends DisposableObject {
     // Strategy 4: known filesystem locations
     for (const location of KNOWN_LOCATIONS) {
       const validated = await this.validateBinary(location);
+      if (isStale()) return undefined;
       if (validated) {
         this.logger.info(`CodeQL CLI found at known location: ${location}`);
         this.cachedPath = location;
@@ -106,6 +152,8 @@ export class CliResolver extends DisposableObject {
   invalidateCache(): void {
     this.cachedPath = null;
     this.cachedVersion = undefined;
+    this.resolvePromise = null;
+    this._generation++;
   }
 
   /** Check if a path exists and responds to `--version`. */

@@ -118,6 +118,14 @@
           "default": ".codeql/ql-mcp",
           "markdownDescription": "Workspace-relative path for the ql-mcp scratch directory used for temporary files (query logs, external predicates, etc). The `.codeql/` parent is shared with other CodeQL CLI commands like `codeql pack bundle`. Set to an absolute path to override workspace-relative resolution."
         },
+        "codeql-mcp.scanExcludeDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Additional directory names to exclude from workspace scanning (prompt completions, QL code search). Entries are merged with the built-in defaults (`.git`, `node_modules`, `dist`, etc.). Prefix an entry with `!` to remove a default (e.g., `!build` re-includes the `build` directory). Passed to the server as `CODEQL_MCP_SCAN_EXCLUDE_DIRS`."
+        },
         "codeql-mcp.watchCodeqlExtension": {
           "type": "boolean",
           "default": true,

@@ -214,8 +214,12 @@ describe('ServerManager', () => {
       expect(installed).toBe(false);
       expect(execFile).not.toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('bundled server'),
+        expect.stringContaining('Bundled server ready'),
       );
+      // Should NOT mention npm install — VSIX is always self-contained
+      for (const call of logger.info.mock.calls) {
+        expect(String(call[0])).not.toMatch(/npm install/i);
+      }
     });
 
     it('should npm install when bundle is missing and nothing installed', async () => {

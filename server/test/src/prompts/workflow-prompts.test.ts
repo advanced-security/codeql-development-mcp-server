@@ -349,12 +349,12 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject missing language', () => {
+    it('should accept missing language (optional field)', () => {
       const result = workshopCreationWorkflowSchema.safeParse({
         queryPath: '/path/to/query.ql'
       });
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
     it('should reject empty object (both required fields missing)', () => {
@@ -563,11 +563,11 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject missing language', () => {
+    it('should accept missing language (optional field)', () => {
       const result = explainCodeqlQuerySchema.safeParse({
         queryPath: '/q.ql',
       });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
     it('should reject empty object (both required fields missing)', () => {
@@ -633,9 +633,9 @@ describe('Workflow Prompts', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject missing language', () => {
+    it('should accept missing language (optional field)', () => {
       const result = documentCodeqlQuerySchema.safeParse({ queryPath: '/q.ql' });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
     it('should reject empty object (both required fields missing)', () => {
@@ -698,9 +698,9 @@ describe('Workflow Prompts', () => {
       }
     });
 
-    it('should reject missing language', () => {
+    it('should accept missing language (optional field)', () => {
       const result = qlLspIterativeDevelopmentSchema.safeParse({ queryPath: '/q.ql' });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
     it('should reject missing queryPath', () => {
@@ -808,8 +808,8 @@ describe('Workflow Prompts', () => {
       {
         name: 'workshopCreationWorkflowSchema',
         schema: workshopCreationWorkflowSchema,
-        required: ['language', 'queryPath'],
-        optional: ['numStages', 'workshopName'],
+        required: ['queryPath'],
+        optional: ['language', 'numStages', 'workshopName'],
       },
       {
         name: 'qlTddBasicSchema',
@@ -832,20 +832,20 @@ describe('Workflow Prompts', () => {
       {
         name: 'explainCodeqlQuerySchema',
         schema: explainCodeqlQuerySchema,
-        required: ['language', 'queryPath'],
-        optional: ['databasePath'],
+        required: ['queryPath'],
+        optional: ['databasePath', 'language'],
       },
       {
         name: 'documentCodeqlQuerySchema',
         schema: documentCodeqlQuerySchema,
-        required: ['language', 'queryPath'],
-        optional: [],
+        required: ['queryPath'],
+        optional: ['language'],
       },
       {
         name: 'qlLspIterativeDevelopmentSchema',
         schema: qlLspIterativeDevelopmentSchema,
-        required: ['language', 'queryPath'],
-        optional: ['workspaceUri'],
+        required: ['queryPath'],
+        optional: ['language', 'workspaceUri'],
       },
       {
         name: 'checkForDuplicatedCodeSchema',
@@ -1960,13 +1960,15 @@ describe('Workflow Prompts', () => {
       expect(text).toContain('PYTHON');
     });
 
-    it('document_codeql_query handler should return inline error when language is missing', async () => {
+    it('document_codeql_query handler should warn when language cannot be auto-derived', async () => {
       const handler = getRegisteredHandler(mockServer, 'document_codeql_query');
       const result: PromptResult = await handler({
         queryPath: '/q.ql',
       });
       const text = result.messages[0].content.text;
-      expect(text).toContain('Invalid input');
+      expect(text).toContain('Language could not be auto-derived');
+      expect(text).toContain('codeql/<lang>-all');
+      expect(text).toContain('codeql/<lang>-queries');
     });
   });
 });
