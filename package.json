@@ -32,7 +32,7 @@
     "typescript-eslint": "^8.58.1"
   },
   "scripts": {
-    "build": "npm run build -w server && npm run build -w extensions/vscode",
+    "build": "npm run build -w server && make -C client build && npm run build -w extensions/vscode",
     "build-and-test": "npm run build:all && npm run test:all",
     "build:all": "npm run tidy && npm run build -w server && make -C client build && npm run build -w extensions/vscode",
     "clean": "make -C client clean && npm run clean -w server -w extensions/vscode && npm run clean:test-dbs",
