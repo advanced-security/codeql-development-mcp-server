@@ -60,6 +60,10 @@ codeql-development-mcp-server.code-workspace
 /evaluator-*.json
 /stderr.txt
 /stdout.txt
+sarif-downloads/
+*.cs-apply.json
+*.cs-assess.json
+*.cs-report.json
 
 # Ignore test scaffolding directory created by query-scaffolding tests
 .test-query-scaffolding

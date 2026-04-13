@@ -314,15 +314,20 @@ function normalizeUri(uri: string): string {
 }
 
 /**
+ * Check if two already-normalized URIs refer to the same file.
+ * Uses suffix matching: if one is a suffix of the other, they match.
+ */
+function normalizedUrisMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  return a.endsWith(b) || b.endsWith(a);
+}
+
+/**
  * Check if two URIs refer to the same file.
  * Uses suffix matching: if one URI is a suffix of the other, they match.
  */
 function urisMatch(uriA: string, uriB: string): boolean {
-  const a = normalizeUri(uriA);
-  const b = normalizeUri(uriB);
-  if (a === b) return true;
-  // Suffix match: the shorter path must be a suffix of the longer one
-  return a.endsWith(b) || b.endsWith(a);
+  return normalizedUrisMatch(normalizeUri(uriA), normalizeUri(uriB));
 }
 
 /** Check if two regions in the same file overlap. */
@@ -934,7 +939,7 @@ export function diffSarifByCommits(
     // Find matching diff file using precomputed normalized paths
     let matchingDiff: DiffFileEntry | undefined;
     for (const { entry, normalized } of normalizedDiffEntries) {
-      if (normalized === normalizedUri || normalized.endsWith(normalizedUri) || normalizedUri.endsWith(normalized)) {
+      if (normalizedUrisMatch(normalized, normalizedUri)) {
         matchingDiff = entry;
         break;
       }
