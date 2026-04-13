@@ -103,6 +103,10 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - Replaced `lowdb` with `sql.js` as the persistence backend, removing the previous JSON-file storage dependency. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
 - Added `codeql/rust-all` support for the new Rust tool queries. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+- Bumped minimum Node.js version from `>=24.13.0` to `>=25.6.0` across root, server, and VS Code extension workspaces. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
+- Bumped VS Code engine from `^1.110.0` to `^1.115.0` and `@types/vscode` to match. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
+- Upgraded `eslint` to `^10.2.0`, `prettier` to `^3.8.2`, `typescript-eslint` to `^8.58.1`, `@vitest/coverage-v8` and `vitest` to `^4.1.4`, and `dotenv` to `^17.4.1`. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
+- Updated devcontainer image from `typescript-node:24` to `typescript-node:25`. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
 
 ### New Contributors
 
