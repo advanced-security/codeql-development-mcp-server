@@ -347,6 +347,7 @@ function parseGitDiffOutput(diffOutput: string): DiffFileEntry[] {
     if (currentFile && line.startsWith('@@')) {
       const match = line.match(/@@ [^ ]+ \+(\d+)(?:,(\d+))? @@/);
       if (match) {
+        currentFile.hunksParsed = true;
         const startLine = parseInt(match[1], 10);
         const lineCount = match[2] !== undefined ? parseInt(match[2], 10) : 1;
         if (lineCount > 0) {

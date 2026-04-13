@@ -39,7 +39,7 @@ func projectTmpDir(t *testing.T, name string) string {
 
 func TestBuildToolParams_TestConfig(t *testing.T) {
 	// Create a temp test fixture with test-config.json
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "test-config")
 	testDir := filepath.Join(dir, "tools", "my_tool", "my_test")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -56,7 +56,7 @@ func TestBuildToolParams_TestConfig(t *testing.T) {
 }
 
 func TestBuildToolParams_MonitoringStateParams(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "monitoring-state")
 	testDir := filepath.Join(dir, "tools", "codeql_lsp_completion", "basic")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -77,7 +77,7 @@ func TestBuildToolParams_MonitoringStateParams(t *testing.T) {
 }
 
 func TestBuildToolParams_ValidateCodeqlQuery(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "validate-query")
 	testDir := filepath.Join(dir, "tools", "validate_codeql_query", "syntax_validation")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -97,7 +97,7 @@ func TestBuildToolParams_ValidateCodeqlQuery(t *testing.T) {
 }
 
 func TestBuildToolParams_ResolveQueries_UsesDirectoryKey(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "resolve-queries")
 	testDir := filepath.Join(dir, "tools", "codeql_resolve_queries", "resolve_queries")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -116,7 +116,7 @@ func TestBuildToolParams_ResolveQueries_UsesDirectoryKey(t *testing.T) {
 }
 
 func TestBuildToolParams_ResolveLanguages(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "resolve-languages")
 	testDir := filepath.Join(dir, "tools", "codeql_resolve_languages", "list_languages")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -134,7 +134,7 @@ func TestBuildToolParams_ResolveLanguages(t *testing.T) {
 }
 
 func TestBuildToolParams_UnknownTool(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "unknown-tool")
 	testDir := filepath.Join(dir, "tools", "unknown_tool_xyz", "test1")
 	os.MkdirAll(filepath.Join(testDir, "before"), 0o755)
 	os.MkdirAll(filepath.Join(testDir, "after"), 0o755)
@@ -148,7 +148,7 @@ func TestBuildToolParams_UnknownTool(t *testing.T) {
 }
 
 func TestFindFilesByExt(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "find-files")
 	os.WriteFile(filepath.Join(dir, "a.ql"), []byte(""), 0o600)
 	os.WriteFile(filepath.Join(dir, "b.ql"), []byte(""), 0o600)
 	os.WriteFile(filepath.Join(dir, "c.txt"), []byte(""), 0o600)
@@ -189,7 +189,7 @@ func TestIsSARIFTool(t *testing.T) {
 }
 
 func TestBuildToolParams_SARIFToolWithConfig(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "sarif-tool-config")
 	testDir := filepath.Join(dir, "tools", "sarif_extract_rule", "extract_sql_injection")
 	beforeDir := filepath.Join(testDir, "before")
 	os.MkdirAll(beforeDir, 0o755)
@@ -221,7 +221,7 @@ func TestBuildToolParams_SARIFToolWithConfig(t *testing.T) {
 }
 
 func TestBuildToolParams_SARIFCompareAlertsWithConfig(t *testing.T) {
-	dir := t.TempDir()
+	dir := projectTmpDir(t, "sarif-compare-alerts")
 	testDir := filepath.Join(dir, "tools", "sarif_compare_alerts", "sink_overlap")
 	beforeDir := filepath.Join(testDir, "before")
 	os.MkdirAll(beforeDir, 0o755)

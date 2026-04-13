@@ -1596,15 +1596,41 @@ describe('diffSarifByCommits', () => {
       expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
     });
 
-    it('should treat files with empty hunks as file-level match in line mode', () => {
+    it('should treat files with no hunks parsed as file-level match in line mode', () => {
       const sarif = createDiffTestSarif();
       const diffFiles: DiffFileEntry[] = [
-        { path: 'src/db.js', hunks: [] },
+        { path: 'src/db.js', hunks: [], hunksParsed: false },
       ];
 
       const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
 
-      // No hunk info → falls back to file-level
+      // No hunk info at all → falls back to file-level
+      expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
+    });
+
+    it('should classify results as pre-existing for deletion-only diffs in line mode', () => {
+      const sarif = createDiffTestSarif();
+      // hunksParsed=true but hunks=[] means all hunks had lineCount=0 (deletion-only)
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [], hunksParsed: true },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
+
+      // Deletion-only file: no new lines → results should be pre-existing
+      expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(0);
+      expect(result.preExistingResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
+    });
+
+    it('should classify results as new for deletion-only diffs in file mode', () => {
+      const sarif = createDiffTestSarif();
+      // In file mode, any matching file is "new" regardless of hunk details
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [], hunksParsed: true },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
       expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
     });
 

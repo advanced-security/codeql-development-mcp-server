@@ -89,8 +89,14 @@ export interface SarifDiffResult {
 
 /** A file changed in a git diff, with optional line ranges. */
 export interface DiffFileEntry {
-  /** Changed line ranges (hunks). Empty array means file-level only. */
+  /** Changed line ranges (hunks). Only includes hunks with lineCount > 0 (additions). */
   hunks: Array<{ startLine: number; lineCount: number }>;
+  /**
+   * Whether hunk headers were parsed for this file. When true and hunks is empty,
+   * the diff contained only deletions (no new lines). When false/undefined and
+   * hunks is empty, no hunk information was available (file-level match only).
+   */
+  hunksParsed?: boolean;
   /** File path relative to the repository root. */
   path: string;
 }
@@ -864,18 +870,6 @@ export function findOverlappingAlerts(
 // ---------------------------------------------------------------------------
 
 /**
- * Check whether a SARIF URI matches a diff file path.
- *
- * SARIF URIs may be absolute (`file:///…`) or relative (`src/db.js`),
- * while git diff paths are always relative to the repo root (e.g. `src/db.js`).
- * We normalize both and use suffix matching so that cross-environment
- * comparisons work (e.g. CI vs local).
- */
-function diffPathMatchesSarifUri(diffPath: string, sarifUri: string): boolean {
-  return urisMatch(diffPath, sarifUri);
-}
-
-/**
  * Check whether a line number falls within any of a file's changed hunks.
  */
 function lineInHunks(line: number, hunks: Array<{ startLine: number; lineCount: number }>): boolean {
@@ -912,6 +906,13 @@ export function diffSarifByCommits(
   const newResults: ClassifiedResult[] = [];
   const preExistingResults: ClassifiedResult[] = [];
 
+  // Precompute normalized diff paths once to avoid re-normalizing on every
+  // result iteration (O(results) normalize calls instead of O(results × diffFiles)).
+  const normalizedDiffEntries = diffFiles.map(df => ({
+    entry: df,
+    normalized: normalizeUri(df.path),
+  }));
+
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
     const primaryLoc = result.locations?.[0]?.physicalLocation;
@@ -928,9 +929,16 @@ export function diffSarifByCommits(
     }
 
     const startLine = primaryLoc?.region?.startLine;
+    const normalizedUri = normalizeUri(uri);
 
-    // Find matching diff file
-    const matchingDiff = diffFiles.find(df => diffPathMatchesSarifUri(df.path, uri));
+    // Find matching diff file using precomputed normalized paths
+    let matchingDiff: DiffFileEntry | undefined;
+    for (const { entry, normalized } of normalizedDiffEntries) {
+      if (normalized === normalizedUri || normalized.endsWith(normalizedUri) || normalizedUri.endsWith(normalized)) {
+        matchingDiff = entry;
+        break;
+      }
+    }
 
     let isNew = false;
     if (matchingDiff) {
@@ -938,15 +946,17 @@ export function diffSarifByCommits(
         isNew = true;
       } else if (startLine !== undefined && matchingDiff.hunks.length > 0) {
         isNew = lineInHunks(startLine, matchingDiff.hunks);
-      } else if (matchingDiff.hunks.length === 0) {
-        // No hunk info available — treat as file-level match
+      } else if (matchingDiff.hunks.length === 0 && !matchingDiff.hunksParsed) {
+        // No hunk info available at all — treat as file-level match
         isNew = true;
       }
-      // else: line granularity requested but no startLine on the result → pre-existing
+      // else: line granularity but hunksParsed=true with empty hunks means
+      // deletion-only diff (no new lines) → pre-existing.
+      // Or: line granularity requested but no startLine on the result → pre-existing.
     }
 
     const classified: ClassifiedResult = {
-      file: matchingDiff ? matchingDiff.path : normalizeUri(uri),
+      file: matchingDiff ? matchingDiff.path : normalizedUri,
       line: startLine,
       resultIndex: i,
       ruleId: result.ruleId,

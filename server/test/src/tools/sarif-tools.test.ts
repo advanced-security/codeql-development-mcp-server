@@ -653,6 +653,32 @@ describe('SARIF Tools', () => {
         const newFiles = parsed.newResults.map((r: any) => r.file);
         expect(newFiles).toContain('src/db.js');
       });
+
+      it('should classify results as pre-existing for deletion-only diffs in line mode', async () => {
+        // Deletion-only hunk: @@ -10,3 +10,0 @@ means 3 lines removed, 0 added
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -10,3 +10,0 @@',
+          ].join('\n'),
+          stderr: '',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main..HEAD',
+          granularity: 'line',
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.granularity).toBe('line');
+        // src/db.js had only deletions — no new lines, so result at line 42 is pre-existing
+        const newInDb = parsed.newResults.filter((r: any) => r.file === 'src/db.js');
+        expect(newInDb).toHaveLength(0);
+      });
     });
   });
 });
