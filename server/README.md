@@ -6,7 +6,7 @@
 
 ### Prerequisites
 
-- **Node.js** v24.13.0+ ([nodejs.org](https://nodejs.org/))
+- **Node.js** v25.6.0+ ([nodejs.org](https://nodejs.org/))
 - **CodeQL CLI** ([github.com/github/codeql-cli-binaries](https://github.com/github/codeql-cli-binaries/releases))
 - **VS Code** with GitHub Copilot extension (only required for this "Quick Start" guide)
 

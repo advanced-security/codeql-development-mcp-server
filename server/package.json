@@ -52,14 +52,14 @@
     "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
   },
   "engines": {
-    "node": ">=24.13.0",
+    "node": ">=25.6.0",
     "npm": ">=11.6.2"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "adm-zip": "^0.5.17",
     "cors": "^2.8.6",
-    "dotenv": "^17.4.0",
+    "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "js-yaml": "^4.1.1",
     "sql.js": "^1.14.1",

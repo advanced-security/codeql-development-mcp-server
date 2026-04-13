@@ -120,6 +120,9 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - Added `codeql/rust-all` support for the new Rust tool queries. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - Bumped `typescript` from 5.9.3 to 6.0.2, `esbuild` from 0.27.4 to 0.28.0, `@modelcontextprotocol/sdk` to 1.29.0, `dotenv` to 17.4.0, `typescript-eslint` to 8.58.0, and `adm-zip` to 0.5.17. ([#205](https://github.com/advanced-security/codeql-development-mcp-server/pull/205))
 - Updated `eslint`, `prettier`, `@types/node`, `@types/vscode`, `@vitest/coverage-v8`, and `vitest` to latest compatible versions. ([#245](https://github.com/advanced-security/codeql-development-mcp-server/pull/245))
+- Bumped minimum Node.js version from `>=24.13.0` to `>=25.6.0` across root, server, and VS Code extension workspaces. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
+- Bumped VS Code engine from `^1.110.0` to `^1.115.0` and `@types/vscode` to match. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
+- Updated devcontainer image from `typescript-node:24` to `typescript-node:25`. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
 
 ### New Contributors
 

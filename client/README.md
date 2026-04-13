@@ -8,7 +8,7 @@ Installable as a standalone binary or as a `gh` CLI extension (`gh ql-mcp-client
 
 - **Go** 1.25.6 or later
 - **GitHub CLI** (`gh`) authenticated — used for GitHub API calls via `go-gh`
-- **Node.js** v24.13.0 or later — required to run the MCP server subprocess in `stdio` mode
+- **Node.js** v25.6.0 or later — required to run the MCP server subprocess in `stdio` mode
 - **CodeQL CLI** — required for integration tests that exercise CodeQL tools
 
 ## Build
