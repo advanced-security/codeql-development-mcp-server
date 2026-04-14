@@ -123,6 +123,16 @@ func assessAlerts(alerts []alertEntry) []assessedAlert {
 						"potential duplicate of dismissed alert #%d from rule %s",
 						peer.Number, peer.Rule.ID)
 				}
+
+				// If both alerts are open, mark the higher-numbered one as discard
+				if a.State == "open" && peer.State == "open" && assessed.Recommendation == "keep" {
+					if a.Number > peer.Number {
+						assessed.Recommendation = "discard"
+						assessed.RecommendReason = fmt.Sprintf(
+							"duplicate of canonical alert #%d from rule %s at same location",
+							peer.Number, peer.Rule.ID)
+					}
+				}
 			}
 		}
 

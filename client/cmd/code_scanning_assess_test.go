@@ -155,3 +155,96 @@ func TestBuildAssessReport_ReviewCountSeparateFromKeep(t *testing.T) {
 		t.Errorf("keepDismissedCount = %d, want 1", assessReport.Summary.KeepDismissed)
 	}
 }
+
+func TestAssessAlerts_DiscardForOverlappingOpenAlerts(t *testing.T) {
+	// Two open alerts from different rules at the same location.
+	// The higher-numbered alert should be marked "discard" (lower number is canonical).
+	alerts := []alertEntry{
+		{Number: 1, State: "open", Rule: ruleEntry{ID: "js/sql-injection", Severity: "8.8"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+		{Number: 5, State: "open", Rule: ruleEntry{ID: "js/sql-injection-v2", Severity: "8.8"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+	}
+
+	assessed := assessAlerts(alerts)
+
+	var discardCount int
+	for _, a := range assessed {
+		if a.Recommendation == "discard" {
+			discardCount++
+			if a.Number != 5 {
+				t.Errorf("expected alert #5 to be discard, got alert #%d", a.Number)
+			}
+		}
+	}
+	if discardCount != 1 {
+		t.Errorf("expected 1 discard recommendation, got %d", discardCount)
+	}
+
+	// The canonical alert (lower number) keeps "keep" recommendation
+	for _, a := range assessed {
+		if a.Number == 1 && a.Recommendation != "keep" {
+			t.Errorf("canonical alert #1 recommendation = %q, want keep", a.Recommendation)
+		}
+	}
+}
+
+func TestAssessAlerts_DiscardPreservesOverlapMetadata(t *testing.T) {
+	alerts := []alertEntry{
+		{Number: 1, State: "open", Rule: ruleEntry{ID: "js/sql-injection"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+		{Number: 5, State: "open", Rule: ruleEntry{ID: "js/sql-injection-v2"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+	}
+
+	assessed := assessAlerts(alerts)
+
+	for _, a := range assessed {
+		if a.Number == 5 {
+			if len(a.OverlappingAlerts) == 0 {
+				t.Error("discarded alert #5 should list overlapping alerts")
+			}
+			if a.RecommendReason == "" {
+				t.Error("discarded alert #5 should have a recommend reason")
+			}
+		}
+	}
+}
+
+func TestAssessAlerts_DiscardNotAppliedToMixedStateOverlaps(t *testing.T) {
+	// When an open alert overlaps with a dismissed alert, it should be "review" not "discard".
+	// Discard only applies when all overlapping alerts are open.
+	alerts := []alertEntry{
+		{Number: 1, State: "dismissed", Rule: ruleEntry{ID: "js/sql-injection"}, Location: locationEntry{Path: "src/db.js", StartLine: 42},
+			DismissedReason: strPtr("false positive")},
+		{Number: 5, State: "open", Rule: ruleEntry{ID: "js/sql-injection-v2"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+	}
+
+	assessed := assessAlerts(alerts)
+
+	for _, a := range assessed {
+		if a.Number == 5 {
+			if a.Recommendation == "discard" {
+				t.Error("alert #5 overlapping with dismissed alert should be 'review', not 'discard'")
+			}
+			if a.Recommendation != "review" {
+				t.Errorf("alert #5 recommendation = %q, want review", a.Recommendation)
+			}
+		}
+	}
+}
+
+func TestBuildAssessReport_DiscardCount(t *testing.T) {
+	// Two open alerts at same location → one should be discarded
+	alerts := []alertEntry{
+		{Number: 1, State: "open", Rule: ruleEntry{ID: "js/sql-injection"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+		{Number: 5, State: "open", Rule: ruleEntry{ID: "js/sql-injection-v2"}, Location: locationEntry{Path: "src/db.js", StartLine: 42}},
+	}
+
+	report := buildReport("test/repo", nil, alerts)
+	assessed := assessAlerts(alerts)
+	assessReport := buildAssessReport(report, assessed)
+
+	if assessReport.Summary.DiscardCount != 1 {
+		t.Errorf("discardCount = %d, want 1", assessReport.Summary.DiscardCount)
+	}
+	if assessReport.Summary.KeepCount != 1 {
+		t.Errorf("keepCount = %d, want 1 (canonical alert kept)", assessReport.Summary.KeepCount)
+	}
+}

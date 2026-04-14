@@ -194,6 +194,10 @@ func runReport(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if err := validatePerPage(reportFlags.perPage); err != nil {
+		return err
+	}
+
 	client, err := gh.NewClient()
 	if err != nil {
 		return err

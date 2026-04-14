@@ -28,12 +28,14 @@ type applyAction struct {
 }
 
 type applySummary struct {
-	TotalAlerts   int  `json:"totalAlerts"`
-	DismissCount  int  `json:"dismissCount"`
-	NoChangeCount int  `json:"noChangeCount"`
-	AppliedCount  int  `json:"appliedCount"`
-	ErrorCount    int  `json:"errorCount"`
-	DryRun        bool `json:"dryRun"`
+	TotalAlerts              int  `json:"totalAlerts"`
+	DismissCount             int  `json:"dismissCount"`
+	AuthorizedDismissCount   int  `json:"authorizedDismissCount"`
+	UnauthorizedDismissCount int  `json:"unauthorizedDismissCount"`
+	NoChangeCount            int  `json:"noChangeCount"`
+	AppliedCount             int  `json:"appliedCount"`
+	ErrorCount               int  `json:"errorCount"`
+	DryRun                   bool `json:"dryRun"`
 }
 
 type applyPlan struct {
@@ -95,14 +97,25 @@ func buildApplyPlan(assessed []assessedAlert, opts applyOptions) applyPlan {
 		}
 	}
 
+	var authorizedCount, unauthorizedCount int
+	for _, a := range actions {
+		if a.Authorized {
+			authorizedCount++
+		} else {
+			unauthorizedCount++
+		}
+	}
+
 	return applyPlan{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 		Actions:     actions,
 		Summary: applySummary{
-			TotalAlerts:   len(assessed),
-			DismissCount:  len(actions),
-			NoChangeCount: noChange,
-			DryRun:        opts.dryRun,
+			TotalAlerts:              len(assessed),
+			DismissCount:             len(actions),
+			AuthorizedDismissCount:   authorizedCount,
+			UnauthorizedDismissCount: unauthorizedCount,
+			NoChangeCount:            noChange,
+			DryRun:                   opts.dryRun,
 		},
 	}
 }

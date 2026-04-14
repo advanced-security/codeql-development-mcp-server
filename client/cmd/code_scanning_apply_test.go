@@ -154,3 +154,65 @@ func TestBuildApplyPlan_ReviewWithoutAcceptIsNotAuthorized(t *testing.T) {
 		t.Errorf("action = %q, want dismiss", plan.Actions[0].Action)
 	}
 }
+
+func TestBuildApplyPlan_AuthorizedVsUnauthorizedCounts(t *testing.T) {
+	assessed := []assessedAlert{
+		{Number: 1, State: "open", Rule: ruleEntry{ID: "r1"}, Recommendation: "discard"},
+		{Number: 2, State: "open", Rule: ruleEntry{ID: "r2"}, Recommendation: "review"},
+		{Number: 3, State: "open", Rule: ruleEntry{ID: "r1"}, Recommendation: "discard"},
+	}
+
+	// Only accept r1 — so alerts 1 and 3 are authorized, alert 2 is not
+	plan := buildApplyPlan(assessed, applyOptions{
+		dryRun:               true,
+		acceptChangeForRules: []string{"r1"},
+	})
+
+	if plan.Summary.DismissCount != 3 {
+		t.Errorf("dismissCount = %d, want 3 (total proposed)", plan.Summary.DismissCount)
+	}
+	if plan.Summary.AuthorizedDismissCount != 2 {
+		t.Errorf("authorizedDismissCount = %d, want 2", plan.Summary.AuthorizedDismissCount)
+	}
+	if plan.Summary.UnauthorizedDismissCount != 1 {
+		t.Errorf("unauthorizedDismissCount = %d, want 1", plan.Summary.UnauthorizedDismissCount)
+	}
+}
+
+func TestBuildApplyPlan_AllAuthorizedWhenAcceptAll(t *testing.T) {
+	assessed := []assessedAlert{
+		{Number: 1, State: "open", Rule: ruleEntry{ID: "r1"}, Recommendation: "discard"},
+		{Number: 2, State: "open", Rule: ruleEntry{ID: "r2"}, Recommendation: "review"},
+	}
+
+	plan := buildApplyPlan(assessed, applyOptions{
+		dryRun:           true,
+		acceptAllChanges: true,
+	})
+
+	if plan.Summary.AuthorizedDismissCount != 2 {
+		t.Errorf("authorizedDismissCount = %d, want 2", plan.Summary.AuthorizedDismissCount)
+	}
+	if plan.Summary.UnauthorizedDismissCount != 0 {
+		t.Errorf("unauthorizedDismissCount = %d, want 0", plan.Summary.UnauthorizedDismissCount)
+	}
+}
+
+func TestBuildApplyPlan_DiscardAutoAuthorizedCountsCorrectly(t *testing.T) {
+	assessed := []assessedAlert{
+		{Number: 1, State: "open", Rule: ruleEntry{ID: "r1"}, Recommendation: "discard"},
+	}
+
+	// No rule filter set — discard should be auto-authorized
+	plan := buildApplyPlan(assessed, applyOptions{dryRun: true})
+
+	if plan.Summary.DismissCount != 1 {
+		t.Errorf("dismissCount = %d, want 1", plan.Summary.DismissCount)
+	}
+	if plan.Summary.AuthorizedDismissCount != 1 {
+		t.Errorf("authorizedDismissCount = %d, want 1", plan.Summary.AuthorizedDismissCount)
+	}
+	if plan.Summary.UnauthorizedDismissCount != 0 {
+		t.Errorf("unauthorizedDismissCount = %d, want 0", plan.Summary.UnauthorizedDismissCount)
+	}
+}
