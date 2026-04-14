@@ -4,6 +4,10 @@ VERSION := $(shell grep 'Version = ' cmd/root.go | head -1 | sed 's/.*"\(.*\)"/\
 
 # Use bash as the Make recipe shell (required on Windows where the default
 # shell cannot execute .sh scripts).
+# On Windows with WSL installed, bare "bash" may resolve to the WSL launcher
+# (C:\Windows\System32\bash.exe) instead of Git Bash. CI workflows override
+# this with SHELL="$(which bash)" to guarantee Git Bash. For local Windows
+# dev use, ensure Git Bash appears before System32 on PATH.
 SHELL := bash
 
 # Disable CGO to avoid Xcode/C compiler dependency
