@@ -105,7 +105,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - **`audit_add_notes` ignored `findingId`** — Added `findingId` as preferred direct-lookup alternative to the composite key fields. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 - **`codeql_bqrs_info` `files` array caused CLI error** — Changed parameter from `files` (array) to `file` (string) to match the CLI expectation. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 - **Per-database mutex lock key not normalized** — Database lock key now uses `realpath` to prevent bypassing serialization with relative paths, symlinks, or different casing. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
-- **`upgrade-packs.sh` missing Rust from all-languages upgrade loop** — Added `upgrade_packs "server/ql/rust/tools"` to the script, fixing CI failures where `codeql/rust-all` was not found in the pack download cache during CodeQL CLI upgrades.
+- **`upgrade-packs.sh` missing Rust from all-languages upgrade loop** — Added `upgrade_packs "server/ql/rust/tools"` to the script, fixing CI failures where `codeql/rust-all` was not found in the pack download cache during CodeQL CLI upgrades. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - **Stale `interpretedOutput` directories in integration tests** — The integration test runner now cleans up stale output before running directory comparison tests. ([#228](https://github.com/advanced-security/codeql-development-mcp-server/pull/228))
 
 ### Dependencies
