@@ -181,6 +181,7 @@ else
 	upgrade_packs "server/ql/javascript/tools"
 	upgrade_packs "server/ql/python/tools"
 	upgrade_packs "server/ql/ruby/tools"
+	upgrade_packs "server/ql/rust/tools"
 	upgrade_packs "server/ql/swift/tools"
 fi
 
