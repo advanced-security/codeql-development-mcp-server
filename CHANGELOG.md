@@ -14,14 +14,14 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
-> Preview theme: the **next** phase of MCP-assisted CodeQL query development, incorporating and extending ideas for [`GitHubSecurityLab/seclab-taskflow-agent`](https://github.com/GitHubSecurityLab/seclab-taskflow-agent) and `seclab-taskflows` for multi-repository variant analysis workflows.
+## [v2.25.2] — 2026-04-15
 
 ### Highlights
 
-- **Persistent MRVA workflow state and caching** — Introduced a new `SqliteStore` backend plus opt-in annotation, audit, and query result cache tools to support the next phase of MCP-assisted CodeQL development and `seclab-taskflow-agent` integration. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
-- **Rust language support** — Added first-class Rust support with `PrintAST`, `PrintCFG`, `CallGraphFrom`, `CallGraphTo`, and `CallGraphFromTo` queries, bringing the total supported languages to 10. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
-- **Bug fixes and design improvements from recent evaluation sessions** — Fixed 5 bugs across `bqrs_interpret`, `bqrs_info`, `annotation_search`, `audit_add_notes`, and `query_results_cache_compare`; added `database_analyze` auto-caching and per-database mutex serialization; auto-enabled annotation tools in VS Code extension. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
-- **SARIF analysis tools and cache model improvements** — Added `sarif_list_rules`, `sarif_extract_rule`, `sarif_rule_to_markdown`, `sarif_compare_alerts`, and `sarif_diff_runs` tools for rule-level SARIF extraction, Mermaid dataflow visualization, alert overlap analysis, and cross-run behavioral comparison. Extended cache model with `rule_id` and `run_id` columns; added `ruleId` filter to all cache tools; auto-decompose `database_analyze` SARIF into per-rule cache entries. Added `compare_overlapping_alerts` prompt and updated all SARIF-related prompts with tool recommendations. Extracted shared libraries for database metadata and SARIF rule name resolution. ([#204](https://github.com/advanced-security/codeql-development-mcp-server/pull/204))
+- **Prompt auto-completions and optional language derivation** — All 14 workflow prompts now provide auto-complete suggestions for parameters like `queryPath`, `database`, `language`, and `sarifPath` via the MCP SDK's `completable()` function. Several prompts no longer require the `language` parameter, automatically deriving it from the nearest `codeql-pack.yml`. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
+- **LLM-friendly tool input validation** — CLI tools now silently normalize camelCase and snake_case parameter names to kebab-case, and report all validation errors at once instead of one-at-a-time, reducing failed tool invocations. ([#224](https://github.com/advanced-security/codeql-development-mcp-server/pull/224), [#227](https://github.com/advanced-security/codeql-development-mcp-server/pull/227))
+- **SARIF analysis tools and persistent workflow state** — Added 5 SARIF analysis tools, annotation/audit/cache tools backed by a new `SqliteStore`, and first-class Rust language support with 10 languages now covered. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169), [#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195), [#204](https://github.com/advanced-security/codeql-development-mcp-server/pull/204))
+- **Upgraded CodeQL CLI to v2.25.2** — Full compatibility with the latest CodeQL CLI release, including upgraded QL pack dependencies for all supported languages. Fixed `upgrade-packs.sh` to include Rust packs in the all-languages upgrade loop.
 
 ### Added
 
@@ -56,6 +56,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - Added Rust coverage to CI and release workflows, including query unit tests and VSIX bundling. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - Added client integration tests for the new Rust queries and for the annotation, audit, and cache tool suites, including an MRVA triage workflow end-to-end test. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169), [#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+- Added missing `Cargo.lock` files and `ext/` crate scaffolding for Rust query test fixtures (`CallGraphFromTo`, `CallGraphTo`, `PrintCFG`). ([#210](https://github.com/advanced-security/codeql-development-mcp-server/pull/210))
 
 ### Changed
 
@@ -63,6 +64,8 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 | Tool                                   | Change                                                                                                                                                                                                                                                                                    |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| All CLI tools                          | camelCase and snake_case parameter names are now silently normalized to kebab-case; unknown properties are rejected with the property name and a "did you mean?" suggestion. ([#224](https://github.com/advanced-security/codeql-development-mcp-server/pull/224))                        |
+| All tools (validation)                 | Validation errors are now reported all-at-once instead of one-at-a-time, reducing iterative trial-and-error tool invocations. ([#227](https://github.com/advanced-security/codeql-development-mcp-server/pull/227))                                                                       |
 | `codeql_query_run`                     | Query results are now auto-cached after SARIF interpretation, enabling later lookup and comparison workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                       |
 | query metadata and database resolution | Added in-memory caching with mtime-based invalidation and deduplicated resolution logic for better performance. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                     |
 | `codeql_bqrs_interpret`                | Added optional `database` parameter mapped to `--source-archive` for SARIF source context; validates that `src.zip` or `src` exists. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                                |
@@ -71,16 +74,27 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 | `audit_add_notes`                      | Added `findingId` as preferred lookup; `owner`/`repo`/`sourceLocation`/`line` are now optional fallback fields. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                                                     |
 | `annotation_search`                    | Category field is now matched with case-insensitive `COLLATE NOCASE` alongside the existing FTS index. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                                                              |
 | `query_results_cache_compare`          | SARIF content fallback for result count is now gated on SARIF output format, avoiding unnecessary JSON parsing of non-SARIF cache entries. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))                                                          |
+| `sarif_list_rules`                     | Documented per-rule `resultCount` field in the `server-tools.md` MCP resource with JSON response schema and field reference table. ([#219](https://github.com/advanced-security/codeql-development-mcp-server/pull/219))                                                                  |
+
+#### MCP Server Prompts
+
+- All 14 workflow prompts now provide auto-complete suggestions for `queryPath`, `database`, `language`, `sarifPath`, `workspaceUri`, and `packRoot` parameters via `completable()`. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
+- `language` parameter is now optional on `workshop_creation_workflow`, `explain_codeql_query`, `document_codeql_query`, and `ql_lsp_iterative_development` prompts, with auto-derivation from `codeql-pack.yml`. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
 
 #### VS Code Extension
 
 - `McpProvider.requestRestart()` now invalidates the environment cache and bumps a `+rN` revision suffix so VS Code reliably restarts the MCP server after configuration changes. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
 - Cached the extension version in the provider constructor to avoid repeated synchronous reads of `package.json`. ([#196](https://github.com/advanced-security/codeql-development-mcp-server/pull/196))
 - New `codeql-mcp.enableAnnotationTools` setting (default: `true`) auto-sets `ENABLE_ANNOTATION_TOOLS` and `MONITORING_STORAGE_LOCATION` environment variables; `additionalEnv` overrides for advanced users. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- `CliResolver` ensures only one resolution runs at a time, validates PATH-discovered binaries, and uses generation tokens to prevent stale cache writes after invalidation. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
+- `PackInstaller` uses consistent "download" terminology for `codeql pack download` operations with detailed per-language logging. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
+- `McpProvider.fireDidChange` debounces rapid-fire notifications and clears pending timers on dispose/restart. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
+- File watchers use relative paths in log messages and no longer trigger MCP definition changes for content-only file events. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
 
 #### Infrastructure & CI/CD
 
 - Refactored monolithic server logic into focused `database-resolver`, `query-resolver`, `result-processor`, and `codeql-version` modules for maintainability and reuse. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
+- `extract-test-databases.sh` now defaults to `--scope integration` for efficient CI runs; `--language` implies `--scope all`. ([#228](https://github.com/advanced-security/codeql-development-mcp-server/pull/228))
 
 ### Fixed
 
@@ -91,15 +105,25 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - **`audit_add_notes` ignored `findingId`** — Added `findingId` as preferred direct-lookup alternative to the composite key fields. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 - **`codeql_bqrs_info` `files` array caused CLI error** — Changed parameter from `files` (array) to `file` (string) to match the CLI expectation. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
 - **Per-database mutex lock key not normalized** — Database lock key now uses `realpath` to prevent bypassing serialization with relative paths, symlinks, or different casing. ([#199](https://github.com/advanced-security/codeql-development-mcp-server/pull/199))
+- **`upgrade-packs.sh` missing Rust from all-languages upgrade loop** — Added `upgrade_packs "server/ql/rust/tools"` to the script, fixing CI failures where `codeql/rust-all` was not found in the pack download cache during CodeQL CLI upgrades.
+- **Stale `interpretedOutput` directories in integration tests** — The integration test runner now cleans up stale output before running directory comparison tests. ([#228](https://github.com/advanced-security/codeql-development-mcp-server/pull/228))
 
 ### Dependencies
 
+- Upgraded CodeQL CLI dependency to v2.25.2.
+- Upgraded all `ql-mcp-*` pack dependencies and regenerated lock files for all supported languages.
 - Replaced `lowdb` with `sql.js` as the persistence backend, removing the previous JSON-file storage dependency. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))
 - Added `codeql/rust-all` support for the new Rust tool queries. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
+- Bumped `typescript` from 5.9.3 to 6.0.2, `esbuild` from 0.27.4 to 0.28.0, `@modelcontextprotocol/sdk` to 1.29.0, `dotenv` to 17.4.0, `typescript-eslint` to 8.58.0, and `adm-zip` to 0.5.17. ([#205](https://github.com/advanced-security/codeql-development-mcp-server/pull/205))
+- Updated `eslint`, `prettier`, `@types/node`, `@types/vscode`, `@vitest/coverage-v8`, and `vitest` to latest compatible versions. ([#245](https://github.com/advanced-security/codeql-development-mcp-server/pull/245))
 
 ### New Contributors
 
 - [@Copilot](https://github.com/apps/copilot-swe-agent) made their first contribution in [#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195)
+
+**Full Changelog**: [`v2.25.1...v2.25.2`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.1...v2.25.2)
+
+---
 
 ## [v2.25.1] — 2026-03-29
 
@@ -395,7 +419,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.1...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.2...HEAD
+[v2.25.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.2
 [v2.25.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.1
 [v2.25.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.0
 [v2.24.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.24.3
