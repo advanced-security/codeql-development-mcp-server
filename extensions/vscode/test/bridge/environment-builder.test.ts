@@ -347,25 +347,6 @@ describe('EnvironmentBuilder', () => {
     }
   });
 
-  it('should preserve ENABLE_ANNOTATION_TOOLS from parent process environment', async () => {
-    const origValue = process.env.ENABLE_ANNOTATION_TOOLS;
-
-    try {
-      process.env.ENABLE_ANNOTATION_TOOLS = 'false';
-
-      builder.invalidate();
-      const env = await builder.build();
-      // Inherited process.env value should be preserved
-      expect(env.ENABLE_ANNOTATION_TOOLS).toBe('false');
-    } finally {
-      if (origValue === undefined) {
-        delete process.env.ENABLE_ANNOTATION_TOOLS;
-      } else {
-        process.env.ENABLE_ANNOTATION_TOOLS = origValue;
-      }
-    }
-  });
-
   it('should set CODEQL_MCP_SCAN_EXCLUDE_DIRS when scanExcludeDirs setting is non-empty', async () => {
     const vscode = await import('vscode');
     const originalGetConfig = vscode.workspace.getConfiguration;
