@@ -169,11 +169,6 @@ jobs:
       - name: CODEQL_PATH Tests - Install server dependencies
         run: npm ci --workspace=server --ignore-scripts
 
-      ## esbuild's optional platform binary is normally wired up by its postinstall
-      ## script; .npmrc 'ignore-scripts=true' suppresses that, so rebuild here.
-      - name: CODEQL_PATH Tests - Rebuild esbuild platform binary
-        run: npm rebuild esbuild --ignore-scripts=false
-
       - name: CODEQL_PATH Tests - Build server bundle
         run: npm run bundle -w server
 
