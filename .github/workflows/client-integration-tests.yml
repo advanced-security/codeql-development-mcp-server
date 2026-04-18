@@ -62,11 +62,6 @@ jobs:
       - name: MCP Integration Tests - Install node dependencies for client and server workspaces
         run: npm ci --workspace=client --ignore-scripts && npm ci --workspace=server --ignore-scripts
 
-      ## esbuild's optional platform binary is normally wired up by its postinstall
-      ## script; .npmrc 'ignore-scripts=true' suppresses that, so rebuild here.
-      - name: MCP Integration Tests - Rebuild esbuild platform binary
-        run: npm rebuild esbuild --ignore-scripts=false
-
       - name: MCP Integration Tests - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment
         with:

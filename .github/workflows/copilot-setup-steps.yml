@@ -48,11 +48,6 @@ jobs:
       - name: Copilot Setup - Install dependencies
         run: npm ci --include=optional --ignore-scripts
 
-      ## esbuild's optional platform binary is normally wired up by its postinstall
-      ## script; .npmrc 'ignore-scripts=true' suppresses that, so rebuild here.
-      - name: Copilot Setup - Rebuild esbuild platform binary
-        run: npm rebuild esbuild --ignore-scripts=false
-
       - name: Copilot Setup - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment
         with:
