@@ -66,7 +66,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: npm - Install dependencies
-        run: npm ci --include=optional
+        run: npm ci --include=optional --ignore-scripts
 
       - name: npm - Build server
         run: npm run build -w server

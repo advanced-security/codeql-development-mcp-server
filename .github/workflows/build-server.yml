@@ -13,7 +13,6 @@ on:
       - '.github/workflows/build-server.yml'
       - '.node-version'
       - 'server/**'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -38,7 +37,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Build Server - Install dependencies
-        run: npm ci --include=optional
+        run: npm ci --include=optional --ignore-scripts
         working-directory: .
 
       - name: Build Server - Clean previous build
@@ -50,7 +49,21 @@ jobs:
       - name: Build Server - Bundle application
         run: npm run bundle
 
+      ## Consumed by dependabot-commit-dist.yml via workflow_run.
+      - name: Build Server - Upload server/dist artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: server-dist
+          path: |
+            server/dist/codeql-development-mcp-server.js
+            server/dist/codeql-development-mcp-server.js.map
+          if-no-files-found: error
+          retention-days: 7
+
+      ## Skipped for Dependabot PRs: dependabot-commit-dist.yml will push the
+      ## rebuilt 'server/dist' back to the PR branch.
       - name: Build Server - Check for uncommitted changes
+        if: github.actor != 'dependabot[bot]'
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "❌ Uncommitted changes detected after build:"

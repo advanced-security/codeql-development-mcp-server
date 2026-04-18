@@ -1,31 +1,26 @@
 name: 'Copilot Setup Steps'
 
 on:
-  # Allow manual testing through the repository's "Actions" tab
-  workflow_dispatch: {}
-  # Automatically run the setup steps when an associated workflow is changed.
   push:
     paths:
       - '.codeql-version'
+      - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/copilot-setup-steps.yml'
       - '.node-version'
-      - '.github/actions/setup-codeql-environment/action.yml'
       - '**/codeql-pack.yml'
       - '**/codeql-pack.lock.yml'
       - '**/package.json'
       - '**/package-lock.json'
-      - '**/qlpack.yml'
   pull_request:
     paths:
       - '.codeql-version'
+      - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/copilot-setup-steps.yml'
       - '.node-version'
-      - '.github/actions/setup-codeql-environment/action.yml'
       - '**/codeql-pack.yml'
       - '**/codeql-pack.lock.yml'
       - '**/package.json'
       - '**/package-lock.json'
-      - '**/qlpack.yml'
 
 jobs:
   # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
@@ -51,7 +46,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Copilot Setup - Install dependencies
-        run: npm ci --include=optional
+        run: npm ci --include=optional --ignore-scripts
 
       - name: Copilot Setup - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment

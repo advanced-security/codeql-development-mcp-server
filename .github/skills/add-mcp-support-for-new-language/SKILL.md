@@ -273,7 +273,6 @@ on:
     branches: ['main']
     paths:
       # Same as above
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -284,12 +283,12 @@ jobs:
     runs-on: {os}-latest  # e.g., macos-latest, windows-latest
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           cache: 'npm'
           node-version-file: '.node-version'
-      - run: npm ci --workspaces
+      - run: npm ci --workspaces --ignore-scripts
       - uses: ./.github/actions/setup-codeql-environment
         with:
           install-language-runtimes: false

@@ -225,7 +225,7 @@ jobs:
 
       - name: Release - Install production dependencies
         working-directory: dist-package/server
-        run: npm install --omit=dev --include=optional
+        run: npm install --omit=dev --include=optional --ignore-scripts
 
       - name: Release - Create archive
         run: |
