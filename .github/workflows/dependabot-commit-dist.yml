@@ -84,20 +84,23 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       ## Defence in depth: confirm the artifact contains exactly the two
-      ## expected bundle files before copying into the repo.
+      ## expected bundle files before copying into the repo. The upload
+      ## step in 'build-server.yml' preserves the 'server/dist/' prefix
+      ## relative to the workspace root, so files land under that path.
       - name: Commit Dist - Verify artifact contents
         if: steps.verify.outputs.skip == 'false'
         run: |
           set -euo pipefail
-          for f in codeql-development-mcp-server.js codeql-development-mcp-server.js.map; do
+          for f in server/dist/codeql-development-mcp-server.js \
+                   server/dist/codeql-development-mcp-server.js.map; do
             if [ ! -f "artifact/${f}" ]; then
               echo "::error::Missing expected artifact file: ${f}"
               exit 1
             fi
           done
           UNEXPECTED="$(find artifact -type f \
-            ! -name 'codeql-development-mcp-server.js' \
-            ! -name 'codeql-development-mcp-server.js.map' \
+            ! -path 'artifact/server/dist/codeql-development-mcp-server.js' \
+            ! -path 'artifact/server/dist/codeql-development-mcp-server.js.map' \
             -print)"
           if [ -n "${UNEXPECTED}" ]; then
             echo "::error::Unexpected files in artifact:"
@@ -111,8 +114,8 @@ jobs:
           BRANCH: ${{ steps.pr.outputs.branch }}
         run: |
           set -euo pipefail
-          cp artifact/codeql-development-mcp-server.js server/dist/
-          cp artifact/codeql-development-mcp-server.js.map server/dist/
+          cp artifact/server/dist/codeql-development-mcp-server.js server/dist/
+          cp artifact/server/dist/codeql-development-mcp-server.js.map server/dist/
 
           git config user.name 'dependabot[bot]'
           git config user.email '49699333+dependabot[bot]@users.noreply.github.com'
