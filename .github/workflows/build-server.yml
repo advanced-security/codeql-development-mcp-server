@@ -40,6 +40,11 @@ jobs:
         run: npm ci --include=optional --ignore-scripts
         working-directory: .
 
+      ## esbuild's optional platform binary is normally wired up by its postinstall
+      ## script; .npmrc 'ignore-scripts=true' suppresses that, so rebuild here.
+      - name: Build Server - Rebuild esbuild platform binary
+        run: npm rebuild esbuild --ignore-scripts=false
+
       - name: Build Server - Clean previous build
         run: npm run clean
 

@@ -86,6 +86,7 @@ fi
 # Step 1: Build and bundle the server code
 echo "📦 Building CodeQL MCP server bundle..."
 cd "$SERVER_DIR"
+npm run rebuild:esbuild
 npm run bundle
 
 # Step 2: Install CodeQL packs (only once for both modes, skip if --no-install-packs)
