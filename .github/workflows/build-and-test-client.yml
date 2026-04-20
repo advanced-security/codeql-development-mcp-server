@@ -76,7 +76,12 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     env:
-      HTTP_HOST: 'localhost'
+      # Use 127.0.0.1 (not 'localhost') so the server's app.listen() bind
+      # address and the client's MCP_SERVER_URL agree on a single address
+      # family. On Windows, Node's dns.lookup('localhost') may return
+      # 127.0.0.1 while the Go client resolves 'localhost' to [::1], causing
+      # ECONNREFUSED because the IPv4 and IPv6 stacks are not bridged.
+      HTTP_HOST: '127.0.0.1'
       HTTP_PORT: '3000'
       MCP_MODE: ${{ matrix.mcp-mode }}
       TIMEOUT_SECONDS: '30'
