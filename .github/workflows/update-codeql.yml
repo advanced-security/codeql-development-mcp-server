@@ -145,7 +145,7 @@ jobs:
           ./server/scripts/update-release-version.sh "${LATEST}"
 
       - name: Update - Install dependencies
-        run: npm install --include=optional
+        run: npm install --include=optional --ignore-scripts
 
       - name: Update - Upgrade CodeQL pack dependencies
         run: server/scripts/upgrade-packs.sh

@@ -85,7 +85,8 @@
   "scripts": {
     "build": "npm run clean && npm run lint && npm run bundle",
     "build:all": "npm run build && npm run test:ql:fail-fast",
-    "bundle": "node esbuild.config.js",
+    "bundle": "npm run rebuild:esbuild && node esbuild.config.js",
+    "rebuild:esbuild": "npm rebuild esbuild --ignore-scripts=false",
     "clean": "rm -rf dist .tmp",
     "dev:stdio": "npm run build && TRANSPORT_MODE=stdio node dist/codeql-development-mcp-server.js",
     "dev:http": "npm run build && TRANSPORT_MODE=http node dist/codeql-development-mcp-server.js",

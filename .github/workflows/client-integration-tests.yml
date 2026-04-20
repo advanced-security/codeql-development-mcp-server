@@ -19,7 +19,6 @@ on:
       - '.node-version'
       - 'client/**'
       - 'server/**'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -61,7 +60,7 @@ jobs:
         run: choco install jq -y
 
       - name: MCP Integration Tests - Install node dependencies for client and server workspaces
-        run: npm ci --workspace=client && npm ci --workspace=server
+        run: npm ci --workspace=client --ignore-scripts && npm ci --workspace=server --ignore-scripts
 
       - name: MCP Integration Tests - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment
@@ -168,7 +167,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: CODEQL_PATH Tests - Install server dependencies
-        run: npm ci --workspace=server
+        run: npm ci --workspace=server --ignore-scripts
 
       - name: CODEQL_PATH Tests - Build server bundle
         run: npm run bundle -w server

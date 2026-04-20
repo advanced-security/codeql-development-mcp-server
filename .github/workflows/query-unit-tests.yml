@@ -29,7 +29,6 @@ on:
       - 'server/ql/**'
       - 'server/scripts/install-packs.sh'
       - 'server/scripts/run-query-unit-tests.sh'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -58,7 +57,7 @@ jobs:
         run: sudo apt-get install -y jq
 
       - name: Query Unit Tests - ${{ matrix.language }} - Install node dependencies for all workspaces
-        run: npm ci --workspaces
+        run: npm ci --workspaces --ignore-scripts
 
       - name: Query Unit Tests - ${{ matrix.language }} - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment

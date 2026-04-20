@@ -28,7 +28,6 @@ on:
       - 'server/scripts/extract-test-databases.sh'
       - 'server/scripts/install-packs.sh'
       - 'server/scripts/run-query-unit-tests.sh'
-  workflow_dispatch:
 
 # Prevent duplicate runs from push + PR on the same branch
 concurrency:

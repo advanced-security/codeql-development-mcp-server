@@ -21,7 +21,6 @@ on:
       - 'server/ql/swift/**'
       - 'server/scripts/install-packs.sh'
       - 'server/scripts/run-query-unit-tests.sh'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -42,7 +41,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Query Unit Tests - swift - Install node dependencies for all workspaces
-        run: npm ci --workspaces
+        run: npm ci --workspaces --ignore-scripts
 
       - name: Query Unit Tests - swift - Setup CodeQL environment
         uses: ./.github/actions/setup-codeql-environment

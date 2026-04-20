@@ -5,7 +5,6 @@ on:
     branches: ['main', 'next']
   push:
     branches: ['main', 'next']
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,7 +25,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Lint and Format - Install node dependencies for all workspaces
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint and Format - Run eslint
         run: npm run lint
