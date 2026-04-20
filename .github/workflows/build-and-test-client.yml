@@ -1,0 +1,323 @@
+name: Build and Test Client - CodeQL Development MCP Server
+
+on:
+  pull_request:
+    branches: ['main', 'next']
+    paths:
+      - '.github/actions/setup-codeql-environment/action.yml'
+      - '.github/workflows/build-and-test-client.yml'
+      - '.codeql-version'
+      - '.node-version'
+      - 'client/**'
+      - 'server/**'
+  push:
+    branches: ['main', 'next']
+    paths:
+      - '.github/actions/setup-codeql-environment/action.yml'
+      - '.github/workflows/build-and-test-client.yml'
+      - '.codeql-version'
+      - '.node-version'
+      - 'client/**'
+      - 'server/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test-client:
+    name: Build and Unit Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Go environment
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          cache-dependency-path: 'client/go.sum'
+          go-version-file: 'client/go.mod'
+
+      - name: Build client
+        shell: bash
+        run: make -C client build SHELL="$(which bash)"
+
+      - name: Run unit tests
+        shell: bash
+        run: make -C client test-unit SHELL="$(which bash)"
+
+      - name: Lint
+        shell: bash
+        run: make -C client lint SHELL="$(which bash)"
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Build and Unit Test Client (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Go build completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Unit tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Lint checks passed" >> $GITHUB_STEP_SUMMARY
+
+  integration-tests:
+    name: Integration Tests (${{ matrix.os }}, ${{ matrix.mcp-mode }})
+    needs: build-and-test-client
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mcp-mode: [http, stdio]
+        os: [ubuntu-latest, windows-latest]
+
+    env:
+      HTTP_HOST: 'localhost'
+      HTTP_PORT: '3000'
+      MCP_MODE: ${{ matrix.mcp-mode }}
+      TIMEOUT_SECONDS: '30'
+      URL_SCHEME: 'http'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Go environment
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          cache-dependency-path: 'client/go.sum'
+          go-version-file: 'client/go.mod'
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Install OS dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y jq
+
+      - name: Install OS dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install jq -y
+
+      - name: Install node dependencies for server workspace
+        run: npm ci --workspace=server
+
+      - name: Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          install-language-runtimes: false
+
+      ## Verify that the CodeQL CLI is spawnable from Node.js, not just from
+      ## bash. On Windows, Node.js spawn()/execFile() require a real .exe
+      ## binary on PATH, not a bash stub or .cmd wrapper. Fail fast here
+      ## instead of waiting for integration tests to time out.
+      - name: Verify CodeQL CLI is spawnable from Node.js
+        shell: bash
+        run: |
+          node -e "
+            const { execFile } = require('child_process');
+            execFile('codeql', ['version', '--format=terse'], (err, stdout) => {
+              if (err) {
+                console.error('❌ CodeQL CLI is not spawnable from Node.js:', err.message);
+                console.error('This typically means codeql.exe is not on PATH (Windows).');
+                process.exit(1);
+              }
+              console.log('✅ CodeQL CLI is spawnable from Node.js, version:', stdout.trim());
+            });
+          "
+
+      - name: Install CodeQL packs
+        shell: bash
+        run: ./server/scripts/install-packs.sh
+
+      ## Extract test databases used in the integration tests.
+      ## Defaults to integration scope (javascript/examples + specific tools
+      ## databases referenced by integration test fixtures).
+      - name: Extract test databases
+        shell: bash
+        run: ./server/scripts/extract-test-databases.sh
+
+      ## Configure npm to use bash for running scripts on Windows, since the
+      ## integration test scripts are bash scripts that cmd.exe cannot execute.
+      - name: Configure npm script shell (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: npm config set script-shell "$(which bash)"
+
+      ## Run integration tests. This script builds the server bundle and runs tests.
+      ## On Windows, GNU Make's SHELL := bash resolves to WSL's bash.exe
+      ## instead of Git Bash. We override SHELL with the full Git Bash path.
+      - name: Run integration tests
+        shell: bash
+        run: make -C client test-integration SHELL="$(which bash)"
+
+      - name: Stop the background MCP server process
+        if: always() && matrix.mcp-mode == 'http'
+        shell: bash
+        run: |
+          if [ -f server.pid ]; then
+            PID=$(cat server.pid)
+            echo "Stopping server with PID $PID"
+            if kill -0 "$PID" 2>/dev/null; then
+              kill "$PID" || true
+              sleep 2
+              if kill -0 "$PID" 2>/dev/null; then
+                echo "Force killing server process"
+                kill -9 "$PID" || true
+              fi
+            else
+              echo "Server process was not running"
+            fi
+            rm -f server.pid
+          else
+            echo "No server.pid file found"
+          fi
+          if [ -f server.log ]; then
+            rm -f server.log
+          fi
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Integration Tests (${{ matrix.os }}, ${{ matrix.mcp-mode }})" >> $GITHUB_STEP_SUMMARY
+          echo "✅ MCP server integration tests passed on ${{ matrix.os }} with ${{ matrix.mcp-mode }} transport" >> $GITHUB_STEP_SUMMARY
+
+  codeql-path-tests:
+    name: CODEQL_PATH Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          cache: 'npm'
+          node-version-file: '.node-version'
+
+      - name: Install server dependencies
+        run: npm ci --workspace=server
+
+      - name: Build server bundle
+        run: npm run bundle -w server
+
+      - name: Setup CodeQL environment
+        uses: ./.github/actions/setup-codeql-environment
+        with:
+          add-to-path: false
+          install-language-runtimes: false
+
+      ## Locate the real CodeQL binary (not the gh-codeql bash stub).
+      - name: Locate CodeQL binary
+        id: locate-codeql
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            LOCALAPPDATA_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}"
+            CODEQL_BINARY=""
+            for search_dir in \
+                "${LOCALAPPDATA_DIR}/GitHub/gh-codeql" \
+                "${LOCALAPPDATA_DIR}/GitHub CLI/extensions/gh-codeql" \
+                "${LOCALAPPDATA_DIR}"; do
+              if [[ -d "$search_dir" ]]; then
+                CODEQL_BINARY=$(find "$search_dir" -maxdepth 10 \
+                  -name "codeql.exe" -type f 2>/dev/null | head -1)
+                if [[ -n "$CODEQL_BINARY" ]]; then
+                  break
+                fi
+              fi
+            done
+            if [[ -n "$CODEQL_BINARY" ]]; then
+              CODEQL_BINARY=$(cygpath -m "$CODEQL_BINARY")
+            fi
+          else
+            for search_dir in "$HOME/.local" "$HOME/Library"; do
+              if [[ -d "$search_dir" ]]; then
+                CODEQL_BINARY=$(find "$search_dir" -path "*gh-codeql*release*" -name "codeql" -type f 2>/dev/null | head -1)
+                if [[ -n "$CODEQL_BINARY" ]]; then
+                  break
+                fi
+              fi
+            done
+          fi
+
+          if [[ -z "$CODEQL_BINARY" ]]; then
+            echo "::error::Could not locate CodeQL binary in gh-codeql distribution"
+            exit 1
+          fi
+
+          ACTUAL=$("$CODEQL_BINARY" version --format=terse 2>/dev/null)
+          EXPECTED=$(gh codeql version --format=terse 2>/dev/null)
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "::error::Binary version mismatch: got '$ACTUAL', expected '$EXPECTED'"
+            exit 1
+          fi
+
+          echo "✅ CodeQL binary verified: $CODEQL_BINARY (version $ACTUAL)"
+          echo "codeql-version=$ACTUAL" >> "$GITHUB_OUTPUT"
+          echo "codeql-binary=$CODEQL_BINARY" >> "$GITHUB_OUTPUT"
+
+      ## Build a PATH that excludes every directory containing 'codeql'.
+      - name: Build clean PATH without CodeQL
+        shell: bash
+        run: |
+          CLEAN_PATH=""
+          IFS=':' read -ra PARTS <<< "$PATH"
+          for part in "${PARTS[@]}"; do
+            case "$part" in
+              *codeql*|*gh-codeql*) ;;
+              *)
+                CLEAN_PATH="${CLEAN_PATH:+$CLEAN_PATH:}$part"
+                ;;
+            esac
+          done
+
+          if PATH="$CLEAN_PATH" command -v codeql >/dev/null 2>&1; then
+            echo "::error::codeql is still discoverable after PATH cleanup"
+            exit 1
+          fi
+
+          echo "✅ codeql is not on the clean PATH"
+          echo "CLEAN_PATH=$CLEAN_PATH" >> "$GITHUB_ENV"
+
+      - name: Test 1 - Fail with invalid CODEQL_PATH
+        shell: bash
+        run: ./server/scripts/test-codeql-path-invalid.sh
+
+      - name: Test 2 - Fail when codeql not on PATH and CODEQL_PATH not set
+        shell: bash
+        run: ./server/scripts/test-codeql-path-missing.sh
+
+      - name: Test 3 - Start with valid CODEQL_PATH
+        shell: bash
+        run: ./server/scripts/test-codeql-path-valid.sh "${{ steps.locate-codeql.outputs.codeql-binary }}"
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## CODEQL_PATH Tests (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Invalid CODEQL_PATH causes startup failure | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Missing codeql (no PATH, no CODEQL_PATH) causes startup failure | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Valid CODEQL_PATH (no PATH) starts server | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| ------ | ----- |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Version | ${{ steps.locate-codeql.outputs.codeql-version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Binary | \`${{ steps.locate-codeql.outputs.codeql-binary }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| OS | ${{ matrix.os }} |" >> $GITHUB_STEP_SUMMARY

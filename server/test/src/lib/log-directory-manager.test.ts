@@ -97,6 +97,17 @@ describe('Log Directory Manager', () => {
       );
     });
 
+    it('should accept a valid logDir even when base path is a prefix of another path segment', () => {
+      // Regression: '/tmp/base-dir' must not be treated as inside '/tmp/base'
+      // (i.e. a simple startsWith('/tmp/base') check would accept '/tmp/base-dir').
+      // This is particularly relevant on Windows where drive-letter casing may differ.
+      const similarPrefix = join(testBaseDir + '-sibling', 'sub');
+
+      expect(() => getOrCreateLogDirectory(similarPrefix)).toThrow(
+        /Provided log directory is outside the allowed base directory/
+      );
+    });
+
     it('should use default base directory when env var is not set', () => {
       delete process.env.CODEQL_QUERY_LOG_DIR;
 

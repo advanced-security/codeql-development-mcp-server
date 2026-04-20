@@ -27,7 +27,11 @@ client/integration-tests/
 
 ## Requirements for Integration Tests
 
-Each integration test must define `before` and `after` files for `monitoring-state.json` and should, when possible, also define `before` and `after` files for any content provided as input (before) and/or generated as output (after) by calling the MCP server primitive (e.g. tool) under test.
+Each integration test is configured via one of the following mechanisms, checked in order by the Go test runner (`client/internal/testing/params.go`):
+
+1. **`test-config.json`** (preferred) — a JSON file in the test directory with `toolName` and `arguments` fields.
+2. **`before/monitoring-state.json` with embedded `parameters`** — the `parameters` object inside `monitoring-state.json` is used as tool arguments.
+3. **Tool-specific defaults** — the Go test runner has built-in parameter logic for well-known tools (e.g., `codeql_query_run`, `codeql_resolve_languages`).
 
 ## ⚠️ CRITICAL: File Placement Guidelines
 
@@ -81,15 +85,12 @@ Examples:
 - `codeql_bqrs_decode` tool: Use static BQRS files as inputs, create decoded output files in `after/`
 - `codeql_query_format` tool: Use static unformatted query files in `before/`, expect formatted versions in `after/`
 
-### Integration Tests with `before/monitoring-state.json` and `after/monitoring-state.json` files
+### Integration Tests with `before/monitoring-state.json` files
 
-All integration tests are required to provide `before` and `after` versions of a `monitoring-state.json` file.
+The `before/monitoring-state.json` file serves a dual purpose in integration tests:
 
-- **Integration Pattern**: Add `monitoring-state.json` files to the existing `before/` and `after/` directories for any tool test case.
-- **Before File Location**: `client/integration-tests/primitives/tools/<tool_name>/<test_case>/before/monitoring-state.json`.
-- **After File Location**: `client/integration-tests/primitives/tools/<tool_name>/<test_case>/after/monitoring-state.json`.
-- **Before Purpose**: The `before/monitoring-state.json` represents the initial monitoring state (usually empty sessions array).
-- **After Purpose**: The `after/monitoring-state.json` represents the expected monitoring state after executing the tool, where we would always expect to see our MCP server track at least one call (from the integration test client) for the MCP primitive (endpoint) under test.
+1. **Parameter passing**: The `parameters` field within `monitoring-state.json` supplies tool arguments to the Go test runner. This is a legacy mechanism — prefer `test-config.json` for new tests.
+2. **Fixture presence**: Many existing tests include `monitoring-state.json` in both `before/` and `after/` directories. The Go test runner does not diff these files — it only reads parameters from the `before/` copy.
 
 ### Integration Tests with additional `before` and `after` files
 
@@ -105,26 +106,45 @@ Integration tests should, when possible, also define `before` and `after` files 
 ### Running Integration Tests
 
 ```bash
-# Run standard file-based integration tests
-node src/ql-mcp-client.js integration-tests
+# Build the Go client and run all integration tests
+make -C client test-integration
 
-# Run monitoring-based integration tests (includes monitoring validation)
-node src/ql-mcp-client.js integration-tests --tools codeql_monitoring_dump
+# Run integration tests directly via the binary
+gh-ql-mcp-client integration-tests --mode stdio
+
+# Filter by tool or test
+gh-ql-mcp-client integration-tests --tools codeql_query_run
+gh-ql-mcp-client integration-tests --tools codeql_query_run --tests basic_query_run
+
+# Via the shell script (builds server, binary, extracts test DBs, then runs)
+./client/scripts/run-integration-tests.sh --no-install-packs
 ```
 
-## Benefits of Monitoring-Based Tests
+## Example: Tool Test with `test-config.json`
 
-Monitoring-based integration tests enable testing of MCP tools that previously couldn't have deterministic integration tests because:
+```text
+client/integration-tests/primitives/tools/codeql_query_run/
+└── custom_log_directory/
+    ├── test-config.json           # Tool arguments (toolName + arguments)
+    ├── before/
+    │   └── monitoring-state.json  # Legacy fixture (parameters may be read)
+    └── after/
+        └── monitoring-state.json  # Legacy fixture (not diffed by Go runner)
+```
 
-1. **Deterministic Before/After States**: Instead of only file system changes, tests can use monitoring JSON data changes as an additional deterministic state comparison mechanism.
+Where `test-config.json` contains:
 
-2. **Session-Aware Tool Testing**: Tests can verify that tools properly integrate with the monitoring system when a `sessionId` parameter is provided.
+```json
+{
+  "toolName": "codeql_query_run",
+  "arguments": {
+    "query": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+    "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj"
+  }
+}
+```
 
-3. **Workflow Testing**: Complex multi-step workflows can be tested by combining multiple MCP tool calls and validating the cumulative monitoring state changes.
-
-4. **Quality Assessment Testing**: Tools that affect quality scoring, session lifecycle, or analytics can be thoroughly tested using monitoring data as the validation mechanism.
-
-## Example: Tool with Both File-Based and Monitoring Tests
+## Example: Tool Test with File-Based Fixtures
 
 ```text
 client/integration-tests/primitives/tools/codeql_lsp_diagnostics/
@@ -137,17 +157,4 @@ client/integration-tests/primitives/tools/codeql_lsp_diagnostics/
         └── monitoring-state.json      # Expected monitoring state after tool execution
 ```
 
-This approach enables comprehensive testing of both the primary tool functionality (via file comparison) and the monitoring integration (via JSON state comparison) within the same test case structure. Static files (like query files and test databases) are referenced from `server/ql/<language>/examples/` directories.
-
-## Example: Monitoring-Only Tool Test
-
-```text
-client/integration-tests/primitives/tools/session_start/
-└── basic_session_creation/
-    ├── before/
-    │   └── monitoring-state.json      # Empty sessions array
-    └── after/
-        └── monitoring-state.json      # Session array with created session
-```
-
-For tools that only affect monitoring state (like session management tools), the test case contains only monitoring-state.json files, demonstrating how monitoring data serves as the deterministic test mechanism.
+This approach enables comprehensive testing of tool functionality through the Go MCP client. Static files (like query files and test databases) are referenced from `server/ql/<language>/examples/` directories.

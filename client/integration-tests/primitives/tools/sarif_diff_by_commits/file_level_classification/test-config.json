@@ -1,0 +1,17 @@
+{
+  "toolName": "sarif_diff_by_commits",
+  "arguments": {
+    "refRange": "HEAD..HEAD",
+    "granularity": "file"
+  },
+  "assertions": {
+    "responseContains": [
+      "\"granularity\": \"file\"",
+      "\"preExistingResults\"",
+      "\"newResults\"",
+      "\"totalPreExisting\": 3",
+      "\"totalNew\": 0",
+      "\"totalResults\": 3"
+    ]
+  }
+}

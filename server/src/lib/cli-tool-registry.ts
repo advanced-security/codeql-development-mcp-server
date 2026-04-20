@@ -13,7 +13,7 @@ import { resolveQueryPath } from './query-resolver';
 import { cacheDatabaseAnalyzeResults, processQueryRunResults } from './result-processor';
 import { getUserWorkspaceDir, packageRootDir } from '../utils/package-paths';
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs';
-import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
+import { basename, delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import * as yaml from 'js-yaml';
 import { createProjectTempDir } from '../utils/temp-dir';
 
@@ -459,8 +459,28 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
 
           case 'codeql_query_compile':
+            // Handle query parameter as positional argument
+            if (query) {
+              positionalArgs = [...positionalArgs, query as string];
+            }
+            // Enable --dump-dil by default unless the user explicitly set
+            // dump-dil to false or passed --no-dump-dil / --dump-dil in
+            // additionalArgs (which takes precedence).
+            if (options['dump-dil'] === undefined) {
+              const pending = Array.isArray(options.additionalArgs)
+                ? options.additionalArgs as string[]
+                : [];
+              const hasDilOverride = pending.some(
+                arg => arg === '--no-dump-dil' || arg === '--dump-dil'
+              );
+              if (!hasDilOverride) {
+                options['dump-dil'] = true;
+              }
+            }
+            break;
+
           case 'codeql_resolve_metadata':
-            // Handle query parameter as positional argument for query compilation and metadata tools
+            // Handle query parameter as positional argument for metadata tools
             if (query) {
               positionalArgs = [...positionalArgs, query as string];
             }
@@ -536,13 +556,38 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
         }
 
+        // Compute an effective "dump-dil enabled" flag for codeql_query_compile
+        // that accounts for both `dump-dil: false` and `--no-dump-dil` in
+        // `additionalArgs`.  The log directory is created lazily post-success
+        // to avoid leaving empty directories behind on compilation failures.
+        let effectiveDumpDilEnabled = false;
+
         // Extract additionalArgs from options so they are passed as raw CLI
         // arguments instead of being transformed into --additionalArgs=value
         // by buildCodeQLArgs.
-        const rawAdditionalArgs = Array.isArray(options.additionalArgs)
+        let rawAdditionalArgs = Array.isArray(options.additionalArgs)
           ? options.additionalArgs as string[]
           : [];
         delete options.additionalArgs;
+
+        if (name === 'codeql_query_compile') {
+          // Last --dump-dil / --no-dump-dil in additionalArgs overrides the named param
+          const lastDumpDilFlag = [...rawAdditionalArgs].reverse().find(
+            (arg) => arg === '--dump-dil' || arg === '--no-dump-dil',
+          );
+          if (lastDumpDilFlag === '--dump-dil') {
+            options['dump-dil'] = true;
+          } else if (lastDumpDilFlag === '--no-dump-dil') {
+            options['dump-dil'] = false;
+          }
+          if (lastDumpDilFlag !== undefined) {
+            rawAdditionalArgs = rawAdditionalArgs.filter(
+              (arg) => arg !== '--dump-dil' && arg !== '--no-dump-dil',
+            );
+          }
+
+          effectiveDumpDilEnabled = options['dump-dil'] !== false;
+        }
 
         // For tools with post-execution processing (query run, test run,
         // database analyze), certain CLI flags are set internally and their
@@ -697,8 +742,33 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           cacheDatabaseAnalyzeResults({ ...params, database: resolvedDb, output: options.output, format: options.format }, logger);
         }
 
+        // Post-execution: persist DIL output to a .dil file for codeql_query_compile.
+        // The log directory is created lazily here (only on success with output)
+        // to avoid leaving empty directories behind on compilation failures.
+        let dilFilePath: string | undefined;
+        if (name === 'codeql_query_compile' && result.success && effectiveDumpDilEnabled && result.stdout) {
+          try {
+            const compileLogDir = getOrCreateLogDirectory(customLogDir as string | undefined);
+            logger.info(`Using log directory for ${name}: ${compileLogDir}`);
+            const queryBaseName = query
+              ? basename(query as string, '.ql')
+              : 'query';
+            dilFilePath = join(compileLogDir, `${queryBaseName}.dil`);
+            writeFileSync(dilFilePath, result.stdout, 'utf8');
+            logger.info(`Saved DIL output to ${dilFilePath}`);
+          } catch (dilError) {
+            logger.warn(`Failed to save DIL output: ${dilError}`);
+            dilFilePath = undefined;
+          }
+        }
+
         // Process the result
-        const processedResult = resultProcessor(result, params);
+        let processedResult = resultProcessor(result, params);
+
+        // Append DIL file path to the response for codeql_query_compile
+        if (dilFilePath) {
+          processedResult += `\n\nDIL file: ${dilFilePath}`;
+        }
 
         return {
           content: [{

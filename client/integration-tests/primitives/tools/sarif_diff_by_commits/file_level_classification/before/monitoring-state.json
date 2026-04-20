@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_diff_by_commits",
+  "expectedSuccess": true,
+  "description": "Test sarif_diff_by_commits classifies all results as pre-existing with empty diff"
+}

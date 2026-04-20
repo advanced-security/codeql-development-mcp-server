@@ -1,0 +1,5 @@
+{
+  "toolName": "sarif_diff_by_commits",
+  "success": true,
+  "description": "Successfully classified all results as pre-existing with empty diff (line granularity)"
+}

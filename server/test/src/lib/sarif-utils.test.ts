@@ -4,8 +4,10 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  computeFingerprintOverlap,
   computeLocationOverlap,
   decomposeSarifByRule,
+  diffSarifByCommits,
   diffSarifRules,
   extractRuleFromSarif,
   findOverlappingAlerts,
@@ -14,6 +16,7 @@ import {
   sarifResultToMermaid,
   sarifRuleToMarkdown,
 } from '../../../src/lib/sarif-utils';
+import type { DiffFileEntry } from '../../../src/lib/sarif-utils';
 import type { SarifDocument, SarifResult, SarifRule } from '../../../src/types/sarif';
 
 // ---------------------------------------------------------------------------
@@ -1222,5 +1225,488 @@ describe('getRuleDisplayName', () => {
       id: 'js/sql-injection',
     };
     expect(getRuleDisplayName(rule)).toBe('js/sql-injection');
+  });
+});
+
+describe('computeFingerprintOverlap', () => {
+  it('should detect matching fingerprints', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(true);
+    expect(overlap.fingerprintMatch).toBe(true);
+    expect(overlap.matchedFingerprints).toEqual({ primaryLocationLineHash: 'abc123' });
+    expect(overlap.overlapMode).toBe('fingerprint');
+  });
+
+  it('should detect non-matching fingerprints', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: { primaryLocationLineHash: 'def456' },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(false);
+    expect(overlap.fingerprintMatch).toBe(false);
+  });
+
+  it('should return no match when fingerprints are absent', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(false);
+    expect(overlap.fingerprintMatch).toBe(false);
+  });
+
+  it('should return no match when one result has empty fingerprints', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: {},
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(false);
+  });
+
+  it('should match on multiple shared fingerprint keys', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      partialFingerprints: {
+        primaryLocationLineHash: 'abc123',
+        primaryLocationStartColumnFingerprint: 'xyz789',
+      },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      partialFingerprints: {
+        primaryLocationLineHash: 'abc123',
+        primaryLocationStartColumnFingerprint: 'xyz789',
+      },
+    };
+
+    const overlap = computeFingerprintOverlap(resultA, resultB);
+
+    expect(overlap.overlaps).toBe(true);
+    expect(Object.keys(overlap.matchedFingerprints!)).toHaveLength(2);
+  });
+});
+
+describe('computeLocationOverlap fingerprint mode', () => {
+  it('should use fingerprint matching and fall back to full-path', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      partialFingerprints: { primaryLocationLineHash: 'abc123' },
+    };
+
+    const overlap = computeLocationOverlap(resultA, resultB, 'fingerprint');
+
+    expect(overlap.overlaps).toBe(true);
+    expect(overlap.overlapMode).toBe('fingerprint');
+    expect(overlap.fingerprintMatch).toBe(true);
+  });
+
+  it('should fall back to full-path when fingerprints are absent', () => {
+    const resultA: SarifResult = {
+      ruleId: 'r1',
+      message: { text: 'a' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      codeFlows: [{ threadFlows: [{ locations: [
+        { location: { physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42 } } } },
+      ] }] }],
+    };
+    const resultB: SarifResult = {
+      ruleId: 'r2',
+      message: { text: 'b' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: 'src/db.js' },
+          region: { startLine: 42 },
+        },
+      }],
+      codeFlows: [{ threadFlows: [{ locations: [
+        { location: { physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42 } } } },
+      ] }] }],
+    };
+
+    const overlap = computeLocationOverlap(resultA, resultB, 'fingerprint');
+
+    // Falls back to full-path since no fingerprints
+    expect(overlap.overlaps).toBe(true);
+    expect(overlap.overlapMode).toBe('full-path');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// diffSarifByCommits
+// ---------------------------------------------------------------------------
+
+describe('diffSarifByCommits', () => {
+  /** Helper: SARIF with results in multiple files and lines. */
+  function createDiffTestSarif(): SarifDocument {
+    return {
+      version: '2.1.0',
+      $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
+      runs: [{
+        tool: {
+          driver: {
+            name: 'CodeQL',
+            version: '2.25.1',
+            rules: [
+              { id: 'js/sql-injection', name: 'SQL injection' },
+              { id: 'js/xss', name: 'XSS' },
+            ],
+          },
+        },
+        results: [
+          {
+            ruleId: 'js/sql-injection',
+            message: { text: 'SQL injection' },
+            locations: [{ physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42, startColumn: 5 } } }],
+          },
+          {
+            ruleId: 'js/sql-injection',
+            message: { text: 'SQL injection from body' },
+            locations: [{ physicalLocation: { artifactLocation: { uri: 'src/api.js' }, region: { startLine: 15, startColumn: 3 } } }],
+          },
+          {
+            ruleId: 'js/xss',
+            message: { text: 'XSS vulnerability' },
+            locations: [{ physicalLocation: { artifactLocation: { uri: 'src/views.js' }, region: { startLine: 30, startColumn: 10 } } }],
+          },
+          {
+            ruleId: 'js/xss',
+            message: { text: 'XSS vulnerability 2' },
+            locations: [{ physicalLocation: { artifactLocation: { uri: 'src/templates.js' }, region: { startLine: 5 } } }],
+          },
+        ],
+      }],
+    };
+  }
+
+  describe('file-level granularity', () => {
+    it('should classify all results as new when all files are in the diff', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [] },
+        { path: 'src/api.js', hunks: [] },
+        { path: 'src/views.js', hunks: [] },
+        { path: 'src/templates.js', hunks: [] },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.newResults).toHaveLength(4);
+      expect(result.preExistingResults).toHaveLength(0);
+      expect(result.summary.totalNew).toBe(4);
+      expect(result.summary.totalPreExisting).toBe(0);
+      expect(result.summary.totalResults).toBe(4);
+      expect(result.summary.refRange).toBe('main..HEAD');
+      expect(result.granularity).toBe('file');
+    });
+
+    it('should classify all results as pre-existing when no files match', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/other.js', hunks: [] },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.newResults).toHaveLength(0);
+      expect(result.preExistingResults).toHaveLength(4);
+      expect(result.summary.totalNew).toBe(0);
+      expect(result.summary.totalPreExisting).toBe(4);
+    });
+
+    it('should partition results between new and pre-existing', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [] },
+        { path: 'src/views.js', hunks: [] },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'feature..main', 'file');
+
+      expect(result.newResults).toHaveLength(2);
+      expect(result.preExistingResults).toHaveLength(2);
+      expect(result.newResults.map(r => r.file).sort()).toEqual(['src/db.js', 'src/views.js']);
+      expect(result.preExistingResults.map(r => r.file).sort()).toEqual(['src/api.js', 'src/templates.js']);
+    });
+
+    it('should handle empty diff (no changed files)', () => {
+      const sarif = createDiffTestSarif();
+      const result = diffSarifByCommits(sarif, [], 'main..HEAD', 'file');
+
+      expect(result.newResults).toHaveLength(0);
+      expect(result.preExistingResults).toHaveLength(4);
+      expect(result.summary.diffFileCount).toBe(0);
+    });
+
+    it('should handle SARIF with no results', () => {
+      const sarif: SarifDocument = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'CodeQL', rules: [] } },
+          results: [],
+        }],
+      };
+      const diffFiles: DiffFileEntry[] = [{ path: 'src/db.js', hunks: [] }];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.newResults).toHaveLength(0);
+      expect(result.preExistingResults).toHaveLength(0);
+      expect(result.summary.totalResults).toBe(0);
+    });
+
+    it('should classify results with no location as pre-existing', () => {
+      const sarif: SarifDocument = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'CodeQL', rules: [{ id: 'r1' }] } },
+          results: [{ ruleId: 'r1', message: { text: 'no location' } }],
+        }],
+      };
+      const diffFiles: DiffFileEntry[] = [{ path: 'src/db.js', hunks: [] }];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.newResults).toHaveLength(0);
+      expect(result.preExistingResults).toHaveLength(1);
+      expect(result.preExistingResults[0].file).toBe('<unknown>');
+    });
+
+    it('should match file:// URIs against relative diff paths', () => {
+      const sarif: SarifDocument = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'CodeQL', rules: [{ id: 'r1' }] } },
+          results: [{
+            ruleId: 'r1',
+            message: { text: 'result' },
+            locations: [{ physicalLocation: { artifactLocation: { uri: 'file:///home/user/project/src/db.js' }, region: { startLine: 10 } } }],
+          }],
+        }],
+      };
+      const diffFiles: DiffFileEntry[] = [{ path: 'src/db.js', hunks: [] }];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.newResults).toHaveLength(1);
+      // When matched, file should use the diff path, not the normalized URI
+      expect(result.newResults[0].file).toBe('src/db.js');
+    });
+  });
+
+  describe('line-level granularity', () => {
+    it('should classify result as new when its line falls within a changed hunk', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [{ startLine: 40, lineCount: 5 }] },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
+
+      // Line 42 is within hunk 40-44
+      const newInDb = result.newResults.filter(r => r.file === 'src/db.js');
+      expect(newInDb).toHaveLength(1);
+      expect(newInDb[0].line).toBe(42);
+    });
+
+    it('should classify result as pre-existing when its line is outside changed hunks', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [{ startLine: 100, lineCount: 5 }] },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
+
+      // Line 42 is not within hunk 100-104
+      const preExisting = result.preExistingResults.filter(r => r.file === 'src/db.js');
+      expect(preExisting).toHaveLength(1);
+      expect(preExisting[0].line).toBe(42);
+    });
+
+    it('should handle multiple hunks in the same file', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [{ startLine: 10, lineCount: 3 }, { startLine: 42, lineCount: 1 }] },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
+
+      // Line 42 is exactly in the second hunk
+      expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
+    });
+
+    it('should treat files with no hunks parsed as file-level match in line mode', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [], hunksParsed: false },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
+
+      // No hunk info at all → falls back to file-level
+      expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
+    });
+
+    it('should classify results as pre-existing for deletion-only diffs in line mode', () => {
+      const sarif = createDiffTestSarif();
+      // hunksParsed=true but hunks=[] means all hunks had lineCount=0 (deletion-only)
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [], hunksParsed: true },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
+
+      // Deletion-only file: no new lines → results should be pre-existing
+      expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(0);
+      expect(result.preExistingResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
+    });
+
+    it('should classify results as new for deletion-only diffs in file mode', () => {
+      const sarif = createDiffTestSarif();
+      // In file mode, any matching file is "new" regardless of hunk details
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/db.js', hunks: [], hunksParsed: true },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.newResults.filter(r => r.file === 'src/db.js')).toHaveLength(1);
+    });
+
+    it('should handle single-line hunks correctly', () => {
+      const sarif: SarifDocument = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'CodeQL', rules: [{ id: 'r1' }] } },
+          results: [
+            {
+              ruleId: 'r1',
+              message: { text: 'on the line' },
+              locations: [{ physicalLocation: { artifactLocation: { uri: 'src/a.js' }, region: { startLine: 10 } } }],
+            },
+            {
+              ruleId: 'r1',
+              message: { text: 'off by one' },
+              locations: [{ physicalLocation: { artifactLocation: { uri: 'src/a.js' }, region: { startLine: 11 } } }],
+            },
+          ],
+        }],
+      };
+      const diffFiles: DiffFileEntry[] = [
+        { path: 'src/a.js', hunks: [{ startLine: 10, lineCount: 1 }] },
+      ];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'line');
+
+      expect(result.newResults).toHaveLength(1);
+      expect(result.newResults[0].line).toBe(10);
+      expect(result.preExistingResults).toHaveLength(1);
+      expect(result.preExistingResults[0].line).toBe(11);
+    });
+  });
+
+  describe('classified result structure', () => {
+    it('should include ruleId, file, line, and resultIndex in classified results', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [{ path: 'src/db.js', hunks: [] }];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      const newResult = result.newResults[0];
+      expect(newResult.ruleId).toBe('js/sql-injection');
+      expect(newResult.file).toBe('src/db.js');
+      expect(newResult.line).toBe(42);
+      expect(newResult.resultIndex).toBe(0);
+    });
+
+    it('should use normalized URI as file when result does not match any diff entry', () => {
+      const sarif: SarifDocument = {
+        version: '2.1.0',
+        runs: [{
+          tool: { driver: { name: 'CodeQL', rules: [{ id: 'r1' }] } },
+          results: [{
+            ruleId: 'r1',
+            message: { text: 'result' },
+            locations: [{ physicalLocation: { artifactLocation: { uri: 'file:///home/user/project/src/unmatched.js' }, region: { startLine: 1 } } }],
+          }],
+        }],
+      };
+      const diffFiles: DiffFileEntry[] = [{ path: 'src/other.js', hunks: [] }];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD', 'file');
+
+      expect(result.preExistingResults).toHaveLength(1);
+      expect(result.preExistingResults[0].file).toBe('home/user/project/src/unmatched.js');
+    });
+
+    it('should default granularity to file when not specified', () => {
+      const sarif = createDiffTestSarif();
+      const diffFiles: DiffFileEntry[] = [{ path: 'src/db.js', hunks: [] }];
+
+      const result = diffSarifByCommits(sarif, diffFiles, 'main..HEAD');
+
+      expect(result.granularity).toBe('file');
+    });
   });
 });
