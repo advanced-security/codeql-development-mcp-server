@@ -763,11 +763,21 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         }
 
         // Process the result
-        let processedResult = resultProcessor(result, params);
-
-        // Append DIL file path to the response for codeql_query_compile
+        let processedResult: string;
         if (dilFilePath) {
+          // DIL output was successfully persisted to a file. Don't echo the
+          // full DIL back through stdout — it can be very large and would
+          // exceed MCP response size budgets / degrade LLM performance.
+          // Surface only a short summary plus the file path; preserve any
+          // stderr (warnings/info) the CLI emitted for diagnostic value.
+          const stdoutBytes = Buffer.byteLength(result.stdout ?? '', 'utf8');
+          processedResult = `Compiled successfully. DIL output written to file (${stdoutBytes} bytes).`;
+          if (result.stderr) {
+            processedResult += `\n\nWarnings/Info:\n${result.stderr}`;
+          }
           processedResult += `\n\nDIL file: ${dilFilePath}`;
+        } else {
+          processedResult = resultProcessor(result, params);
         }
 
         return {

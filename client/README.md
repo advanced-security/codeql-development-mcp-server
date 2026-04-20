@@ -31,12 +31,12 @@ gh ql-mcp-client <command> [flags]
 
 ### Global Flags
 
-| Flag       | Default     | Description                           |
-| ---------- | ----------- | ------------------------------------- |
-| `--mode`   | `stdio`     | MCP server transport (`stdio`/`http`) |
-| `--host`   | `localhost` | MCP server host (http mode)           |
-| `--port`   | `3000`      | MCP server port (http mode)           |
-| `--format` | `text`      | Output format (`text`/`json`)         |
+| Flag       | Default     | Description                              |
+| ---------- | ----------- | ---------------------------------------- |
+| `--mode`   | `stdio`     | MCP server transport (`stdio`/`http`)    |
+| `--host`   | `localhost` | MCP server host (http mode)              |
+| `--port`   | `3000`      | MCP server port (http mode)              |
+| `--format` | `text`      | Output format (`text`/`json`/`markdown`) |
 
 Transport is configured via CLI flags. The CLI does not currently read `MCP_MODE`.
 

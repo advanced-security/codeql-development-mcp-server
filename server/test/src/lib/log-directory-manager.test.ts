@@ -98,9 +98,11 @@ describe('Log Directory Manager', () => {
     });
 
     it('should accept a valid logDir even when base path is a prefix of another path segment', () => {
-      // Regression: '/tmp/base-dir' must not be treated as inside '/tmp/base'
-      // (i.e. a simple startsWith('/tmp/base') check would accept '/tmp/base-dir').
-      // This is particularly relevant on Windows where drive-letter casing may differ.
+      // Regression: a sibling path like '<repo>/.tmp/base-dir' must not be
+      // treated as inside '<repo>/.tmp/base' (i.e. a simple
+      // startsWith('<repo>/.tmp/base') check would accept '<repo>/.tmp/base-dir').
+      // This is particularly relevant on Windows where drive-letter casing
+      // may differ between the resolved base and target paths.
       const similarPrefix = join(testBaseDir + '-sibling', 'sub');
 
       expect(() => getOrCreateLogDirectory(similarPrefix)).toThrow(

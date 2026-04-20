@@ -1,3 +1,3 @@
 module languages/go/tools/test/CallGraphTo
 
-go 1.21.13
+go 1.21

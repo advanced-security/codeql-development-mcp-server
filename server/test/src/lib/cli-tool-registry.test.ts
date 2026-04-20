@@ -724,6 +724,58 @@ describe('registerCLITool handler behavior', () => {
     }
   });
 
+  it('should not echo full DIL stdout back to caller when DIL is persisted', async () => {
+    // Regression: result.stdout from `codeql query compile --dump-dil` can be
+    // very large. When we successfully persist it to a .dil file, the response
+    // should report a short summary + file path rather than the raw DIL text,
+    // so MCP responses stay within size budgets.
+    const definition: CLIToolDefinition = {
+      name: 'codeql_query_compile',
+      description: 'Compile query',
+      command: 'codeql',
+      subcommand: 'query compile',
+      inputSchema: {
+        query: z.string(),
+        'dump-dil': z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    const dilContent = 'DIL:\n  predicate#abc123\n    SCAN table\n    SELECT col1, col2';
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: dilContent,
+      stderr: 'compiled MyQuery.ql in 12ms',
+      success: true
+    });
+
+    const codeqlQueryLogDir = createTestTempDir('codeql-query-log-dir');
+    const originalCodeqlQueryLogDir = process.env.CODEQL_QUERY_LOG_DIR;
+    process.env.CODEQL_QUERY_LOG_DIR = codeqlQueryLogDir;
+
+    try {
+      const result = await handler({ query: '/path/to/MyQuery.ql' });
+
+      // The DIL file path must still appear so the LLM can read the file.
+      expect(result.content[0].text).toContain('DIL file:');
+      // But the raw DIL stdout must NOT be echoed back inline.
+      expect(result.content[0].text).not.toContain(dilContent);
+      // Stderr (warnings/info) is still surfaced for diagnostic value.
+      expect(result.content[0].text).toContain('compiled MyQuery.ql in 12ms');
+    } finally {
+      if (originalCodeqlQueryLogDir === undefined) {
+        delete process.env.CODEQL_QUERY_LOG_DIR;
+      } else {
+        process.env.CODEQL_QUERY_LOG_DIR = originalCodeqlQueryLogDir;
+      }
+
+      rmSync(codeqlQueryLogDir, { recursive: true, force: true });
+    }
+  });
+
   it('should not save DIL file when dump-dil is explicitly false for codeql_query_compile', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_query_compile',

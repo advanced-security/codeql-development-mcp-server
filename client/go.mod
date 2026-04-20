@@ -1,6 +1,6 @@
 module github.com/advanced-security/codeql-development-mcp-server/client
 
-go 1.25.6
+go 1.25.0
 
 require (
 	github.com/cli/go-gh/v2 v2.13.0

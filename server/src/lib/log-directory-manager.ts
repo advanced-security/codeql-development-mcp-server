@@ -3,7 +3,7 @@
  */
 
 import { mkdirSync, existsSync } from 'fs';
-import { join, resolve, sep, relative } from 'path';
+import { join, resolve, sep, relative, isAbsolute } from 'path';
 import { randomBytes } from 'crypto';
 import { getProjectTmpDir } from '../utils/temp-dir';
 
@@ -18,9 +18,12 @@ function ensurePathWithinBase(baseDir: string, targetPath: string): string {
   // This avoids false positives from a simple startsWith() check (e.g. on
   // Windows where drive-letter casing can differ between absBase and absTarget).
   const rel = relative(absBase, absTarget);
-  // If the relative path starts with ".." (or equals ".."), the target is
-  // outside the base directory.
-  if (rel === '..' || rel.startsWith('..' + sep)) {
+  // The target is outside the base directory if either:
+  //   - the relative path starts with ".." (different subtree), or
+  //   - the relative path is itself absolute. On Windows, path.relative()
+  //     returns an absolute path (e.g. "D:\\...") when the two paths live on
+  //     different drives, which would otherwise bypass the ".." check.
+  if (rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)) {
     throw new Error(`Provided log directory is outside the allowed base directory: ${absBase}`);
   }
   return absTarget;

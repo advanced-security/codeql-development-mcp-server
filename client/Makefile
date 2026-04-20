@@ -51,7 +51,7 @@ test-coverage:
 	go tool cover -html=coverage.out -o coverage.html
 
 ## lint: Run linters
-lint:
+lint: tidy
 	@if command -v golangci-lint > /dev/null 2>&1; then \
 		golangci-lint run ./...; \
 	else \
