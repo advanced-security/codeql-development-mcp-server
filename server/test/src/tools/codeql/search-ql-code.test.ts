@@ -2,7 +2,7 @@
  * Tests for search-ql-code tool
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { searchQlCode } from '../../../../src/tools/codeql/search-ql-code';
@@ -335,6 +335,37 @@ describe('searchQlCode', () => {
 
       expect(result.totalMatches).toBe(1);
       expect(result.results[0].filePath).toContain('lib');
+    });
+  });
+
+  describe('dynamic scan exclude dirs', () => {
+    beforeEach(() => {
+      vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', '');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('should respect CODEQL_MCP_SCAN_EXCLUDE_DIRS changes after module load', async () => {
+      tempDir = createTestTempDir('search-ql-code');
+      const srcDir = join(tempDir, 'src');
+      const customDir = join(tempDir, 'custom-build');
+      mkdirSync(srcDir, { recursive: true });
+      mkdirSync(customDir, { recursive: true });
+      writeFileSync(join(srcDir, 'Query.qll'), 'findme\n');
+      writeFileSync(join(customDir, 'Query.qll'), 'findme\n');
+
+      // Without exclusion: custom-build should be found
+      vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', '');
+      const before = await searchQlCode({ pattern: 'findme', paths: [tempDir] });
+      expect(before.totalMatches).toBe(2);
+
+      // Now exclude custom-build via env var — should be respected
+      vi.stubEnv('CODEQL_MCP_SCAN_EXCLUDE_DIRS', 'custom-build');
+      const after = await searchQlCode({ pattern: 'findme', paths: [tempDir] });
+      expect(after.totalMatches).toBe(1);
+      expect(after.results[0].filePath).toContain('src');
     });
   });
 });

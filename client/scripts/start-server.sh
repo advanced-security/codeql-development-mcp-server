@@ -36,11 +36,17 @@ fi
 # Change to root directory
 cd "$ROOT_DIR"
 
+# Align the server's tmp base with the Go client's {{tmpdir}} placeholder
+# so that log-directory validation passes in HTTP mode (where the server
+# is a separate process that doesn't inherit the Go client's env).
+CODEQL_MCP_TMP_DIR="${CODEQL_MCP_TMP_DIR:-$ROOT_DIR/.tmp}"
+
 # Start server in background and capture PID
 HTTP_HOST="$HTTP_HOST" \
 HTTP_PORT="$HTTP_PORT" \
 TRANSPORT_MODE="$TRANSPORT_MODE" \
 ENABLE_MONITORING_TOOLS="$ENABLE_MONITORING_TOOLS" \
+CODEQL_MCP_TMP_DIR="$CODEQL_MCP_TMP_DIR" \
 node server/dist/codeql-development-mcp-server.js > "$CLIENT_DIR/server.log" 2>&1 &
 
 SERVER_PID=$!

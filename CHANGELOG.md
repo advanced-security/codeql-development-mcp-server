@@ -27,12 +27,13 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 #### MCP Server Tools
 
-| Tool                                                                                                                     | Description                                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `annotation_create`, `annotation_get`, `annotation_list`, `annotation_update`, `annotation_delete`, `annotation_search`  | General-purpose annotation tools for creating, managing, and searching notes and bookmarks on analysis entities. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                          |
-| `audit_store_findings`, `audit_list_findings`, `audit_add_notes`, `audit_clear_repo`                                     | Repo-keyed audit tools for MRVA finding management and triage workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                  |
-| `query_results_cache_lookup`, `query_results_cache_retrieve`, `query_results_cache_clear`, `query_results_cache_compare` | Query result cache tools for lookup, subset retrieval, cache clearing, and cross-database comparison. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                     |
-| `sarif_list_rules`, `sarif_extract_rule`, `sarif_rule_to_markdown`, `sarif_compare_alerts`, `sarif_diff_runs`            | SARIF analysis tools for rule discovery, per-rule extraction, Mermaid dataflow visualization, alert overlap comparison, and cross-run behavioral diffing. ([#204](https://github.com/advanced-security/codeql-development-mcp-server/pull/204)) |
+| Tool                                                                                                                     | Description                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `annotation_create`, `annotation_get`, `annotation_list`, `annotation_update`, `annotation_delete`, `annotation_search`  | General-purpose annotation tools for creating, managing, and searching notes and bookmarks on analysis entities. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                     |
+| `audit_store_findings`, `audit_list_findings`, `audit_add_notes`, `audit_clear_repo`                                     | Repo-keyed audit tools for MRVA finding management and triage workflows. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                                             |
+| `query_results_cache_lookup`, `query_results_cache_retrieve`, `query_results_cache_clear`, `query_results_cache_compare` | Query result cache tools for lookup, subset retrieval, cache clearing, and cross-database comparison. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169))                                                                                |
+| `sarif_list_rules`, `sarif_extract_rule`, `sarif_rule_to_markdown`, `sarif_compare_alerts`, `sarif_diff_runs`            | SARIF analysis tools for rule discovery, per-rule extraction, Mermaid dataflow visualization, alert overlap comparison, and cross-run behavioral diffing. ([#204](https://github.com/advanced-security/codeql-development-mcp-server/pull/204))                            |
+| `sarif_store`, `sarif_deduplicate_rules`                                                                                 | SARIF session cache ingest and cross-file rule deduplication tools. `sarif_compare_alerts` enhanced with `fingerprint` overlap mode with automatic fallback to full-path comparison. ([#234](https://github.com/advanced-security/codeql-development-mcp-server/pull/234)) |
 
 #### MCP Server Resources
 
@@ -57,6 +58,8 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - Added Rust coverage to CI and release workflows, including query unit tests and VSIX bundling. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - Added client integration tests for the new Rust queries and for the annotation, audit, and cache tool suites, including an MRVA triage workflow end-to-end test. ([#169](https://github.com/advanced-security/codeql-development-mcp-server/pull/169), [#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - Added missing `Cargo.lock` files and `ext/` crate scaffolding for Rust query test fixtures (`CallGraphFromTo`, `CallGraphTo`, `PrintCFG`). ([#210](https://github.com/advanced-security/codeql-development-mcp-server/pull/210))
+- Added `code-scanning` and `sarif` subcommand groups to `gh-ql-mcp-client` with GitHub REST API client integration via `go-gh` for Code Scanning alert lifecycle management. ([#234](https://github.com/advanced-security/codeql-development-mcp-server/pull/234))
+- Added `gh` extension packaging support with cross-compilation targets for `darwin/amd64`, `darwin/arm64`, `linux/amd64`, `linux/arm64`, `windows/amd64`. ([#234](https://github.com/advanced-security/codeql-development-mcp-server/pull/234))
 
 ### Changed
 
@@ -90,6 +93,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - `PackInstaller` uses consistent "download" terminology for `codeql pack download` operations with detailed per-language logging. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
 - `McpProvider.fireDidChange` debounces rapid-fire notifications and clears pending timers on dispose/restart. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
 - File watchers use relative paths in log messages and no longer trigger MCP definition changes for content-only file events. ([#230](https://github.com/advanced-security/codeql-development-mcp-server/pull/230))
+- The earlier `codeql-mcp.enableAnnotationTools` setting is no longer applicable and has been removed from the extension as annotation tools are now enabled by default. ([#223](https://github.com/advanced-security/codeql-development-mcp-server/pull/223))
 
 #### Infrastructure & CI/CD
 
@@ -116,6 +120,9 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - Added `codeql/rust-all` support for the new Rust tool queries. ([#195](https://github.com/advanced-security/codeql-development-mcp-server/pull/195))
 - Bumped `typescript` from 5.9.3 to 6.0.2, `esbuild` from 0.27.4 to 0.28.0, `@modelcontextprotocol/sdk` to 1.29.0, `dotenv` to 17.4.0, `typescript-eslint` to 8.58.0, and `adm-zip` to 0.5.17. ([#205](https://github.com/advanced-security/codeql-development-mcp-server/pull/205))
 - Updated `eslint`, `prettier`, `@types/node`, `@types/vscode`, `@vitest/coverage-v8`, and `vitest` to latest compatible versions. ([#245](https://github.com/advanced-security/codeql-development-mcp-server/pull/245))
+- Bumped minimum Node.js version from `>=24.13.0` to `>=25.6.0` across root, server, and VS Code extension workspaces. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
+- Bumped VS Code engine from `^1.110.0` to `^1.115.0` and `@types/vscode` to match. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
+- Updated devcontainer image from `typescript-node:24` to `typescript-node:25`. ([#240](https://github.com/advanced-security/codeql-development-mcp-server/pull/240))
 
 ### New Contributors
 

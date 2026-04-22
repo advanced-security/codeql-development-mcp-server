@@ -1,132 +1,123 @@
-# MCP Integration Client
+# gh-ql-mcp-client
 
-This is an integration testing client for the CodeQL Development MCP Server. It provides basic connectivity testing and will be extended to test all MCP server tools.
+A Go CLI for listing MCP server primitives, running MCP server integration tests, and (planned) managing Code Scanning alert lifecycles.
+
+Installable as a standalone binary or as a `gh` CLI extension (`gh ql-mcp-client`).
+
+## Prerequisites
+
+- **Go** 1.25.6 or later
+- **GitHub CLI** (`gh`) authenticated — used for GitHub API calls via `go-gh`
+- **Node.js** v25.6.0 or later — required to run the MCP server subprocess in `stdio` mode
+- **CodeQL CLI** — required for integration tests that exercise CodeQL tools
+
+## Build
+
+```bash
+make build          # Build for current platform
+make build-all      # Cross-compile for darwin/linux/windows (amd64+arm64)
+make install        # Install to $GOPATH/bin
+```
+
+## Usage
+
+```bash
+# As standalone binary
+gh-ql-mcp-client <command> [flags]
+
+# As gh extension
+gh ql-mcp-client <command> [flags]
+```
+
+### Global Flags
+
+| Flag       | Default     | Description                              |
+| ---------- | ----------- | ---------------------------------------- |
+| `--mode`   | `stdio`     | MCP server transport (`stdio`/`http`)    |
+| `--host`   | `localhost` | MCP server host (http mode)              |
+| `--port`   | `3000`      | MCP server port (http mode)              |
+| `--format` | `text`      | Output format (`text`/`json`/`markdown`) |
+
+Transport is configured via CLI flags. The CLI does not currently read `MCP_MODE`.
+
+### Commands
+
+#### `list`
+
+List MCP server primitives (tools, prompts, resources).
+
+```bash
+# List all tools registered on the MCP server
+gh-ql-mcp-client list tools
+gh-ql-mcp-client list tools --format json
+
+# List all prompts
+gh-ql-mcp-client list prompts
+
+# List all resources
+gh-ql-mcp-client list resources
+```
+
+#### `integration-tests`
+
+Run MCP server integration tests from `client/integration-tests/`.
+
+```bash
+# Run all integration tests (stdio mode)
+gh-ql-mcp-client integration-tests --mode stdio
+
+# Filter by tool name
+gh-ql-mcp-client integration-tests --tools codeql_query_run
+
+# Filter by tool and test case
+gh-ql-mcp-client integration-tests --tools codeql_query_run --tests basic_query_run
+```
+
+## Testing
+
+```bash
+make test            # Run unit tests + integration tests
+make test-unit       # Go unit tests only
+make test-integration  # Build binary + run integration tests
+make test-verbose    # Unit tests with verbose output
+make test-coverage   # Unit tests with coverage report
+```
+
+## Environment Variables
+
+| Variable          | Description                                             | Default                      |
+| ----------------- | ------------------------------------------------------- | ---------------------------- |
+| `MCP_SERVER_URL`  | Override MCP server URL (http mode)                     | `http://localhost:3000/mcp`  |
+| `MCP_SERVER_PATH` | Override path to MCP server JS entry point (stdio mode) | Auto-detected from repo root |
+
+Transport mode is controlled by the `--mode` flag, which defaults to `stdio`. `MCP_SERVER_URL` is only used to override the server URL when running in `http` mode.
+
+## Architecture
+
+```text
+client/
+├── main.go                     # Entry point
+├── cmd/                        # Cobra CLI commands
+│   ├── root.go                 # Root command + global flags
+│   ├── list.go                 # list subcommand group (tools/prompts/resources)
+│   ├── helpers.go              # Shared CLI helpers
+│   └── integration_tests.go    # integration-tests command
+├── internal/
+│   ├── mcp/                    # MCP server client (via mcp-go)
+│   └── testing/                # Integration test runner and parameter builder
+├── integration-tests/          # Test fixtures (before/after directories)
+├── scripts/                    # Shell scripts for test orchestration
+├── Makefile                    # Build, test, lint, cross-compile targets
+└── go.mod                      # Go module definition
+```
 
 ## Known Issues and Limitations
 
 ### BQRS Binary Format Compatibility
 
-The BQRS-related tools (`codeql_bqrs_decode`, `codeql_bqrs_info`) currently fail in integration tests due to binary format version incompatibility:
-
-```text
-java.lang.IllegalArgumentException: Mismatched binary query results version. Got 35 expected 2
-```
-
-This is a compatibility issue between the CodeQL CLI version being used and the test BQRS files. The BQRS files were generated with a newer version of CodeQL (format version 35) but the current CLI expects format version 2.
-
-**Resolution**: This is not a bug in the MCP server code, but rather a test environment setup issue. To resolve:
-
-1. Generate new test BQRS files using the current CodeQL CLI version, or
-2. Upgrade the CodeQL CLI to a version that supports BQRS format version 35
+The BQRS-related tools (`codeql_bqrs_decode`, `codeql_bqrs_info`) may fail in integration tests due to binary format version incompatibility between test fixture BQRS files and the current CodeQL CLI version.
 
 ### Other Integration Test Notes
 
 - Some pack dependency resolution warnings are expected in test environment
 - Exit code 1 for `codeql query format --check-only` indicates "file would change" and is considered success
-
-## Usage
-
-### CLI Interface
-
-The CodeQL MCP Client provides a CLI for running integration tests with filtering options. See [CLI-USAGE.md](CLI-USAGE.md) for detailed documentation.
-
-#### Implemented Subcommands
-
-- [x] `help` - Display CLI help and usage information
-- [x] `integration-tests` - Run integration tests for MCP server primitives (each test calls a single, specific MCP primitive)
-- [x] `list primitives` - List all currently registered MCP server primitives (prompts, resources, and tools)
-- [x] `list prompts` - List all currently registered MCP server prompts
-- [x] `list resources` - List all currently registered MCP server resources
-- [x] `list tools` - List all currently registered MCP server tools
-
-**Quick Start:**
-
-```bash
-# Run all integration tests
-npm test
-
-# Run tests for specific tools
-./scripts/run-integration-tests.sh --tools codeql_query_run
-
-# Run specific tests with custom timeout
-./scripts/run-integration-tests.sh --tools codeql_query_run --tests basic_query_run --timeout 600
-```
-
-**Direct CLI Usage:**
-
-```bash
-# Display help
-node src/ql-mcp-client.js
-node src/ql-mcp-client.js help
-node src/ql-mcp-client.js --help
-
-# List MCP primitives
-node src/ql-mcp-client.js list primitives
-node src/ql-mcp-client.js list prompts
-node src/ql-mcp-client.js list resources
-node src/ql-mcp-client.js list tools
-
-# List with JSON format
-node src/ql-mcp-client.js list tools --format json
-node src/ql-mcp-client.js list primitives --format json
-
-# Run all integration tests
-node src/ql-mcp-client.js integration-tests
-
-# Filter by tools
-node src/ql-mcp-client.js integration-tests --tools codeql_query_format
-
-# Filter by tools and tests
-node src/ql-mcp-client.js integration-tests --tools codeql_query_run --tests basic_query_run,javascript_tools_print_ast
-```
-
-### Environment Variables
-
-- `MCP_SERVER_URL`: URL for the MCP server (default: `http://localhost:3000/mcp`)
-- `TIMEOUT_SECONDS`: Default timeout in seconds (default: `30`)
-- `HTTP_HOST`: Server host (default: `localhost`)
-- `HTTP_PORT`: Server port (default: `3000`)
-
-## Architecture
-
-- `src/ql-mcp-client.js`: Main client implementation
-
-- [ ] Full MCP SDK integration for real tool testing
-- [ ] Comprehensive test cases for all ~30 server tools
-
-## Integration Test Discovery
-
-Reference: [`client/integration-tests/README.md`](integration-tests/README.md)
-
-The client automatically discovers and runs integration tests:
-
-1. Lists tools via MCP API
-2. Matches each tool name to `client/integration-tests/primitives/tools/<tool>/`
-3. Each subdirectory represents a test case with `before/` and `after/` directories
-4. Copies `before/` → temp workspace, runs tool, compares output to `after/`
-5. Reports test results and coverage
-
-**CLI Filtering:**
-
-Use `--tools` and `--tests` options to filter which tests run:
-
-```bash
-# Run only query-related tools
-node src/ql-mcp-client.js integration-tests --tools codeql_query_run,codeql_query_format
-
-# Run specific test case
-node src/ql-mcp-client.js integration-tests --tools codeql_query_run --tests basic_query_run
-```
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-```

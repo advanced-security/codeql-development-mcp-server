@@ -11,6 +11,13 @@ import { registerSarifTools } from '../../../src/tools/sarif-tools';
 import { sessionDataManager } from '../../../src/lib/session-data-manager';
 import { createProjectTempDir } from '../../../src/utils/temp-dir';
 
+// Module-scope mock for cli-executor so the dynamic import in the handler
+// always resolves to the same controllable mock (prevents module-cache flakiness).
+const mockExecuteCLICommand = vi.fn();
+vi.mock('../../../src/lib/cli-executor', () => ({
+  executeCLICommand: mockExecuteCLICommand,
+}));
+
 // ---------------------------------------------------------------------------
 // Test fixtures
 // ---------------------------------------------------------------------------
@@ -117,26 +124,7 @@ describe('SARIF Tools', () => {
   });
 
   describe('registerSarifTools', () => {
-    it('should not register tools when enableAnnotationTools is false', () => {
-      vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
-        storageLocation: testStorageDir,
-        autoTrackSessions: true,
-        retentionDays: 90,
-        includeCallParameters: true,
-        includeCallResults: true,
-        maxActiveSessionsPerQuery: 3,
-        scoringFrequency: 'per_call',
-        archiveCompletedSessions: true,
-        enableAnnotationTools: false,
-        enableRecommendations: true,
-        enableMonitoringTools: false,
-      });
-
-      registerSarifTools(mockServer);
-      expect(mockServer.tool).not.toHaveBeenCalled();
-    });
-
-    it('should register 5 SARIF tools when enableAnnotationTools is true', () => {
+    it('should register all 8 SARIF tools', () => {
       vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
         storageLocation: testStorageDir,
         autoTrackSessions: true,
@@ -152,14 +140,17 @@ describe('SARIF Tools', () => {
       });
 
       registerSarifTools(mockServer);
-      expect(mockServer.tool).toHaveBeenCalledTimes(5);
+      expect(mockServer.tool).toHaveBeenCalledTimes(8);
 
       const toolNames = (mockServer.tool as any).mock.calls.map((call: any) => call[0]);
+      expect(toolNames).toContain('sarif_compare_alerts');
+      expect(toolNames).toContain('sarif_deduplicate_rules');
+      expect(toolNames).toContain('sarif_diff_by_commits');
+      expect(toolNames).toContain('sarif_diff_runs');
       expect(toolNames).toContain('sarif_extract_rule');
       expect(toolNames).toContain('sarif_list_rules');
       expect(toolNames).toContain('sarif_rule_to_markdown');
-      expect(toolNames).toContain('sarif_compare_alerts');
-      expect(toolNames).toContain('sarif_diff_runs');
+      expect(toolNames).toContain('sarif_store');
     });
   });
 
@@ -206,7 +197,7 @@ describe('SARIF Tools', () => {
 
       it('should return error when no sarifPath or cacheKey provided', async () => {
         const result = await handlers.sarif_extract_rule({ ruleId: 'js/sql-injection' });
-        expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+        expect(result.content[0].text).toContain('No SARIF source provided');
       });
 
       it('should return error for invalid file path', async () => {
@@ -361,7 +352,332 @@ describe('SARIF Tools', () => {
         const result = await handlers.sarif_diff_runs({
           sarifPathB: testSarifPath,
         });
-        expect(result.content[0].text).toContain('Either sarifPath or cacheKey is required');
+        expect(result.content[0].text).toContain('No SARIF source provided');
+      });
+    });
+
+    describe('sarif_store', () => {
+      let mockPutCacheEntry: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        mockPutCacheEntry = vi.fn();
+        vi.spyOn(sessionDataManager, 'getStore').mockReturnValue({
+          putCacheEntry: mockPutCacheEntry,
+        } as any);
+      });
+
+      it('should store SARIF from file path and return cache key', async () => {
+        const result = await handlers.sarif_store({ sarifPath: testSarifPath });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.cacheKey).toBeDefined();
+        expect(parsed.cacheKey).toMatch(/^sarif-store-/);
+        expect(parsed.source).toBe('file');
+        expect(parsed.resultCount).toBe(3);
+        expect(parsed.ruleCount).toBe(2);
+        expect(parsed.toolName).toBe('CodeQL');
+        expect(mockPutCacheEntry).toHaveBeenCalledTimes(1);
+      });
+
+      it('should store SARIF from inline content', async () => {
+        const content = JSON.stringify(createTestSarif());
+        const result = await handlers.sarif_store({ sarifContent: content });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.cacheKey).toMatch(/^sarif-store-/);
+        expect(parsed.source).toBe('inline');
+        expect(parsed.resultCount).toBe(3);
+        expect(mockPutCacheEntry).toHaveBeenCalledTimes(1);
+      });
+
+      it('should store SARIF with label', async () => {
+        const result = await handlers.sarif_store({
+          label: 'my-analysis',
+          sarifPath: testSarifPath,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.label).toBe('my-analysis');
+      });
+
+      it('should return error when neither content nor path provided', async () => {
+        const result = await handlers.sarif_store({});
+        expect(result.content[0].text).toContain('Either sarifContent or sarifPath is required');
+      });
+
+      it('should return error for invalid SARIF content', async () => {
+        const result = await handlers.sarif_store({ sarifContent: '{"not": "sarif"}' });
+        expect(result.content[0].text).toContain('Invalid SARIF');
+      });
+    });
+
+    describe('sarif_deduplicate_rules', () => {
+      it('should detect duplicate rules across two SARIF files with overlapping results', async () => {
+        // Create SARIF B with same rule and matching codeFlow locations to A.
+        // Both results must have codeFlows for full-path overlap to detect them.
+        const sarifB = {
+          version: '2.1.0',
+          runs: [{
+            tool: {
+              driver: {
+                name: 'CodeQL',
+                version: '2.25.1',
+                rules: [
+                  { id: 'js/sql-injection-v2', shortDescription: { text: 'SQL injection (v2)' } },
+                ],
+              },
+            },
+            results: [
+              {
+                ruleId: 'js/sql-injection-v2',
+                ruleIndex: 0,
+                message: { text: 'SQL injection from user input.' },
+                locations: [{ physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42, startColumn: 5, endColumn: 38 } } }],
+                codeFlows: [{ threadFlows: [{ locations: [
+                  { location: { physicalLocation: { artifactLocation: { uri: 'src/handler.js' }, region: { startLine: 10 } }, message: { text: 'req.query.id' } } },
+                  { location: { physicalLocation: { artifactLocation: { uri: 'src/db.js' }, region: { startLine: 42 } }, message: { text: 'query(...)' } } },
+                ] }] }],
+              },
+            ],
+          }],
+        };
+        const pathB = join(testStorageDir, 'dedup-b.sarif');
+        writeFileSync(pathB, JSON.stringify(sarifB));
+
+        // Use a low threshold since only the codeFlow result will match (1 of 2 in A)
+        const result = await handlers.sarif_deduplicate_rules({
+          sarifPathA: testSarifPath,
+          sarifPathB: pathB,
+          overlapThreshold: 0.3,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.summary.totalRulesA).toBe(2);
+        expect(parsed.summary.totalRulesB).toBe(1);
+        expect(parsed.duplicateGroups.length).toBeGreaterThan(0);
+
+        // The js/sql-injection (A) vs js/sql-injection-v2 (B) pair should be detected
+        const sqlPair = parsed.duplicateGroups.find(
+          (g: any) => g.ruleIdA === 'js/sql-injection' && g.ruleIdB === 'js/sql-injection-v2',
+        );
+        expect(sqlPair).toBeDefined();
+        expect(sqlPair.overlapScore).toBeGreaterThan(0);
+        expect(sqlPair.matchedAlerts).toBeGreaterThan(0);
+        expect(sqlPair.totalA).toBe(2);
+        expect(sqlPair.totalB).toBe(1);
+      });
+
+      it('should return empty groups when no rules overlap', async () => {
+        // Create SARIF B with completely different rule and locations
+        const sarifB = {
+          version: '2.1.0',
+          runs: [{
+            tool: {
+              driver: {
+                name: 'CodeQL',
+                version: '2.25.1',
+                rules: [
+                  { id: 'py/command-injection', shortDescription: { text: 'Command injection' } },
+                ],
+              },
+            },
+            results: [
+              {
+                ruleId: 'py/command-injection',
+                ruleIndex: 0,
+                message: { text: 'Command injection.' },
+                locations: [{ physicalLocation: { artifactLocation: { uri: 'src/run.py' }, region: { startLine: 100, startColumn: 1, endColumn: 20 } } }],
+              },
+            ],
+          }],
+        };
+        const pathB = join(testStorageDir, 'dedup-none.sarif');
+        writeFileSync(pathB, JSON.stringify(sarifB));
+
+        const result = await handlers.sarif_deduplicate_rules({
+          sarifPathA: testSarifPath,
+          sarifPathB: pathB,
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.summary.overlapThreshold).toBe(0.8);
+        expect(parsed.duplicateGroups).toHaveLength(0);
+      });
+
+      it('should return error when sarifPathA is missing', async () => {
+        const result = await handlers.sarif_deduplicate_rules({
+          sarifPathB: testSarifPath,
+        });
+        expect(result.content[0].text).toContain('No SARIF source provided');
+      });
+    });
+
+    describe('sarif_diff_by_commits', () => {
+      it('should classify results as new when their files appear in git diff', async () => {
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -40,5 +40,5 @@',
+            ' some context',
+          ].join('\n'),
+          stderr: '',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main..HEAD',
+          granularity: 'file',
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.granularity).toBe('file');
+        expect(parsed.summary.refRange).toBe('main..HEAD');
+        expect(parsed.summary.totalResults).toBe(3);
+        // src/db.js has one sql-injection result
+        const newFiles = parsed.newResults.map((r: any) => r.file);
+        expect(newFiles).toContain('src/db.js');
+      });
+
+      it('should classify all results as pre-existing when diff has no matching files', async () => {
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/unrelated.txt b/unrelated.txt',
+            '--- a/unrelated.txt',
+            '+++ b/unrelated.txt',
+            '@@ -1,1 +1,1 @@',
+          ].join('\n'),
+          stderr: '',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main..HEAD',
+          granularity: 'file',
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.preExistingResults.length).toBeGreaterThan(0);
+      });
+
+      it('should return error when SARIF path is not provided', async () => {
+        const result = await handlers.sarif_diff_by_commits({
+          refRange: 'main..HEAD',
+        });
+        expect(result.content[0].text).toContain('No SARIF source provided');
+      });
+
+      it('should return error when git diff fails', async () => {
+        mockExecuteCLICommand.mockResolvedValue({
+          success: false,
+          stdout: '',
+          stderr: 'fatal: bad revision',
+          error: 'fatal: bad revision',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'nonexistent..HEAD',
+        });
+        expect(result.content[0].text).toContain('git diff failed');
+      });
+
+      it('should support line-level granularity', async () => {
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -42,1 +42,1 @@',
+          ].join('\n'),
+          stderr: '',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main..HEAD',
+          granularity: 'line',
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.granularity).toBe('line');
+        // Line 42 should be new (within hunk 42-42)
+        const newInDb = parsed.newResults.filter((r: any) => r.file === 'src/db.js');
+        expect(newInDb).toHaveLength(1);
+        expect(newInDb[0].line).toBe(42);
+      });
+
+      it('should return error for refRange starting with a dash', async () => {
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: '--option-injection',
+        });
+        expect(result.content[0].text).toContain('Invalid refRange');
+      });
+
+      it('should return error for refRange containing whitespace', async () => {
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main HEAD',
+        });
+        expect(result.content[0].text).toContain('Invalid refRange');
+      });
+
+      it('should correctly parse git diff output with CRLF line endings', async () => {
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -40,5 +40,5 @@',
+            ' some context',
+          ].join('\r\n'),
+          stderr: '',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main..HEAD',
+          granularity: 'file',
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.granularity).toBe('file');
+        expect(parsed.summary.totalResults).toBe(3);
+        // src/db.js must match despite CRLF — path should not contain \r
+        const newFiles = parsed.newResults.map((r: any) => r.file);
+        expect(newFiles).toContain('src/db.js');
+      });
+
+      it('should classify results as pre-existing for deletion-only diffs in line mode', async () => {
+        // Deletion-only hunk: @@ -10,3 +10,0 @@ means 3 lines removed, 0 added
+        mockExecuteCLICommand.mockResolvedValue({
+          success: true,
+          stdout: [
+            'diff --git a/src/db.js b/src/db.js',
+            '--- a/src/db.js',
+            '+++ b/src/db.js',
+            '@@ -10,3 +10,0 @@',
+          ].join('\n'),
+          stderr: '',
+        });
+
+        const result = await handlers.sarif_diff_by_commits({
+          sarifPath: testSarifPath,
+          refRange: 'main..HEAD',
+          granularity: 'line',
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.granularity).toBe('line');
+        // src/db.js had only deletions — no new lines, so result at line 42 is pre-existing
+        const newInDb = parsed.newResults.filter((r: any) => r.file === 'src/db.js');
+        expect(newInDb).toHaveLength(0);
       });
     });
   });

@@ -58,49 +58,53 @@ npm run test
 
 #### Starting and Stopping the QL MCP Server for Client Integration Tests
 
-QL MCP Client integration tests require the QL MCP Server to be running. You can start the server in a separate terminal window using:
+For HTTP mode integration tests, the QL MCP Server must be running. You can start the server using the shell scripts:
 
 ```bash
-## From the `client/` directory use `npm run server:start && npm run server:wait`.
-## From the root of the repository use:
-npm run server:start -w client && npm run server:wait -w client
+client/scripts/start-server.sh
+client/scripts/wait-for-server.sh
 ```
 
-To stop the server after running the integration tests, use:
+To stop the server after running the integration tests:
 
 ```bash
-## From the `client/` directory use `npm run server:stop`.
-## From the root of the repository use:
-npm run server:stop -w client
+client/scripts/stop-server.sh
 ```
+
+For stdio mode, the Go client spawns the server automatically — no manual start/stop is needed.
 
 #### Fixing Client Integration Tests for the QL MCP Server
 
-Client integration tests are executed via the `client/src/ql-mcp-client.js` script.
+Client integration tests are executed via the Go binary `gh-ql-mcp-client`.
 
-To get help on using the MCP Client script, including help for the `integration-tests` subcommand, run:
+To get help on using the MCP Client binary, including help for the `integration-tests` subcommand, run:
 
 ```bash
-node src/ql-mcp-client.js --help
+gh-ql-mcp-client --help
 ```
 
-When focusing specifically on fixing client integration tests, it makes more sense to change directories to `cd client/` and then run the integration tests directly using `node src/ql-mcp-client.js integration-tests`.
+When focusing specifically on fixing client integration tests, build the binary and run the integration tests directly:
+
+```bash
+make -C client build
+gh-ql-mcp-client integration-tests --mode stdio --no-install-packs
+```
 
 Because integration tests can be time-consuming, you can run specific tests or tools as needed using the following commands:
 
 ```bash
 # Run all integration tests with default settings
-node src/ql-mcp-client.js integration-tests
+gh-ql-mcp-client integration-tests --mode stdio --no-install-packs
 
 # Run tests for specific tools
-node src/ql-mcp-client.js integration-tests --tools codeql_query_run
+gh-ql-mcp-client integration-tests --mode stdio --tools codeql_query_run --no-install-packs
 
-# Run specific tests for a tool with custom timeout
-node src/ql-mcp-client.js integration-tests --tools codeql_query_run --tests basic_query_run,javascript_tools_print_ast --timeout 600
+# Run specific tests for a tool
+gh-ql-mcp-client integration-tests --mode stdio --tools codeql_query_run --tests basic_query_run --no-install-packs
 ```
 
 ## References
 
-- [`package.json`](../../package.json) - The main `package.json` file that defines the `scripts` for building and testing the MCP Server, with references to the `server/` and `client/` workspaces.
+- [`package.json`](../../package.json) - The main `package.json` file that defines the `scripts` for building and testing the MCP Server, with references to the `server/` workspace and `make -C client` targets.
 - [`server/package.json`](../../server/package.json) - The `package.json` file in the `server/` workspace that defines the build and test scripts specific to the MCP Server.
-- [`client/package.json`](../../client/package.json) - The `package.json` file in the `client/` workspace that defines the integration test scripts for the MCP Client.
+- [`client/Makefile`](../../client/Makefile) - The Makefile in the `client/` directory that defines build, test, lint, and cross-compile targets for the Go CLI.

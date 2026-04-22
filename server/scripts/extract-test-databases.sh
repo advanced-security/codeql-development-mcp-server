@@ -118,7 +118,8 @@ extract_test_databases() {
 ## Extract test databases based on scope and language filters.
 ##
 ## Default (no flags): only databases needed by client integration tests
-##   (currently just server/ql/javascript/examples).
+##   (javascript/examples + specific tools databases referenced by
+##   integration test fixtures).
 ## --scope all: all languages × examples + tools.
 ## --language: filter to a single language (implies --scope all).
 
@@ -145,7 +146,35 @@ elif [ "${SCOPE}" = "all" ]; then
 	done
 else
 	echo "Extracting test databases for integration tests only..."
+	# Extract javascript/examples for default codeql_query_run parameters
 	extract_test_databases "server/ql/javascript/examples"
+	# Extract only the specific tools/test databases referenced by client
+	# integration test fixtures (client/integration-tests/**/test-config.json).
+	# This is much faster than extracting all tools databases for all languages.
+	INTEGRATION_TOOLS_DIRS=(
+		"server/ql/cpp/tools/test/CallGraphFrom"
+		"server/ql/cpp/tools/test/CallGraphFromTo"
+		"server/ql/cpp/tools/test/CallGraphTo"
+		"server/ql/javascript/tools/test/CallGraphFromTo"
+		"server/ql/python/tools/test/CallGraphFromTo"
+		"server/ql/rust/tools/test/CallGraphFrom"
+		"server/ql/rust/tools/test/PrintAST"
+	)
+	for test_dir in "${INTEGRATION_TOOLS_DIRS[@]}"; do
+		if [ ! -d "${test_dir}" ]; then
+			echo "INFO: Directory ${test_dir} does not exist, skipping..."
+			continue
+		fi
+		test_dir_name=$(basename "${test_dir}")
+		if [ -d "${test_dir}/${test_dir_name}.testproj" ]; then
+			echo "INFO: Database already exists at ${test_dir}/${test_dir_name}.testproj, skipping extraction..."
+		else
+			echo "INFO: Extracting test database for ${test_dir}..."
+			codeql test extract "${test_dir}" || {
+				echo "WARNING: Failed to extract database for ${test_dir}, continuing..."
+			}
+		fi
+	done
 fi
 
 echo "INFO: Test database extraction complete!"

@@ -16,8 +16,8 @@
     "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
   },
   "engines": {
-    "vscode": "^1.110.0",
-    "node": ">=24.13.0"
+    "vscode": "^1.115.0",
+    "node": ">=25.6.0"
   },
   "categories": [
     "AI",
@@ -94,11 +94,6 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Copy CodeQL databases from the `GitHub.vscode-codeql` extension storage into a managed directory, removing query-server lock files so the MCP server CLI can operate without contention. Disable to use databases in-place (may fail when the CodeQL query server is running)."
-        },
-        "codeql-mcp.enableAnnotationTools": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Enable annotation, audit, and query results caching tools. When enabled, the MCP server registers `annotation_*`, `audit_*`, and `query_results_cache_*` tools. Disable to reduce the tool surface if these capabilities are not needed."
         },
         "codeql-mcp.serverArgs": {
           "type": "array",
@@ -183,7 +178,7 @@
     "@eslint/js": "^10.0.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.6.0",
-    "@types/vscode": "^1.110.0",
+    "@types/vscode": "^1.115.0",
     "@vitest/coverage-v8": "^4.1.4",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",

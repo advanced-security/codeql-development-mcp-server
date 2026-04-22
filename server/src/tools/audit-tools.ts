@@ -5,8 +5,7 @@
  * findings with notes, mirroring the seclab codeql_python MCP server's
  * SQLite-backed source tracking — but now backed by the shared SqliteStore.
  *
- * Enabled when ENABLE_ANNOTATION_TOOLS=true (disabled by default when annotation tools are off).
- * Audit tools are layered on annotations; there is no separate ENABLE_AUDIT_TOOLS flag.
+ * Enabled by default alongside annotation tools.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -20,15 +19,6 @@ const AUDIT_CATEGORY = 'audit-finding';
  * Register all audit tools with the MCP server.
  */
 export function registerAuditTools(server: McpServer): void {
-  const config = sessionDataManager.getConfig();
-
-  if (!config.enableAnnotationTools) {
-    logger.info(
-      'Audit tools are disabled (opt-in). Set ENABLE_ANNOTATION_TOOLS=true to enable audit_* and annotation_* tools.',
-    );
-    return;
-  }
-
   registerAuditStoreFindingsTool(server);
   registerAuditListFindingsTool(server);
   registerAuditAddNotesTool(server);
