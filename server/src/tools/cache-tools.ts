@@ -77,15 +77,21 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
     {
       cacheKey: z.string().describe('The cache key of the result to retrieve.'),
       lineRange: z
-        .tuple([z.number().int().min(1), z.number().int().min(1)])
-        .refine(([start, end]) => start <= end, { message: 'lineRange start must be <= end' })
+        .object({
+          start: z.number().int().min(1).describe('First line to include (1-indexed, inclusive).'),
+          end: z.number().int().min(1).describe('Last line to include (1-indexed, inclusive).'),
+        })
+        .refine(({ start, end }) => start <= end, { message: 'lineRange.start must be <= lineRange.end' })
         .optional()
-        .describe('Line range [start, end] (1-indexed, inclusive). For graphtext/CSV output only.'),
+        .describe('Line range {start, end} (1-indexed, inclusive). For graphtext/CSV output only.'),
       resultIndices: z
-        .tuple([z.number().int().min(0), z.number().int().min(0)])
-        .refine(([start, end]) => start <= end, { message: 'resultIndices start must be <= end' })
+        .object({
+          start: z.number().int().min(0).describe('First SARIF result index to include (0-indexed, inclusive).'),
+          end: z.number().int().min(0).describe('Last SARIF result index to include (0-indexed, inclusive).'),
+        })
+        .refine(({ start, end }) => start <= end, { message: 'resultIndices.start must be <= resultIndices.end' })
         .optional()
-        .describe('SARIF result index range [start, end] (0-indexed, inclusive). For SARIF output only.'),
+        .describe('SARIF result index range {start, end} (0-indexed, inclusive). For SARIF output only.'),
       fileFilter: z.string().optional().describe('For SARIF: only include results whose file path contains this string.'),
       maxLines: z.number().int().positive().optional().describe('Maximum number of lines to return for line-based formats (default: 500).'),
       maxResults: z.number().int().positive().optional().describe('Maximum number of SARIF results to return (default: 100).'),
@@ -103,7 +109,7 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
       const isSarif = meta.outputFormat.includes('sarif');
       if (isSarif) {
         const subset = store.getCacheSarifSubset(cacheKey, {
-          resultIndices,
+          resultIndices: resultIndices ? [resultIndices.start, resultIndices.end] : undefined,
           fileFilter,
           maxResults,
         });
@@ -137,7 +143,7 @@ function registerQueryResultsCacheRetrieveTool(server: McpServer): void {
 
       // Line-based subset for graphtext, CSV, or any other text format.
       const subset = store.getCacheContentSubset(cacheKey, {
-        lineRange,
+        lineRange: lineRange ? [lineRange.start, lineRange.end] : undefined,
         maxLines: maxLines ?? 500,
       });
       if (!subset) {

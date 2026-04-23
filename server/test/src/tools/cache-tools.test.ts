@@ -74,7 +74,7 @@ describe('Cache Tools', () => {
         });
       });
 
-      it('should validate lineRange as positive integer tuple with start <= end', () => {
+      it('should validate lineRange as positive integer object with start <= end', () => {
         registerCacheTools(mockServer);
 
         const retrieveCall = (mockServer.tool as any).mock.calls.find(
@@ -84,19 +84,22 @@ describe('Cache Tools', () => {
         const lineRange = schema.lineRange;
 
         // Valid range
-        expect(lineRange.safeParse([1, 5]).success).toBe(true);
+        expect(lineRange.safeParse({ start: 1, end: 5 }).success).toBe(true);
 
         // start > end should fail refinement
-        expect(lineRange.safeParse([5, 1]).success).toBe(false);
+        expect(lineRange.safeParse({ start: 5, end: 1 }).success).toBe(false);
 
         // 0 is not >= 1
-        expect(lineRange.safeParse([0, 5]).success).toBe(false);
+        expect(lineRange.safeParse({ start: 0, end: 5 }).success).toBe(false);
 
         // Floats should fail
-        expect(lineRange.safeParse([1.5, 3]).success).toBe(false);
+        expect(lineRange.safeParse({ start: 1.5, end: 3 }).success).toBe(false);
+
+        // Tuple form (legacy) must NOT be accepted — we want a JSON-Schema-clean object.
+        expect(lineRange.safeParse([1, 5]).success).toBe(false);
       });
 
-      it('should validate resultIndices as non-negative integer tuple', () => {
+      it('should validate resultIndices as non-negative integer object', () => {
         registerCacheTools(mockServer);
 
         const retrieveCall = (mockServer.tool as any).mock.calls.find(
@@ -106,13 +109,16 @@ describe('Cache Tools', () => {
         const resultIndices = schema.resultIndices;
 
         // Valid range
-        expect(resultIndices.safeParse([0, 5]).success).toBe(true);
+        expect(resultIndices.safeParse({ start: 0, end: 5 }).success).toBe(true);
 
         // start > end should fail refinement
-        expect(resultIndices.safeParse([5, 1]).success).toBe(false);
+        expect(resultIndices.safeParse({ start: 5, end: 1 }).success).toBe(false);
 
         // Negative should fail
-        expect(resultIndices.safeParse([-1, 3]).success).toBe(false);
+        expect(resultIndices.safeParse({ start: -1, end: 3 }).success).toBe(false);
+
+        // Tuple form (legacy) must NOT be accepted.
+        expect(resultIndices.safeParse([0, 5]).success).toBe(false);
       });
 
       it('should validate maxLines as positive integer', () => {
@@ -142,6 +148,99 @@ describe('Cache Tools', () => {
         expect(maxResults.safeParse(10).success).toBe(true);
         expect(maxResults.safeParse(0).success).toBe(false);
         expect(maxResults.safeParse(-1).success).toBe(false);
+      });
+    });
+
+    describe('JSON Schema serialization (issue: GitHub Copilot Chat strict validation)', () => {
+      beforeEach(() => {
+        vi.spyOn(sessionDataManager, 'getConfig').mockReturnValue({
+          storageLocation: testStorageDir,
+          autoTrackSessions: true,
+          retentionDays: 90,
+          includeCallParameters: true,
+          includeCallResults: true,
+          maxActiveSessionsPerQuery: 3,
+          scoringFrequency: 'per_call',
+          archiveCompletedSessions: true,
+          enableAnnotationTools: true,
+          enableRecommendations: true,
+          enableMonitoringTools: false,
+        });
+      });
+
+      /**
+       * Regression test for the bug where `lineRange` and `resultIndices`
+       * (defined via `z.tuple([...])`) serialized to a bare array as the
+       * JSON Schema value (e.g. `[{"type":"integer"}, {"type":"integer"}]`),
+       * which the GitHub Copilot Chat backend rejects with HTTP 400:
+       *   "[...] is not of type 'object', 'boolean'."
+       *
+       * Every property's JSON Schema MUST itself be an object (or boolean),
+       * never an array.
+       */
+      it('produces a strict-JSON-Schema-valid input schema for every cache tool', async () => {
+        // Use the real McpServer + SDK tool registration path so we exercise
+        // the same Zod -> JSON-Schema conversion that the live server uses.
+        const { McpServer: RealMcpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
+        const realServer = new RealMcpServer({ name: 'test', version: '0.0.0' });
+        registerCacheTools(realServer);
+
+        // Internal handle to the registered tools and their JSON-Schema
+        // converter — this is the same code path used to satisfy
+        // `tools/list` requests over the wire.
+        const registered = (realServer as any)._registeredTools as Record<string, { inputSchema?: unknown }>;
+        const { toJsonSchemaCompat } = await import('@modelcontextprotocol/sdk/server/zod-json-schema-compat.js');
+
+        const offendingProps: string[] = [];
+        for (const [toolName, def] of Object.entries(registered)) {
+          if (!def.inputSchema) continue;
+          const jsonSchema = toJsonSchemaCompat(def.inputSchema as never) as {
+            properties?: Record<string, unknown>;
+          };
+          // The top-level schema must be an object schema.
+          expect(typeof jsonSchema, `${toolName} top-level schema type`).toBe('object');
+          expect(Array.isArray(jsonSchema), `${toolName} top-level schema must not be an array`).toBe(false);
+
+          for (const [propName, propSchema] of Object.entries(jsonSchema.properties ?? {})) {
+            // Per JSON Schema spec (and OpenAI/Copilot strict validation),
+            // every property's schema value must be an object or boolean.
+            const isValid =
+              typeof propSchema === 'boolean' ||
+              (typeof propSchema === 'object' && propSchema !== null && !Array.isArray(propSchema));
+            if (!isValid) {
+              offendingProps.push(`${toolName}.${propName} = ${JSON.stringify(propSchema)}`);
+            }
+          }
+        }
+
+        expect(offendingProps, `Properties with invalid (non-object/boolean) JSON Schema: ${offendingProps.join('; ')}`).toEqual([]);
+      });
+
+      it('serializes lineRange and resultIndices as JSON-Schema object types (not bare arrays)', async () => {
+        const { McpServer: RealMcpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
+        const realServer = new RealMcpServer({ name: 'test', version: '0.0.0' });
+        registerCacheTools(realServer);
+
+        const registered = (realServer as any)._registeredTools as Record<string, { inputSchema?: unknown }>;
+        const { toJsonSchemaCompat } = await import('@modelcontextprotocol/sdk/server/zod-json-schema-compat.js');
+
+        const retrieveTool = registered['query_results_cache_retrieve'];
+        expect(retrieveTool, 'query_results_cache_retrieve must be registered').toBeTruthy();
+
+        const jsonSchema = toJsonSchemaCompat(retrieveTool.inputSchema as never) as {
+          properties: Record<string, { type?: string; properties?: Record<string, unknown> }>;
+        };
+
+        for (const propName of ['lineRange', 'resultIndices']) {
+          const prop = jsonSchema.properties[propName];
+          expect(prop, `${propName} must be present in JSON Schema`).toBeTruthy();
+          expect(typeof prop, `${propName} schema must be an object`).toBe('object');
+          expect(Array.isArray(prop), `${propName} schema must not be a bare array`).toBe(false);
+          expect(prop.type, `${propName} must be type=object`).toBe('object');
+          expect(prop.properties, `${propName} must declare start/end sub-properties`).toBeTruthy();
+          expect(prop.properties).toHaveProperty('start');
+          expect(prop.properties).toHaveProperty('end');
+        }
       });
     });
 
