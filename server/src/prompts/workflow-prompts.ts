@@ -192,6 +192,27 @@ export async function resolvePromptFilePath(
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Schema for data_extension_development prompt parameters.
+ *
+ * - `language` is **required** – the model format depends on the language.
+ * - `libraryName` is optional – the library or framework to model.
+ * - `database` is optional – path to a CodeQL database for testing.
+ */
+export const dataExtensionDevelopmentSchema = z.object({
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .describe('Programming language for the data extension'),
+  libraryName: z
+    .string()
+    .optional()
+    .describe('Name of the library or framework to model'),
+  database: z
+    .string()
+    .optional()
+    .describe('Path to a CodeQL database for testing the extension'),
+});
+
+/**
  * Schema for test_driven_development prompt parameters.
  *
  * - `language` is **required** – the TDD workflow is language-specific.
@@ -621,6 +642,7 @@ export function createSafePromptHandler<T extends z.ZodObject<z.ZodRawShape>>(
 export const WORKFLOW_PROMPT_NAMES = [
   'check_for_duplicated_code',
   'compare_overlapping_alerts',
+  'data_extension_development',
   'document_codeql_query',
   'explain_codeql_query',
   'find_overlapping_queries',
@@ -1044,6 +1066,60 @@ export function registerWorkflowPrompts(server: McpServer): void {
     ),
   );
 
+  // Data Extension Development Prompt
+  server.prompt(
+    'data_extension_development',
+    'End-to-end workflow for creating CodeQL data extensions (Models-as-Data) for third-party libraries',
+    addCompletions(toPermissiveShape(dataExtensionDevelopmentSchema.shape)),
+    createSafePromptHandler(
+      'data_extension_development',
+      dataExtensionDevelopmentSchema,
+      async ({ language, libraryName, database }) => {
+        const template = loadPromptTemplate('data-extension-development.prompt.md');
+
+        const warnings: string[] = [];
+        let resolvedDatabase = database || '<database-path>';
+        if (database) {
+          const dbResult = await resolvePromptFilePath(database);
+          if (dbResult.blocked) return blockedPathError(dbResult, 'database path');
+          resolvedDatabase = dbResult.resolvedPath;
+          if (dbResult.warning) warnings.push(dbResult.warning);
+        }
+
+        const content = processPromptTemplate(template, {
+          language,
+          libraryName: libraryName || '<library-name>',
+        });
+
+        let contextSection = '## Data Extension Context\n\n';
+        contextSection += `- **Language**: ${language}\n`;
+        if (libraryName) {
+          contextSection += `- **Library**: ${libraryName}\n`;
+        }
+        if (database) {
+          contextSection += `- **Database**: ${markdownInlineCode(resolvedDatabase)}\n`;
+        }
+        contextSection += '\n';
+
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + content,
+              },
+            },
+          ],
+        };
+      },
+    ),
+  );
+
   // Document CodeQL Query Prompt
   server.prompt(
     'document_codeql_query',
@@ -1262,6 +1338,10 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
 
   logger.info(`Registered ${WORKFLOW_PROMPT_NAMES.length} workflow prompts`);
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// End of registerWorkflowPrompts — helper functions below
+// ────────────────────────────────────────────────────────────────────────────
 
 /**
  * Build context section for tools query workflow

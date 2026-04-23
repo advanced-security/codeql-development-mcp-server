@@ -4,6 +4,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
+  getDataExtensionsOverview,
   getDataflowMigration,
   getLearningQueryBasics,
   getPerformancePatterns,
@@ -203,6 +204,27 @@ export function registerCodeQLResources(server: McpServer): void {
             uri: 'codeql://guides/query-unit-testing',
             mimeType: 'text/markdown',
             text: getQueryUnitTesting(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Learning: Data Extensions
+  server.resource(
+    'CodeQL Data Extensions Overview',
+    'codeql://learning/data-extensions',
+    {
+      description: 'Data extensions (Models-as-Data) overview: YAML model formats, extensible predicates, model packs',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://learning/data-extensions',
+            mimeType: 'text/markdown',
+            text: getDataExtensionsOverview(),
           },
         ],
       };
