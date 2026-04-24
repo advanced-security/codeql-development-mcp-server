@@ -34,7 +34,7 @@ vi.mock('../../../src/lib/session-data-manager', () => ({
       clearCacheEntries: vi.fn(),
     }),
     getConfig: vi.fn().mockReturnValue({
-      storageLocation: '/tmp/test',
+      storageLocation: '.tmp/test',
       autoTrackSessions: false,
       retentionDays: 90,
       includeCallParameters: false,
