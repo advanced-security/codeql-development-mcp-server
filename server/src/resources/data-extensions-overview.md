@@ -171,7 +171,8 @@ name: my-org/security-models
 version: 1.0.0
 dependencies:
   codeql/<language>-all: '*'
-dataExtensions: '*.yml'
+dataExtensions:
+  - 'ext/*.model.yml'
 ```
 
 ### Testing Extensions
