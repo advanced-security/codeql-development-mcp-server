@@ -111,7 +111,7 @@ describe('Language Resources', () => {
     it('should register additional resources for all languages with additional content', () => {
       registerLanguageAdditionalResources(mockServer);
 
-      expect(mockServer.resource).toHaveBeenCalledTimes(9);
+      expect(mockServer.resource).toHaveBeenCalledTimes(11);
 
       const resourceCalls = (mockServer.resource as ReturnType<typeof vi.fn>).mock.calls;
       const resourceNames = resourceCalls.map((call: unknown[]) => call[0]);
@@ -125,6 +125,8 @@ describe('Language Resources', () => {
       expect(resourceNames).toContain('JAVASCRIPT Library Modeling');
       expect(resourceNames).toContain('PYTHON Library Modeling');
       expect(resourceNames).toContain('RUBY Library Modeling');
+      expect(resourceNames).toContain('RUST Library Modeling');
+      expect(resourceNames).toContain('SWIFT Library Modeling');
     });
 
     it('should register additional resources with correct URIs', () => {
@@ -146,8 +148,8 @@ describe('Language Resources', () => {
     it('should register all language resources', () => {
       registerLanguageResources(mockServer);
 
-      // 9 AST + 5 security + 9 additional = 23
-      expect(mockServer.resource).toHaveBeenCalledTimes(23);
+      // 9 AST + 5 security + 11 additional = 25
+      expect(mockServer.resource).toHaveBeenCalledTimes(25);
     });
 
     it('every registered handler should return non-empty content', async () => {

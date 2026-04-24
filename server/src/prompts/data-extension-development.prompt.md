@@ -7,7 +7,7 @@ agent: agent
 Use this workflow to create CodeQL data extensions (Models-as-Data) for third-party libraries and frameworks. Data extensions let you customize taint tracking without writing QL code — you author YAML files that declare which functions are sources, sinks, summaries, barriers, or barrier guards.
 
 For format reference, read the MCP resource: `codeql://learning/data-extensions`
-For language-specific guidance: `codeql://languages/{{language}}/library-modeling`
+For language-specific guidance, read the corresponding `codeql://languages/<language>/library-modeling` resource. Available for: `cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`.
 
 ## Workflow Checklist
 

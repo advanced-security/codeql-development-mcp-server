@@ -28,6 +28,8 @@ import pythonSecurity from '../resources/languages/python_security_query_guide.m
 import rubyAst from '../resources/languages/ruby_ast.md';
 import rubyLibraryModeling from '../resources/languages/ruby_library_modeling.md';
 import rustAst from '../resources/languages/rust_ast.md';
+import rustLibraryModeling from '../resources/languages/rust_library_modeling.md';
+import swiftLibraryModeling from '../resources/languages/swift_library_modeling.md';
 
 export interface LanguageResource {
   language: string;
@@ -99,6 +101,15 @@ export const LANGUAGE_RESOURCES: LanguageResource[] = [
   },
   {
     language: 'rust',
-    astContent: rustAst
+    astContent: rustAst,
+    additionalResources: {
+      'library-modeling': rustLibraryModeling,
+    }
+  },
+  {
+    language: 'swift',
+    additionalResources: {
+      'library-modeling': swiftLibraryModeling,
+    }
   }
 ];
