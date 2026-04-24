@@ -22,13 +22,15 @@ Use a custom QL query instead when:
 
 ## Two Model Formats
 
-CodeQL uses two distinct formats depending on the language. The choice is fixed per language — you cannot mix formats.
+CodeQL uses two distinct formats depending on the language. The choice is fixed per language — you cannot mix formats. For authoritative language-specific details, see `codeql://languages/{language}/library-modeling`.
 
 ### MaD Tuple Format (9–10 Column Tuples)
 
-**Languages**: C/C++, C#, Go, Java/Kotlin
+**Languages**: C/C++, C#, Go, Java/Kotlin, Swift
 
 Identifies callables by **package/namespace, type, method name, and signature**. Each row is a tuple of 9–10 string columns.
+
+> **Rust** uses a distinct crate-path-based format that does not match either the tuple or API-graph layout described here. Consult `codeql://languages/rust/library-modeling` for the Rust-specific column layout.
 
 ```yaml
 extensions:
