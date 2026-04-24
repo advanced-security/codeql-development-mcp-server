@@ -14,6 +14,10 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+### Fixed
+
+- **`query_results_cache_retrieve` rejected by GitHub Copilot Chat (HTTP 400 invalid schema)** — The `lineRange` and `resultIndices` parameters were defined with `z.tuple([...])`, which the MCP SDK serialized to a bare-array JSON Schema value (e.g. `[{"type":"integer"}, {"type":"integer"}]`). GitHub Copilot Chat enforces strict JSON Schema validation and rejected the entire `ql-mcp` server with `"... is not of type 'object', 'boolean'"`. Both parameters now use `z.object({ start, end })` so they serialize to a valid `type: "object"` JSON Schema. Tool callers must now pass `{ "lineRange": { "start": 1, "end": 10 } }` instead of `{ "lineRange": [1, 10] }`. ([#263](https://github.com/advanced-security/codeql-development-mcp-server/pull/263))
+
 ## [v2.25.2] — 2026-04-15
 
 ### Highlights

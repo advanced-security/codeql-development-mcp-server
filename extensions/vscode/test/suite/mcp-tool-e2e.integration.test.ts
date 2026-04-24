@@ -471,6 +471,82 @@ suite('MCP Annotation & Audit Tool Integration Tests', () => {
     const retrieveText = (retrieveResult.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
     assert.ok(retrieveText.includes('No cached result'), `Should handle missing key. Got: ${retrieveText}`);
 
+    // Step 5: Retrieve with the new object-form lineRange and resultIndices
+    // parameters (regression: these used to be tuples, which serialized to an
+    // invalid JSON Schema and broke GitHub Copilot Chat with HTTP 400).
+    const retrieveWithSubsetResult = await client.callTool({
+      name: 'query_results_cache_retrieve',
+      arguments: {
+        cacheKey: 'nonexistent-test-key',
+        lineRange: { start: 1, end: 10 },
+        resultIndices: { start: 0, end: 5 },
+      },
+    });
+    assert.ok(
+      !retrieveWithSubsetResult.isError,
+      `query_results_cache_retrieve with subset should succeed. Got: ${JSON.stringify(retrieveWithSubsetResult.content)}`,
+    );
+
     console.log('[mcp-annotation-e2e] Query results cache test passed');
+  });
+
+  /**
+   * Regression test for the bug reported in the issue:
+   *   "Fix invalid schema for query_results_cache_retrieve tool use in
+   *    VS Code Copilot Chat".
+   *
+   * The GitHub Copilot Chat backend rejects MCP tools whose JSON Schema for
+   * any input parameter is not an object or boolean. The original
+   * `query_results_cache_retrieve` tool defined `lineRange` / `resultIndices`
+   * with `z.tuple([...])`, which serialized to a bare-array schema value and
+   * caused HTTP 400 responses from Copilot.
+   *
+   * This test enforces — at the live wire-protocol level — that EVERY tool's
+   * `inputSchema` is itself an object schema and that every property's schema
+   * value is also an object or boolean (never an array).
+   */
+  test('Every tool inputSchema is a valid strict JSON Schema (no array-valued schemas)', async function () {
+    this.timeout(15_000);
+
+    const response = await client.listTools();
+    assert.ok(response.tools && response.tools.length > 0, 'Server should list tools');
+
+    const offending: string[] = [];
+    for (const tool of response.tools) {
+      const inputSchema = tool.inputSchema as
+        | { type?: string; properties?: Record<string, unknown> }
+        | undefined;
+
+      assert.ok(inputSchema, `Tool ${tool.name} should have an inputSchema`);
+      assert.ok(
+        typeof inputSchema === 'object' && !Array.isArray(inputSchema),
+        `Tool ${tool.name} inputSchema must be a JSON Schema object, got: ${JSON.stringify(inputSchema)}`,
+      );
+
+      const properties = inputSchema.properties ?? {};
+      for (const [propName, propSchema] of Object.entries(properties)) {
+        const isValid =
+          typeof propSchema === 'boolean' ||
+          (typeof propSchema === 'object' && propSchema !== null && !Array.isArray(propSchema));
+        if (!isValid) {
+          offending.push(`${tool.name}.${propName} = ${JSON.stringify(propSchema)}`);
+        }
+      }
+    }
+
+    assert.deepStrictEqual(
+      offending,
+      [],
+      `The following tool input properties have invalid (non-object/boolean) JSON Schema values, ` +
+        `which causes GitHub Copilot Chat to reject the server with HTTP 400:\n  ${offending.join('\n  ')}`,
+    );
+
+    // Spot-check the originally-broken tool/properties.
+    const retrieveTool = response.tools.find(t => t.name === 'query_results_cache_retrieve');
+    assert.ok(retrieveTool, 'query_results_cache_retrieve must be present');
+    const props = (retrieveTool.inputSchema as { properties?: Record<string, { type?: string }> })
+      .properties ?? {};
+    assert.strictEqual(props.lineRange?.type, 'object', 'lineRange must serialize as an object schema');
+    assert.strictEqual(props.resultIndices?.type, 'object', 'resultIndices must serialize as an object schema');
   });
 });

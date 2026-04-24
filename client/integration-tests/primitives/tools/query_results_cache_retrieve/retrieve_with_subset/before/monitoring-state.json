@@ -2,7 +2,8 @@
   "toolName": "query_results_cache_retrieve",
   "parameters": {
     "cacheKey": "nonexistent-key-for-test",
-    "maxLines": 50
+    "maxLines": 50,
+    "lineRange": { "start": 1, "end": 10 }
   },
   "expectedSuccess": true,
   "description": "Test query_results_cache_retrieve returns appropriate message for missing cache key"
