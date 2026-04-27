@@ -17,8 +17,9 @@ For language-specific guidance, read the corresponding `codeql://languages/<lang
   - Library name and version: {{libraryName}}
   - Target language: {{language}}
   - Determine the model format:
-    - **MaD tuple format** (9–10 column tuples): C/C++ (`codeql/cpp-all`), C# (`codeql/csharp-all`), Go (`codeql/go-all`), Java/Kotlin (`codeql/java-all`)
+    - **MaD tuple format** (9–10 column tuples): C/C++ (`codeql/cpp-all`), C# (`codeql/csharp-all`), Go (`codeql/go-all`), Java/Kotlin (`codeql/java-all`), Swift (`codeql/swift-all`)
     - **API Graph format** (3–5 column tuples): JavaScript/TypeScript (`codeql/javascript-all`), Python (`codeql/python-all`), Ruby (`codeql/ruby-all`)
+    - **Rust format**: Rust (`codeql/rust-all`) uses its own crate-path-based model format; follow `codeql://languages/rust/library-modeling`
   - Using the wrong format will cause the extension to silently fail to load.
 
 - [ ] **Locate a CodeQL database**

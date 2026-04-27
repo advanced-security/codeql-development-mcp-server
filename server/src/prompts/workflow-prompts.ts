@@ -481,6 +481,7 @@ export const qlLspIterativeDevelopmentSchema = z.object({
  * Prompt result shape returned by every workflow prompt handler.
  */
 interface PromptResult {
+  [key: string]: unknown;
   messages: Array<{
     role: 'user';
     content: { type: 'text'; text: string };

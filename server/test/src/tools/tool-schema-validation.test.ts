@@ -66,7 +66,10 @@ vi.mock('../../../src/lib/server-manager', () => ({
   getServerManager: vi.fn().mockReturnValue(null),
 }));
 
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { registerAnnotationTools } from '../../../src/tools/annotation-tools';
 import { registerAuditTools } from '../../../src/tools/audit-tools';
 import { registerCacheTools } from '../../../src/tools/cache-tools';
@@ -89,35 +92,44 @@ function registerAllTools(server: McpServer): void {
   registerSarifTools(server);
 }
 
+/**
+ * Helper: list all tools via the public `tools/list` JSON-RPC method using
+ * an in-memory client/server pair. This exercises the same code path as a
+ * real MCP client and avoids reaching into SDK-private fields.
+ */
+async function listToolsViaPublicAPI(server: McpServer): Promise<Tool[]> {
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport);
+  const client = new Client({ name: 'schema-test-client', version: '0.0.0' });
+  await client.connect(clientTransport);
+  try {
+    const { tools } = await client.listTools();
+    return tools;
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}
+
 describe('Tool JSON Schema Validation (all tools)', () => {
   it('every tool inputSchema property must be an object or boolean — never a bare array', async () => {
     const server = new McpServer({ name: 'schema-test', version: '0.0.0' });
     registerAllTools(server);
 
-    // Access registered tools via internal SDK handle — same code path as
-    // the live `tools/list` JSON-RPC handler.
-    const registered = (server as any)._registeredTools as
-      Record<string, { inputSchema?: unknown }>;
-
-    expect(Object.keys(registered).length).toBeGreaterThan(0);
-
-    const { toJsonSchemaCompat } = await import(
-      '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js'
-    );
+    const tools = await listToolsViaPublicAPI(server);
+    expect(tools.length).toBeGreaterThan(0);
 
     const offending: string[] = [];
 
-    for (const [toolName, def] of Object.entries(registered)) {
-      if (!def.inputSchema) continue;
-
-      const jsonSchema = toJsonSchemaCompat(def.inputSchema as never) as {
+    for (const tool of tools) {
+      const jsonSchema = tool.inputSchema as {
         type?: string;
         properties?: Record<string, unknown>;
       };
 
       // Top-level schema must be an object, not an array.
       if (Array.isArray(jsonSchema)) {
-        offending.push(`${toolName} (top-level schema is an array)`);
+        offending.push(`${tool.name} (top-level schema is an array)`);
         continue;
       }
 
@@ -127,7 +139,7 @@ describe('Tool JSON Schema Validation (all tools)', () => {
           typeof propSchema === 'boolean' ||
           (typeof propSchema === 'object' && propSchema !== null && !Array.isArray(propSchema));
         if (!isValid) {
-          offending.push(`${toolName}.${propName} = ${JSON.stringify(propSchema)}`);
+          offending.push(`${tool.name}.${propName} = ${JSON.stringify(propSchema)}`);
         }
 
         // Recurse one level into nested object properties (catches nested
@@ -145,7 +157,7 @@ describe('Tool JSON Schema Validation (all tools)', () => {
                 (typeof nestedSchema === 'object' && nestedSchema !== null && !Array.isArray(nestedSchema));
               if (!isNestedValid) {
                 offending.push(
-                  `${toolName}.${propName}.${nestedName} = ${JSON.stringify(nestedSchema)}`,
+                  `${tool.name}.${propName}.${nestedName} = ${JSON.stringify(nestedSchema)}`,
                 );
               }
             }
@@ -161,31 +173,23 @@ describe('Tool JSON Schema Validation (all tools)', () => {
     const server = new McpServer({ name: 'schema-test', version: '0.0.0' });
     registerAllTools(server);
 
-    const registered = (server as any)._registeredTools as Record<string, unknown>;
-    const toolCount = Object.keys(registered).length;
+    const tools = await listToolsViaPublicAPI(server);
 
     // Sanity: we expect at least 30 tools across all categories. If this
     // drops significantly it likely means a registration function is broken.
-    expect(toolCount).toBeGreaterThanOrEqual(30);
+    expect(tools.length).toBeGreaterThanOrEqual(30);
   });
 
   it('no tool property uses z.tuple serialization (bare array items)', async () => {
     const server = new McpServer({ name: 'schema-test', version: '0.0.0' });
     registerAllTools(server);
 
-    const registered = (server as any)._registeredTools as
-      Record<string, { inputSchema?: unknown }>;
-
-    const { toJsonSchemaCompat } = await import(
-      '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js'
-    );
+    const tools = await listToolsViaPublicAPI(server);
 
     const tupleProps: string[] = [];
 
-    for (const [toolName, def] of Object.entries(registered)) {
-      if (!def.inputSchema) continue;
-
-      const jsonSchema = toJsonSchemaCompat(def.inputSchema as never) as {
+    for (const tool of tools) {
+      const jsonSchema = tool.inputSchema as {
         properties?: Record<string, unknown>;
       };
 
@@ -198,7 +202,7 @@ describe('Tool JSON Schema Validation (all tools)', () => {
           'items' in propSchema &&
           Array.isArray((propSchema as { items: unknown }).items)
         ) {
-          tupleProps.push(`${toolName}.${propName}`);
+          tupleProps.push(`${tool.name}.${propName}`);
         }
       }
     }
@@ -207,5 +211,29 @@ describe('Tool JSON Schema Validation (all tools)', () => {
       tupleProps,
       `Tools with tuple-serialized properties (use z.object instead): ${tupleProps.join(', ')}`,
     ).toEqual([]);
+  });
+
+  it('query_results_cache_retrieve lineRange and resultIndices serialize as object types', async () => {
+    const server = new McpServer({ name: 'schema-test', version: '0.0.0' });
+    registerAllTools(server);
+
+    const tools = await listToolsViaPublicAPI(server);
+    const retrieveTool = tools.find(t => t.name === 'query_results_cache_retrieve');
+    expect(retrieveTool, 'query_results_cache_retrieve must be registered').toBeTruthy();
+
+    const jsonSchema = retrieveTool!.inputSchema as {
+      properties: Record<string, { type?: string; properties?: Record<string, unknown> }>;
+    };
+
+    for (const propName of ['lineRange', 'resultIndices']) {
+      const prop = jsonSchema.properties[propName];
+      expect(prop, `${propName} must be present in JSON Schema`).toBeTruthy();
+      expect(typeof prop, `${propName} schema must be an object`).toBe('object');
+      expect(Array.isArray(prop), `${propName} schema must not be a bare array`).toBe(false);
+      expect(prop.type, `${propName} must be type=object`).toBe('object');
+      expect(prop.properties, `${propName} must declare start/end sub-properties`).toBeTruthy();
+      expect(prop.properties).toHaveProperty('start');
+      expect(prop.properties).toHaveProperty('end');
+    }
   });
 });
