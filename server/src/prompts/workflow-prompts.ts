@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { access } from 'fs/promises';
 import { basename, isAbsolute, normalize, relative, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
-import { SUPPORTED_LANGUAGES } from './constants';
+import { MAD_SUPPORTED_LANGUAGES, SUPPORTED_LANGUAGES } from './constants';
 import { addCompletions, getEffectiveLanguage } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
 import { getUserWorkspaceDir } from '../utils/package-paths';
@@ -195,13 +195,17 @@ export async function resolvePromptFilePath(
  * Schema for data_extension_development prompt parameters.
  *
  * - `language` is **required** – the model format depends on the language.
+ *   Restricted to {@link MAD_SUPPORTED_LANGUAGES} (the subset of supported
+ *   languages that have a registered `library-modeling` resource and
+ *   upstream Models-as-Data support); `actions` is excluded because it
+ *   does not support data extensions.
  * - `libraryName` is optional – the library or framework to model.
  * - `database` is optional – path to a CodeQL database for testing.
  */
 export const dataExtensionDevelopmentSchema = z.object({
   language: z
-    .enum(SUPPORTED_LANGUAGES)
-    .describe('Programming language for the data extension'),
+    .enum(MAD_SUPPORTED_LANGUAGES)
+    .describe('Programming language for the data extension (Models-as-Data supported languages only)'),
   libraryName: z
     .string()
     .optional()

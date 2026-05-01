@@ -8,7 +8,7 @@
  */
 
 // Static imports — esbuild inlines the file contents as string literals.
-import dataExtensionsOverviewContent from '../resources/data-extensions-overview.md';
+import learningDataExtensionsContent from '../resources/learning-data-extensions.md';
 import dataflowMigrationContent from '../resources/dataflow-migration-v1-to-v2.md';
 import learningQueryBasicsContent from '../resources/learning-query-basics.md';
 import performancePatternsContent from '../resources/performance-patterns.md';
@@ -84,10 +84,10 @@ export function getQueryUnitTesting(): string {
 }
 
 /**
- * Get the data extensions overview content
+ * Get the data extensions learning resource content
  */
-export function getDataExtensionsOverview(): string {
-  return dataExtensionsOverviewContent;
+export function getLearningDataExtensions(): string {
+  return learningDataExtensionsContent;
 }
 
 /**

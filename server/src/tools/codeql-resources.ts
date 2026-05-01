@@ -4,7 +4,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  getDataExtensionsOverview,
+  getLearningDataExtensions,
   getDataflowMigration,
   getLearningQueryBasics,
   getPerformancePatterns,
@@ -224,7 +224,7 @@ export function registerCodeQLResources(server: McpServer): void {
           {
             uri: 'codeql://learning/data-extensions',
             mimeType: 'text/markdown',
-            text: getDataExtensionsOverview(),
+            text: getLearningDataExtensions(),
           },
         ],
       };
