@@ -195,10 +195,10 @@ func FormatResourceContentText(rc *ResourceContent) string {
 			sb.WriteString("\n---\n")
 		}
 		if item.URI != "" {
-			sb.WriteString(fmt.Sprintf("URI: %s\n", item.URI))
+			fmt.Fprintf(&sb, "URI: %s\n", item.URI)
 		}
 		if item.MIMEType != "" {
-			sb.WriteString(fmt.Sprintf("Type: %s\n", item.MIMEType))
+			fmt.Fprintf(&sb, "Type: %s\n", item.MIMEType)
 		}
 		sb.WriteString("\n")
 		sb.WriteString(item.Text)
@@ -211,13 +211,13 @@ func FormatResourceContentText(rc *ResourceContent) string {
 func FormatPromptMessagesText(pm *PromptMessages) string {
 	var sb strings.Builder
 	if pm.Description != "" {
-		sb.WriteString(fmt.Sprintf("Description: %s\n\n", pm.Description))
+		fmt.Fprintf(&sb, "Description: %s\n\n", pm.Description)
 	}
 	for i, msg := range pm.Messages {
 		if i > 0 {
 			sb.WriteString("\n---\n")
 		}
-		sb.WriteString(fmt.Sprintf("[%s]\n", msg.Role))
+		fmt.Fprintf(&sb, "[%s]\n", msg.Role)
 		sb.WriteString(msg.Content)
 		sb.WriteString("\n")
 	}
@@ -254,13 +254,13 @@ func FormatResourceContentMarkdown(rc *ResourceContent) string {
 func FormatPromptMessagesMarkdown(pm *PromptMessages) string {
 	var sb strings.Builder
 	if pm.Description != "" {
-		sb.WriteString(fmt.Sprintf("*%s*\n\n", pm.Description))
+		fmt.Fprintf(&sb, "*%s*\n\n", pm.Description)
 	}
 	for i, msg := range pm.Messages {
 		if i > 0 {
 			sb.WriteString("\n---\n\n")
 		}
-		sb.WriteString(fmt.Sprintf("### %s\n\n", msg.Role))
+		fmt.Fprintf(&sb, "### %s\n\n", msg.Role)
 		sb.WriteString(msg.Content)
 		sb.WriteString("\n")
 	}
