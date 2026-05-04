@@ -102,17 +102,81 @@ jobs:
           fi
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Step 2: Update version, build, test, and create PR
+  # Step 2: Check whether the upgrade branch already exists
+  #
+  # When this workflow runs on its nightly cron schedule and an upgrade PR has
+  # already been opened for the target version, re-running `create-pr` would
+  # force-push over the existing branch and silently discard any review
+  # commits already made on top of the bot's initial push (e.g., manual fixes
+  # to upgrade-packs.sh output or reviewer follow-ups). This job short-circuits
+  # subsequent work in that case so the existing branch is preserved.
+  #
+  # The branch check is skipped on `workflow_dispatch` so a maintainer can
+  # always re-run the upgrade pipeline on demand to re-create the branch.
+  # ─────────────────────────────────────────────────────────────────────────────
+  check-existing-branch:
+    name: Check for Existing Upgrade Branch
+    needs: detect-update
+    if: needs.detect-update.outputs.update_needed == 'true'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    outputs:
+      branch_exists: ${{ steps.check-branch.outputs.branch_exists }}
+
+    steps:
+      - name: Check - Look up upgrade branch on origin
+        id: check-branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: 'codeql/upgrade-to-${{ needs.detect-update.outputs.version }}'
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "ℹ️ Manual dispatch — skipping existing-branch check."
+            echo "branch_exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Checking whether branch '${BRANCH}' exists on ${GITHUB_REPOSITORY}..."
+          if gh api "repos/${GITHUB_REPOSITORY}/branches/${BRANCH}" \
+              --silent > /dev/null 2>&1; then
+            echo "✅ Branch '${BRANCH}' already exists — skipping update to preserve manual edits."
+            echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ Branch '${BRANCH}' does not exist — proceeding with update."
+            echo "branch_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check - Summary
+        env:
+          BRANCH: 'codeql/upgrade-to-${{ needs.detect-update.outputs.version }}'
+        run: |
+          echo "## Upgrade Branch Preflight" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-branch.outputs.branch_exists }}" = "true" ]; then
+            echo "⏭️ Branch \`${BRANCH}\` already exists — skipping the rest of the pipeline to preserve any manual edits or review commits on it." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Trigger this workflow manually via \`workflow_dispatch\` to force a refresh." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "▶️ Branch \`${BRANCH}\` does not exist — proceeding with the update pipeline." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Step 3: Update version, build, test, and create PR
   #
   # Updates all version-bearing files, installs dependencies, runs the full
   # build-and-test suite, and creates a pull request with the changes.
   # ─────────────────────────────────────────────────────────────────────────────
   create-pr:
     name: Create Update Pull Request
-    needs: detect-update
-    if: needs.detect-update.outputs.update_needed == 'true'
+    needs: [detect-update, check-existing-branch]
+    if: |
+      needs.detect-update.outputs.update_needed == 'true' &&
+      needs.check-existing-branch.outputs.branch_exists != 'true'
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
       pull-requests: write
