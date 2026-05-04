@@ -14,32 +14,14 @@ Example1.rs:
 #    4| x
 #-----|  -> x
 
-#    8| FormatArgsExpr
-#-----|  -> ...::format_args_nl!...
-
-#    6| FormatArgsExpr
-#-----|  -> ...::format_args_nl!...
-
-#   12| FormatArgsExpr
-#-----|  -> ...::format_args_nl!...
-
 #    5| 0
 #-----|  -> ... > ...
-
-#    8| "Non-positive\n"
-#-----|  -> FormatArgsExpr
-
-#    6| "Positive\n"
-#-----|  -> FormatArgsExpr
 
 #   11| 3
 #-----|  -> 0..3
 
 #   11| 0
 #-----|  -> 3
-
-#   12| "{}\n"
-#-----|  -> i
 
 #    5| ... > ...
 #-----|  -> ExprStmt
@@ -49,61 +31,25 @@ Example1.rs:
 #-----|  -> i
 
 #    8| MacroExpr
-#-----|  -> ...::_print(...)
-
-#    8| MacroExpr
 #-----|  -> { ... }
-
-#    6| MacroExpr
-#-----|  -> ...::_print(...)
 
 #    6| MacroExpr
 #-----|  -> { ... }
 
 #   12| MacroExpr
-#-----|  -> ...::_print(...)
-
-#   12| MacroExpr
 #-----|  -> { ... }
-
-#    8| { ... }
-#-----|  -> { ... }
-
-#    8| { ... }
-#-----|  -> println!...
 
 #    7| { ... }
 #-----|  -> if ... {...} else {...}
 
-#    6| { ... }
-#-----|  -> { ... }
-
-#    6| { ... }
-#-----|  -> println!...
-
 #    5| { ... }
 #-----|  -> if ... {...} else {...}
-
-#   12| { ... }
-#-----|  -> { ... }
-
-#   12| { ... }
-#-----|  -> println!...
 
 #   11| { ... }
 #-----|  -> i
 
 #    4| { ... }
 #-----|  -> exit fn simple_function (normal)
-
-#    8| ...::_print(...)
-#-----|  -> { ... }
-
-#    6| ...::_print(...)
-#-----|  -> { ... }
-
-#   12| ...::_print(...)
-#-----|  -> { ... }
 
 #   11| for ... in ... { ... }
 #-----|  -> { ... }
@@ -121,55 +67,25 @@ Example1.rs:
 #    5| x
 #-----|  -> 0
 
-#    8| ...::_print
-#-----|  -> "Non-positive\n"
-
-#    6| ...::_print
-#-----|  -> "Positive\n"
-
-#   12| i
-#-----|  -> FormatArgsExpr
-
-#   12| ...::_print
-#-----|  -> "{}\n"
-
 #    8| ExprStmt
-#-----|  -> ...::_print
-
-#    8| ExprStmt
-#-----|  -> ExprStmt
+#-----|  -> println!...
 
 #    6| ExprStmt
-#-----|  -> ...::_print
-
-#    6| ExprStmt
-#-----|  -> ExprStmt
+#-----|  -> println!...
 
 #    5| ExprStmt
 #-----|  -> x
 
 #   12| ExprStmt
-#-----|  -> ...::_print
-
-#   12| ExprStmt
-#-----|  -> ExprStmt
+#-----|  -> println!...
 
 #    8| println!...
-#-----|  -> MacroExpr
-
-#    8| ...::format_args_nl!...
 #-----|  -> MacroExpr
 
 #    6| println!...
 #-----|  -> MacroExpr
 
-#    6| ...::format_args_nl!...
-#-----|  -> MacroExpr
-
 #   12| println!...
-#-----|  -> MacroExpr
-
-#   12| ...::format_args_nl!...
 #-----|  -> MacroExpr
 
 #    4| ...: i32
@@ -305,29 +221,14 @@ Example1.rs:
 #   36| result
 #-----|  -> result
 
-#   37| FormatArgsExpr
-#-----|  -> ...::format_args_nl!...
-
 #   35| 5
 #-----|  -> simple_function(...)
 
 #   36| 20
 #-----|  -> complex_function(...)
 
-#   37| "{}\n"
-#-----|  -> result
-
-#   37| MacroExpr
-#-----|  -> ...::_print(...)
-
 #   37| MacroExpr
 #-----|  -> { ... }
-
-#   37| { ... }
-#-----|  -> { ... }
-
-#   37| { ... }
-#-----|  -> println!...
 
 #   34| { ... }
 #-----|  -> exit fn main (normal)
@@ -338,9 +239,6 @@ Example1.rs:
 #   36| complex_function(...)
 #-----|  -> result
 
-#   37| ...::_print(...)
-#-----|  -> { ... }
-
 #   36| result
 #-----|  -> ExprStmt
 
@@ -350,28 +248,16 @@ Example1.rs:
 #   36| complex_function
 #-----|  -> 20
 
-#   37| result
-#-----|  -> FormatArgsExpr
-
-#   37| ...::_print
-#-----|  -> "{}\n"
-
 #   35| ExprStmt
 #-----|  -> simple_function
 
 #   37| ExprStmt
-#-----|  -> ...::_print
-
-#   37| ExprStmt
-#-----|  -> ExprStmt
+#-----|  -> println!...
 
 #   36| let ... = ...
 #-----|  -> complex_function
 
 #   37| println!...
-#-----|  -> MacroExpr
-
-#   37| ...::format_args_nl!...
 #-----|  -> MacroExpr
 
 #    3| exit fn simple_function (normal)
