@@ -92,6 +92,70 @@ Define low-impact flows to reduce over-taint/noise:
 - ['strings', '', 'ToUpper', '', 'value', 'manual']
 ```
 
+### Barrier Models (CodeQL 2.25.2+)
+
+**`barrierModel(package, type, subtypes, name, signature, ext, output, kind, provenance)`**
+
+Define sanitizers that stop taint flow. The `output` access path identifies the value that is safe after the function returns. The `kind` must match the sink kind used by the corresponding security query.
+
+**Example**: HTML-escaping prevents XSS
+
+```go
+func Render(w http.ResponseWriter, r *http.Request) {
+    name := r.FormValue("name")
+    safe := beego.Htmlquote(name) // safe is HTML-escaped
+}
+```
+
+```yaml
+extensions:
+  - addsTo:
+      pack: codeql/go-all
+      extensible: barrierModel
+    data:
+      - ['group:beego', '', true, 'Htmlquote', '', '', 'ReturnValue', 'html-injection', 'manual']
+```
+
+Note: The `group:` prefix matches multiple package paths that refer to the same package (configured via `packageGrouping`). The `kind` `"html-injection"` must match the sink kind used by XSS queries.
+
+### Barrier Guard Models (CodeQL 2.25.2+)
+
+**`barrierGuardModel(package, type, subtypes, name, signature, ext, input, acceptingValue, kind, provenance)`**
+
+Define validators that stop taint flow via conditional checks. When the function returns the `acceptingValue`, taint flow is stopped through the guarded branch. The `input` access path identifies the value being validated.
+
+**Example**: Validation function prevents SQL injection
+
+```go
+func Query(db *sql.DB, input string) {
+    if example.IsSafe(input) { // The check guards the query
+        db.Query(input) // Safe
+    }
+}
+```
+
+```yaml
+extensions:
+  - addsTo:
+      pack: codeql/go-all
+      extensible: barrierGuardModel
+    data:
+      - [
+          'example.com/example',
+          '',
+          false,
+          'IsSafe',
+          '',
+          '',
+          'Argument[0]',
+          'true',
+          'sql-injection',
+          'manual'
+        ]
+```
+
+Note: The `acceptingValue` `"true"` means the barrier applies when `IsSafe` returns true. The `input` `"Argument[0]"` identifies the first argument whose taint flow is blocked.
+
 ## Access Paths
 
 ### Basic Access Paths

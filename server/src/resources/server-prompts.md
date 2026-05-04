@@ -7,6 +7,7 @@ This resource provides a complete reference of the prompts exposed by the CodeQL
 | Prompt                                    | Description                                                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `compare_overlapping_alerts`              | Compare CodeQL SARIF alerts across rules, files, runs, databases, or CodeQL versions                          |
+| `data_extension_development`              | End-to-end workflow for creating CodeQL data extensions (Models-as-Data) for third-party libraries            |
 | `document_codeql_query`                   | Create or update standardized markdown documentation for a CodeQL query                                       |
 | `explain_codeql_query`                    | Generate a detailed explanation of a CodeQL query with Mermaid evaluation diagrams                            |
 | `ql_lsp_iterative_development`            | Iterative CodeQL query development using LSP tools for completion, navigation, and validation                 |
@@ -49,6 +50,10 @@ This resource provides a complete reference of the prompts exposed by the CodeQL
 ### Workshop Creation
 
 - **`workshop_creation_workflow`** — Guides the creation of multi-exercise workshops that teach CodeQL query development. Requires `queryPath` and `language`, optionally accepts `workshopName` and `numStages`.
+
+### Data Extension Development
+
+- **`data_extension_development`** — End-to-end procedural workflow for creating CodeQL data extensions (Models-as-Data) for third-party libraries. Covers: identify target library → classify API surface → choose deployment scope → author `.model.yml` → configure pack → test with `codeql_query_run` and `codeql_test_run` → decide next steps. Requires `language`; optionally accepts `libraryName` and `database`. References `codeql://learning/data-extensions` and `codeql://languages/{language}/library-modeling` for format-specific guidance.
 
 ## Related Resources
 

@@ -92,6 +92,9 @@ export interface QueryFilesResult {
     };
   };
 
+  // Contextual hints for LLM consumers
+  hints?: string[];
+
   // Library path information (from codeql resolve library-path)
   libraryPaths?: string[];  // Resolved library paths for the query
 

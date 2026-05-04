@@ -42,7 +42,7 @@ func runUseTool(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	result, err := mcpclient.CallTool(ctx, client, toolName, params)
 	if err != nil {
@@ -59,11 +59,11 @@ func outputToolResult(result *mcpclient.ToolResult) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stdout, s)
+		_, _ = fmt.Fprintln(os.Stdout, s)
 	case "markdown":
-		fmt.Fprint(os.Stdout, mcpclient.FormatToolResultMarkdown(result))
+		_, _ = fmt.Fprint(os.Stdout, mcpclient.FormatToolResultMarkdown(result))
 	default:
-		fmt.Fprint(os.Stdout, mcpclient.FormatToolResultText(result))
+		_, _ = fmt.Fprint(os.Stdout, mcpclient.FormatToolResultText(result))
 	}
 	if result.IsError {
 		return fmt.Errorf("tool returned error")

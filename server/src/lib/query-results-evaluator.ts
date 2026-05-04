@@ -268,7 +268,8 @@ function generateMermaidFromGraphResults(queryResults: unknown, metadata: QueryM
   }
   
   // Check if results have the expected structure for graph queries
-  const tuples = queryResults.tuples || queryResults;
+  const resultsObj = queryResults as Record<string, unknown>;
+  const tuples = resultsObj.tuples || queryResults;
   
   if (!Array.isArray(tuples) || tuples.length === 0) {
     mermaidContent += '```mermaid\ngraph TD\n    A[No Graph Data]\n```\n';
@@ -305,9 +306,10 @@ function generateMermaidFromGraphResults(queryResults: unknown, metadata: QueryM
       }
     } else if (typeof tuple === 'object' && tuple !== null) {
       // Handle object-based results
-      const source = sanitizeNodeId(tuple.source?.toString() || tuple.from?.toString() || `node_${index}_src`);
-      const target = sanitizeNodeId(tuple.target?.toString() || tuple.to?.toString() || `node_${index}_tgt`);
-      const label = tuple.label?.toString() || tuple.relation?.toString() || '';
+      const obj = tuple as Record<string, unknown>;
+      const source = sanitizeNodeId(obj.source?.toString() || obj.from?.toString() || `node_${index}_src`);
+      const target = sanitizeNodeId(obj.target?.toString() || obj.to?.toString() || `node_${index}_tgt`);
+      const label = obj.label?.toString() || obj.relation?.toString() || '';
       
       nodes.add(source);
       nodes.add(target);

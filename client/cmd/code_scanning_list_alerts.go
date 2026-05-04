@@ -75,11 +75,11 @@ func runListAlerts(cmd *cobra.Command, _ []string) error {
 	}
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "NUM\tSTATE\tRULE\tSEVERITY\tFILE:LINE\tCREATED")
+	_, _ = fmt.Fprintln(w, "NUM\tSTATE\tRULE\tSEVERITY\tFILE:LINE\tCREATED")
 	for _, a := range alerts {
 		loc := a.MostRecentInstance.Location
 		locStr := fmt.Sprintf("%s:%d", loc.Path, loc.StartLine)
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\n",
 			a.Number, a.State, a.Rule.ID, a.Rule.Severity, locStr, a.CreatedAt)
 	}
 	return w.Flush()

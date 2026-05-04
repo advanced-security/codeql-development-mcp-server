@@ -7,11 +7,16 @@ import { loadPromptTemplate, processPromptTemplate } from '../../../src/prompts/
 
 /** All prompt template filenames that must be embedded in the bundle. */
 const EXPECTED_PROMPT_FILES = [
+  'check-for-duplicated-code.prompt.md',
+  'compare-overlapping-alerts.prompt.md',
+  'data-extension-development.prompt.md',
   'document-codeql-query.prompt.md',
   'explain-codeql-query.prompt.md',
+  'find-overlapping-queries.prompt.md',
   'ql-lsp-iterative-development.prompt.md',
   'ql-tdd-advanced.prompt.md',
   'ql-tdd-basic.prompt.md',
+  'run-query-and-summarize-false-positives.prompt.md',
   'sarif-rank-false-positives.prompt.md',
   'sarif-rank-true-positives.prompt.md',
   'tools-query-workflow.prompt.md',

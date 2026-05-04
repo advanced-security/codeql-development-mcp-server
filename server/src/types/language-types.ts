@@ -7,8 +7,10 @@
 
 import actionsAst from '../resources/languages/actions_ast.md';
 import cppAst from '../resources/languages/cpp_ast.md';
+import cppLibraryModeling from '../resources/languages/cpp_library_modeling.md';
 import cppSecurity from '../resources/languages/cpp_security_query_guide.md';
 import csharpAst from '../resources/languages/csharp_ast.md';
+import csharpLibraryModeling from '../resources/languages/csharp_library_modeling.md';
 import csharpSecurity from '../resources/languages/csharp_security_query_guide.md';
 import goAst from '../resources/languages/go_ast.md';
 import goBasicQueries from '../resources/languages/go_basic_queries.md';
@@ -16,12 +18,18 @@ import goDataflow from '../resources/languages/go_dataflow.md';
 import goLibraryModeling from '../resources/languages/go_library_modeling.md';
 import goSecurity from '../resources/languages/go_security_query_guide.md';
 import javaAst from '../resources/languages/java_ast.md';
+import javaLibraryModeling from '../resources/languages/java_library_modeling.md';
 import javascriptAst from '../resources/languages/javascript_ast.md';
+import javascriptLibraryModeling from '../resources/languages/javascript_library_modeling.md';
 import javascriptSecurity from '../resources/languages/javascript_security_query_guide.md';
 import pythonAst from '../resources/languages/python_ast.md';
+import pythonLibraryModeling from '../resources/languages/python_library_modeling.md';
 import pythonSecurity from '../resources/languages/python_security_query_guide.md';
 import rubyAst from '../resources/languages/ruby_ast.md';
+import rubyLibraryModeling from '../resources/languages/ruby_library_modeling.md';
 import rustAst from '../resources/languages/rust_ast.md';
+import rustLibraryModeling from '../resources/languages/rust_library_modeling.md';
+import swiftLibraryModeling from '../resources/languages/swift_library_modeling.md';
 
 export interface LanguageResource {
   language: string;
@@ -38,12 +46,18 @@ export const LANGUAGE_RESOURCES: LanguageResource[] = [
   {
     language: 'cpp',
     astContent: cppAst,
-    securityContent: cppSecurity
+    securityContent: cppSecurity,
+    additionalResources: {
+      'library-modeling': cppLibraryModeling,
+    }
   },
   {
     language: 'csharp',
     astContent: csharpAst,
-    securityContent: csharpSecurity
+    securityContent: csharpSecurity,
+    additionalResources: {
+      'library-modeling': csharpLibraryModeling,
+    }
   },
   {
     language: 'go',
@@ -58,23 +72,44 @@ export const LANGUAGE_RESOURCES: LanguageResource[] = [
   {
     language: 'java',
     astContent: javaAst,
+    additionalResources: {
+      'library-modeling': javaLibraryModeling,
+    }
   },
   {
     language: 'javascript',
     astContent: javascriptAst,
-    securityContent: javascriptSecurity
+    securityContent: javascriptSecurity,
+    additionalResources: {
+      'library-modeling': javascriptLibraryModeling,
+    }
   },
   {
     language: 'python',
     astContent: pythonAst,
-    securityContent: pythonSecurity
+    securityContent: pythonSecurity,
+    additionalResources: {
+      'library-modeling': pythonLibraryModeling,
+    }
   },
   {
     language: 'ruby',
-    astContent: rubyAst
+    astContent: rubyAst,
+    additionalResources: {
+      'library-modeling': rubyLibraryModeling,
+    }
   },
   {
     language: 'rust',
-    astContent: rustAst
+    astContent: rustAst,
+    additionalResources: {
+      'library-modeling': rustLibraryModeling,
+    }
+  },
+  {
+    language: 'swift',
+    additionalResources: {
+      'library-modeling': swiftLibraryModeling,
+    }
   }
 ];

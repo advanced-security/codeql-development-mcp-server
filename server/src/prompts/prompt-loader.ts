@@ -10,6 +10,7 @@
 // Static imports — esbuild inlines the file contents as string literals.
 import checkForDuplicatedCode from './check-for-duplicated-code.prompt.md';
 import compareOverlappingAlerts from './compare-overlapping-alerts.prompt.md';
+import dataExtensionDevelopment from './data-extension-development.prompt.md';
 import documentCodeqlQuery from './document-codeql-query.prompt.md';
 import explainCodeqlQuery from './explain-codeql-query.prompt.md';
 import findOverlappingQueries from './find-overlapping-queries.prompt.md';
@@ -32,6 +33,7 @@ import workshopCreationWorkflow from './workshop-creation-workflow.prompt.md';
 const PROMPT_TEMPLATES: Record<string, string> = {
   'check-for-duplicated-code.prompt.md': checkForDuplicatedCode,
   'compare-overlapping-alerts.prompt.md': compareOverlappingAlerts,
+  'data-extension-development.prompt.md': dataExtensionDevelopment,
   'document-codeql-query.prompt.md': documentCodeqlQuery,
   'explain-codeql-query.prompt.md': explainCodeqlQuery,
   'find-overlapping-queries.prompt.md': findOverlappingQueries,
