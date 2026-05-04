@@ -14,14 +14,32 @@ Example1.rs:
 #    4| x
 #-----|  -> x
 
+#    8| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
+#    6| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
+#   12| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
 #    5| 0
 #-----|  -> ... > ...
+
+#    8| "Non-positive\n"
+#-----|  -> FormatArgsExpr
+
+#    6| "Positive\n"
+#-----|  -> FormatArgsExpr
 
 #   11| 3
 #-----|  -> 0..3
 
 #   11| 0
 #-----|  -> 3
+
+#   12| "{}\n"
+#-----|  -> i
 
 #    5| ... > ...
 #-----|  -> ExprStmt
@@ -104,13 +122,16 @@ Example1.rs:
 #-----|  -> 0
 
 #    8| ...::_print
-#-----|  -> ...::format_args_nl!...
+#-----|  -> "Non-positive\n"
 
 #    6| ...::_print
-#-----|  -> ...::format_args_nl!...
+#-----|  -> "Positive\n"
+
+#   12| i
+#-----|  -> FormatArgsExpr
 
 #   12| ...::_print
-#-----|  -> ...::format_args_nl!...
+#-----|  -> "{}\n"
 
 #    8| ExprStmt
 #-----|  -> ...::_print
@@ -284,11 +305,17 @@ Example1.rs:
 #   36| result
 #-----|  -> result
 
+#   37| FormatArgsExpr
+#-----|  -> ...::format_args_nl!...
+
 #   35| 5
 #-----|  -> simple_function(...)
 
 #   36| 20
 #-----|  -> complex_function(...)
+
+#   37| "{}\n"
+#-----|  -> result
 
 #   37| MacroExpr
 #-----|  -> ...::_print(...)
@@ -323,8 +350,11 @@ Example1.rs:
 #   36| complex_function
 #-----|  -> 20
 
+#   37| result
+#-----|  -> FormatArgsExpr
+
 #   37| ...::_print
-#-----|  -> ...::format_args_nl!...
+#-----|  -> "{}\n"
 
 #   35| ExprStmt
 #-----|  -> simple_function
