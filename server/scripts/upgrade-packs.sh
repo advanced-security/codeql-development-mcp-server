@@ -80,11 +80,17 @@ cd "${REPO_ROOT}"
 ## Resolve and pin the latest compatible version of the codeql/<lang>-all
 ## upstream dependency in a source pack's codeql-pack.yml.
 ##
-## Strategy: run `codeql pack upgrade` first to resolve the latest compatible
-## version into the lock file, then read the resolved version back and update
-## the codeql-pack.yml to pin that exact version. Packs with wildcard
-## dependencies (e.g., '*') still get their lock files upgraded, but the
-## pinning step is skipped — those versions intentionally float.
+## Strategy: when the dependency is pinned to an exact version, `codeql pack
+## upgrade` will leave both the manifest and the lock file unchanged because
+## the existing pin already satisfies the constraint. To force resolution to
+## the latest compatible version, this function temporarily rewrites the
+## pinned dependency to a wildcard ('*'), runs `codeql pack upgrade` (which
+## refreshes the lock file with the latest compatible versions of the
+## codeql/<lang>-all pack and all transitive dependencies), then reads the
+## resolved version back from the lock file and pins the manifest to that
+## exact version. Packs that already use a wildcard dependency keep
+## floating — the upgrade still runs against them, and the pinning step is
+## skipped.
 pin_upstream_dep() {
 	local pack_dir="$1"
 	local pack_yml="${pack_dir}/codeql-pack.yml"
@@ -106,6 +112,21 @@ pin_upstream_dep() {
 	dep_name=$(echo "${dep_line}" | sed 's/^[[:space:]]*//' | cut -d: -f1)
 	dep_old_version=$(echo "${dep_line}" | sed 's/^[^:]*:[[:space:]]*//')
 
+	local is_wildcard=false
+	if [[ "${dep_old_version}" == *"*"* ]]; then
+		is_wildcard=true
+	fi
+
+	## For pinned dependencies, temporarily rewrite the manifest to use a
+	## wildcard so `codeql pack upgrade` resolves to the latest compatible
+	## version. The original manifest is preserved as a .bak file and
+	## restored on failure.
+	if [[ "${is_wildcard}" == false ]]; then
+		cp "${pack_yml}" "${pack_yml}.bak"
+		sed -i.tmp "s|${dep_name}: ${dep_old_version}|${dep_name}: \"*\"|" "${pack_yml}"
+		rm -f "${pack_yml}.tmp"
+	fi
+
 	## Always run codeql pack upgrade so the lock file stays in sync with
 	## the CLI, even for packs with wildcard dependencies that intentionally
 	## float. Only the pinning step is skipped for wildcard deps.
@@ -113,17 +134,21 @@ pin_upstream_dep() {
 	if ! upgrade_output=$(codeql pack upgrade -- "${pack_dir}" 2>&1); then
 		echo "  ❌ codeql pack upgrade failed for ${pack_dir}:" >&2
 		echo "${upgrade_output}" >&2
+		if [[ "${is_wildcard}" == false ]]; then
+			mv "${pack_yml}.bak" "${pack_yml}"
+		fi
 		return 1
 	fi
 
 	## Skip pinning for wildcard dependencies — these intentionally float
-	if [[ "${dep_old_version}" == *"*"* ]]; then
+	if [[ "${is_wildcard}" == true ]]; then
 		echo "  ℹ️  ${dep_name}: ${dep_old_version} (wildcard — lock file upgraded, pinning skipped)"
 		return
 	fi
 
 	if [[ ! -f "${lock_file}" ]]; then
 		echo "  ⚠️  No lock file after upgrade for ${pack_dir}" >&2
+		mv "${pack_yml}.bak" "${pack_yml}"
 		return
 	fi
 
@@ -134,9 +159,12 @@ pin_upstream_dep() {
 
 	if [[ -z "${resolved_version}" ]]; then
 		echo "  ⚠️  ${dep_name}: not found in lock file, kept ${dep_old_version}" >&2
+		mv "${pack_yml}.bak" "${pack_yml}"
 		return
 	fi
 
+	## Restore the original manifest, then pin to the resolved version.
+	mv "${pack_yml}.bak" "${pack_yml}"
 	if [[ "${dep_old_version}" != "${resolved_version}" ]]; then
 		sed -i.bak "s|${dep_name}: ${dep_old_version}|${dep_name}: ${resolved_version}|" "${pack_yml}"
 		rm -f "${pack_yml}.bak"

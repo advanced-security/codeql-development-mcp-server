@@ -8,6 +8,9 @@ Example1.swift:
 #    5| var ... = ...
 #-----|  -> if ... then { ... } else { ... }
 
+#   12| var ... = ...
+#-----|  -> .next()
+
 #   12| 0
 #-----|  -> 3
 
@@ -106,6 +109,7 @@ Example1.swift:
 #-----|  -> for ... in ... { ... }
 
 #   12| call to makeIterator()
+#-----|  -> var ... = ...
 
 #    6| if ... then { ... } else { ... }
 #-----|  -> StmtCondition
