@@ -290,6 +290,40 @@ import javascript`;
       expect(result.success).toBe(false);
       expect(result.error).toContain('Failed to parse query results JSON');
     });
+
+    it('should handle object-based tuple results with source/target properties', async () => {
+      const queryContent = `/**
+ * @name Object Graph
+ * @description Graph with object-based tuples
+ * @kind graph
+ */
+
+import javascript`;
+
+      writeFileSync(testQueryPath, queryContent);
+
+      const mockJsonResults = JSON.stringify({
+        tuples: [
+          { source: 'NodeA', target: 'NodeB', label: 'calls' },
+          { source: 'NodeB', target: 'NodeC', relation: 'depends_on' },
+        ]
+      });
+
+      mockExecuteCodeQLCommand.mockResolvedValue({
+        success: true,
+        stdout: mockJsonResults,
+        stderr: '',
+        exitCode: 0
+      });
+
+      const result = await evaluateWithMermaidGraph(testBqrsPath, testQueryPath);
+
+      expect(result.success).toBe(true);
+      expect(result.content).toContain('```mermaid\ngraph TD');
+      expect(result.content).toContain('NodeA');
+      expect(result.content).toContain('NodeB');
+      expect(result.content).toContain('NodeC');
+    });
   });
 
   describe('evaluateQueryResults', () => {

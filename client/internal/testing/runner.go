@@ -516,7 +516,7 @@ func cleanStaleOutput(toolName string, params map[string]any, baseDir string) {
 		return
 	}
 
-	os.RemoveAll(fullPath)
+	_ = os.RemoveAll(fullPath)
 }
 
 func truncate(s string, max int) string {

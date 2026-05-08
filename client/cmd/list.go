@@ -61,7 +61,7 @@ func runListTools(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	tools, err := client.ListTools(ctx)
 	if err != nil {
@@ -87,15 +87,15 @@ func runListTools(_ *cobra.Command, _ []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(w, "NAME\tDESCRIPTION\n")
+	_, _ = fmt.Fprintf(w, "NAME\tDESCRIPTION\n")
 	for _, t := range tools {
 		desc := t.Description
 		if len(desc) > 80 {
 			desc = desc[:77] + "..."
 		}
-		fmt.Fprintf(w, "%s\t%s\n", t.Name, desc)
+		_, _ = fmt.Fprintf(w, "%s\t%s\n", t.Name, desc)
 	}
-	w.Flush()
+	_ = w.Flush()
 	fmt.Printf("\n%d tools registered\n", len(tools))
 	return nil
 }
@@ -106,7 +106,7 @@ func runListPrompts(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	prompts, err := client.ListPrompts(ctx)
 	if err != nil {
@@ -132,15 +132,15 @@ func runListPrompts(_ *cobra.Command, _ []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(w, "NAME\tDESCRIPTION\n")
+	_, _ = fmt.Fprintf(w, "NAME\tDESCRIPTION\n")
 	for _, p := range prompts {
 		desc := p.Description
 		if len(desc) > 80 {
 			desc = desc[:77] + "..."
 		}
-		fmt.Fprintf(w, "%s\t%s\n", p.Name, desc)
+		_, _ = fmt.Fprintf(w, "%s\t%s\n", p.Name, desc)
 	}
-	w.Flush()
+	_ = w.Flush()
 	fmt.Printf("\n%d prompts registered\n", len(prompts))
 	return nil
 }
@@ -151,7 +151,7 @@ func runListResources(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	resources, err := client.ListResources(ctx)
 	if err != nil {
@@ -178,15 +178,15 @@ func runListResources(_ *cobra.Command, _ []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(w, "NAME\tURI\tDESCRIPTION\n")
+	_, _ = fmt.Fprintf(w, "NAME\tURI\tDESCRIPTION\n")
 	for _, r := range resources {
 		desc := r.Description
 		if len(desc) > 60 {
 			desc = desc[:57] + "..."
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", r.Name, r.URI, desc)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", r.Name, r.URI, desc)
 	}
-	w.Flush()
+	_ = w.Flush()
 	fmt.Printf("\n%d resources registered\n", len(resources))
 	return nil
 }

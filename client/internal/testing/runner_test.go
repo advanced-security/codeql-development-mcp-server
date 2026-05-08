@@ -176,7 +176,7 @@ func TestRunnerWithMockCaller(t *testing.T) {
 	// Create a valid repo root with an empty fixtures directory
 	dir := t.TempDir()
 	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
-	os.MkdirAll(testsDir, 0o755)
+	_ = os.MkdirAll(testsDir, 0o755)
 
 	opts := RunnerOptions{
 		RepoRoot:    dir,
@@ -205,7 +205,7 @@ func TestRunnerNoInstallPacks(t *testing.T) {
 	dir := t.TempDir()
 	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
 	// Create the fixture dir so the runner encounters it and records a skip
-	os.MkdirAll(filepath.Join(testsDir, "codeql_pack_install"), 0o755)
+	_ = os.MkdirAll(filepath.Join(testsDir, "codeql_pack_install"), 0o755)
 
 	opts := RunnerOptions{
 		RepoRoot:       dir,
@@ -249,9 +249,9 @@ func TestRunnerEmptyContentFails(t *testing.T) {
 	dir := t.TempDir()
 	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
 	toolDir := filepath.Join(testsDir, "mock_tool", "basic")
-	os.MkdirAll(filepath.Join(toolDir, "before"), 0o755)
-	os.MkdirAll(filepath.Join(toolDir, "after"), 0o755)
-	os.WriteFile(filepath.Join(toolDir, "test-config.json"),
+	_ = os.MkdirAll(filepath.Join(toolDir, "before"), 0o755)
+	_ = os.MkdirAll(filepath.Join(toolDir, "after"), 0o755)
+	_ = os.WriteFile(filepath.Join(toolDir, "test-config.json"),
 		[]byte(`{"toolName":"mock_tool","arguments":{"key":"value"}}`), 0o600)
 
 	opts := RunnerOptions{
@@ -292,7 +292,7 @@ func TestValidateAssertions_NoConfig(t *testing.T) {
 
 func TestValidateAssertions_NoAssertions(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{}}`), 0o600)
 
 	result := validateAssertions(dir, []mcpprim.ContentBlock{{Text: "hello"}})
@@ -303,7 +303,7 @@ func TestValidateAssertions_NoAssertions(t *testing.T) {
 
 func TestValidateAssertions_ResponseContains_Pass(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["hello","world"]}}`), 0o600)
 
 	content := []mcpprim.ContentBlock{{Text: "hello world"}}
@@ -315,7 +315,7 @@ func TestValidateAssertions_ResponseContains_Pass(t *testing.T) {
 
 func TestValidateAssertions_ResponseContains_Fail(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["missing"]}}`), 0o600)
 
 	content := []mcpprim.ContentBlock{{Text: "hello world"}}
@@ -327,7 +327,7 @@ func TestValidateAssertions_ResponseContains_Fail(t *testing.T) {
 
 func TestValidateAssertions_ResponseNotContains_Pass(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseNotContains":["error","fail"]}}`), 0o600)
 
 	content := []mcpprim.ContentBlock{{Text: "all good"}}
@@ -339,7 +339,7 @@ func TestValidateAssertions_ResponseNotContains_Pass(t *testing.T) {
 
 func TestValidateAssertions_ResponseNotContains_Fail(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseNotContains":["error"]}}`), 0o600)
 
 	content := []mcpprim.ContentBlock{{Text: "some error happened"}}
@@ -351,7 +351,7 @@ func TestValidateAssertions_ResponseNotContains_Fail(t *testing.T) {
 
 func TestValidateAssertions_MinContentBlocks_Pass(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"minContentBlocks":2}}`), 0o600)
 
 	content := []mcpprim.ContentBlock{{Text: "block1"}, {Text: "block2"}}
@@ -363,7 +363,7 @@ func TestValidateAssertions_MinContentBlocks_Pass(t *testing.T) {
 
 func TestValidateAssertions_MinContentBlocks_Fail(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"minContentBlocks":3}}`), 0o600)
 
 	content := []mcpprim.ContentBlock{{Text: "only one"}}
@@ -375,7 +375,7 @@ func TestValidateAssertions_MinContentBlocks_Fail(t *testing.T) {
 
 func TestValidateAssertions_MultipleBlocks(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test-config.json"),
+	_ = os.WriteFile(filepath.Join(dir, "test-config.json"),
 		[]byte(`{"toolName":"my_tool","arguments":{},"assertions":{"responseContains":["from block2"]}}`), 0o600)
 
 	content := []mcpprim.ContentBlock{{Text: "block1 text"}, {Text: "from block2"}}
@@ -418,9 +418,9 @@ func TestRunnerAssertionFailure(t *testing.T) {
 	dir := t.TempDir()
 	testsDir := filepath.Join(dir, "client", "integration-tests", "primitives", "tools")
 	toolDir := filepath.Join(testsDir, "mock_tool", "assertion_test")
-	os.MkdirAll(filepath.Join(toolDir, "before"), 0o755)
-	os.MkdirAll(filepath.Join(toolDir, "after"), 0o755)
-	os.WriteFile(filepath.Join(toolDir, "test-config.json"),
+	_ = os.MkdirAll(filepath.Join(toolDir, "before"), 0o755)
+	_ = os.MkdirAll(filepath.Join(toolDir, "after"), 0o755)
+	_ = os.WriteFile(filepath.Join(toolDir, "test-config.json"),
 		[]byte(`{"toolName":"mock_tool","arguments":{"key":"value"},"assertions":{"responseContains":["expected text"]}}`), 0o600)
 
 	runner := NewRunner(caller, RunnerOptions{RepoRoot: dir})
@@ -450,7 +450,7 @@ func TestRunnerAssertionFailure(t *testing.T) {
 func TestCleanStaleOutputRelativeFile(t *testing.T) {
 	dir := t.TempDir()
 	staleFile := filepath.Join(dir, "query-results.sarif")
-	os.WriteFile(staleFile, []byte("stale"), 0o600)
+	_ = os.WriteFile(staleFile, []byte("stale"), 0o600)
 
 	params := map[string]any{
 		"interpretedOutput": "query-results.sarif",
@@ -466,8 +466,8 @@ func TestCleanStaleOutputRelativeFile(t *testing.T) {
 func TestCleanStaleOutputRelativeDir(t *testing.T) {
 	dir := t.TempDir()
 	staleDir := filepath.Join(dir, "query-results")
-	os.MkdirAll(filepath.Join(staleDir, "subdir"), 0o755)
-	os.WriteFile(filepath.Join(staleDir, "subdir", "file.txt"), []byte("stale"), 0o600)
+	_ = os.MkdirAll(filepath.Join(staleDir, "subdir"), 0o755)
+	_ = os.WriteFile(filepath.Join(staleDir, "subdir", "file.txt"), []byte("stale"), 0o600)
 
 	params := map[string]any{
 		"interpretedOutput": "query-results",
@@ -485,8 +485,8 @@ func TestCleanStaleOutputAbsolutePathWithinBase(t *testing.T) {
 	// within tmpBase. cleanStaleOutput should clean those paths.
 	dir := t.TempDir()
 	staleFile := filepath.Join(dir, "test-output", "query-results.sarif")
-	os.MkdirAll(filepath.Dir(staleFile), 0o755)
-	os.WriteFile(staleFile, []byte("stale"), 0o600)
+	_ = os.MkdirAll(filepath.Dir(staleFile), 0o755)
+	_ = os.WriteFile(staleFile, []byte("stale"), 0o600)
 
 	params := map[string]any{
 		"interpretedOutput": staleFile, // absolute path inside dir
@@ -503,10 +503,10 @@ func TestCleanStaleOutputRejectsAbsolutePathOutsideBase(t *testing.T) {
 	// Absolute paths that are OUTSIDE baseDir must not be removed.
 	dir := t.TempDir()
 	outsideFile := filepath.Join(dir, "outside-file")
-	os.WriteFile(outsideFile, []byte("keep"), 0o600)
+	_ = os.WriteFile(outsideFile, []byte("keep"), 0o600)
 
 	innerBase := filepath.Join(dir, "inner")
-	os.MkdirAll(innerBase, 0o755)
+	_ = os.MkdirAll(innerBase, 0o755)
 
 	params := map[string]any{
 		"interpretedOutput": outsideFile, // absolute path OUTSIDE innerBase
@@ -522,10 +522,10 @@ func TestCleanStaleOutputRejectsAbsolutePathOutsideBase(t *testing.T) {
 func TestCleanStaleOutputRejectsTraversal(t *testing.T) {
 	dir := t.TempDir()
 	parentFile := filepath.Join(dir, "parent-file")
-	os.WriteFile(parentFile, []byte("keep"), 0o600)
+	_ = os.WriteFile(parentFile, []byte("keep"), 0o600)
 
 	childDir := filepath.Join(dir, "child")
-	os.MkdirAll(childDir, 0o755)
+	_ = os.MkdirAll(childDir, 0o755)
 
 	params := map[string]any{
 		"interpretedOutput": "../parent-file",
@@ -541,7 +541,7 @@ func TestCleanStaleOutputRejectsTraversal(t *testing.T) {
 func TestCleanStaleOutputSkipsNonQueryRun(t *testing.T) {
 	dir := t.TempDir()
 	staleFile := filepath.Join(dir, "output.txt")
-	os.WriteFile(staleFile, []byte("keep"), 0o600)
+	_ = os.WriteFile(staleFile, []byte("keep"), 0o600)
 
 	params := map[string]any{
 		"interpretedOutput": "output.txt",

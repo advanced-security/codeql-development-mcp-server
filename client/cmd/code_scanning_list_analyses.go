@@ -72,9 +72,9 @@ func runListAnalyses(cmd *cobra.Command, _ []string) error {
 	}
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tTOOL\tREF\tCATEGORY\tRESULTS\tRULES\tCREATED")
+	_, _ = fmt.Fprintln(w, "ID\tTOOL\tREF\tCATEGORY\tRESULTS\tRULES\tCREATED")
 	for _, a := range analyses {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%d\t%d\t%s\n",
+		_, _ = fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%d\t%d\t%s\n",
 			a.ID, a.Tool.Name, a.Ref, a.Category, a.ResultsCount, a.RulesCount, a.CreatedAt)
 	}
 	return w.Flush()

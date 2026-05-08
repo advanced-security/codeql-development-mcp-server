@@ -144,10 +144,10 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
     const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3000;
     
     // Return a promise that keeps the process alive
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<McpServer>((resolve, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
-        resolve();
+        resolve(server);
       });
       
       httpServer.on('error', (error) => {
