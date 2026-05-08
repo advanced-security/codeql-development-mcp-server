@@ -2,27 +2,27 @@
 lockVersion: 1.0.0
 dependencies:
   codeql/concepts:
-    version: 0.0.22
+    version: 0.0.23
   codeql/controlflow:
-    version: 2.0.32
+    version: 2.0.33
   codeql/dataflow:
-    version: 2.1.4
+    version: 2.1.5
   codeql/mad:
-    version: 1.0.48
+    version: 1.0.49
   codeql/regex:
-    version: 1.0.48
+    version: 1.0.49
   codeql/rust-all:
-    version: 0.2.12
+    version: 0.2.13
   codeql/ssa:
-    version: 2.0.24
+    version: 2.0.25
   codeql/threat-models:
-    version: 1.0.48
+    version: 1.0.49
   codeql/tutorial:
-    version: 1.0.48
+    version: 1.0.49
   codeql/typeinference:
-    version: 0.0.29
+    version: 0.0.30
   codeql/typetracking:
-    version: 2.0.32
+    version: 2.0.33
   codeql/util:
-    version: 2.0.35
+    version: 2.0.36
 compiled: false

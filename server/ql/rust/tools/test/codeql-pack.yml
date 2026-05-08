@@ -1,5 +1,5 @@
 name: advanced-security/ql-mcp-rust-tools-test
-version: 2.25.3
+version: 2.25.4
 dependencies:
   advanced-security/ql-mcp-rust-tools-src: ${workspace}
 extractor: rust
