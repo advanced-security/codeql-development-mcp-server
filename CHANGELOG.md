@@ -44,7 +44,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 | `codeql://languages/rust/library-modeling`       | Rust-specific library-modeling guide (crate-path-based MaD format) for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                |
 | `codeql://languages/swift/library-modeling`      | Swift-specific library-modeling guide (MaD tuple format) for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                          |
 
-The Go `codeql://languages/go/library-modeling` resource was already registered prior to this release; the new entries above complete coverage of every CodeQL language that supports Models-as-Data upstream. `actions` is intentionally excluded because it does not support data extensions.
+With these additions, every CodeQL language that supports Models-as-Data upstream (`cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`) now has a registered `codeql://languages/<lang>/library-modeling` resource. `actions` is intentionally excluded because it does not support data extensions.
 
 ### Fixed
 
