@@ -41,7 +41,7 @@ func runUsePrompt(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	result, err := mcpclient.GetPrompt(ctx, client, promptName, params)
 	if err != nil {
@@ -58,11 +58,11 @@ func outputPromptMessages(result *mcpclient.PromptMessages) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stdout, s)
+		_, _ = fmt.Fprintln(os.Stdout, s)
 	case "markdown":
-		fmt.Fprint(os.Stdout, mcpclient.FormatPromptMessagesMarkdown(result))
+		_, _ = fmt.Fprint(os.Stdout, mcpclient.FormatPromptMessagesMarkdown(result))
 	default:
-		fmt.Fprint(os.Stdout, mcpclient.FormatPromptMessagesText(result))
+		_, _ = fmt.Fprint(os.Stdout, mcpclient.FormatPromptMessagesText(result))
 	}
 	return nil
 }

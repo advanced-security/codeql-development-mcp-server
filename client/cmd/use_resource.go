@@ -33,7 +33,7 @@ func runUseResource(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	result, err := mcpclient.ReadResource(ctx, client, uri)
 	if err != nil {
@@ -50,11 +50,11 @@ func outputResourceContent(result *mcpclient.ResourceContent) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stdout, s)
+		_, _ = fmt.Fprintln(os.Stdout, s)
 	case "markdown":
-		fmt.Fprint(os.Stdout, mcpclient.FormatResourceContentMarkdown(result))
+		_, _ = fmt.Fprint(os.Stdout, mcpclient.FormatResourceContentMarkdown(result))
 	default:
-		fmt.Fprint(os.Stdout, mcpclient.FormatResourceContentText(result))
+		_, _ = fmt.Fprint(os.Stdout, mcpclient.FormatResourceContentText(result))
 	}
 	return nil
 }

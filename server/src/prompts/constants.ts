@@ -20,3 +20,23 @@ export const SUPPORTED_LANGUAGES = [
   'rust',
   'swift',
 ] as const;
+
+/**
+ * CodeQL languages that support Models-as-Data (MaD) data extensions.
+ *
+ * This is the subset of {@link SUPPORTED_LANGUAGES} for which the server
+ * registers a `codeql://languages/<language>/library-modeling` resource.
+ * `actions` is intentionally excluded because the GitHub Actions language
+ * does not support data extensions upstream.
+ */
+export const MAD_SUPPORTED_LANGUAGES = [
+  'cpp',
+  'csharp',
+  'go',
+  'java',
+  'javascript',
+  'python',
+  'ruby',
+  'rust',
+  'swift',
+] as const;

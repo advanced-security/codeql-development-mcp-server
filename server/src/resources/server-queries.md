@@ -8,13 +8,13 @@ For general QL query writing guidance (syntax, metadata, `from`/`where`/`select`
 
 The server bundles five tools queries that operate on CodeQL databases:
 
-| Query             | Purpose                                                 | Output Format             |
-| ----------------- | ------------------------------------------------------- | ------------------------- |
-| `PrintAST`        | Visualize the Abstract Syntax Tree of source code       | `@kind graph` (graphtext) |
-| `PrintCFG`        | Visualize the Control Flow Graph of a function          | `@kind graph` (graphtext) |
-| `CallGraphFrom`   | Show all functions called FROM a given function         | `@kind graph` (graphtext) |
-| `CallGraphTo`     | Show all call sites that call TO a given function       | `@kind graph` (graphtext) |
-| `CallGraphFromTo` | Show calls FROM one function TO another (bidirectional) | `@kind graph` (graphtext) |
+| Query             | Purpose                                           | Output Format             |
+| ----------------- | ------------------------------------------------- | ------------------------- |
+| `PrintAST`        | Visualize the Abstract Syntax Tree of source code | `@kind graph` (graphtext) |
+| `PrintCFG`        | Visualize the Control Flow Graph of a function    | `@kind graph` (graphtext) |
+| `CallGraphFrom`   | Show all functions called FROM a given function   | `@kind graph` (graphtext) |
+| `CallGraphTo`     | Show all call sites that call TO a given function | `@kind graph` (graphtext) |
+| `CallGraphFromTo` | Show calls FROM one function TO another           | `@kind graph` (graphtext) |
 
 All five queries use `@kind graph` metadata and produce output in graphtext format.
 

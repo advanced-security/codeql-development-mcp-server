@@ -6,12 +6,16 @@ on:
     paths:
       - '.github/workflows/build-server.yml'
       - '.node-version'
+      - 'package.json'
+      - 'package-lock.json'
       - 'server/**'
   push:
     branches: ['main', 'next']
     paths:
       - '.github/workflows/build-server.yml'
       - '.node-version'
+      - 'package.json'
+      - 'package-lock.json'
       - 'server/**'
 
 permissions:

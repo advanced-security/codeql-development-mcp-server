@@ -76,6 +76,6 @@ func runDownloadAnalysis(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Downloaded SARIF to %s (%d bytes)\n", outPath, len(sarif))
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Downloaded SARIF to %s (%d bytes)\n", outPath, len(sarif))
 	return nil
 }

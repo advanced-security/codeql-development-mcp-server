@@ -10,20 +10,22 @@ The CodeQL Development MCP Server wraps the CodeQL CLI and supporting utilities 
 
 Read these resources via `resources/read` to deepen your understanding:
 
-| URI                                           | Purpose                                             |
-| --------------------------------------------- | --------------------------------------------------- |
-| `codeql://server/overview`                    | This guide — MCP server orientation                 |
-| `codeql://server/queries`                     | Bundled tools queries (PrintAST, PrintCFG, etc.)    |
-| `codeql://server/tools`                       | Complete default tool reference                     |
-| `codeql://server/prompts`                     | Complete prompt reference                           |
-| `codeql://learning/query-basics`              | QL query writing reference (syntax, metadata, etc.) |
-| `codeql://learning/test-driven-development`   | TDD theory and workflow for CodeQL                  |
-| `codeql://templates/security`                 | Security query templates (multi-language)           |
-| `codeql://patterns/performance`               | Performance profiling and optimization              |
-| `codeql://guides/query-unit-testing`          | Guide for creating and running CodeQL query tests   |
-| `codeql://guides/dataflow-migration-v1-to-v2` | Migrating from v1 to v2 dataflow API                |
-| `codeql://languages/{language}/ast`           | Language-specific AST class reference               |
-| `codeql://languages/{language}/security`      | Language-specific security patterns                 |
+| URI                                              | Purpose                                                                                                                                                                                 |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql://server/overview`                       | This guide — MCP server orientation                                                                                                                                                     |
+| `codeql://server/queries`                        | Bundled tools queries (PrintAST, PrintCFG, etc.)                                                                                                                                        |
+| `codeql://server/tools`                          | Complete default tool reference                                                                                                                                                         |
+| `codeql://server/prompts`                        | Complete prompt reference                                                                                                                                                               |
+| `codeql://learning/query-basics`                 | QL query writing reference (syntax, metadata, etc.)                                                                                                                                     |
+| `codeql://learning/test-driven-development`      | TDD theory and workflow for CodeQL                                                                                                                                                      |
+| `codeql://learning/data-extensions`              | Data extensions (Models-as-Data) overview and formats                                                                                                                                   |
+| `codeql://templates/security`                    | Security query templates (multi-language)                                                                                                                                               |
+| `codeql://patterns/performance`                  | Performance profiling and optimization                                                                                                                                                  |
+| `codeql://guides/query-unit-testing`             | Guide for creating and running CodeQL query tests                                                                                                                                       |
+| `codeql://guides/dataflow-migration-v1-to-v2`    | Migrating from v1 to v2 dataflow API                                                                                                                                                    |
+| `codeql://languages/{language}/ast`              | Language-specific AST class reference                                                                                                                                                   |
+| `codeql://languages/{language}/security`         | Language-specific security patterns                                                                                                                                                     |
+| `codeql://languages/{language}/library-modeling` | Language-specific library modeling — registered for every CodeQL language that supports Models-as-Data (`cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`) |
 
 ## Quick-Start Workflows
 
@@ -74,12 +76,14 @@ The server provides default tools across these categories (see `codeql://server/
 
 ## Prompt Categories
 
-The server provides **11 prompts** (see `codeql://server/prompts` for the full reference):
+The server provides **15 prompts** (see `codeql://server/prompts` for the full reference):
 
 - **Test-driven development** — `test_driven_development`, `ql_tdd_basic`, `ql_tdd_advanced`
 - **Code understanding** — `tools_query_workflow`, `explain_codeql_query`
 - **Iterative development** — `ql_lsp_iterative_development`
 - **Documentation and quality** — `document_codeql_query`, `run_query_and_summarize_false_positives`, `sarif_rank_false_positives`, `sarif_rank_true_positives`
+- **Alert analysis** — `compare_overlapping_alerts`, `check_for_duplicated_code`, `find_overlapping_queries`
+- **Data extension development** — `data_extension_development`
 - **Workshop creation** — `workshop_creation_workflow`
 
 ## Key Concepts

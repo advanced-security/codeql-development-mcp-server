@@ -95,7 +95,7 @@ func runIntegrationTests(cmd *cobra.Command, _ []string) error {
 	// server/.tmp/) which causes log directory validation failures.
 	tmpBase := filepath.Join(repoRoot, ".tmp")
 	if os.Getenv("CODEQL_MCP_TMP_DIR") == "" {
-		os.Setenv("CODEQL_MCP_TMP_DIR", tmpBase)
+		_ = os.Setenv("CODEQL_MCP_TMP_DIR", tmpBase)
 	}
 
 	// Connect to MCP server
