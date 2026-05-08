@@ -12,11 +12,11 @@ import semmle.code.csharp.controlflow.ControlFlowGraph
 /**
  * Configuration for PrintCFG that outputs all CFG nodes and edges.
  */
-query predicate nodes(ControlFlow::Node node, string property, string value) {
+query predicate nodes(ControlFlowNode node, string property, string value) {
   property = "semmle.label" and
   value = node.toString()
 }
 
-query predicate edges(ControlFlow::Node pred, ControlFlow::Node succ) {
+query predicate edges(ControlFlowNode pred, ControlFlowNode succ) {
   pred.getASuccessor() = succ
 }
