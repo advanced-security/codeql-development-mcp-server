@@ -4,8 +4,19 @@
 
 import { existsSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { computeQueryCacheKey } from '../../../src/lib/result-processor';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Module-scope mocks must be declared before importing the module under test.
+const { mockExecuteCodeQLCommand, mockGetActualCodeqlVersion } = vi.hoisted(() => ({
+  mockExecuteCodeQLCommand: vi.fn(),
+  mockGetActualCodeqlVersion: vi.fn(() => '2.25.0'),
+}));
+vi.mock('../../../src/lib/cli-executor', () => ({
+  executeCodeQLCommand: mockExecuteCodeQLCommand,
+  getActualCodeqlVersion: mockGetActualCodeqlVersion,
+}));
+
+import { computeQueryCacheKey, processQueryRunResults } from '../../../src/lib/result-processor';
 import { readDatabaseMetadata } from '../../../src/lib/database-resolver';
 import { createProjectTempDir } from '../../../src/utils/temp-dir';
 
@@ -99,5 +110,116 @@ describe('database language resolution for caching', () => {
     writeFileSync(join(testDir, 'codeql-database.yaml'), 'primaryLanguage: python\n');
     const metadata = readDatabaseMetadata(testDir);
     expect(metadata.language).toBe('python');
+  });
+});
+
+/**
+ * processQueryRunResults should infer a default output format from the query's
+ * @kind metadata when the caller does not explicitly request one. This ensures
+ * problem/path-problem/graph queries are interpreted (and auto-cached) without
+ * forcing every caller to specify `format`.
+ */
+describe('processQueryRunResults format inference from @kind', () => {
+  let testDir: string;
+  const noopLogger = { error: () => {}, info: () => {} };
+
+  beforeEach(() => {
+    testDir = createProjectTempDir('format-infer-test-');
+    mockExecuteCodeQLCommand.mockReset();
+    // Default: bqrs interpret call succeeds with empty stdout.
+    mockExecuteCodeQLCommand.mockResolvedValue({
+      exitCode: 0, stderr: '', stdout: '', success: true,
+    });
+  });
+
+  afterEach(() => {
+    if (existsSync(testDir)) {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  function writeQuery(kind: string): string {
+    const queryPath = join(testDir, 'q.ql');
+    writeFileSync(queryPath, `/**\n * @id test/q\n * @name Test\n * @kind ${kind}\n */\nfrom int x select x\n`);
+    return queryPath;
+  }
+
+  it('infers sarif-latest for @kind problem when format is not provided', async () => {
+    const queryPath = writeQuery('problem');
+    const bqrsPath = join(testDir, 'results.bqrs');
+    writeFileSync(bqrsPath, '');
+
+    await processQueryRunResults(
+      { exitCode: 0, stderr: '', stdout: '', success: true },
+      { output: bqrsPath, query: queryPath },
+      noopLogger,
+    );
+
+    expect(mockExecuteCodeQLCommand).toHaveBeenCalled();
+    const [subcommand, opts] = mockExecuteCodeQLCommand.mock.calls[0];
+    expect(subcommand).toBe('bqrs interpret');
+    expect(opts.format).toBe('sarif-latest');
+  });
+
+  it('infers sarif-latest for @kind path-problem when format is not provided', async () => {
+    const queryPath = writeQuery('path-problem');
+    const bqrsPath = join(testDir, 'results.bqrs');
+    writeFileSync(bqrsPath, '');
+
+    await processQueryRunResults(
+      { exitCode: 0, stderr: '', stdout: '', success: true },
+      { output: bqrsPath, query: queryPath },
+      noopLogger,
+    );
+
+    expect(mockExecuteCodeQLCommand).toHaveBeenCalled();
+    const [, opts] = mockExecuteCodeQLCommand.mock.calls[0];
+    expect(opts.format).toBe('sarif-latest');
+  });
+
+  it('infers graphtext for @kind graph when format is not provided', async () => {
+    const queryPath = writeQuery('graph');
+    const bqrsPath = join(testDir, 'results.bqrs');
+    writeFileSync(bqrsPath, '');
+
+    await processQueryRunResults(
+      { exitCode: 0, stderr: '', stdout: '', success: true },
+      { output: bqrsPath, query: queryPath },
+      noopLogger,
+    );
+
+    expect(mockExecuteCodeQLCommand).toHaveBeenCalled();
+    const [, opts] = mockExecuteCodeQLCommand.mock.calls[0];
+    expect(opts.format).toBe('graphtext');
+  });
+
+  it('does not interpret @kind table queries when format is not provided', async () => {
+    const queryPath = writeQuery('table');
+    const bqrsPath = join(testDir, 'results.bqrs');
+    writeFileSync(bqrsPath, '');
+
+    await processQueryRunResults(
+      { exitCode: 0, stderr: '', stdout: '', success: true },
+      { output: bqrsPath, query: queryPath },
+      noopLogger,
+    );
+
+    expect(mockExecuteCodeQLCommand).not.toHaveBeenCalled();
+  });
+
+  it('honours an explicit format over inference', async () => {
+    const queryPath = writeQuery('problem');
+    const bqrsPath = join(testDir, 'results.bqrs');
+    writeFileSync(bqrsPath, '');
+
+    await processQueryRunResults(
+      { exitCode: 0, stderr: '', stdout: '', success: true },
+      { format: 'csv', output: bqrsPath, query: queryPath },
+      noopLogger,
+    );
+
+    expect(mockExecuteCodeQLCommand).toHaveBeenCalled();
+    const [, opts] = mockExecuteCodeQLCommand.mock.calls[0];
+    expect(opts.format).toBe('csv');
   });
 });

@@ -161,11 +161,6 @@ export async function processQueryRunResults(
       queryName,
     } = params;
 
-    // If no format or evaluationFunction specified, return as-is
-    if (!format && !evaluationFunction) {
-      return result;
-    }
-
     // Ensure output (bqrs file) was generated
     if (!output) {
       return result;
@@ -183,6 +178,32 @@ export async function processQueryRunResults(
       queryPath = await resolveQueryPath(params, logger);
     }
 
+    // Resolve effective format: when caller did not explicitly request a format
+    // and is not using the legacy evaluationFunction, infer one from the query's
+    // @kind metadata so that results from problem/path-problem/graph queries are
+    // automatically interpreted and cached.
+    let effectiveFormat: string | undefined = format as string | undefined;
+    if (!effectiveFormat && !evaluationFunction && queryPath) {
+      try {
+        const metadata = await extractQueryMetadata(queryPath);
+        if (metadata.kind === 'problem' || metadata.kind === 'path-problem') {
+          effectiveFormat = 'sarif-latest';
+        } else if (metadata.kind === 'graph') {
+          effectiveFormat = 'graphtext';
+        }
+        if (effectiveFormat) {
+          logger.info(`No format specified; defaulting to '${effectiveFormat}' for @kind ${metadata.kind} query`);
+        }
+      } catch (metaErr) {
+        logger.error('Failed to infer default format from query metadata:', metaErr);
+      }
+    }
+
+    // If no format (explicit or inferred) and no evaluationFunction, return as-is
+    if (!effectiveFormat && !evaluationFunction) {
+      return result;
+    }
+
     if (!queryPath) {
       logger.error('Cannot determine query path for interpretation/evaluation');
       return {
@@ -192,8 +213,8 @@ export async function processQueryRunResults(
     }
 
     // Handle new format parameter (preferred approach)
-    if (format) {
-      const outputFormat = format as string;
+    if (effectiveFormat) {
+      const outputFormat = effectiveFormat;
 
       // Determine output path
       let outputFilePath = interpretedOutput as string | undefined;
