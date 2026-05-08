@@ -7,7 +7,7 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 ## Features
 
 - **Comprehensive Tool Suite** - Wraps CodeQL CLI commands for query compilation, execution, testing, and database operations
-- **Multi-Language Support** - Supports CodeQL query development for 9 languages including Python, JavaScript, Java, C/C++, and more
+- **Multi-Language Support** - Supports CodeQL query development for 10 languages including Python, JavaScript, Java, C/C++, Rust, Swift, and more
 - **AI-Optimized Prompts** - Built-in prompts and resources that guide AI assistants through CodeQL development workflows
 - **Test-Driven Development** - Integrated testing tools for validating query accuracy with expected results
 - **Flexible Transport** - Supports both stdio and HTTP transport modes for different integration scenarios

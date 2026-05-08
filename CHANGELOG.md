@@ -14,27 +14,57 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.25.4] — 2026-05-08
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.25.4** — Full compatibility with the latest CodeQL CLI release, including upgraded QL pack dependencies for all supported languages and re-baselined `PrintCFG` test expectations for C# (csharp-all 6.0.0 dropped the legacy `ControlFlow::Node` namespace) and Java (deterministic node-ordering change). ([#272](https://github.com/advanced-security/codeql-development-mcp-server/pull/272))
+- **First-class Models-as-Data (MaD) authoring support** — New `data_extension_development` workflow prompt plus a `codeql://learning/data-extensions` overview resource and per-language `codeql://languages/<lang>/library-modeling` guides for every CodeQL language that supports MaD upstream (`cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`). ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))
+- **Schema fix unblocks GitHub Copilot Chat** — Replaced `z.tuple([...])` parameters on `query_results_cache_retrieve` with `z.object({ start, end })` so the MCP SDK emits a valid JSON Schema accepted by Copilot Chat's strict validator. ([#263](https://github.com/advanced-security/codeql-development-mcp-server/pull/263))
+
 ### Added
 
 #### MCP Server Prompts
 
-| Prompt                       | Description                                                                                                                                                                                                                                 |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data_extension_development` | End-to-end workflow for authoring CodeQL data extensions (Models-as-Data) for third-party libraries; restricts `language` to MaD-supported languages. ([#266](https://github.com/advanced-security/codeql-development-mcp-server/pull/266)) |
+| Prompt                       | Description                                                                                                                                                                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data_extension_development` | End-to-end workflow for authoring CodeQL data extensions (Models-as-Data) for third-party libraries; restricts `language` to MaD-supported languages. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271)) |
 
 #### MCP Server Resources
 
-| URI                                         | Description                                                                                                                                                                                             |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `codeql://learning/data-extensions`         | Models-as-Data (MaD) overview: YAML model formats, extensible predicates, and model-pack layout. ([#266](https://github.com/advanced-security/codeql-development-mcp-server/pull/266))                  |
-| `codeql://languages/rust/library-modeling`  | Rust-specific library-modeling guide (crate-path-based MaD format) for the `data_extension_development` workflow. ([#266](https://github.com/advanced-security/codeql-development-mcp-server/pull/266)) |
-| `codeql://languages/swift/library-modeling` | Swift-specific library-modeling guide (MaD tuple format) for the `data_extension_development` workflow. ([#266](https://github.com/advanced-security/codeql-development-mcp-server/pull/266))           |
+| URI                                              | Description                                                                                                                                                                                                                                                            |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql://learning/data-extensions`              | Models-as-Data (MaD) overview: YAML model formats, extensible predicates, and model-pack layout. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                                 |
+| `codeql://languages/cpp/library-modeling`        | C/C++-specific library-modeling guide for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                                             |
+| `codeql://languages/csharp/library-modeling`     | C#-specific library-modeling guide for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                                                |
+| `codeql://languages/java/library-modeling`       | Java/Kotlin-specific library-modeling guide for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                                       |
+| `codeql://languages/javascript/library-modeling` | JavaScript/TypeScript-specific library-modeling guide for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                             |
+| `codeql://languages/python/library-modeling`     | Python-specific library-modeling guide for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                                            |
+| `codeql://languages/ruby/library-modeling`       | Ruby-specific library-modeling guide for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                                              |
+| `codeql://languages/rust/library-modeling`       | Rust-specific library-modeling guide (crate-path-based MaD format) for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                |
+| `codeql://languages/swift/library-modeling`      | Swift-specific library-modeling guide (MaD tuple format) for the `data_extension_development` workflow. ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))                                                                          |
 
-Every CodeQL language that supports Models-as-Data upstream (`cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`) now has a registered `codeql://languages/<language>/library-modeling` resource. `actions` is intentionally excluded because it does not support data extensions.
+The Go `codeql://languages/go/library-modeling` resource was already registered prior to this release; the new entries above complete coverage of every CodeQL language that supports Models-as-Data upstream. `actions` is intentionally excluded because it does not support data extensions.
 
 ### Fixed
 
 - **`query_results_cache_retrieve` rejected by GitHub Copilot Chat (HTTP 400 invalid schema)** — The `lineRange` and `resultIndices` parameters were defined with `z.tuple([...])`, which the MCP SDK serialized to a bare-array JSON Schema value (e.g. `[{"type":"integer"}, {"type":"integer"}]`). GitHub Copilot Chat enforces strict JSON Schema validation and rejected the entire `ql-mcp` server with `"... is not of type 'object', 'boolean'"`. Both parameters now use `z.object({ start, end })` so they serialize to a valid `type: "object"` JSON Schema. Tool callers must now pass `{ "lineRange": { "start": 1, "end": 10 } }` instead of `{ "lineRange": [1, 10] }`. ([#263](https://github.com/advanced-security/codeql-development-mcp-server/pull/263))
+- **C# `PrintCFG` query failed to compile against `codeql/csharp-all` 6.0.0** — The legacy `ControlFlow::Node` namespace was removed by the new pack; the query now uses `ControlFlowNode` directly and the `PrintCFG.expected` baseline has been regenerated against the new CFG (`Entry` / `Normal Exit` / `Exit` markers and explicit `Before <expr>` nodes). The Java `PrintCFG.expected` baseline was also re-generated to absorb a deterministic node-ordering change in CodeQL CLI v2.25.4 (same nodes and edges, reordered). ([#272](https://github.com/advanced-security/codeql-development-mcp-server/pull/272))
+
+### Dependencies
+
+- Upgraded CodeQL CLI dependency to v2.25.4 and synchronized all `ql-mcp-*` pack dependencies to the matching upstream library packs. ([#272](https://github.com/advanced-security/codeql-development-mcp-server/pull/272))
+- Bumped `hono` from 4.12.14 to 4.12.18. ([#273](https://github.com/advanced-security/codeql-development-mcp-server/pull/273))
+
+### Changed
+
+#### Infrastructure & CI/CD
+
+- Tightened `on.paths` triggers for the `build-server`, `build-and-test-client`, and `build-and-test-extension` workflows so unrelated changes no longer re-run the matrix builds. ([#274](https://github.com/advanced-security/codeql-development-mcp-server/pull/274))
+
+**Full Changelog**: [`v2.25.2...v2.25.4`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.2...v2.25.4)
+
+---
 
 ## [v2.25.2] — 2026-04-15
 
@@ -448,7 +478,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.2...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.4...HEAD
+[v2.25.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.4
 [v2.25.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.2
 [v2.25.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.1
 [v2.25.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.0
