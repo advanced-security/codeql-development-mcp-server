@@ -4,20 +4,24 @@ on:
   pull_request:
     branches: ['main', 'next']
     paths:
+      - '.codeql-version'
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/build-and-test-client.yml'
-      - '.codeql-version'
       - '.node-version'
       - 'client/**'
+      - 'package.json'
+      - 'package-lock.json'
       - 'server/**'
   push:
     branches: ['main', 'next']
     paths:
+      - '.codeql-version'
       - '.github/actions/setup-codeql-environment/action.yml'
       - '.github/workflows/build-and-test-client.yml'
-      - '.codeql-version'
       - '.node-version'
       - 'client/**'
+      - 'package.json'
+      - 'package-lock.json'
       - 'server/**'
   workflow_dispatch:
 
