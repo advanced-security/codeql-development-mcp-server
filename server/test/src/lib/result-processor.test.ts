@@ -7,14 +7,23 @@ import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Module-scope mocks must be declared before importing the module under test.
-const { mockExecuteCodeQLCommand, mockGetActualCodeqlVersion } = vi.hoisted(() => ({
+const { mockExecuteCodeQLCommand, mockGetActualCodeqlVersion, spyExtractQueryMetadata } = vi.hoisted(() => ({
   mockExecuteCodeQLCommand: vi.fn(),
   mockGetActualCodeqlVersion: vi.fn(() => '2.25.0'),
+  spyExtractQueryMetadata: vi.fn(),
 }));
 vi.mock('../../../src/lib/cli-executor', () => ({
   executeCodeQLCommand: mockExecuteCodeQLCommand,
   getActualCodeqlVersion: mockGetActualCodeqlVersion,
 }));
+vi.mock('../../../src/lib/query-results-evaluator', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/lib/query-results-evaluator')>();
+  spyExtractQueryMetadata.mockImplementation(actual.extractQueryMetadata);
+  return {
+    ...actual,
+    extractQueryMetadata: spyExtractQueryMetadata,
+  };
+});
 
 import { computeQueryCacheKey, processQueryRunResults } from '../../../src/lib/result-processor';
 import { readDatabaseMetadata } from '../../../src/lib/database-resolver';
@@ -126,6 +135,7 @@ describe('processQueryRunResults format inference from @kind', () => {
   beforeEach(() => {
     testDir = createProjectTempDir('format-infer-test-');
     mockExecuteCodeQLCommand.mockReset();
+    spyExtractQueryMetadata.mockClear();
     // Default: bqrs interpret call succeeds with empty stdout.
     mockExecuteCodeQLCommand.mockResolvedValue({
       exitCode: 0, stderr: '', stdout: '', success: true,
@@ -221,5 +231,38 @@ describe('processQueryRunResults format inference from @kind', () => {
     expect(mockExecuteCodeQLCommand).toHaveBeenCalled();
     const [, opts] = mockExecuteCodeQLCommand.mock.calls[0];
     expect(opts.format).toBe('csv');
+  });
+
+  it('extracts query metadata only once per invocation when inferring format', async () => {
+    const queryPath = writeQuery('problem');
+    const bqrsPath = join(testDir, 'results.bqrs');
+    writeFileSync(bqrsPath, '');
+
+    await processQueryRunResults(
+      { exitCode: 0, stderr: '', stdout: '', success: true },
+      { output: bqrsPath, query: queryPath },
+      noopLogger,
+    );
+
+    // Should be called once (for inference) and reused by interpretBQRSFile,
+    // not extracted a second time.
+    expect(spyExtractQueryMetadata).toHaveBeenCalledTimes(1);
+    expect(spyExtractQueryMetadata).toHaveBeenCalledWith(queryPath);
+  });
+
+  it('extracts query metadata only once per invocation when format is explicit', async () => {
+    const queryPath = writeQuery('problem');
+    const bqrsPath = join(testDir, 'results.bqrs');
+    writeFileSync(bqrsPath, '');
+
+    await processQueryRunResults(
+      { exitCode: 0, stderr: '', stdout: '', success: true },
+      { format: 'sarif-latest', output: bqrsPath, query: queryPath },
+      noopLogger,
+    );
+
+    // Even with an explicit format we still need metadata for id/kind in
+    // bqrs interpret, but it should only be extracted once.
+    expect(spyExtractQueryMetadata).toHaveBeenCalledTimes(1);
   });
 });

@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { CLIExecutionResult, executeCodeQLCommand, getActualCodeqlVersion } from './cli-executor';
 import { readDatabaseMetadata } from './database-resolver';
-import { evaluateQueryResults, extractQueryMetadata, QueryEvaluationResult } from './query-results-evaluator';
+import { evaluateQueryResults, extractQueryMetadata, QueryEvaluationResult, QueryMetadata } from './query-results-evaluator';
 import { resolveQueryPath } from './query-resolver';
 import { collectAllRules, decomposeSarifByRule, getRuleDisplayName } from './sarif-utils';
 import { sessionDataManager } from './session-data-manager';
@@ -67,6 +67,10 @@ export function getDefaultExtension(format: string): string {
 
 /**
  * Interpret a BQRS file using `codeql bqrs interpret`.
+ *
+ * If `metadata` is provided, the caller-supplied query metadata is reused
+ * (avoiding a redundant file open/read in `extractQueryMetadata`); otherwise
+ * the metadata is read from `queryPath`.
  */
 export async function interpretBQRSFile(
   bqrsPath: string,
@@ -74,15 +78,16 @@ export async function interpretBQRSFile(
   format: string,
   outputPath: string,
   logger: ProcessorLogger,
+  metadata?: QueryMetadata,
 ): Promise<CLIExecutionResult> {
   try {
-    // Extract query metadata to get id and kind
-    const metadata = await extractQueryMetadata(queryPath);
+    // Extract query metadata to get id and kind, unless the caller already did.
+    const queryMetadata = metadata ?? await extractQueryMetadata(queryPath);
 
     // Validate required metadata fields
     const missingFields = [];
-    if (!metadata.id) missingFields.push('id');
-    if (!metadata.kind) missingFields.push('kind');
+    if (!queryMetadata.id) missingFields.push('id');
+    if (!queryMetadata.kind) missingFields.push('kind');
 
     if (missingFields.length > 0) {
       return {
@@ -95,14 +100,14 @@ export async function interpretBQRSFile(
     }
 
     // Sanitize metadata values to prevent command injection
-    const sanitizedId = (metadata.id || '').replace(/[^a-zA-Z0-9_/:-]/g, '');
-    const sanitizedKind = (metadata.kind || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    const sanitizedId = (queryMetadata.id || '').replace(/[^a-zA-Z0-9_/:-]/g, '');
+    const sanitizedKind = (queryMetadata.kind || '').replace(/[^a-zA-Z0-9_-]/g, '');
 
     // Validate format for query kind
     const graphFormats = ['graphtext', 'dgml', 'dot'];
-    if (graphFormats.includes(format) && metadata.kind !== 'graph') {
+    if (graphFormats.includes(format) && queryMetadata.kind !== 'graph') {
       return {
-        error: `Format '${format}' is only compatible with @kind graph queries, but this query has @kind ${metadata.kind}`,
+        error: `Format '${format}' is only compatible with @kind graph queries, but this query has @kind ${queryMetadata.kind}`,
         exitCode: 1,
         stderr: '',
         stdout: '',
@@ -182,20 +187,26 @@ export async function processQueryRunResults(
     // and is not using the legacy evaluationFunction, infer one from the query's
     // @kind metadata so that results from problem/path-problem/graph queries are
     // automatically interpreted and cached.
+    //
+    // The metadata is also reused below by `interpretBQRSFile` to avoid a second
+    // file read for the same query.
     let effectiveFormat: string | undefined = format as string | undefined;
-    if (!effectiveFormat && !evaluationFunction && queryPath) {
+    let queryMetadata: QueryMetadata | undefined;
+    if (queryPath) {
       try {
-        const metadata = await extractQueryMetadata(queryPath);
-        if (metadata.kind === 'problem' || metadata.kind === 'path-problem') {
-          effectiveFormat = 'sarif-latest';
-        } else if (metadata.kind === 'graph') {
-          effectiveFormat = 'graphtext';
-        }
-        if (effectiveFormat) {
-          logger.info(`No format specified; defaulting to '${effectiveFormat}' for @kind ${metadata.kind} query`);
-        }
+        queryMetadata = await extractQueryMetadata(queryPath);
       } catch (metaErr) {
-        logger.error('Failed to infer default format from query metadata:', metaErr);
+        logger.error('Failed to extract query metadata:', metaErr);
+      }
+    }
+    if (!effectiveFormat && !evaluationFunction && queryMetadata) {
+      if (queryMetadata.kind === 'problem' || queryMetadata.kind === 'path-problem') {
+        effectiveFormat = 'sarif-latest';
+      } else if (queryMetadata.kind === 'graph') {
+        effectiveFormat = 'graphtext';
+      }
+      if (effectiveFormat) {
+        logger.info(`No format specified; defaulting to '${effectiveFormat}' for @kind ${queryMetadata.kind} query`);
       }
     }
 
@@ -225,8 +236,9 @@ export async function processQueryRunResults(
 
       logger.info(`Interpreting query results from ${bqrsPath} with format: ${outputFormat}`);
 
-      // Interpret the BQRS file
-      const interpretResult = await interpretBQRSFile(bqrsPath, queryPath, outputFormat, outputFilePath, logger);
+      // Interpret the BQRS file (reusing already-extracted metadata to avoid
+      // a second file read of the query source).
+      const interpretResult = await interpretBQRSFile(bqrsPath, queryPath, outputFormat, outputFilePath, logger, queryMetadata);
 
       if (interpretResult.success) {
         let enhancedOutput = result.stdout;
