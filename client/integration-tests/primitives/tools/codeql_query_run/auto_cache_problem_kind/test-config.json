@@ -1,0 +1,13 @@
+{
+  "toolName": "codeql_query_run",
+  "arguments": {
+    "query": "server/ql/javascript/examples/src/ExampleQuery1/ExampleQuery1.ql",
+    "database": "server/ql/javascript/examples/test/ExampleQuery1/ExampleQuery1.testproj"
+  },
+  "assertions": {
+    "responseContains": [
+      "Query results interpreted successfully with format: sarif-latest",
+      "Results cached with key:"
+    ]
+  }
+}
