@@ -20,7 +20,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - **Upgraded CodeQL CLI to v2.25.4** — Full compatibility with the latest CodeQL CLI release, including upgraded QL pack dependencies for all supported languages and re-baselined `PrintCFG` test expectations for C# (csharp-all 6.0.0 dropped the legacy `ControlFlow::Node` namespace) and Java (deterministic node-ordering change). ([#272](https://github.com/advanced-security/codeql-development-mcp-server/pull/272))
 - **First-class Models-as-Data (MaD) authoring support** — New `data_extension_development` workflow prompt plus a `codeql://learning/data-extensions` overview resource and per-language `codeql://languages/<lang>/library-modeling` guides for every CodeQL language that supports MaD upstream (`cpp`, `csharp`, `go`, `java`, `javascript`, `python`, `ruby`, `rust`, `swift`). ([#271](https://github.com/advanced-security/codeql-development-mcp-server/pull/271))
-- **Schema fix unblocks GitHub Copilot Chat** — Replaced `z.tuple([...])` parameters on `query_results_cache_retrieve` with `z.object({ start, end })` so the MCP SDK emits a valid JSON Schema accepted by Copilot Chat's strict validator. ([#263](https://github.com/advanced-security/codeql-development-mcp-server/pull/263))
+- **`codeql_query_run` auto-caches results for `@kind problem` / `path-problem` / `graph` queries by default** — The post-processor now infers `format` from the query's `@kind` metadata when the caller omits it, so SARIF (`sarif-latest`) and graph (`graphtext`) output is generated and added to the query results cache automatically, matching the documented behavior. ([#275](https://github.com/advanced-security/codeql-development-mcp-server/pull/275))
 
 ### Added
 
@@ -48,14 +48,14 @@ With these additions, every CodeQL language that supports Models-as-Data upstrea
 
 ### Fixed
 
-- **`codeql_query_run` did not auto-cache results for `@kind problem` / `@kind path-problem` / `@kind graph` queries when `format` was not provided** — The query result post-processor only ran BQRS interpretation (and therefore only populated the query results cache) when the caller passed an explicit `format`. The tool description already documented that `format` defaults based on `@kind`, but the implementation returned early. The post-processor now reads the query's `@kind` metadata and defaults `format` to `sarif-latest` for `problem`/`path-problem` queries and `graphtext` for `graph` queries, so SARIF/graphtext output is generated and cached automatically. Explicitly-provided `format` values continue to take precedence. ([#268](https://github.com/advanced-security/codeql-development-mcp-server/pull/268))
-- **`query_results_cache_retrieve` rejected by GitHub Copilot Chat (HTTP 400 invalid schema)** — The `lineRange` and `resultIndices` parameters were defined with `z.tuple([...])`, which the MCP SDK serialized to a bare-array JSON Schema value (e.g. `[{"type":"integer"}, {"type":"integer"}]`). GitHub Copilot Chat enforces strict JSON Schema validation and rejected the entire `ql-mcp` server with `"... is not of type 'object', 'boolean'"`. Both parameters now use `z.object({ start, end })` so they serialize to a valid `type: "object"` JSON Schema. Tool callers must now pass `{ "lineRange": { "start": 1, "end": 10 } }` instead of `{ "lineRange": [1, 10] }`. ([#263](https://github.com/advanced-security/codeql-development-mcp-server/pull/263))
+- **`codeql_query_run` did not auto-cache results for `@kind problem` / `@kind path-problem` / `@kind graph` queries when `format` was not provided** — The query result post-processor only ran BQRS interpretation (and therefore only populated the query results cache) when the caller passed an explicit `format`. The tool description already documented that `format` defaults based on `@kind`, but the implementation returned early. The post-processor now reads the query's `@kind` metadata and defaults `format` to `sarif-latest` for `problem`/`path-problem` queries and `graphtext` for `graph` queries, so SARIF/graphtext output is generated and cached automatically. Explicitly-provided `format` values continue to take precedence. ([#275](https://github.com/advanced-security/codeql-development-mcp-server/pull/275))
 - **C# `PrintCFG` query failed to compile against `codeql/csharp-all` 6.0.0** — The legacy `ControlFlow::Node` namespace was removed by the new pack; the query now uses `ControlFlowNode` directly and the `PrintCFG.expected` baseline has been regenerated against the new CFG (`Entry` / `Normal Exit` / `Exit` markers and explicit `Before <expr>` nodes). The Java `PrintCFG.expected` baseline was also re-generated to absorb a deterministic node-ordering change in CodeQL CLI v2.25.4 (same nodes and edges, reordered). ([#272](https://github.com/advanced-security/codeql-development-mcp-server/pull/272))
 
 ### Dependencies
 
 - Upgraded CodeQL CLI dependency to v2.25.4 and synchronized all `ql-mcp-*` pack dependencies to the matching upstream library packs. ([#272](https://github.com/advanced-security/codeql-development-mcp-server/pull/272))
 - Bumped `hono` from 4.12.14 to 4.12.18. ([#273](https://github.com/advanced-security/codeql-development-mcp-server/pull/273))
+- Bumped `fast-uri` (transitive) from 3.1.0 to 3.1.2. ([#277](https://github.com/advanced-security/codeql-development-mcp-server/pull/277))
 
 ### Changed
 
@@ -63,7 +63,45 @@ With these additions, every CodeQL language that supports Models-as-Data upstrea
 
 - Tightened `on.paths` triggers for the `build-server`, `build-and-test-client`, and `build-and-test-extension` workflows so unrelated changes no longer re-run the matrix builds. ([#274](https://github.com/advanced-security/codeql-development-mcp-server/pull/274))
 
-**Full Changelog**: [`v2.25.2...v2.25.4`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.2...v2.25.4)
+**Full Changelog**: [`v2.25.3...v2.25.4`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.3...v2.25.4)
+
+---
+
+## [v2.25.3] — 2026-05-04
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.25.3** — Full compatibility with the latest CodeQL CLI release. The release also fixes `upgrade-packs.sh` so that pack lock files are actually refreshed on CLI bumps (previously a no-op for packs with pinned `codeql/<lang>-all` dependencies), regenerates all `codeql-pack.lock.yml` files, and re-baselines Ruby / Rust / Swift `PrintAST` and `PrintCFG` expected outputs for benign ordering and macro-expansion changes introduced by the upgraded upstream packs. ([#269](https://github.com/advanced-security/codeql-development-mcp-server/pull/269), [#270](https://github.com/advanced-security/codeql-development-mcp-server/pull/270))
+- **Schema fix unblocks GitHub Copilot Chat** — Replaced `z.tuple([...])` parameters on `query_results_cache_retrieve` with `z.object({ start, end })` so the MCP SDK emits a valid JSON Schema accepted by Copilot Chat's strict validator. ([#263](https://github.com/advanced-security/codeql-development-mcp-server/pull/263))
+- **Supply-chain hardening for npm and GitHub Actions** — Pinned npm install scripts, enforced `--ignore-scripts` on CI installs, and tightened action SHA pinning across workflows. ([#258](https://github.com/advanced-security/codeql-development-mcp-server/pull/258))
+
+### Fixed
+
+- **`query_results_cache_retrieve` rejected by GitHub Copilot Chat (HTTP 400 invalid schema)** — The `lineRange` and `resultIndices` parameters were defined with `z.tuple([...])`, which the MCP SDK serialized to a bare-array JSON Schema value (e.g. `[{"type":"integer"}, {"type":"integer"}]`). GitHub Copilot Chat enforces strict JSON Schema validation and rejected the entire `ql-mcp` server with `"... is not of type 'object', 'boolean'"`. Both parameters now use `z.object({ start, end })` so they serialize to a valid `type: "object"` JSON Schema. Tool callers must now pass `{ "lineRange": { "start": 1, "end": 10 } }` instead of `{ "lineRange": [1, 10] }`. ([#263](https://github.com/advanced-security/codeql-development-mcp-server/pull/263))
+- **`upgrade-packs.sh` left pack lock files unchanged on CLI bumps** — `codeql pack upgrade` was a no-op for packs with pinned `codeql/<lang>-all` dependencies because the existing pin already satisfied the constraint. The script now temporarily rewrites the pinned dependency to a wildcard before running `codeql pack upgrade`, then restores the manifest pinned to the resolved version, so lock files are actually refreshed against the new CLI. ([#269](https://github.com/advanced-security/codeql-development-mcp-server/pull/269))
+- **Scheduled `update-codeql` workflow could force-push over reviewer commits** — Added a `check-existing-branch` gate so that on `schedule` (cron) runs the workflow is skipped when the target `codeql/upgrade-to-vX.Y.Z` branch already exists on origin. The check is bypassed on `workflow_dispatch` so maintainers can still force a refresh manually. ([#269](https://github.com/advanced-security/codeql-development-mcp-server/pull/269))
+- **Rust `PrintAST` / `PrintCFG` expected output mismatched CI** — Re-learned the Rust `.expected` baselines with `rustc`/`cargo` installed (matching the CI runner's `install-language-runtimes: true` setting) so that `println!`-style macros are expanded into their stdlib internals as they are on CI. ([#270](https://github.com/advanced-security/codeql-development-mcp-server/pull/270))
+
+### Changed
+
+#### Infrastructure & CI/CD
+
+- Hardened the supply chain for npm dependencies and GitHub Actions workflows: stricter SHA pinning, `--ignore-scripts` on CI installs, and audit-trail improvements. ([#258](https://github.com/advanced-security/codeql-development-mcp-server/pull/258))
+- Merged the `next` integration branch into `main` to consolidate release-prep history. ([#260](https://github.com/advanced-security/codeql-development-mcp-server/pull/260))
+
+### Dependencies
+
+- Upgraded CodeQL CLI dependency to v2.25.3 and re-pinned all `ql-mcp-*` pack dependencies to the matching upstream library packs (with regenerated lock files for every supported language). ([#269](https://github.com/advanced-security/codeql-development-mcp-server/pull/269))
+- Bumped the `all-npm-dependencies` group across 4 directories with 5 updates. ([#257](https://github.com/advanced-security/codeql-development-mcp-server/pull/257))
+- Bumped the `all-npm-dependencies` dev-dependency group across 4 directories with 3 updates. ([#259](https://github.com/advanced-security/codeql-development-mcp-server/pull/259))
+- Bumped `actions/cache` from 5.0.4 to 5.0.5. ([#256](https://github.com/advanced-security/codeql-development-mcp-server/pull/256))
+- Bumped `actions/upload-artifact` from 7.0.0 to 7.0.1. ([#255](https://github.com/advanced-security/codeql-development-mcp-server/pull/255))
+- Bumped `actions/setup-node` from 6.3.0 to 6.4.0. ([#264](https://github.com/advanced-security/codeql-development-mcp-server/pull/264))
+- Bumped `actions/setup-go` from 5.6.0 to 6.4.0. ([#265](https://github.com/advanced-security/codeql-development-mcp-server/pull/265))
+- Bumped `peter-evans/create-pull-request` from 8.1.0 to 8.1.1. ([#253](https://github.com/advanced-security/codeql-development-mcp-server/pull/253))
+- Bumped `softprops/action-gh-release` from 2.6.1 to 3.0.0. ([#254](https://github.com/advanced-security/codeql-development-mcp-server/pull/254))
+
+**Full Changelog**: [`v2.25.2...v2.25.3`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.2...v2.25.3)
 
 ---
 
@@ -481,6 +519,7 @@ _Initial public release of the CodeQL Development MCP Server._
 
 [Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.4...HEAD
 [v2.25.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.4
+[v2.25.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.3
 [v2.25.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.2
 [v2.25.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.1
 [v2.25.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.0
