@@ -26,18 +26,18 @@ The server exposes **11 static resources** and a set of **dynamic per-language r
 
 Each supported language can expose one or more of the following resource types under the URI pattern `codeql://languages/{language}/{type}`:
 
-| Language   | AST Reference | Security Patterns | Library Modeling | Additional               |
-| ---------- | :-----------: | :---------------: | :--------------: | ------------------------ |
-| actions    |       ✓       |                   |                  |                          |
-| cpp        |       ✓       |         ✓         |        ✓         |                          |
-| csharp     |       ✓       |         ✓         |        ✓         |                          |
-| go         |       ✓       |         ✓         |        ✓         | dataflow, basic-queries  |
-| java       |       ✓       |                   |        ✓         |                          |
-| javascript |       ✓       |         ✓         |        ✓         |                          |
-| python     |       ✓       |         ✓         |        ✓         |                          |
-| ruby       |       ✓       |                   |        ✓         |                          |
-| rust       |       ✓       |                   |        ✓         |                          |
-| swift      |               |                   |        ✓         |                          |
+| Language   | AST Reference | Security Patterns | Library Modeling | Additional              |
+| ---------- | :-----------: | :---------------: | :--------------: | ----------------------- |
+| actions    |       ✓       |                   |                  |                         |
+| cpp        |       ✓       |         ✓         |        ✓         |                         |
+| csharp     |       ✓       |         ✓         |        ✓         |                         |
+| go         |       ✓       |         ✓         |        ✓         | dataflow, basic-queries |
+| java       |       ✓       |                   |        ✓         |                         |
+| javascript |       ✓       |         ✓         |        ✓         |                         |
+| python     |       ✓       |         ✓         |        ✓         |                         |
+| ruby       |       ✓       |                   |        ✓         |                         |
+| rust       |       ✓       |                   |        ✓         |                         |
+| swift      |               |                   |        ✓         |                         |
 
 ### Resource Types
 
