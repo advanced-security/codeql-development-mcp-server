@@ -10,6 +10,10 @@ inputs:
     description: 'Whether to install language-specific runtimes and build tools'
     required: false
     default: 'true'
+  enable-cache:
+    description: "Whether to restore/save caches (gh-codeql, language runtimes, package managers). MUST be set to 'false' for release-generating workflows to avoid cache-poisoning attacks where a feature-branch contributor can populate the cache that a release job later restores."
+    required: false
+    default: 'true'
 
   # Language selection (only used if install-language-runtimes is true)
   languages:
@@ -81,7 +85,7 @@ runs:
 
     - name: Cache `gh-codeql` extension and CodeQL packages (Unix)
       id: cache-codeql-unix
-      if: runner.os != 'Windows'
+      if: runner.os != 'Windows' && inputs.enable-cache == 'true'
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: |
@@ -93,7 +97,7 @@ runs:
 
     - name: Cache `gh-codeql` extension and CodeQL packages (Windows)
       id: cache-codeql-windows
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && inputs.enable-cache == 'true'
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: |
@@ -318,18 +322,24 @@ runs:
           echo "No .NET dependency files found"
         fi
 
-    - name: Setup Node.js
-      if: inputs.install-language-runtimes == 'true'
+    - name: Setup Node.js (with cache)
+      if: inputs.install-language-runtimes == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         cache: 'npm'
         cache-dependency-path: 'package-lock.json'
         node-version-file: '.node-version'
 
+    - name: Setup Node.js (without cache)
+      if: inputs.install-language-runtimes == 'true' && inputs.enable-cache != 'true'
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      with:
+        node-version-file: '.node-version'
+
     # Cache language runtimes to avoid repeated downloads (excluding .NET which is cached separately)
     - name: Cache language runtimes
       id: cache-runtimes
-      if: inputs.install-language-runtimes == 'true'
+      if: inputs.install-language-runtimes == 'true' && inputs.enable-cache == 'true'
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: |
@@ -343,20 +353,20 @@ runs:
           language-runtimes-${{ runner.os }}-
 
     - name: Setup Python (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: ${{ inputs.python-version }}
         cache: 'pip'
 
     - name: Setup Python (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'false'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && (steps.check-deps.outputs.python-deps == 'false' || inputs.enable-cache != 'true')
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Setup Java (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
       with:
         distribution: 'temurin'
@@ -364,21 +374,21 @@ runs:
         cache: 'maven'
 
     - name: Setup Java (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'false'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && (steps.check-deps.outputs.java-deps == 'false' || inputs.enable-cache != 'true')
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
       with:
         distribution: 'temurin'
         java-version: ${{ inputs.java-version }}
 
     - name: Setup Go (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
       with:
         go-version: ${{ inputs.go-version }}
         cache: true
 
     - name: Setup Go (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'false'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && (steps.check-deps.outputs.go-deps == 'false' || inputs.enable-cache != 'true')
       uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
       with:
         go-version: ${{ inputs.go-version }}
@@ -386,7 +396,7 @@ runs:
 
     # Cache .NET packages and tools
     - name: Cache .NET packages
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp')
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp') && inputs.enable-cache == 'true'
       id: cache-dotnet-packages
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
@@ -405,14 +415,14 @@ runs:
         dotnet-version: ${{ inputs.dotnet-version }}
 
     - name: Setup Ruby (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'true' && inputs.enable-cache == 'true'
       uses: ruby/setup-ruby@4dc28cf14d77b0afa6832d9765ac422dbf0dfedd # v1
       with:
         ruby-version: ${{ inputs.ruby-version }}
         bundler-cache: true
 
     - name: Setup Ruby (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'false'
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && (steps.check-deps.outputs.ruby-deps == 'false' || inputs.enable-cache != 'true')
       uses: ruby/setup-ruby@4dc28cf14d77b0afa6832d9765ac422dbf0dfedd # v1
       with:
         ruby-version: ${{ inputs.ruby-version }}
