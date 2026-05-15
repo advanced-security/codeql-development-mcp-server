@@ -22,7 +22,7 @@ on:
         required: false
         type: boolean
       version:
-        description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
+        description: 'Release version (e.g., vX.Y.Z or vX.Y.Z-PRERELEASE). Must match ^vMAJOR.MINOR.PATCH(-PRERELEASE)?$ where PRERELEASE may contain alphanumerics, dots, and hyphens.'
         required: true
         type: string
 
