@@ -19,7 +19,7 @@ inputs:
   languages:
     description: 'Comma-separated list of target programming languages for which dependencies should be installed'
     required: false
-    default: 'csharp,go,java,javascript,python,ruby'
+    default: 'csharp,go,java,javascript,python,ruby,rust'
 
   # Language runtime versions (only used if install-language-runtimes is true)
   python-version:
@@ -42,6 +42,10 @@ inputs:
     description: 'Ruby version to install'
     required: false
     default: '3.2'
+  rust-version:
+    description: 'Rust toolchain version to install. A specific version (e.g. 1.80.0) is recommended so that the rust extractor produces deterministic macro expansions across local and CI runs.'
+    required: false
+    default: '1.80.0'
 
 outputs:
   codeql-home:
@@ -322,6 +326,15 @@ runs:
           echo "No .NET dependency files found"
         fi
 
+        # Check for Rust dependency files
+        if [[ -f "Cargo.toml" ]] || compgen -G '**/Cargo.toml' >/dev/null; then
+          echo "rust-deps=true" >> $GITHUB_OUTPUT
+          echo "Found Rust dependency files"
+        else
+          echo "rust-deps=false" >> $GITHUB_OUTPUT
+          echo "No Rust dependency files found"
+        fi
+
     - name: Setup Node.js (with cache)
       if: inputs.install-language-runtimes == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
@@ -428,6 +441,33 @@ runs:
         ruby-version: ${{ inputs.ruby-version }}
         bundler-cache: false
 
+    # Cache Rust toolchain components and cargo registry. The CodeQL rust
+    # extractor invokes cargo/rustc to resolve std-library macro expansions
+    # (format!, println!, vec!, ...). Without a working toolchain, the
+    # extractor produces partial AST nodes with no getMacroCallExpansion()
+    # subtrees, which breaks PrintAST/PrintCFG tests.
+    - name: Cache Rust toolchain and cargo registry
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'rust') && inputs.enable-cache == 'true'
+      id: cache-rust
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      with:
+        path: |
+          ~/.cargo/bin
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          ~/.rustup
+        key: rust-${{ runner.os }}-${{ inputs.rust-version }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          rust-${{ runner.os }}-${{ inputs.rust-version }}-
+
+    - name: Setup Rust toolchain
+      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'rust')
+      uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      with:
+        toolchain: ${{ inputs.rust-version }}
+        components: rust-src
+
     - name: Verify language-specific tools
       if: inputs.install-language-runtimes == 'true' && inputs.languages != ''
       shell: bash
@@ -458,6 +498,11 @@ runs:
 
         if [[ "${{ inputs.languages }}" == *"ruby"* ]]; then
           echo "Ruby version: $(ruby --version)"
+        fi
+
+        if [[ "${{ inputs.languages }}" == *"rust"* ]]; then
+          echo "Rust version: $(rustc --version 2>/dev/null || echo 'rustc not found')"
+          echo "Cargo version: $(cargo --version 2>/dev/null || echo 'cargo not found')"
         fi
 
         echo "================================="
