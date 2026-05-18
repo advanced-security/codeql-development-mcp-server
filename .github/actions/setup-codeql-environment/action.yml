@@ -17,7 +17,16 @@ inputs:
 
   # Language selection (only used if install-language-runtimes is true)
   languages:
-    description: 'Comma-separated list of target programming languages for which dependencies should be installed'
+    description: |
+      Comma-separated list of target programming languages for which
+      dependencies should be installed. The default list intentionally does
+      NOT include 'rust' because the Rust toolchain (rustc + cargo + rust-src)
+      is a several-hundred-megabyte download and is only needed for
+      Rust-specific CodeQL extraction (e.g. macro expansion in PrintAST /
+      PrintCFG tests). Callers that need Rust support MUST pass an explicit
+      `languages:` override that includes 'rust' (for example
+      `languages: 'rust'` from a per-language matrix entry, or
+      `languages: 'java,rust'` for a multi-language job).
     required: false
     default: 'csharp,go,java,javascript,python,ruby'
 
@@ -43,7 +52,12 @@ inputs:
     required: false
     default: '3.2'
   rust-version:
-    description: 'Rust toolchain version to install. A specific version (e.g. 1.80.0) is recommended so that the rust extractor produces deterministic macro expansions across local and CI runs.'
+    description: |
+      Rust toolchain version to install. Only takes effect when the
+      `languages` input explicitly includes 'rust' (Rust is NOT installed by
+      default — see the `languages` input documentation). A specific version
+      (e.g. 1.80.0) is recommended so that the Rust extractor produces
+      deterministic macro expansions across local and CI runs.
     required: false
     default: '1.80.0'
 
@@ -366,20 +380,20 @@ runs:
           language-runtimes-${{ runner.os }}-
 
     - name: Setup Python (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && steps.check-deps.outputs.python-deps == 'true' && inputs.enable-cache == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',python,') && steps.check-deps.outputs.python-deps == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: ${{ inputs.python-version }}
         cache: 'pip'
 
     - name: Setup Python (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'python') && (steps.check-deps.outputs.python-deps == 'false' || inputs.enable-cache != 'true')
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',python,') && (steps.check-deps.outputs.python-deps == 'false' || inputs.enable-cache != 'true')
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Setup Java (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && steps.check-deps.outputs.java-deps == 'true' && inputs.enable-cache == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',java,') && steps.check-deps.outputs.java-deps == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
       with:
         distribution: 'temurin'
@@ -387,21 +401,21 @@ runs:
         cache: 'maven'
 
     - name: Setup Java (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'java') && (steps.check-deps.outputs.java-deps == 'false' || inputs.enable-cache != 'true')
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',java,') && (steps.check-deps.outputs.java-deps == 'false' || inputs.enable-cache != 'true')
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
       with:
         distribution: 'temurin'
         java-version: ${{ inputs.java-version }}
 
     - name: Setup Go (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && steps.check-deps.outputs.go-deps == 'true' && inputs.enable-cache == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',go,') && steps.check-deps.outputs.go-deps == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
       with:
         go-version: ${{ inputs.go-version }}
         cache: true
 
     - name: Setup Go (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'go') && (steps.check-deps.outputs.go-deps == 'false' || inputs.enable-cache != 'true')
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',go,') && (steps.check-deps.outputs.go-deps == 'false' || inputs.enable-cache != 'true')
       uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
       with:
         go-version: ${{ inputs.go-version }}
@@ -409,7 +423,7 @@ runs:
 
     # Cache .NET packages and tools
     - name: Cache .NET packages
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp') && inputs.enable-cache == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',csharp,') && inputs.enable-cache == 'true'
       id: cache-dotnet-packages
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
@@ -422,20 +436,20 @@ runs:
           dotnet-packages-${{ runner.os }}-
 
     - name: Setup .NET (for C#)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'csharp')
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',csharp,')
       uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
 
     - name: Setup Ruby (with cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && steps.check-deps.outputs.ruby-deps == 'true' && inputs.enable-cache == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',ruby,') && steps.check-deps.outputs.ruby-deps == 'true' && inputs.enable-cache == 'true'
       uses: ruby/setup-ruby@4dc28cf14d77b0afa6832d9765ac422dbf0dfedd # v1
       with:
         ruby-version: ${{ inputs.ruby-version }}
         bundler-cache: true
 
     - name: Setup Ruby (without cache)
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'ruby') && (steps.check-deps.outputs.ruby-deps == 'false' || inputs.enable-cache != 'true')
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',ruby,') && (steps.check-deps.outputs.ruby-deps == 'false' || inputs.enable-cache != 'true')
       uses: ruby/setup-ruby@4dc28cf14d77b0afa6832d9765ac422dbf0dfedd # v1
       with:
         ruby-version: ${{ inputs.ruby-version }}
@@ -446,8 +460,13 @@ runs:
     # (format!, println!, vec!, ...). Without a working toolchain, the
     # extractor produces partial AST nodes with no getMacroCallExpansion()
     # subtrees, which breaks PrintAST/PrintCFG tests.
+    #
+    # NOTE: 'rust' is NOT part of the default `languages` value. The Rust
+    # toolchain is only installed when a caller passes an explicit
+    # `languages:` override that includes 'rust' (e.g. from a per-language
+    # matrix entry). See the `languages` input documentation above.
     - name: Cache Rust toolchain and cargo registry
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'rust') && inputs.enable-cache == 'true'
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',rust,') && inputs.enable-cache == 'true'
       id: cache-rust
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
@@ -462,7 +481,7 @@ runs:
           rust-${{ runner.os }}-${{ inputs.rust-version }}-
 
     - name: Setup Rust toolchain
-      if: inputs.install-language-runtimes == 'true' && contains(inputs.languages, 'rust')
+      if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',rust,')
       uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # 1.88.0
       with:
         toolchain: ${{ inputs.rust-version }}
@@ -471,36 +490,42 @@ runs:
     - name: Verify language-specific tools
       if: inputs.install-language-runtimes == 'true' && inputs.languages != ''
       shell: bash
+      env:
+        LANGUAGES: ${{ inputs.languages }}
       run: |
         echo "=== Language-specific tool verification ==="
 
-        if [[ "${{ inputs.languages }}" == *"javascript"* ]] || [[ "${{ inputs.languages }}" == *"typescript"* ]]; then
+        # Wrap the comma-separated list in commas so glob patterns can match
+        # whole tokens (',java,' vs ',javascript,') instead of substrings.
+        _LANGS=",${LANGUAGES},"
+
+        if [[ "${_LANGS}" == *",javascript,"* ]] || [[ "${_LANGS}" == *",typescript,"* ]]; then
           echo "Node.js version: $(node --version)"
           echo "npm version: $(npm --version)"
         fi
 
-        if [[ "${{ inputs.languages }}" == *"python"* ]]; then
+        if [[ "${_LANGS}" == *",python,"* ]]; then
           echo "Python version: $(python --version)"
           echo "pip version: $(pip --version)"
         fi
 
-        if [[ "${{ inputs.languages }}" == *"java"* ]]; then
+        if [[ "${_LANGS}" == *",java,"* ]]; then
           echo "Java version: $(java -version 2>&1 | head -1)"
         fi
 
-        if [[ "${{ inputs.languages }}" == *"go"* ]]; then
+        if [[ "${_LANGS}" == *",go,"* ]]; then
           echo "Go version: $(go version)"
         fi
 
-        if [[ "${{ inputs.languages }}" == *"csharp"* ]]; then
+        if [[ "${_LANGS}" == *",csharp,"* ]]; then
           echo "dotnet version: $(dotnet --version)"
         fi
 
-        if [[ "${{ inputs.languages }}" == *"ruby"* ]]; then
+        if [[ "${_LANGS}" == *",ruby,"* ]]; then
           echo "Ruby version: $(ruby --version)"
         fi
 
-        if [[ "${{ inputs.languages }}" == *"rust"* ]]; then
+        if [[ "${_LANGS}" == *",rust,"* ]]; then
           echo "Rust version: $(rustc --version 2>/dev/null || echo 'rustc not found')"
           echo "Cargo version: $(cargo --version 2>/dev/null || echo 'cargo not found')"
         fi

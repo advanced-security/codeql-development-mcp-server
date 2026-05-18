@@ -14,6 +14,35 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+### Highlights
+
+- **Second supply-chain hardening pass for release workflows** — The `release.yml`, `release-tag.yml`, `release-npm.yml`, `release-vsix.yml`, and `release-codeql.yml` workflows are now resistant to cache-poisoning attacks: the shared `setup-codeql-environment` composite action exposes a new `enable-cache` input (set to `false` for every release-generating job), every inline `cache: 'npm'` was dropped, runners are pinned to `ubuntu-24.04`, `cancel-in-progress` is `false` on the parent release workflow, version inputs are validated against the strict regex `^vMAJOR.MINOR.PATCH(-PRERELEASE)?$` via `env:` intermediaries, and non-pushing checkouts use `persist-credentials: false`. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- **First-class Rust toolchain support in CI** — `setup-codeql-environment` now installs a pinned Rust toolchain (default `1.80.0`, via `dtolnay/rust-toolchain@stable` with `rust-src`) for any matrix entry that includes `rust`, so the CodeQL rust extractor can expand `format!` / `println!` / `vec!` macros against the standard library on Linux runners. The `query-unit-tests.yml` workflow now passes `languages: ${{ matrix.language }}` so each matrix entry only installs its own runtime. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+
+### Security
+
+- **Hardened release workflows against cache poisoning.** All four reusable release workflows (`release-tag.yml`, `release-npm.yml`, `release-vsix.yml`, `release-codeql.yml`) and the orchestrating `release.yml` now opt out of every `actions/cache`, `setup-node` npm cache, `setup-go` cache, `setup-java` Maven cache, `setup-python` pip cache, `setup-ruby` bundler cache, and `actions/cache` for `.nuget`/`~/.rustup`, so a feature-branch contributor can no longer prime a cache entry that a release job would later restore. The `cancel-in-progress: false` change ensures a release cannot be cancelled mid-publish, preventing inconsistent npm/GHCR/tag state. Non-pushing checkouts now use `persist-credentials: false` to limit accidental token reuse, and the `release-codeql.yml` `codeql pack publish` invocation now uses a bash array to avoid word-splitting on the `--allow-prerelease` flag. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+
+### Changed
+
+#### Infrastructure & CI/CD
+
+- The `setup-codeql-environment` composite action gained an `enable-cache` input (default `true`) that gates every cache-related step it owns (gh-codeql, language-runtimes, .NET packages) and every `cache:` feature it passes to `actions/setup-*`. Release workflows now pass `enable-cache: false`. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- The `setup-codeql-environment` composite action now sets up Rust (default `1.80.0`, configurable via `rust-version`) when `rust` is in the `languages` input, including a dedicated cache for `~/.cargo`/`~/.rustup` and a Cargo dependency-file detector. **Rust is opt-in only** — it is intentionally NOT included in the default `languages` value (`csharp,go,java,javascript,python,ruby`) because the Rust toolchain (rustc + cargo + rust-src) is a several-hundred-megabyte download. Callers that need Rust support must pass an explicit `languages:` override that includes `rust` (e.g. `languages: ${{ matrix.language }}` from a per-language matrix entry). ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- The `setup-codeql-environment` composite action now matches the `languages` input with comma-bounded tokens (`contains(format(',{0},', inputs.languages), ',java,')`) instead of bare substring `contains()`. This fixes a latent bug where the JavaScript matrix entry triggered the Java setup steps because `contains('javascript', 'java')` was true. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- `query-unit-tests.yml` matrix entries now pass `languages: ${{ matrix.language }}` to the composite action so each language matrix entry installs only its own runtime instead of the full default set, and `runs-on` is pinned to `ubuntu-24.04`. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- All release workflow `version` inputs (in `release.yml`, `release-tag.yml`, `release-npm.yml`, `release-vsix.yml`, `release-codeql.yml`) now document the actual accepted format (`^vMAJOR.MINOR.PATCH(-PRERELEASE)?$` where `PRERELEASE` may contain alphanumerics, dots, and hyphens) and are validated against that regex via an `env:` intermediate variable. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+
+### Fixed
+
+- **Rust `PrintAST` and `PrintCFG` unit tests failed on CI.** Two distinct root causes: (1) CI had no Rust toolchain installed, so the extractor could not expand `format!`/`println!`/`vec!` and the entire `getMacroCallExpansion()` subtrees were missing from `PrintAST` output; (2) the legacy rust test extractor produces non-deterministic CFG entity ordering under parallel evaluation, which made the `PrintCFG` snapshot test flaky (5 distinct outputs across 5 runs with `--threads=-1`, identical output across every run with `--threads=1`). Fixes: install Rust in CI via the composite action; regenerate the rust `PrintAST.expected` baseline; and force `--threads=1` for the rust language entry in `run-query-unit-tests.sh` so `PrintCFG` produces deterministic output. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- **`run-query-unit-tests.sh` broke the Swift macOS workflow with `unbound variable`.** Bash 3.2 (the default `/bin/bash` on macOS GitHub Actions runners) errors when expanding an empty array under `set -u`. Replaced the `local _threads_arg=()` array with a plain scalar string and unquoted expansion so the script is portable across Bash 3.2 and 4+. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+
+### Dependencies
+
+- Bumped `actions/dependency-review-action` from 4.9.0 to 5.0.0. ([#278](https://github.com/advanced-security/codeql-development-mcp-server/pull/278))
+- Added `dtolnay/rust-toolchain` (pinned to the `stable` branch commit SHA `29eef336d9b2848a0b548edc03f92a220660cdb8`) as a new dependency of `setup-codeql-environment` for the rust language. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+
 ## [v2.25.4] — 2026-05-08
 
 ### Highlights
