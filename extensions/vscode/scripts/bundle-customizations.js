@@ -134,15 +134,20 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
 /**
  * Recursively copies files from overlayDir into targetDir.
  * Warns when a file already exists (collision).
+ *
+ * subPath tracks the path relative to the category root so the manifest key
+ * preserves the directory structure (e.g. "skills/foo/SKILL.md", not
+ * "skills/SKILL.md").
  */
-function applyOverlayDir(overlayDir, targetDir, categoryKey, manifest) {
+function applyOverlayDir(overlayDir, targetDir, categoryKey, manifest, subPath = '') {
   for (const entry of readdirSync(overlayDir, { withFileTypes: true })) {
     const srcPath = join(overlayDir, entry.name);
     const dstPath = join(targetDir, entry.name);
+    const nextSubPath = subPath ? `${subPath}/${entry.name}` : entry.name;
 
     if (entry.isDirectory()) {
       mkdirSync(dstPath, { recursive: true });
-      applyOverlayDir(srcPath, dstPath, categoryKey, manifest);
+      applyOverlayDir(srcPath, dstPath, categoryKey, manifest, nextSubPath);
       continue;
     }
 
@@ -154,8 +159,9 @@ function applyOverlayDir(overlayDir, targetDir, categoryKey, manifest) {
     mkdirSync(dirname(dstPath), { recursive: true });
     copyFileSync(srcPath, dstPath);
 
-    // Build a relative manifest key: e.g. "agents/foo.agent.md"
-    const relKey = `${categoryKey}/${entry.name}`;
+    // Build a relative manifest key: e.g. "agents/foo.agent.md" or
+    // "skills/foo/SKILL.md" — preserving any subdirectory structure.
+    const relKey = `${categoryKey}/${nextSubPath}`;
     if (!alreadyExists && Array.isArray(manifest[categoryKey])) {
       manifest[categoryKey].push(relKey);
     }

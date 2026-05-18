@@ -8,7 +8,6 @@
 
 import * as assert from 'assert';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -107,7 +106,9 @@ suite('Agents Integration Tests', () => {
   });
 
   test('Setting codeql-mcp.additionalAgentDirs appends the dir', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codeql-mcp-test-'));
+    const tmpRoot = path.resolve(ext.extensionPath, '..', '..', '..', '.tmp');
+    fs.mkdirSync(tmpRoot, { recursive: true });
+    const tmpDir = fs.mkdtempSync(path.join(tmpRoot, 'codeql-mcp-test-'));
     const cfg = vscode.workspace.getConfiguration('codeql-mcp');
     const chatCfg = vscode.workspace.getConfiguration('chat');
 
