@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { AgentRegistrar } from './customizations/agent-registrar';
 import { Logger } from './common/logger';
 import { CliResolver } from './codeql/cli-resolver';
 import { ServerManager } from './server/server-manager';
@@ -37,6 +38,18 @@ export async function activate(
   const mcpProvider = new McpProvider(serverManager, envBuilder, logger);
 
   disposables.push(cliResolver, serverManager, packInstaller, storagePaths, envBuilder, mcpProvider);
+
+  // --- Agent registrar ---
+  const agentRegistrar = new AgentRegistrar(context, logger);
+  disposables.push(agentRegistrar);
+  try {
+    agentRegistrar.register();
+    agentRegistrar.startWatching();
+  } catch (err) {
+    logger.warn(
+      `AgentRegistrar init failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   // --- Bridge: filesystem watchers ---
   const config = vscode.workspace.getConfiguration('codeql-mcp');
@@ -139,6 +152,21 @@ export async function activate(
         },
       );
       vscode.window.showInformationMessage('CodeQL tool query packs reinstalled successfully.');
+    }),
+    vscode.commands.registerCommand('codeql-mcp.showAgentsStatus', () => {
+      const status = agentRegistrar.getStatus();
+      const lines = [
+        `Enabled: ${status.enabled}`,
+        `Bundled agents dir: ${status.bundledDir}`,
+        `Additional dirs: ${status.additionalDirs.length > 0 ? status.additionalDirs.join(', ') : '(none)'}`,
+        `Registered locations: ${status.effectiveLocations.length}`,
+      ];
+      logger.info('--- Agents Status ---');
+      for (const line of lines) {
+        logger.info(line);
+      }
+      logger.show();
+      vscode.window.showInformationMessage(lines.join(' | '));
     }),
     vscode.commands.registerCommand('codeql-mcp.showStatus', async () => {
       const cliPath = await cliResolver.resolve();
