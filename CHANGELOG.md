@@ -43,6 +43,15 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - Bumped `actions/dependency-review-action` from 4.9.0 to 5.0.0. ([#278](https://github.com/advanced-security/codeql-development-mcp-server/pull/278))
 - Added `dtolnay/rust-toolchain` (pinned to the `stable` branch commit SHA `29eef336d9b2848a0b548edc03f92a220660cdb8`) as a new dependency of `setup-codeql-environment` for the rust language. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
 
+### Added
+
+#### VS Code Extension
+
+- **Built-in portable custom agents** — The extension now ships two `.agent.md` custom agents (`codeql-query-developer`, `codeql-workshop-author`) bundled inside the VSIX. On activation, the extension registers its `agents/` directory in `chat.agentFilesLocations` so both agents are immediately discoverable in VS Code Copilot Chat without any manual configuration. No specific model is required — users choose their own.
+- **User-extensibility hooks** — Two new settings allow teams and individuals to extend the bundled agents at runtime (`codeql-mcp.additionalAgentDirs: string[]`) or disable the built-in registration entirely (`codeql-mcp.agents.enabled: boolean`, default `true`). A `--customizations-dir` CLI flag (or `CODEQL_MCP_CUSTOMIZATIONS_DIR` env var) on `bundle:customizations` enables building custom VSIXes with overlay agents, prompts, and skills.
+- **`codeql-mcp.showAgentsStatus` command** — New Command Palette entry (**CodeQL MCP: Show Built-in Custom Agents Status**) that reports the enabled state, bundled directory, additional directories, and effective `chat.agentFilesLocations` entries.
+- **Bundled prompts and skills** — Four MCP server prompts (`ql-tdd-basic`, `ql-tdd-advanced`, `tools-query-workflow`, `workshop-creation-workflow`) and two skills (`create-codeql-query-development-workshop`, `validate-ql-mcp-server-tools-queries`) are now copied into the VSIX as static contribution points (`chatPromptFiles`, `chatSkills`) so they are available to Copilot Chat without the MCP server running.
+
 ## [v2.25.4] — 2026-05-08
 
 ### Highlights
