@@ -340,15 +340,6 @@ runs:
           echo "No .NET dependency files found"
         fi
 
-        # Check for Rust dependency files
-        if [[ -f "Cargo.toml" ]] || find . -mindepth 2 -name 'Cargo.toml' -print -quit | grep -q .; then
-          echo "rust-deps=true" >> $GITHUB_OUTPUT
-          echo "Found Rust dependency files"
-        else
-          echo "rust-deps=false" >> $GITHUB_OUTPUT
-          echo "No Rust dependency files found"
-        fi
-
     - name: Setup Node.js (with cache)
       if: inputs.install-language-runtimes == 'true' && inputs.enable-cache == 'true'
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
@@ -482,7 +473,7 @@ runs:
 
     - name: Setup Rust toolchain
       if: inputs.install-language-runtimes == 'true' && contains(format(',{0},', inputs.languages), ',rust,')
-      uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # 1.88.0
+      uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
       with:
         toolchain: ${{ inputs.rust-version }}
         components: rust-src
