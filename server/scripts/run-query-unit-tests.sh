@@ -73,15 +73,34 @@ cd "${REPO_ROOT_DIR}"
 run_tests() {
 	local _tools_dir="$1"
 	local _test_dir="${_tools_dir}/test"
-	
+
 	if [ -d "${_test_dir}" ]; then
 		echo "INFO: Running 'codeql test run' for '${_test_dir}' directory..."
-		
+
+		# Determine the thread count for this language.
+		#
+		# Rust requires --threads=1 because the legacy rust test extractor
+		# produces non-deterministic CFG entity ordering under parallel
+		# evaluation, which makes the snapshot-based PrintCFG test flaky.
+		# All other languages run in parallel using the CodeQL default.
+		#
+		# NOTE: We use a plain string (not an array) because macOS still
+		# ships Bash 3.2 as /bin/bash, and `"${arr[@]}"` on an empty array
+		# errors under `set -u` ("unbound variable"). A scalar string with
+		# unquoted expansion is portable across Bash 3.2 and 4+.
+		local _threads_arg=""
+		case "${_tools_dir}" in
+			*/rust/tools)
+				_threads_arg="--threads=1"
+				echo "INFO: Forcing --threads=1 for rust (deterministic CFG ordering)"
+				;;
+		esac
+
 		# Capture the output and exit code
 		# Explicitly set --failing-exitcode=1 to ensure we get proper exit codes
 		local _output
 		local _exit_code=0
-		_output=$(codeql test run --format=text --failing-exitcode=1 --additional-packs="${_tools_dir}" -- "${_test_dir}" 2>&1) || _exit_code=$?
+		_output=$(codeql test run ${_threads_arg} --format=text --failing-exitcode=1 --additional-packs="${_tools_dir}" -- "${_test_dir}" 2>&1) || _exit_code=$?
 		
 		# Print the output
 		echo "${_output}"

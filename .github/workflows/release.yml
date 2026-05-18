@@ -22,7 +22,7 @@ on:
         required: false
         type: boolean
       version:
-        description: 'Release version (e.g., vX.Y.Z). Must start with "v".'
+        description: 'Release version (e.g., vX.Y.Z or vX.Y.Z-PRERELEASE). Must match ^vMAJOR.MINOR.PATCH(-PRERELEASE)?$ where PRERELEASE may contain alphanumerics, dots, and hyphens.'
         required: true
         type: string
 
@@ -31,7 +31,10 @@ permissions:
 
 concurrency:
   group: release-${{ github.event.inputs.version || github.ref_name }}
-  cancel-in-progress: true
+  # A mid-flight release that publishes to npm and GHCR but never tags (or
+  # vice versa) leaves the ecosystem in an inconsistent state. Releases must
+  # not be cancellable by a newer dispatch of the same version.
+  cancel-in-progress: false
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
@@ -43,7 +46,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   resolve-version:
     name: Resolve Release Version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     outputs:
       create_github_release: ${{ steps.resolve.outputs.create_github_release }}
@@ -55,35 +58,48 @@ jobs:
     steps:
       - name: Version - Resolve and validate
         id: resolve
+        env:
+          DISPATCH_VERSION: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          CREATE_RELEASE_INPUT: ${{ github.event.inputs.create_github_release }}
+          PUBLISH_PACKS_INPUT: ${{ github.event.inputs.publish_codeql_packs }}
+          PUBLISH_NPM_INPUT: ${{ github.event.inputs.publish_npm }}
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
+          if [ "${EVENT_NAME}" == "workflow_dispatch" ]; then
+            VERSION="${DISPATCH_VERSION}"
           else
-            VERSION="${{ github.ref_name }}"
+            VERSION="${REF_NAME}"
           fi
 
-          # Validate version starts with 'v'
-          if [[ ! "${VERSION}" =~ ^v ]]; then
-            echo "::error::Version '${VERSION}' must start with 'v'"
+          # Validate the resolved version: strict regex first, then
+          # git check-ref-format so values like 'v1.2.3-..' (regex-valid but
+          # rejected by git) are caught here instead of in actions/checkout.
+          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+            echo "::error::Version '${VERSION}' does not match ^vMAJOR.MINOR.PATCH(-PRERELEASE)?$"
+            exit 1
+          fi
+          if ! git check-ref-format "refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Version '${VERSION}' is not a valid git tag ref name"
             exit 1
           fi
 
           # Resolve publish flags (default true for tag pushes)
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            CREATE_RELEASE="${{ github.event.inputs.create_github_release }}"
-            PUBLISH_PACKS="${{ github.event.inputs.publish_codeql_packs }}"
-            PUBLISH_NPM="${{ github.event.inputs.publish_npm }}"
+          if [ "${EVENT_NAME}" == "workflow_dispatch" ]; then
+            CREATE_RELEASE="${CREATE_RELEASE_INPUT}"
+            PUBLISH_PACKS="${PUBLISH_PACKS_INPUT}"
+            PUBLISH_NPM="${PUBLISH_NPM_INPUT}"
           else
             CREATE_RELEASE="true"
             PUBLISH_PACKS="true"
             PUBLISH_NPM="true"
           fi
 
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "release_name=${VERSION#v}" >> $GITHUB_OUTPUT
-          echo "create_github_release=${CREATE_RELEASE}" >> $GITHUB_OUTPUT
-          echo "publish_codeql_packs=${PUBLISH_PACKS}" >> $GITHUB_OUTPUT
-          echo "publish_npm=${PUBLISH_NPM}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_name=${VERSION#v}" >> "$GITHUB_OUTPUT"
+          echo "create_github_release=${CREATE_RELEASE}" >> "$GITHUB_OUTPUT"
+          echo "publish_codeql_packs=${PUBLISH_PACKS}" >> "$GITHUB_OUTPUT"
+          echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Step 2: Ensure the release tag exists
@@ -174,7 +190,7 @@ jobs:
       && needs.resolve-version.outputs.create_github_release == 'true'
       && needs.resolve-version.outputs.publish_npm == 'true'
     needs: [resolve-version, ensure-tag, publish-npm, publish-codeql, build-vsix]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: write
