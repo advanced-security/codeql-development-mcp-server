@@ -72,12 +72,15 @@ jobs:
             VERSION="${REF_NAME}"
           fi
 
-          # Strict version format: vMAJOR.MINOR.PATCH with optional
-          # prerelease suffix made of alphanumerics, dots, and hyphens.
-          # This keeps the resolved outputs free of shell-metacharacters
-          # so they are safe to interpolate in later run: blocks.
+          # Validate the resolved version: strict regex first, then
+          # git check-ref-format so values like 'v1.2.3-..' (regex-valid but
+          # rejected by git) are caught here instead of in actions/checkout.
           if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
             echo "::error::Version '${VERSION}' does not match ^vMAJOR.MINOR.PATCH(-PRERELEASE)?$"
+            exit 1
+          fi
+          if ! git check-ref-format "refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Version '${VERSION}' is not a valid git tag ref name"
             exit 1
           fi
 

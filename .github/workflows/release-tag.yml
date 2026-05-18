@@ -51,12 +51,12 @@ jobs:
         env:
           RAW_VERSION: ${{ inputs.version }}
         run: |
-          # Strict version format: vMAJOR.MINOR.PATCH with optional
-          # prerelease suffix made of alphanumerics, dots, and hyphens.
-          # This keeps the resolved outputs free of shell-metacharacters
-          # so they are safe to interpolate in later run: blocks.
           if [[ ! "${RAW_VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
             echo "::error::Version '${RAW_VERSION}' does not match ^vMAJOR.MINOR.PATCH(-PRERELEASE)?$"
+            exit 1
+          fi
+          if ! git check-ref-format "refs/tags/${RAW_VERSION}" >/dev/null 2>&1; then
+            echo "::error::Version '${RAW_VERSION}' is not a valid git tag ref name"
             exit 1
           fi
           echo "version=${RAW_VERSION}" >> "$GITHUB_OUTPUT"

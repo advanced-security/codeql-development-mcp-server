@@ -51,6 +51,10 @@ jobs:
             echo "::error::Version '${RAW_VERSION}' does not match ^vMAJOR.MINOR.PATCH(-PRERELEASE)?$"
             exit 1
           fi
+          if ! git check-ref-format "refs/tags/${RAW_VERSION}" >/dev/null 2>&1; then
+            echo "::error::Version '${RAW_VERSION}' is not a valid git tag ref name"
+            exit 1
+          fi
           echo "version=${RAW_VERSION}" >> "$GITHUB_OUTPUT"
           echo "release_name=${RAW_VERSION#v}" >> "$GITHUB_OUTPUT"
 
