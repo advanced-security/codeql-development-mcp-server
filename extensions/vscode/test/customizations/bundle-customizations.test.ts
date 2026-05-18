@@ -31,7 +31,12 @@ describe('bundle-customizations', () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = mkdtempSync(join(process.cwd(), 'bundle-test-'));
+    // Use project-local .tmp/ rather than process.cwd() to avoid polluting
+    // the repo root and to match the convention used elsewhere in the
+    // monorepo. .tmp/ is gitignored at the repo root.
+    const tmpRoot = resolve(__repoRoot, '.tmp');
+    mkdirSync(tmpRoot, { recursive: true });
+    tmp = mkdtempSync(join(tmpRoot, 'bundle-test-'));
   });
 
   afterEach(() => {
