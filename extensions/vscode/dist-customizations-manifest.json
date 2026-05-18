@@ -1,0 +1,16 @@
+{
+  "agents": [
+    "agents/codeql-query-developer.agent.md",
+    "agents/codeql-workshop-author.agent.md"
+  ],
+  "prompts": [
+    "prompts/ql-tdd-basic.prompt.md",
+    "prompts/ql-tdd-advanced.prompt.md",
+    "prompts/tools-query-workflow.prompt.md",
+    "prompts/workshop-creation-workflow.prompt.md"
+  ],
+  "skills": [
+    "skills/create-codeql-query-development-workshop/SKILL.md",
+    "skills/validate-ql-mcp-server-tools-queries/SKILL.md"
+  ]
+}
