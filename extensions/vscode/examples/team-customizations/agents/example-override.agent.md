@@ -1,6 +1,6 @@
 ---
 name: example-override
-description: "Example agent demonstrating the overlay/override pattern."
+description: 'Example agent demonstrating the overlay/override pattern.'
 tools: ['ql-mcp/*', 'edit', 'read', 'search']
 ---
 

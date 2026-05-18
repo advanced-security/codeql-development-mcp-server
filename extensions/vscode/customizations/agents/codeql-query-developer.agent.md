@@ -1,6 +1,6 @@
 ---
 name: codeql-query-developer
-description: "Develop CodeQL queries, libraries, and tests with TDD via the ql-mcp server."
+description: 'Develop CodeQL queries, libraries, and tests with TDD via the ql-mcp server.'
 tools: ['ql-mcp/*', 'edit', 'read', 'search', 'todo']
 ---
 

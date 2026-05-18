@@ -5,7 +5,7 @@ team-specific or personal agents, prompts, and skills.
 
 ## Structure
 
-```
+```text
 team-customizations/
   agents/          # .agent.md files to add or override
   prompts/         # .prompt.md files to add

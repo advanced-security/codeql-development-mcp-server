@@ -39,10 +39,10 @@ On activation (`onStartupFinished`), the extension:
 
 The extension ships two portable `.agent.md` custom agents that appear in VS Code's Copilot Chat agent picker:
 
-| Agent | Description |
-| ----- | ----------- |
+| Agent                    | Description                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
 | `codeql-query-developer` | Develop CodeQL queries, libraries, and tests using TDD with the `ql-mcp` MCP server tools. |
-| `codeql-workshop-author` | Create CodeQL query development workshops from production-grade queries. |
+| `codeql-workshop-author` | Create CodeQL query development workshops from production-grade queries.                   |
 
 Both agents use the bundled MCP server tools (`ql-mcp/*`), prompts, and skills that ship with the extension. **No specific model is required** — you choose your own model in VS Code Copilot Chat.
 
@@ -88,47 +88,47 @@ See [`examples/team-customizations/`](./examples/team-customizations/README.md) 
 
 All settings are under the `codeql-mcp` namespace in VS Code settings:
 
-| Setting                                    | Default    | Description                                                         |
-| ------------------------------------------ | ---------- | ------------------------------------------------------------------- |
-| `codeql-mcp.agents.enabled`                | `true`     | Register the bundled custom agents in `chat.agentFilesLocations`.   |
+| Setting                                    | Default    | Description                                                                |
+| ------------------------------------------ | ---------- | -------------------------------------------------------------------------- |
+| `codeql-mcp.agents.enabled`                | `true`     | Register the bundled custom agents in `chat.agentFilesLocations`.          |
 | `codeql-mcp.additionalAgentDirs`           | `[]`       | Additional `.agent.md` directories appended to `chat.agentFilesLocations`. |
-| `codeql-mcp.autoInstall`                   | `true`     | Auto-install/update the MCP server on activation.                   |
-| `codeql-mcp.serverVersion`                 | `"latest"` | npm version to install (`"latest"` for most recent).                |
-| `codeql-mcp.serverCommand`                 | `"node"`   | Command to launch the server. Override to `"npx"` or a custom path. |
-| `codeql-mcp.serverArgs`                    | `[]`       | Custom args. When empty, the bundled entry point is used.           |
-| `codeql-mcp.watchCodeqlExtension`          | `true`     | Watch for databases and results from the CodeQL extension.          |
-| `codeql-mcp.enableAnnotationTools`         | `true`     | Enable annotation, audit, and cache tools.                          |
-| `codeql-mcp.additionalEnv`                 | `{}`       | Extra environment variables passed to the server process.           |
-| `codeql-mcp.additionalDatabaseDirs`        | `[]`       | Additional directories to search for CodeQL databases.              |
-| `codeql-mcp.additionalMrvaRunResultsDirs`  | `[]`       | Additional directories containing MRVA run results.                 |
-| `codeql-mcp.additionalQueryRunResultsDirs` | `[]`       | Additional directories containing query run results.                |
+| `codeql-mcp.autoInstall`                   | `true`     | Auto-install/update the MCP server on activation.                          |
+| `codeql-mcp.serverVersion`                 | `"latest"` | npm version to install (`"latest"` for most recent).                       |
+| `codeql-mcp.serverCommand`                 | `"node"`   | Command to launch the server. Override to `"npx"` or a custom path.        |
+| `codeql-mcp.serverArgs`                    | `[]`       | Custom args. When empty, the bundled entry point is used.                  |
+| `codeql-mcp.watchCodeqlExtension`          | `true`     | Watch for databases and results from the CodeQL extension.                 |
+| `codeql-mcp.enableAnnotationTools`         | `true`     | Enable annotation, audit, and cache tools.                                 |
+| `codeql-mcp.additionalEnv`                 | `{}`       | Extra environment variables passed to the server process.                  |
+| `codeql-mcp.additionalDatabaseDirs`        | `[]`       | Additional directories to search for CodeQL databases.                     |
+| `codeql-mcp.additionalMrvaRunResultsDirs`  | `[]`       | Additional directories containing MRVA run results.                        |
+| `codeql-mcp.additionalQueryRunResultsDirs` | `[]`       | Additional directories containing query run results.                       |
 
 ## Commands
 
 Available from the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 
-| Command                                                  | Description                                     |
-| -------------------------------------------------------- | ----------------------------------------------- |
-| **CodeQL MCP: Reinstall MCP Server**                     | Re-download and install the server package.     |
-| **CodeQL MCP: Reinstall CodeQL Tool Query Packs**        | Re-install the bundled CodeQL tool query packs. |
-| **CodeQL MCP: Show Built-in Custom Agents Status**       | Show which agent dirs are registered.           |
-| **CodeQL MCP: Show Status**                              | Display current server status.                  |
-| **CodeQL MCP: Show Logs**                                | Open the server log output.                     |
+| Command                                            | Description                                     |
+| -------------------------------------------------- | ----------------------------------------------- |
+| **CodeQL MCP: Reinstall MCP Server**               | Re-download and install the server package.     |
+| **CodeQL MCP: Reinstall CodeQL Tool Query Packs**  | Re-install the bundled CodeQL tool query packs. |
+| **CodeQL MCP: Show Built-in Custom Agents Status** | Show which agent dirs are registered.           |
+| **CodeQL MCP: Show Status**                        | Display current server status.                  |
+| **CodeQL MCP: Show Logs**                          | Open the server log output.                     |
 
 ## Development
 
 ### npm Scripts
 
-| Script                         | What it does                                                                                                                                                        | When to use                           |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `npm run package`              | **Builds everything and produces the `.vsix`**. Internally runs `vscode:prepublish` (clean → lint → bundle → bundle:server → bundle:customizations) then `vsce package`. | **Building a distributable `.vsix`.** |
-| `npm run build`                | `clean` → `lint` → `bundle` (extension only, no server or customizations).                                                                                          | Development builds without packaging. |
-| `npm run bundle`               | esbuild the extension (no lint, no clean).                                                                                                                           | Fast iteration during development.    |
-| `npm run bundle:customizations`| Copy bundled agents/prompts/skills to output dirs and write the manifest.                                                                                            | After modifying agent/prompt/skill sources. |
-| `npm run watch`                | Rebuild the extension on file changes.                                                                                                                               | Active development.                   |
-| `npm run test`                 | Run unit tests with Vitest.                                                                                                                                          | Validating changes.                   |
-| `npm run test:coverage`        | Run unit tests with coverage.                                                                                                                                        | CI / pre-merge validation.            |
-| `npm run lint`                 | Run ESLint on `src/` and `test/`.                                                                                                                                    | Checking code style.                  |
+| Script                          | What it does                                                                                                                                                             | When to use                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `npm run package`               | **Builds everything and produces the `.vsix`**. Internally runs `vscode:prepublish` (clean → lint → bundle → bundle:server → bundle:customizations) then `vsce package`. | **Building a distributable `.vsix`.**       |
+| `npm run build`                 | `clean` → `lint` → `bundle` (extension only, no server or customizations).                                                                                               | Development builds without packaging.       |
+| `npm run bundle`                | esbuild the extension (no lint, no clean).                                                                                                                               | Fast iteration during development.          |
+| `npm run bundle:customizations` | Copy bundled agents/prompts/skills to output dirs and write the manifest.                                                                                                | After modifying agent/prompt/skill sources. |
+| `npm run watch`                 | Rebuild the extension on file changes.                                                                                                                                   | Active development.                         |
+| `npm run test`                  | Run unit tests with Vitest.                                                                                                                                              | Validating changes.                         |
+| `npm run test:coverage`         | Run unit tests with coverage.                                                                                                                                            | CI / pre-merge validation.                  |
+| `npm run lint`                  | Run ESLint on `src/` and `test/`.                                                                                                                                        | Checking code style.                        |
 
 > **Note:** `vscode:prepublish` is a lifecycle hook invoked automatically by `vsce package` — you should not need to run it directly.
 

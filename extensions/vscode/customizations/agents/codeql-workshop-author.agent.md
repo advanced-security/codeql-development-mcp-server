@@ -1,6 +1,6 @@
 ---
 name: codeql-workshop-author
-description: "Create CodeQL query development workshops from production-grade queries."
+description: 'Create CodeQL query development workshops from production-grade queries.'
 tools: ['ql-mcp/*', 'edit', 'read', 'search', 'todo']
 handoffs:
   - agent: codeql-query-developer
@@ -38,7 +38,7 @@ Creates comprehensive CodeQL query development workshops from production-grade q
 
 ## Workshop Structure
 
-```
+```text
 <workshop-name>/
   exercises/          # Student exercise queries (incomplete, with scaffolding)
   exercises-tests/    # Unit tests for exercises
