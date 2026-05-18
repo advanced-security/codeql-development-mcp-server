@@ -1,5 +1,5 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentRegistrar } from './customizations/agent-registrar';
 import { Logger } from './common/logger';
 import { CliResolver } from './codeql/cli-resolver';
 import { ServerManager } from './server/server-manager';
@@ -39,17 +39,12 @@ export async function activate(
 
   disposables.push(cliResolver, serverManager, packInstaller, storagePaths, envBuilder, mcpProvider);
 
-  // --- Agent registrar ---
-  const agentRegistrar = new AgentRegistrar(context, logger);
-  disposables.push(agentRegistrar);
-  try {
-    agentRegistrar.register();
-    agentRegistrar.startWatching();
-  } catch (err) {
-    logger.warn(
-      `AgentRegistrar init failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
+  // Built-in custom agents are contributed declaratively via
+  // `contributes.chatAgents` in package.json. We deliberately do NOT register
+  // the extension's absolute `agents/` path in `chat.agentFilesLocations` —
+  // VS Code rejects absolute paths there (`Skipping invalid path (glob
+  // patterns and absolute paths not supported)`), so doing so would silently
+  // pollute user settings without making agents discoverable.
 
   // --- Bridge: filesystem watchers ---
   const config = vscode.workspace.getConfiguration('codeql-mcp');
@@ -154,19 +149,24 @@ export async function activate(
       vscode.window.showInformationMessage('CodeQL tool query packs reinstalled successfully.');
     }),
     vscode.commands.registerCommand('codeql-mcp.showAgentsStatus', () => {
-      const status = agentRegistrar.getStatus();
+      // Read the declarative contribution from the extension manifest.
+      const ownExt = vscode.extensions.getExtension(context.extension.id);
+      const contributed: { path: string }[] =
+        ownExt?.packageJSON?.contributes?.chatAgents ?? [];
+      const bundledDir = path.join(context.extensionUri.fsPath, 'agents');
       const lines = [
-        `Enabled: ${status.enabled}`,
-        `Bundled agents dir: ${status.bundledDir}`,
-        `Additional dirs: ${status.additionalDirs.length > 0 ? status.additionalDirs.join(', ') : '(none)'}`,
-        `Registered locations: ${status.effectiveLocations.length}`,
+        `Bundled agents dir: ${bundledDir}`,
+        `Contributed agents: ${contributed.length}`,
+        ...contributed.map((c) => `  - ${c.path}`),
       ];
       logger.info('--- Agents Status ---');
       for (const line of lines) {
         logger.info(line);
       }
       logger.show();
-      vscode.window.showInformationMessage(lines.join(' | '));
+      vscode.window.showInformationMessage(
+        `CodeQL MCP: ${contributed.length} bundled agent(s) contributed via package.json`,
+      );
     }),
     vscode.commands.registerCommand('codeql-mcp.showStatus', async () => {
       const cliPath = await cliResolver.resolve();

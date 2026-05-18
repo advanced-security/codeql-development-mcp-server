@@ -48,14 +48,6 @@
     "configuration": {
       "title": "CodeQL MCP Server",
       "properties": {
-        "codeql-mcp.additionalAgentDirs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Additional directories containing `.agent.md` files to append to `chat.agentFilesLocations`. Useful for team or personal agent overlays."
-        },
         "codeql-mcp.additionalDatabaseDirs": {
           "type": "array",
           "items": {
@@ -87,11 +79,6 @@
           },
           "default": [],
           "description": "Additional directories containing query run result subdirectories. Appended to CODEQL_QUERY_RUN_RESULTS_DIRS alongside the vscode-codeql query storage path."
-        },
-        "codeql-mcp.agents.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Register the bundled custom agents (`codeql-query-developer`, `codeql-workshop-author`) by appending the extension's bundled `agents/` directory to `chat.agentFilesLocations`. Toggle off to disable."
         },
         "codeql-mcp.autoDownloadPacks": {
           "type": "boolean",

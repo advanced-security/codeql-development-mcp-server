@@ -30,6 +30,47 @@ suite('Agents Integration Tests', () => {
     assert.ok(fs.existsSync(agentsDir), `agents/ dir should exist at ${agentsDir}`);
   });
 
+  test('Activation does NOT write the absolute bundled-agents path to chat.agentFilesLocations', () => {
+    // VS Code rejects absolute paths in chat.agentFilesLocations with
+    // "Skipping invalid path (glob patterns and absolute paths not supported)".
+    // Writing the bundled extension path there is therefore a no-op + pollutes
+    // user settings. Agents must be registered via contributes.chatAgents
+    // (or a future programmatic API), not via this setting.
+    const agentsDir = path.join(ext.extensionPath, 'agents');
+    const chatCfg = vscode.workspace.getConfiguration('chat');
+    const raw = chatCfg.get<unknown>('agentFilesLocations');
+    const keys: string[] = Array.isArray(raw)
+      ? (raw as unknown[]).filter((x) => typeof x === 'string') as string[]
+      : (raw && typeof raw === 'object' ? Object.keys(raw as Record<string, unknown>) : []);
+    const polluted = keys.some(
+      (k) => path.isAbsolute(k) && path.normalize(k) === path.normalize(agentsDir),
+    );
+    assert.strictEqual(
+      polluted,
+      false,
+      `chat.agentFilesLocations should not contain the absolute bundled-agents path; got: ${JSON.stringify(keys)}`,
+    );
+  });
+
+  test('package.json declares contributes.chatAgents for both bundled agents', () => {
+    const pkgPath = path.join(ext.extensionPath, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const chatAgents = pkg.contributes?.chatAgents;
+    assert.ok(Array.isArray(chatAgents) && chatAgents.length >= 2, 'contributes.chatAgents should have >=2 entries');
+    const paths: string[] = chatAgents.map((e: { path: string }) => e.path);
+    assert.ok(
+      paths.some((p) => p.endsWith('codeql-query-developer.agent.md')),
+      'chatAgents should reference codeql-query-developer.agent.md',
+    );
+    assert.ok(
+      paths.some((p) => p.endsWith('codeql-workshop-author.agent.md')),
+      'chatAgents should reference codeql-workshop-author.agent.md',
+    );
+    for (const p of paths) {
+      assert.ok(fs.existsSync(path.join(ext.extensionPath, p)), `chatAgents path should exist on disk: ${p}`);
+    }
+  });
+
   test('codeql-query-developer.agent.md exists and has correct name frontmatter', () => {
     const agentPath = path.join(ext.extensionPath, 'agents', 'codeql-query-developer.agent.md');
     assert.ok(fs.existsSync(agentPath), `${agentPath} should exist`);
@@ -64,71 +105,5 @@ suite('Agents Integration Tests', () => {
       vscode.commands.executeCommand('codeql-mcp.showAgentsStatus'),
       'showAgentsStatus command should not throw',
     );
-  });
-
-  test('Toggling codeql-mcp.agents.enabled = false removes bundled dir; re-enabling restores it', async () => {
-    const agentsDir = path.join(ext.extensionPath, 'agents');
-    const cfg = vscode.workspace.getConfiguration('codeql-mcp');
-    const chatCfg = vscode.workspace.getConfiguration('chat');
-
-    // Save original values
-    const originalEnabled = cfg.get<boolean>('agents.enabled', true);
-    const originalLocations = chatCfg.get<Record<string, boolean>>('agentFilesLocations', {});
-
-    try {
-      // Disable agents
-      await cfg.update('agents.enabled', false, vscode.ConfigurationTarget.Global);
-      // Give the registrar time to react
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      const locationsAfterDisable = vscode.workspace.getConfiguration('chat')
-        .get<Record<string, boolean>>('agentFilesLocations', {});
-      const containsBundledAfterDisable = Object.keys(locationsAfterDisable).some(
-        (k) => path.normalize(k) === path.normalize(agentsDir),
-      );
-      assert.strictEqual(containsBundledAfterDisable, false, 'Bundled dir should be removed when disabled');
-
-      // Re-enable
-      await cfg.update('agents.enabled', true, vscode.ConfigurationTarget.Global);
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      const locationsAfterEnable = vscode.workspace.getConfiguration('chat')
-        .get<Record<string, boolean>>('agentFilesLocations', {});
-      const containsBundledAfterEnable = Object.keys(locationsAfterEnable).some(
-        (k) => path.normalize(k) === path.normalize(agentsDir),
-      );
-      assert.strictEqual(containsBundledAfterEnable, true, 'Bundled dir should be restored when re-enabled');
-    } finally {
-      // Restore original config
-      await cfg.update('agents.enabled', originalEnabled, vscode.ConfigurationTarget.Global);
-      await chatCfg.update('agentFilesLocations', originalLocations, vscode.ConfigurationTarget.Global);
-    }
-  });
-
-  test('Setting codeql-mcp.additionalAgentDirs appends the dir', async () => {
-    const tmpRoot = path.resolve(ext.extensionPath, '..', '..', '..', '.tmp');
-    fs.mkdirSync(tmpRoot, { recursive: true });
-    const tmpDir = fs.mkdtempSync(path.join(tmpRoot, 'codeql-mcp-test-'));
-    const cfg = vscode.workspace.getConfiguration('codeql-mcp');
-    const chatCfg = vscode.workspace.getConfiguration('chat');
-
-    const originalAdditional = cfg.get<string[]>('additionalAgentDirs', []);
-    const originalLocations = chatCfg.get<Record<string, boolean>>('agentFilesLocations', {});
-
-    try {
-      await cfg.update('additionalAgentDirs', [tmpDir], vscode.ConfigurationTarget.Global);
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      const locations = vscode.workspace.getConfiguration('chat')
-        .get<Record<string, boolean>>('agentFilesLocations', {});
-      const containsTmpDir = Object.keys(locations).some(
-        (k) => path.normalize(k) === path.normalize(tmpDir),
-      );
-      assert.ok(containsTmpDir, `tmpDir ${tmpDir} should be in agentFilesLocations`);
-    } finally {
-      await cfg.update('additionalAgentDirs', originalAdditional, vscode.ConfigurationTarget.Global);
-      await chatCfg.update('agentFilesLocations', originalLocations, vscode.ConfigurationTarget.Global);
-      try { fs.rmdirSync(tmpDir); } catch { /* ignore */ }
-    }
   });
 });

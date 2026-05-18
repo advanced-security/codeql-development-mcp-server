@@ -33,7 +33,7 @@ On activation (`onStartupFinished`), the extension:
 1. **Auto-installs** the `codeql-development-mcp-server` npm package (unless `codeql-mcp.autoInstall` is `false`).
 2. **Registers an MCP server definition** (`ql-mcp`) so VS Code's Copilot/MCP integration can discover and launch it.
 3. **Watches** the CodeQL extension's storage paths for databases, query results, and MRVA results, passing them to the MCP server as environment variables.
-4. **Registers built-in custom agents** (`codeql-query-developer`, `codeql-workshop-author`) in `chat.agentFilesLocations` so they are discoverable in VS Code Copilot Chat.
+4. **Contributes built-in custom agents** (`codeql-query-developer`, `codeql-workshop-author`) declaratively via `contributes.chatAgents` in the extension manifest, so they are discoverable in VS Code Copilot Chat.
 
 ## Built-in Custom Agents
 
@@ -46,25 +46,11 @@ The extension ships two portable `.agent.md` custom agents that appear in VS Cod
 
 Both agents use the bundled MCP server tools (`ql-mcp/*`), prompts, and skills that ship with the extension. **No specific model is required** — you choose your own model in VS Code Copilot Chat.
 
-### Enabling / Disabling the Built-in Agents
+The agents are contributed declaratively via the `contributes.chatAgents` field in [`package.json`](./package.json); the bundled `.agent.md` files live under `agents/` inside the installed VSIX.
 
-Agents are enabled by default. To disable them, set:
+### Adding Your Own Agents at Runtime
 
-```json
-"codeql-mcp.agents.enabled": false
-```
-
-This removes the bundled `agents/` directory from `chat.agentFilesLocations` so the agents are no longer discoverable in Copilot Chat.
-
-### Extending at Runtime — Additional Agent Directories
-
-To add team or personal `.agent.md` files without rebuilding the extension, use:
-
-```json
-"codeql-mcp.additionalAgentDirs": ["/path/to/your/team-agents"]
-```
-
-This appends the directory to `chat.agentFilesLocations` alongside the bundled agents.
+VS Code's [`chat.agentFilesLocations`](https://code.visualstudio.com/docs/copilot/customization/custom-agents) setting accepts **workspace-relative** paths (e.g. `.github/agents`, `~/.copilot/agents`). Absolute paths are rejected by VS Code, so the extension does not write to that setting on your behalf — add your own personal or team agent directories there directly.
 
 ### Extending at Build Time — Custom VSIX
 
@@ -88,20 +74,18 @@ See [`examples/team-customizations/`](./examples/team-customizations/README.md) 
 
 All settings are under the `codeql-mcp` namespace in VS Code settings:
 
-| Setting                                    | Default    | Description                                                                |
-| ------------------------------------------ | ---------- | -------------------------------------------------------------------------- |
-| `codeql-mcp.agents.enabled`                | `true`     | Register the bundled custom agents in `chat.agentFilesLocations`.          |
-| `codeql-mcp.additionalAgentDirs`           | `[]`       | Additional `.agent.md` directories appended to `chat.agentFilesLocations`. |
-| `codeql-mcp.autoInstall`                   | `true`     | Auto-install/update the MCP server on activation.                          |
-| `codeql-mcp.serverVersion`                 | `"latest"` | npm version to install (`"latest"` for most recent).                       |
-| `codeql-mcp.serverCommand`                 | `"node"`   | Command to launch the server. Override to `"npx"` or a custom path.        |
-| `codeql-mcp.serverArgs`                    | `[]`       | Custom args. When empty, the bundled entry point is used.                  |
-| `codeql-mcp.watchCodeqlExtension`          | `true`     | Watch for databases and results from the CodeQL extension.                 |
-| `codeql-mcp.enableAnnotationTools`         | `true`     | Enable annotation, audit, and cache tools.                                 |
-| `codeql-mcp.additionalEnv`                 | `{}`       | Extra environment variables passed to the server process.                  |
-| `codeql-mcp.additionalDatabaseDirs`        | `[]`       | Additional directories to search for CodeQL databases.                     |
-| `codeql-mcp.additionalMrvaRunResultsDirs`  | `[]`       | Additional directories containing MRVA run results.                        |
-| `codeql-mcp.additionalQueryRunResultsDirs` | `[]`       | Additional directories containing query run results.                       |
+| Setting                                    | Default    | Description                                                         |
+| ------------------------------------------ | ---------- | ------------------------------------------------------------------- |
+| `codeql-mcp.autoInstall`                   | `true`     | Auto-install/update the MCP server on activation.                   |
+| `codeql-mcp.serverVersion`                 | `"latest"` | npm version to install (`"latest"` for most recent).                |
+| `codeql-mcp.serverCommand`                 | `"node"`   | Command to launch the server. Override to `"npx"` or a custom path. |
+| `codeql-mcp.serverArgs`                    | `[]`       | Custom args. When empty, the bundled entry point is used.           |
+| `codeql-mcp.watchCodeqlExtension`          | `true`     | Watch for databases and results from the CodeQL extension.          |
+| `codeql-mcp.enableAnnotationTools`         | `true`     | Enable annotation, audit, and cache tools.                          |
+| `codeql-mcp.additionalEnv`                 | `{}`       | Extra environment variables passed to the server process.           |
+| `codeql-mcp.additionalDatabaseDirs`        | `[]`       | Additional directories to search for CodeQL databases.              |
+| `codeql-mcp.additionalMrvaRunResultsDirs`  | `[]`       | Additional directories containing MRVA run results.                 |
+| `codeql-mcp.additionalQueryRunResultsDirs` | `[]`       | Additional directories containing query run results.                |
 
 ## Commands
 
