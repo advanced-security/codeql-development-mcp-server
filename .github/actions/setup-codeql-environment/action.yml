@@ -19,7 +19,7 @@ inputs:
   languages:
     description: 'Comma-separated list of target programming languages for which dependencies should be installed'
     required: false
-    default: 'csharp,go,java,javascript,python,ruby,rust'
+    default: 'csharp,go,java,javascript,python,ruby'
 
   # Language runtime versions (only used if install-language-runtimes is true)
   python-version:
@@ -327,7 +327,7 @@ runs:
         fi
 
         # Check for Rust dependency files
-        if [[ -f "Cargo.toml" ]] || compgen -G '**/Cargo.toml' >/dev/null; then
+        if [[ -f "Cargo.toml" ]] || find . -mindepth 2 -name 'Cargo.toml' -print -quit | grep -q .; then
           echo "rust-deps=true" >> $GITHUB_OUTPUT
           echo "Found Rust dependency files"
         else
