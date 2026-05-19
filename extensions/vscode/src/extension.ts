@@ -23,6 +23,19 @@ export interface BundledAgentsStatus {
 export interface ExtensionApi {
   readonly mcpProvider: McpProvider;
   /**
+   * Exposes the `EnvironmentBuilder` used to compute environment variables
+   * passed to the MCP server. The bridge/workspace integration tests inspect
+   * its output to verify that storage paths, workspace folders, and the
+   * `CODEQL_PATH` resolution behave correctly without spawning the server.
+   */
+  readonly environmentBuilder: EnvironmentBuilder;
+  /**
+   * Exposes the `ServerManager` so the MCP-server integration tests can
+   * assert the chosen launch command/args and report the installed version
+   * without re-implementing the install lookup.
+   */
+  readonly serverManager: ServerManager;
+  /**
    * Reads the bundled-agents status off disk via `context.extensionUri`. Used
    * by the `codeql-mcp.showAgentsStatus` command and by integration tests; the
    * helper deliberately avoids `context.extension` so it works regardless of

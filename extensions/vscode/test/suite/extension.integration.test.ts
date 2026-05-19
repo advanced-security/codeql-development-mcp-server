@@ -36,6 +36,34 @@ suite('Extension Integration Tests', () => {
     assert.ok(api.mcpProvider, 'API missing mcpProvider');
   });
 
+  test('Extension API shape matches the documented ExtensionApi contract', async () => {
+    // Regression guard. `activate()` returns an `ExtensionApi`, but several
+    // integration tests rely on `environmentBuilder` and `serverManager`
+    // being present on that object. The TypeScript interface MUST declare
+    // every member the integration suite accesses; otherwise the return
+    // value violates the documented type via excess-property semantics.
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
+    assert.ok(ext);
+    const api = ext.isActive ? ext.exports : await ext.activate();
+    const EXPECTED_KEYS = [
+      'mcpProvider',
+      'environmentBuilder',
+      'serverManager',
+      'getBundledAgentsStatus',
+    ] as const;
+    for (const key of EXPECTED_KEYS) {
+      assert.ok(
+        api[key] !== undefined,
+        `ExtensionApi should expose \`${key}\`; got: ${Object.keys(api).join(', ')}`,
+      );
+    }
+    assert.strictEqual(
+      typeof api.getBundledAgentsStatus,
+      'function',
+      'getBundledAgentsStatus should be callable',
+    );
+  });
+
   test('Commands should be registered', async () => {
     const commands = await vscode.commands.getCommands(true);
     const expected = [

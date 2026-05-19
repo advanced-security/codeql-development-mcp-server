@@ -52,7 +52,12 @@ The agents are contributed declaratively via the `contributes.chatAgents` field 
 
 ### Adding Your Own Agents at Runtime
 
-VS Code's [`chat.agentFilesLocations`](https://code.visualstudio.com/docs/copilot/customization/custom-agents) setting accepts **workspace-relative** paths (e.g. `.github/agents`, `~/.copilot/agents`). Absolute paths are rejected by VS Code, so the extension does not write to that setting on your behalf — add your own personal or team agent directories there directly.
+VS Code's [`chat.agentFilesLocations`](https://code.visualstudio.com/docs/copilot/customization/custom-agents) setting accepts:
+
+- **Workspace-relative paths** — e.g. `.github/agents`, `team/agents`.
+- **Home-relative paths** — e.g. `~/.copilot/agents` (the leading `~/` is required; bare `~` is rejected).
+
+It rejects everything else: absolute paths (`/Users/…`, `C:\…`), backslash separators, and glob characters (`*?[]{}`). The extension therefore does not write to this setting on your behalf — add your own personal or team agent directories using one of the accepted forms above.
 
 ### Extending at Build Time — Custom VSIX
 
