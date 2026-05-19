@@ -41,15 +41,24 @@ Use the bundled `ql-mcp/*` tools for all CodeQL operations:
 - `ql-mcp/find_codeql_query_files` — locate query files in the workspace.
 - `ql-mcp/codeql_pack_install` — install QL pack dependencies.
 
-## Bundled Skills and Prompts
+## Bundled Skills
 
-The following bundled resources are available in the extension and provide detailed step-by-step workflows:
+These skills are contributed by this extension and provide detailed step-by-step workflows:
 
-- **Skill `ql-mcp-ext-create-workshop`** — reference for structured query development.
-- **Skill `ql-mcp-ext-validate-tools-queries`** — validate PrintAST, PrintCFG, and CallGraph tools.
-- **Prompt `ql-mcp-ext-tdd-basic`** — basic TDD workflow for simple CodeQL queries.
-- **Prompt `ql-mcp-ext-tdd-advanced`** — advanced TDD patterns for data-flow and taint-tracking queries.
-- **Prompt `ql-mcp-ext-tools-query-workflow`** — workflow for using MCP tool queries (PrintAST, PrintCFG, CallGraph).
+- **`ql-mcp-ext-create-workshop`** — reference for structured query development.
+- **`ql-mcp-ext-validate-tools-queries`** — validate PrintAST, PrintCFG, and CallGraph tools.
+
+## MCP Prompts
+
+These slash commands are served by the `ql-mcp` MCP server and are also available outside this agent. Invoke any of them with `/` in Copilot Chat:
+
+- `/ql_tdd_basic` — core TDD loop for a new query.
+- `/ql_tdd_advanced` — TDD for data-flow and taint-tracking queries.
+- `/ql_lsp_iterative_development` — LSP-driven iterative refinement of an in-progress query.
+- `/tools_query_workflow` — PrintAST, PrintCFG, and CallGraph debugging.
+- `/explain_codeql_query` — read an existing query before modifying or testing it.
+- `/document_codeql_query` — add `@name`, `@id`, `@kind`, `@tags` metadata.
+- `/data_extension_development` — Models-as-Data authoring for library modeling.
 
 ## Quality Standards
 

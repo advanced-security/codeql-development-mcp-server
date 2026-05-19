@@ -33,7 +33,7 @@ On activation (`onStartupFinished`), the extension:
 1. **Auto-installs** the `codeql-development-mcp-server` npm package (unless `codeql-mcp.autoInstall` is `false`).
 2. **Registers an MCP server definition** (`ql-mcp`) so VS Code's Copilot/MCP integration can discover and launch it.
 3. **Watches** the CodeQL extension's storage paths for databases, query results, and MRVA results, passing them to the MCP server as environment variables.
-4. **Contributes built-in custom agents** (`ql-mcp-ext-query-developer`, `ql-mcp-ext-workshop-author`) declaratively via `contributes.chatAgents` in the extension manifest, so they are discoverable in VS Code Copilot Chat.
+4. **Contributes built-in custom agents and skills** (`ql-mcp-ext-query-developer`, `ql-mcp-ext-workshop-author`, plus two skills) declaratively via `contributes.chatAgents` and `contributes.chatSkills` in the extension manifest, so they are discoverable in VS Code Copilot Chat. Workflow prompts come from the `ql-mcp` MCP server, not the VSIX.
 
 ## Built-in Custom Agents
 
@@ -44,7 +44,9 @@ The extension ships two portable `.agent.md` custom agents that appear in VS Cod
 | `ql-mcp-ext-query-developer` | Develop CodeQL queries, libraries, and tests using TDD with the `ql-mcp` MCP server tools. |
 | `ql-mcp-ext-workshop-author` | Create CodeQL query development workshops from production-grade queries.                   |
 
-Both agents use the bundled MCP server tools (`ql-mcp/*`), prompts, and skills that ship with the extension. **No specific model is required** — you choose your own model in VS Code Copilot Chat.
+Both agents use the bundled MCP server tools (`ql-mcp/*`) and skills that ship with the extension. **No specific model is required** — you choose your own model in VS Code Copilot Chat.
+
+Workflow prompts are not bundled in the VSIX; they are served by the `ql-mcp` MCP server (via `prompts/list`) and surfaced by Copilot Chat as slash commands such as `/ql_tdd_basic`, `/explain_codeql_query`, `/document_codeql_query`, and `/workshop_creation_workflow`. Each shipped agent's "MCP Prompts" section lists the slash IDs it works with. Start the MCP server (auto-installed on activation) to use them.
 
 The agents are contributed declaratively via the `contributes.chatAgents` field in [`package.json`](./package.json); the bundled `.agent.md` files live under `agents/` inside the installed VSIX.
 

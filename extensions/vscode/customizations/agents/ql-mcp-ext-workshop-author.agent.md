@@ -58,12 +58,20 @@ Creates comprehensive CodeQL query development workshops from production-grade q
 - **Simple → Filtered** — High recall first, then refine with filters.
 - **Building Blocks** — Define helpers, combine into sources/sinks, connect with flow.
 
-## Bundled Skills and Prompts
+## Bundled Skills
 
-- **Skill `ql-mcp-ext-create-workshop`** — full step-by-step workshop creation workflow.
-- **Skill `ql-mcp-ext-validate-tools-queries`** — AST/CFG/CallGraph validation protocol.
-- **Prompt `ql-mcp-ext-workshop-creation-workflow`** — structured prompt for workshop generation from a production query.
-- **Prompt `ql-mcp-ext-tdd-advanced`** — advanced TDD patterns for data-flow and taint-tracking queries.
+- **`ql-mcp-ext-create-workshop`** — full step-by-step workshop creation workflow.
+- **`ql-mcp-ext-validate-tools-queries`** — AST/CFG/CallGraph validation protocol.
+
+## MCP Prompts
+
+These slash commands are served by the `ql-mcp` MCP server and are also available outside this agent. Invoke any of them with `/` in Copilot Chat:
+
+- `/workshop_creation_workflow` — primary scaffolding workflow for a new workshop.
+- `/explain_codeql_query` — analyze the source production query before decomposing it.
+- `/tools_query_workflow` — produce the AST/CFG/CallGraph graphs that populate `graphs/`.
+- `/ql_tdd_advanced` — TDD patterns used in later workshop stages (data-flow, taint).
+- `/document_codeql_query` — document solution queries in the final stage.
 
 ## Quality Standards
 

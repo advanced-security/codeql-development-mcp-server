@@ -141,4 +141,89 @@ suite('Agents Integration Tests', () => {
       `contributedAgents should reference ql-mcp-ext-workshop-author.agent.md; got: ${JSON.stringify(paths)}`,
     );
   });
+
+  test('package.json does NOT contribute chatPromptFiles (prompts come from the MCP server)', () => {
+    // The extension intentionally does not bundle .prompt.md files. Workflow
+    // prompts ship via the `ql-mcp` MCP server's `prompts/list` surface and
+    // are exposed by Copilot Chat as slash commands when the server is
+    // connected. Bundling extension-side duplicates created two slash-command
+    // IDs for the same content (e.g. `/ql-mcp-ext-tdd-basic` and
+    // `/ql_tdd_basic`); the extension now contributes only agents + skills
+    // and points the agents at the MCP slash IDs.
+    const pkgPath = path.join(ext.extensionPath, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const promptFiles = pkg.contributes?.chatPromptFiles;
+    if (promptFiles !== undefined) {
+      assert.ok(
+        Array.isArray(promptFiles) && promptFiles.length === 0,
+        `contributes.chatPromptFiles should be absent or empty; got: ${JSON.stringify(promptFiles)}`,
+      );
+    }
+  });
+
+  test('Bundled prompts/ directory is not produced by the bundler', () => {
+    const promptsDir = path.join(ext.extensionPath, 'prompts');
+    assert.strictEqual(
+      fs.existsSync(promptsDir),
+      false,
+      `${promptsDir} should not exist; the extension no longer bundles workflow prompts`,
+    );
+  });
+
+  test('Every MCP prompt slash ID referenced by shipped agents maps to a real MCP prompt', () => {
+    // Catches the failure mode where the agent prose names a slash command
+    // that no longer exists in the MCP server (e.g. after a server-side
+    // rename). The set of valid MCP prompt IDs is derived from the names
+    // registered in server/src/prompts/workflow-prompts.ts.
+    const VALID_MCP_PROMPT_IDS = new Set<string>([
+      'check_for_duplicated_code',
+      'compare_overlapping_alerts',
+      'data_extension_development',
+      'document_codeql_query',
+      'explain_codeql_query',
+      'find_overlapping_queries',
+      'ql_lsp_iterative_development',
+      'ql_tdd_advanced',
+      'ql_tdd_basic',
+      'run_query_and_summarize_false_positives',
+      'sarif_rank_false_positives',
+      'sarif_rank_true_positives',
+      'test_driven_development',
+      'tools_query_workflow',
+      'workshop_creation_workflow',
+    ]);
+
+    const agentsDir = path.join(ext.extensionPath, 'agents');
+    const agentFiles = fs
+      .readdirSync(agentsDir)
+      .filter((f) => f.endsWith('.agent.md'));
+    assert.ok(agentFiles.length >= 2, 'expected at least 2 bundled agent files');
+
+    // Find `/<prompt_id>` tokens inside backticks (the documented form).
+    const slashRe = /`\/([a-z][a-z0-9_]+)`/g;
+    const unknown: { agent: string; id: string }[] = [];
+    const perAgentCount: Record<string, number> = {};
+    for (const file of agentFiles) {
+      perAgentCount[file] = 0;
+      const content = fs.readFileSync(path.join(agentsDir, file), 'utf8');
+      let m: RegExpExecArray | null;
+      while ((m = slashRe.exec(content)) !== null) {
+        perAgentCount[file]++;
+        if (!VALID_MCP_PROMPT_IDS.has(m[1])) {
+          unknown.push({ agent: file, id: m[1] });
+        }
+      }
+    }
+    for (const [file, count] of Object.entries(perAgentCount)) {
+      assert.ok(
+        count > 0,
+        `${file} should reference at least one \`/<mcp_prompt_id>\` slash command; got 0`,
+      );
+    }
+    assert.deepStrictEqual(
+      unknown,
+      [],
+      `agent prose references unknown MCP prompt IDs: ${JSON.stringify(unknown)}`,
+    );
+  });
 });

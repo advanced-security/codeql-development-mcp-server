@@ -141,20 +141,6 @@
         "path": "./agents/ql-mcp-ext-workshop-author.agent.md"
       }
     ],
-    "chatPromptFiles": [
-      {
-        "path": "./prompts/ql-mcp-ext-tdd-advanced.prompt.md"
-      },
-      {
-        "path": "./prompts/ql-mcp-ext-tdd-basic.prompt.md"
-      },
-      {
-        "path": "./prompts/ql-mcp-ext-tools-query-workflow.prompt.md"
-      },
-      {
-        "path": "./prompts/ql-mcp-ext-workshop-creation-workflow.prompt.md"
-      }
-    ],
     "chatSkills": [
       {
         "name": "ql-mcp-ext-create-workshop",

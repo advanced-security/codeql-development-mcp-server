@@ -17,7 +17,13 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 const EXTENSION_ID = 'advanced-security.vscode-codeql-development-mcp-server';
-const BUNDLED_DIRS = ['agents', 'prompts', 'skills'] as const;
+// Directories the bundler always produces. The `prompts/` dir is omitted
+// here because workflow prompts now ship via the `ql-mcp` MCP server's
+// `prompts/list`, not as `chatPromptFiles`. If a downstream overlay opts
+// back into bundling prompts, the walk below still picks them up
+// opportunistically (without an existence assertion).
+const REQUIRED_BUNDLED_DIRS = ['agents', 'skills'] as const;
+const OPTIONAL_BUNDLED_DIRS = ['prompts'] as const;
 
 // Match `[label](target)` markdown links. Lazy on label, greedy-but-paren-safe
 // on target. Anchors and angle-bracket forms are handled in the iteration.
@@ -105,12 +111,14 @@ suite('Bundled markdown link validity', () => {
   });
 
   test('every relative link in bundled agents/prompts/skills markdown resolves to a bundled file', () => {
-    // Guard against a vacuous pass: every bundled dir must be present, and
-    // we must scan at least one markdown file and one relative link across
-    // the bundle. If the bundle:customizations step was skipped (so all dirs
-    // are missing) the per-link walk would otherwise return zero and the
-    // test would silently succeed.
-    for (const dirName of BUNDLED_DIRS) {
+    // Guard against a vacuous pass: every REQUIRED bundled dir must be
+    // present, and we must scan at least one markdown file and one relative
+    // link across the bundle. The `prompts/` dir is optional (the extension
+    // no longer contributes `chatPromptFiles`; prompts come from the
+    // `ql-mcp` MCP server). If the bundle:customizations step was skipped
+    // so the required dirs are missing, the per-link walk would otherwise
+    // return zero and the test would silently succeed.
+    for (const dirName of REQUIRED_BUNDLED_DIRS) {
       const dir = path.join(extensionPath, dirName);
       assert.ok(
         fs.existsSync(dir),
@@ -122,7 +130,7 @@ suite('Bundled markdown link validity', () => {
     let mdFiles = 0;
     let scannedLinks = 0;
 
-    for (const dirName of BUNDLED_DIRS) {
+    for (const dirName of [...REQUIRED_BUNDLED_DIRS, ...OPTIONAL_BUNDLED_DIRS]) {
       const dir = path.join(extensionPath, dirName);
       for (const md of walkMarkdown(dir)) {
         mdFiles++;

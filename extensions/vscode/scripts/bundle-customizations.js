@@ -57,12 +57,21 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
     pathToFileURL(configPath).href
   );
 
-  // Clean previous outputs
-  for (const dir of [targetAgentsDir, targetPromptsDir, targetSkillsDir]) {
+  // Clean previous outputs. The prompts dir is only re-created if the
+  // allowlist asks for any prompts; the extension contributes prompts via
+  // the `ql-mcp` MCP server (`prompts/list`), not via `chatPromptFiles`, so
+  // by default no `prompts/` directory ships in the VSIX.
+  for (const dir of [targetAgentsDir, targetSkillsDir]) {
     if (existsSync(dir)) {
       rmSync(dir, { recursive: true, force: true });
     }
     mkdirSync(dir, { recursive: true });
+  }
+  if (existsSync(targetPromptsDir)) {
+    rmSync(targetPromptsDir, { recursive: true, force: true });
+  }
+  if (promptAllowlist.length > 0) {
+    mkdirSync(targetPromptsDir, { recursive: true });
   }
 
   // Track bundled files for manifest
@@ -82,6 +91,10 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
   }
 
   // --- Copy allowlisted prompts (rename on copy per { src, dst }) ---
+  // Default state: `promptAllowlist` is empty because the `ql-mcp` MCP
+  // server already serves these workflow prompts via `prompts/list`. Kept
+  // as an opt-in code path so a downstream overlay can re-introduce
+  // bundled prompts without touching the bundler.
   for (const entry of promptAllowlist) {
     const { src: srcName, dst: dstName } = normalizeRenameEntry(entry);
     const src = join(serverPromptsDir, srcName);
