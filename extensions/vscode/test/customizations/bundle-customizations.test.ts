@@ -3,7 +3,7 @@
  *
  * Runs the bundler's exported `runBundle()` function in an isolated temp
  * directory structure to verify default copying, manifest generation,
- * overlay support, and graceful handling of absent whitelisted files.
+ * overlay support, and graceful handling of absent allowlisted files.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -16,15 +16,17 @@ import {
   writeFileSync,
 } from 'fs';
 import { join, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 // Resolve the actual script location
 const __repoRoot = resolve(fileURLToPath(import.meta.url), '..', '..', '..', '..', '..');
 
-// Import the bundler dynamically (ES module)
+// Import the bundler dynamically. Use a `file://` URL rather than a raw
+// filesystem path so the import resolves on Windows (where absolute paths
+// like `C:\\…\\bundle-customizations.js` are not valid ESM specifiers).
 async function importBundler() {
   const bundlerPath = resolve(__repoRoot, 'extensions', 'vscode', 'scripts', 'bundle-customizations.js');
-  return import(bundlerPath) as Promise<{ runBundle: (opts: { extensionRoot: string; customizationsDir?: string }) => Promise<{ agents: string[]; prompts: string[]; skills: string[] }> }>;
+  return import(pathToFileURL(bundlerPath).href) as Promise<{ runBundle: (opts: { extensionRoot: string; customizationsDir?: string }) => Promise<{ agents: string[]; prompts: string[]; skills: string[] }> }>;
 }
 
 describe('bundle-customizations', () => {
@@ -97,7 +99,7 @@ describe('bundle-customizations', () => {
     expect(manifest.skills).toContain('skills/validate-ql-mcp-server-tools-queries/SKILL.md');
   });
 
-  it('warns but does not fail when whitelisted files are absent', async () => {
+  it('warns but does not fail when allowlisted files are absent', async () => {
     const fakeDeep = join(tmp, 'fake-repo2', 'extensions', 'vscode');
     mkdirSync(join(fakeDeep, 'customizations', 'agents'), { recursive: true });
     writeFileSync(

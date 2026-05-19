@@ -1,7 +1,7 @@
 /**
  * bundle-customizations.config.js
  *
- * Whitelist of prompts and skills to bundle into the VS Code extension.
+ * Allowlist of prompts and skills to bundle into the VS Code extension.
  *
  * Each entry uses `{ src, dst }` so the bundled copy can be renamed at copy
  * time without modifying the source-of-truth files (which other tooling \u2014

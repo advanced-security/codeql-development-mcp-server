@@ -70,6 +70,14 @@ CODEQL_MCP_CUSTOMIZATIONS_DIR=./examples/team-customizations npm run bundle:cust
 
 See [`examples/team-customizations/`](./examples/team-customizations/README.md) for a complete overlay example.
 
+#### What the build-time overlay can and cannot do
+
+VS Code resolves chat customizations declared in the extension manifest (`contributes.chatAgents`, `contributes.chatPromptFiles`, `contributes.chatSkills`), and the bundler does **not** rewrite `package.json` for you. As a result:
+
+- **Overriding the bundled defaults works out of the box.** An overlay file at `customizations-dir/agents/ql-mcp-ext-query-developer.agent.md` replaces the corresponding bundled file with a collision warning. The contribution entry already in `package.json` continues to point at the same path, so the override is picked up automatically.
+- **Adding supporting files under an already-contributed skill works out of the box.** Any new file under `customizations-dir/skills/<bundled-skill-name>/…` is copied alongside the bundled `SKILL.md` and resolvable via relative links from that `SKILL.md`.
+- **Adding a brand-new agent, prompt, or skill that is not already in `package.json` requires a manifest patch.** Drop the overlay file into `customizations-dir/{agents,prompts,skills}/` as usual, then add a matching entry to `extensions/vscode/package.json` under `contributes.chatAgents` (or `chatPromptFiles` / `chatSkills`) pointing at the bundled path. VS Code only registers contributions listed in the manifest, so net-new files that are bundled but not contributed will end up shipped inside the VSIX without being discoverable. The [`examples/team-customizations/`](./examples/team-customizations/README.md) overlay illustrates the file-layout side; the manifest entry is the additional step you must perform for net-new content.
+
 ## Configuration
 
 All settings are under the `codeql-mcp` namespace in VS Code settings:

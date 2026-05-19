@@ -1,6 +1,8 @@
 ---
 name: example-team-prompt
 description: An example team prompt demonstrating the overlay feature.
+agent: ql-mcp-ext-query-developer
+argument-hint: 'Describe the workflow this prompt should run (e.g. "Develop a new CodeQL query for X").'
 ---
 
 # Example Team Prompt

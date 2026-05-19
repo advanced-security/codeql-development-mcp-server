@@ -105,15 +105,30 @@ suite('Bundled markdown link validity', () => {
   });
 
   test('every relative link in bundled agents/prompts/skills markdown resolves to a bundled file', () => {
+    // Guard against a vacuous pass: every bundled dir must be present, and
+    // we must scan at least one markdown file and one relative link across
+    // the bundle. If the bundle:customizations step was skipped (so all dirs
+    // are missing) the per-link walk would otherwise return zero and the
+    // test would silently succeed.
+    for (const dirName of BUNDLED_DIRS) {
+      const dir = path.join(extensionPath, dirName);
+      assert.ok(
+        fs.existsSync(dir),
+        `Expected bundled dir ${dirName}/ at ${dir} (did bundle:customizations run?)`,
+      );
+    }
+
     const broken: LinkRef[] = [];
-    let scanned = 0;
+    let mdFiles = 0;
+    let scannedLinks = 0;
 
     for (const dirName of BUNDLED_DIRS) {
       const dir = path.join(extensionPath, dirName);
       for (const md of walkMarkdown(dir)) {
+        mdFiles++;
         const refs = extractRelativeLinks(md, extensionPath);
         for (const ref of refs) {
-          scanned++;
+          scannedLinks++;
           if (ref.resolved.startsWith('<outside extension:')) {
             broken.push(ref);
             continue;
@@ -125,12 +140,15 @@ suite('Bundled markdown link validity', () => {
       }
     }
 
+    assert.ok(mdFiles > 0, 'Expected at least one bundled markdown file to be scanned');
+    assert.ok(scannedLinks > 0, 'Expected at least one relative markdown link to be scanned');
+
     if (broken.length > 0) {
       const summary = broken
         .map((r) => `  ${path.relative(extensionPath, r.file)}:${r.line}  →  ${r.target}`)
         .join('\n');
       assert.fail(
-        `Found ${broken.length} broken markdown link(s) (scanned ${scanned}):\n${summary}`,
+        `Found ${broken.length} broken markdown link(s) (scanned ${scannedLinks}):\n${summary}`,
       );
     }
   });

@@ -1,7 +1,7 @@
 /**
  * bundle-customizations.js
  *
- * Copies bundled custom agents, whitelisted prompts, and whitelisted skills
+ * Copies bundled custom agents, allowlisted prompts, and allowlisted skills
  * into the extension's output directories so the VSIX is self-contained.
  *
  * Run via: npm run bundle:customizations
@@ -9,8 +9,8 @@
  *
  * Resulting layout inside extensions/vscode/:
  *   agents/                            (bundled .agent.md files)
- *   prompts/                           (whitelisted prompt files)
- *   skills/<name>/SKILL.md             (whitelisted skill files)
+ *   prompts/                           (allowlisted prompt files)
+ *   skills/<name>/SKILL.md             (allowlisted skill files)
  *   dist-customizations-manifest.json  (manifest of bundled files)
  *
  * Overlay support:
@@ -29,7 +29,7 @@ import {
   writeFileSync,
 } from 'fs';
 import { basename, dirname, join, normalize, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -49,9 +49,13 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
   const targetPromptsDir = join(extensionRoot, 'prompts');
   const targetSkillsDir = join(extensionRoot, 'skills');
 
-  // Load whitelist config
+  // Load allowlist config. Use a file URL so the dynamic import works on
+  // Windows, where bare absolute paths (e.g. `C:\\…\\bundle-customizations.config.js`)
+  // are not valid ESM specifiers.
   const configPath = join(customizationsSourceDir, 'bundle-customizations.config.js');
-  const { prompts: promptWhitelist, skills: skillWhitelist } = await import(configPath);
+  const { prompts: promptAllowlist, skills: skillAllowlist } = await import(
+    pathToFileURL(configPath).href
+  );
 
   // Clean previous outputs
   for (const dir of [targetAgentsDir, targetPromptsDir, targetSkillsDir]) {
@@ -77,8 +81,8 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
     }
   }
 
-  // --- Copy whitelisted prompts (rename on copy per { src, dst }) ---
-  for (const entry of promptWhitelist) {
+  // --- Copy allowlisted prompts (rename on copy per { src, dst }) ---
+  for (const entry of promptAllowlist) {
     const { src: srcName, dst: dstName } = normalizeRenameEntry(entry);
     const src = join(serverPromptsDir, srcName);
     if (!existsSync(src)) {
@@ -95,7 +99,7 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
     }
   }
 
-  // --- Copy whitelisted skills (recursive: SKILL.md + any supporting files) ---
+  // --- Copy allowlisted skills (recursive: SKILL.md + any supporting files) ---
   // Each entry may rename the skill dir via { src, dst }. The bundled
   // SKILL.md's frontmatter `name:` is rewritten to match `dst` so VS Code's
   // skill registry resolves it under the new name.
@@ -103,12 +107,12 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
   // `[label](../<old-skill-name>/SKILL.md)`) can be rewritten to point at
   // the new bundled directories during copy.
   const skillRenameMap = new Map();
-  for (const entry of skillWhitelist) {
+  for (const entry of skillAllowlist) {
     const { src, dst } = normalizeRenameEntry(entry);
     if (src !== dst) skillRenameMap.set(src, dst);
   }
 
-  for (const entry of skillWhitelist) {
+  for (const entry of skillAllowlist) {
     const { src: srcName, dst: dstName } = normalizeRenameEntry(entry);
     const srcDir = join(skillsRoot, srcName);
     const skillMd = join(srcDir, 'SKILL.md');
@@ -202,7 +206,7 @@ function applyOverlayDir(overlayDir, targetDir, categoryKey, manifest, subPath =
 }
 
 /**
- * Normalizes a whitelist entry to its `{ src, dst }` form.
+ * Normalizes an allowlist entry to its `{ src, dst }` form.
  * Accepts either a bare string (no rename) or an object with `src` and `dst`.
  */
 function normalizeRenameEntry(entry) {
@@ -210,7 +214,7 @@ function normalizeRenameEntry(entry) {
   if (entry && typeof entry === 'object' && entry.src) {
     return { src: entry.src, dst: entry.dst || entry.src };
   }
-  throw new Error(`Invalid whitelist entry: ${JSON.stringify(entry)}`);
+  throw new Error(`Invalid allowlist entry: ${JSON.stringify(entry)}`);
 }
 
 /**
@@ -293,7 +297,14 @@ function listFilesRecursive(root, prefix = '') {
 }
 
 // --- CLI entry point ---
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run as CLI only when this file is invoked directly (not imported as a
+// module). Compare the resolved absolute paths rather than building a fragile
+// `file://${process.argv[1]}` string — that approach mishandles spaces, drive
+// letters, and relative paths.
+const invokedAsScript =
+  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (invokedAsScript) {
   // Parse --customizations-dir=PATH or --customizations-dir PATH
   let customizationsDir =
     process.env.CODEQL_MCP_CUSTOMIZATIONS_DIR ?? undefined;
