@@ -109,4 +109,36 @@ suite('Agents Integration Tests', () => {
       'showAgentsStatus command should not throw',
     );
   });
+
+  test('extension API exposes getBundledAgentsStatus() with both bundled agent paths', async () => {
+    // Regression guard: the showAgentsStatus command must source its data
+    // from a helper that reads the manifest off disk (via context.extensionUri)
+    // rather than from `context.extension.id`, which is fragile/non-portable.
+    // The helper is exposed on the extension API so tests can introspect the
+    // exact data the command surfaces without relying on output-channel scraping.
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
+    assert.ok(ext, 'extension must be loadable for this assertion');
+    const api = ext.exports as { getBundledAgentsStatus?: () => { bundledDir: string; contributedAgents: { path: string }[] } };
+    assert.ok(
+      typeof api.getBundledAgentsStatus === 'function',
+      'ExtensionApi.getBundledAgentsStatus() should be exported',
+    );
+
+    const status = api.getBundledAgentsStatus!();
+    assert.strictEqual(
+      status.bundledDir,
+      path.join(ext.extensionPath, 'agents'),
+      'bundledDir should resolve via extensionUri',
+    );
+    assert.ok(Array.isArray(status.contributedAgents), 'contributedAgents should be an array');
+    const paths = status.contributedAgents.map((e) => e.path);
+    assert.ok(
+      paths.some((p) => p.endsWith('ql-mcp-ext-query-developer.agent.md')),
+      `contributedAgents should reference ql-mcp-ext-query-developer.agent.md; got: ${JSON.stringify(paths)}`,
+    );
+    assert.ok(
+      paths.some((p) => p.endsWith('ql-mcp-ext-workshop-author.agent.md')),
+      `contributedAgents should reference ql-mcp-ext-workshop-author.agent.md; got: ${JSON.stringify(paths)}`,
+    );
+  });
 });

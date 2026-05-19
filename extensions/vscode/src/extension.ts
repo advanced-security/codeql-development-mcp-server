@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Logger } from './common/logger';
@@ -10,9 +11,46 @@ import { DatabaseWatcher } from './bridge/database-watcher';
 import { QueryResultsWatcher } from './bridge/query-results-watcher';
 import { EnvironmentBuilder } from './bridge/environment-builder';
 
+/** Status of bundled custom agents contributed by this extension. */
+export interface BundledAgentsStatus {
+  /** Absolute path to the `agents/` directory inside the installed extension. */
+  readonly bundledDir: string;
+  /** Entries declared under `contributes.chatAgents` in the extension manifest. */
+  readonly contributedAgents: ReadonlyArray<{ readonly path: string }>;
+}
+
 /** API surface returned from activate() for testing and interop. */
 export interface ExtensionApi {
   readonly mcpProvider: McpProvider;
+  /**
+   * Reads the bundled-agents status off disk via `context.extensionUri`. Used
+   * by the `codeql-mcp.showAgentsStatus` command and by integration tests; the
+   * helper deliberately avoids `context.extension` so it works regardless of
+   * VS Code API surface drift.
+   */
+  getBundledAgentsStatus(): BundledAgentsStatus;
+}
+
+/**
+ * Returns the bundled-agents status for the given extension context. Reads
+ * `package.json` directly from `context.extensionUri.fsPath` so the helper
+ * does not depend on `context.extension` or `vscode.extensions.getExtension`.
+ */
+export function readBundledAgentsStatus(
+  context: vscode.ExtensionContext,
+): BundledAgentsStatus {
+  const extRoot = context.extensionUri.fsPath;
+  const bundledDir = path.join(extRoot, 'agents');
+  let contributedAgents: ReadonlyArray<{ readonly path: string }>;
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(extRoot, 'package.json'), 'utf8'),
+    ) as { contributes?: { chatAgents?: ReadonlyArray<{ path: string }> } };
+    contributedAgents = pkg.contributes?.chatAgents ?? [];
+  } catch {
+    contributedAgents = [];
+  }
+  return { bundledDir, contributedAgents };
 }
 
 const disposables: vscode.Disposable[] = [];
@@ -149,15 +187,11 @@ export async function activate(
       vscode.window.showInformationMessage('CodeQL tool query packs reinstalled successfully.');
     }),
     vscode.commands.registerCommand('codeql-mcp.showAgentsStatus', () => {
-      // Read the declarative contribution from the extension manifest.
-      const ownExt = vscode.extensions.getExtension(context.extension.id);
-      const contributed: { path: string }[] =
-        ownExt?.packageJSON?.contributes?.chatAgents ?? [];
-      const bundledDir = path.join(context.extensionUri.fsPath, 'agents');
+      const status = readBundledAgentsStatus(context);
       const lines = [
-        `Bundled agents dir: ${bundledDir}`,
-        `Contributed agents: ${contributed.length}`,
-        ...contributed.map((c) => `  - ${c.path}`),
+        `Bundled agents dir: ${status.bundledDir}`,
+        `Contributed agents: ${status.contributedAgents.length}`,
+        ...status.contributedAgents.map((c) => `  - ${c.path}`),
       ];
       logger.info('--- Agents Status ---');
       for (const line of lines) {
@@ -165,7 +199,7 @@ export async function activate(
       }
       logger.show();
       vscode.window.showInformationMessage(
-        `CodeQL MCP: ${contributed.length} bundled agent(s) contributed via package.json`,
+        `CodeQL MCP: ${status.contributedAgents.length} bundled agent(s) contributed via package.json`,
       );
     }),
     vscode.commands.registerCommand('codeql-mcp.showStatus', async () => {
@@ -217,7 +251,12 @@ export async function activate(
   }
 
   logger.info('CodeQL Development MCP Server extension activated.');
-  return { environmentBuilder: envBuilder, mcpProvider, serverManager };
+  return {
+    environmentBuilder: envBuilder,
+    mcpProvider,
+    serverManager,
+    getBundledAgentsStatus: () => readBundledAgentsStatus(context),
+  };
 }
 
 export function deactivate(): void {
