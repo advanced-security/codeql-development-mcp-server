@@ -1,10 +1,10 @@
 ---
-name: codeql-query-developer
+name: ql-mcp-ext-query-developer
 description: 'Develop CodeQL queries, libraries, and tests with TDD via the ql-mcp server.'
 tools: ['ql-mcp/*', 'edit', 'read', 'search', 'todo']
 ---
 
-# `codeql-query-developer` Agent
+# `ql-mcp-ext-query-developer` Agent
 
 Develops, tests, and validates CodeQL queries, libraries, and tests using the QL MCP Server tools.
 
@@ -45,11 +45,11 @@ Use the bundled `ql-mcp/*` tools for all CodeQL operations:
 
 The following bundled resources are available in the extension and provide detailed step-by-step workflows:
 
-- **Skill `create-codeql-query-development-workshop`** — reference for structured query development.
-- **Skill `validate-ql-mcp-server-tools-queries`** — validate PrintAST, PrintCFG, and CallGraph tools.
-- **Prompt `ql-tdd-basic`** — basic TDD workflow for simple CodeQL queries.
-- **Prompt `ql-tdd-advanced`** — advanced TDD patterns for data-flow and taint-tracking queries.
-- **Prompt `tools-query-workflow`** — workflow for using MCP tool queries (PrintAST, PrintCFG, CallGraph).
+- **Skill `ql-mcp-ext-create-workshop`** — reference for structured query development.
+- **Skill `ql-mcp-ext-validate-tools-queries`** — validate PrintAST, PrintCFG, and CallGraph tools.
+- **Prompt `ql-mcp-ext-tdd-basic`** — basic TDD workflow for simple CodeQL queries.
+- **Prompt `ql-mcp-ext-tdd-advanced`** — advanced TDD patterns for data-flow and taint-tracking queries.
+- **Prompt `ql-mcp-ext-tools-query-workflow`** — workflow for using MCP tool queries (PrintAST, PrintCFG, CallGraph).
 
 ## Quality Standards
 

@@ -28,6 +28,7 @@ Students will learn to:
    ```
 
 2. Build test databases:
+
    ```bash
    ./build-databases.sh
    ```

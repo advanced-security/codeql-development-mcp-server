@@ -24,6 +24,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'fs';
@@ -76,32 +77,62 @@ export async function runBundle({ extensionRoot, customizationsDir }) {
     }
   }
 
-  // --- Copy whitelisted prompts ---
-  for (const promptName of promptWhitelist) {
-    const src = join(serverPromptsDir, promptName);
+  // --- Copy whitelisted prompts (rename on copy per { src, dst }) ---
+  for (const entry of promptWhitelist) {
+    const { src: srcName, dst: dstName } = normalizeRenameEntry(entry);
+    const src = join(serverPromptsDir, srcName);
     if (!existsSync(src)) {
-      console.warn(`⚠️  Prompt not found, skipping: ${promptName}`);
+      console.warn(`⚠️  Prompt not found, skipping: ${srcName}`);
       continue;
     }
-    const dst = join(targetPromptsDir, promptName);
+    const dst = join(targetPromptsDir, dstName);
     copyFileSync(src, dst);
-    manifest.prompts.push(`prompts/${promptName}`);
-    console.log(`✅ Copied prompt: ${promptName}`);
+    manifest.prompts.push(`prompts/${dstName}`);
+    if (srcName === dstName) {
+      console.log(`✅ Copied prompt: ${dstName}`);
+    } else {
+      console.log(`✅ Copied prompt: ${srcName} → ${dstName}`);
+    }
   }
 
-  // --- Copy whitelisted skills ---
-  for (const skillName of skillWhitelist) {
-    const src = join(skillsRoot, skillName, 'SKILL.md');
-    if (!existsSync(src)) {
-      console.warn(`⚠️  Skill not found, skipping: ${skillName}/SKILL.md`);
+  // --- Copy whitelisted skills (recursive: SKILL.md + any supporting files) ---
+  // Each entry may rename the skill dir via { src, dst }. The bundled
+  // SKILL.md's frontmatter `name:` is rewritten to match `dst` so VS Code's
+  // skill registry resolves it under the new name.
+  // Build a rename map first so that intra-skill cross-references (e.g.
+  // `[label](../<old-skill-name>/SKILL.md)`) can be rewritten to point at
+  // the new bundled directories during copy.
+  const skillRenameMap = new Map();
+  for (const entry of skillWhitelist) {
+    const { src, dst } = normalizeRenameEntry(entry);
+    if (src !== dst) skillRenameMap.set(src, dst);
+  }
+
+  for (const entry of skillWhitelist) {
+    const { src: srcName, dst: dstName } = normalizeRenameEntry(entry);
+    const srcDir = join(skillsRoot, srcName);
+    const skillMd = join(srcDir, 'SKILL.md');
+    if (!existsSync(skillMd)) {
+      console.warn(`⚠️  Skill not found, skipping: ${srcName}/SKILL.md`);
       continue;
     }
-    const dstDir = join(targetSkillsDir, skillName);
+    const dstDir = join(targetSkillsDir, dstName);
     mkdirSync(dstDir, { recursive: true });
-    const dst = join(dstDir, 'SKILL.md');
-    copyFileSync(src, dst);
-    manifest.skills.push(`skills/${skillName}/SKILL.md`);
-    console.log(`✅ Copied skill: ${skillName}/SKILL.md`);
+    copyDirRecursive(srcDir, dstDir);
+    if (srcName !== dstName) {
+      rewriteSkillFrontmatterName(join(dstDir, 'SKILL.md'), dstName);
+    }
+    if (skillRenameMap.size > 0) {
+      rewriteSiblingSkillRefs(dstDir, skillRenameMap);
+    }
+    for (const rel of listFilesRecursive(dstDir)) {
+      manifest.skills.push(`skills/${dstName}/${rel}`);
+    }
+    if (srcName === dstName) {
+      console.log(`✅ Copied skill: ${dstName}/ (recursive)`);
+    } else {
+      console.log(`✅ Copied skill: ${srcName}/ → ${dstName}/ (recursive)`);
+    }
   }
 
   // --- Apply overlay (if specified) ---
@@ -168,6 +199,97 @@ function applyOverlayDir(overlayDir, targetDir, categoryKey, manifest, subPath =
 
     console.log(`   ${alreadyExists ? '↩️  Replaced' : '➕  Added'}: ${relKey}`);
   }
+}
+
+/**
+ * Normalizes a whitelist entry to its `{ src, dst }` form.
+ * Accepts either a bare string (no rename) or an object with `src` and `dst`.
+ */
+function normalizeRenameEntry(entry) {
+  if (typeof entry === 'string') return { src: entry, dst: entry };
+  if (entry && typeof entry === 'object' && entry.src) {
+    return { src: entry.src, dst: entry.dst || entry.src };
+  }
+  throw new Error(`Invalid whitelist entry: ${JSON.stringify(entry)}`);
+}
+
+/**
+ * Rewrites the `name:` field inside the YAML frontmatter of a bundled
+ * SKILL.md so it matches the renamed bundled directory. The rest of the
+ * file is untouched. No-op if no frontmatter is present.
+ */
+function rewriteSkillFrontmatterName(skillMdPath, newName) {
+  const content = readFileSync(skillMdPath, 'utf8');
+  if (!content.startsWith('---')) return;
+  const end = content.indexOf('\n---', 3);
+  if (end < 0) return;
+  const front = content.slice(0, end);
+  const rest = content.slice(end);
+  const updated = front.replace(/^name:\s*.*$/m, `name: ${newName}`);
+  if (updated === front) return;
+  writeFileSync(skillMdPath, updated + rest, 'utf8');
+}
+
+/**
+ * Rewrites intra-skill cross-references (`../<old-skill-name>/...`) in every
+ * `.md` file under `bundledSkillDir` so they target the renamed sibling
+ * directories. `renameMap` maps each src name to its dst name (entries where
+ * src === dst can be omitted).
+ */
+function rewriteSiblingSkillRefs(bundledSkillDir, renameMap) {
+  for (const rel of listFilesRecursive(bundledSkillDir)) {
+    if (!rel.toLowerCase().endsWith('.md')) continue;
+    const full = join(bundledSkillDir, rel);
+    const content = readFileSync(full, 'utf8');
+    let updated = content;
+    for (const [src, dst] of renameMap) {
+      // Only rewrite within markdown link targets to avoid touching prose
+      // that legitimately mentions the source skill name.
+      const re = new RegExp(`(\\]\\([^)]*?\\.\\.\\/)${escapeForRegExp(src)}(\\/)`, 'g');
+      updated = updated.replace(re, `$1${dst}$2`);
+    }
+    if (updated !== content) {
+      writeFileSync(full, updated, 'utf8');
+    }
+  }
+}
+
+function escapeForRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Recursively copies all files from `srcDir` into `dstDir`, preserving subdirs.
+ */
+function copyDirRecursive(srcDir, dstDir) {
+  for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
+    const src = join(srcDir, entry.name);
+    const dst = join(dstDir, entry.name);
+    if (entry.isDirectory()) {
+      mkdirSync(dst, { recursive: true });
+      copyDirRecursive(src, dst);
+    } else if (entry.isFile()) {
+      copyFileSync(src, dst);
+    }
+  }
+}
+
+/**
+ * Returns a list of file paths under `root`, each relative to `root` with
+ * forward-slash separators.
+ */
+function listFilesRecursive(root, prefix = '') {
+  const out = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const sub = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const full = join(root, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...listFilesRecursive(full, sub));
+    } else if (entry.isFile()) {
+      out.push(sub);
+    }
+  }
+  return out;
 }
 
 // --- CLI entry point ---

@@ -135,34 +135,34 @@
     },
     "chatAgents": [
       {
-        "path": "./agents/codeql-query-developer.agent.md"
+        "path": "./agents/ql-mcp-ext-query-developer.agent.md"
       },
       {
-        "path": "./agents/codeql-workshop-author.agent.md"
+        "path": "./agents/ql-mcp-ext-workshop-author.agent.md"
       }
     ],
     "chatPromptFiles": [
       {
-        "path": "./prompts/ql-tdd-advanced.prompt.md"
+        "path": "./prompts/ql-mcp-ext-tdd-advanced.prompt.md"
       },
       {
-        "path": "./prompts/ql-tdd-basic.prompt.md"
+        "path": "./prompts/ql-mcp-ext-tdd-basic.prompt.md"
       },
       {
-        "path": "./prompts/tools-query-workflow.prompt.md"
+        "path": "./prompts/ql-mcp-ext-tools-query-workflow.prompt.md"
       },
       {
-        "path": "./prompts/workshop-creation-workflow.prompt.md"
+        "path": "./prompts/ql-mcp-ext-workshop-creation-workflow.prompt.md"
       }
     ],
     "chatSkills": [
       {
-        "name": "create-codeql-query-development-workshop",
-        "path": "./skills/create-codeql-query-development-workshop/SKILL.md"
+        "name": "ql-mcp-ext-create-workshop",
+        "path": "./skills/ql-mcp-ext-create-workshop/SKILL.md"
       },
       {
-        "name": "validate-ql-mcp-server-tools-queries",
-        "path": "./skills/validate-ql-mcp-server-tools-queries/SKILL.md"
+        "name": "ql-mcp-ext-validate-tools-queries",
+        "path": "./skills/ql-mcp-ext-validate-tools-queries/SKILL.md"
       }
     ],
     "commands": [
@@ -206,7 +206,7 @@
     "rebuild:esbuild": "npm rebuild esbuild --ignore-scripts=false",
     "test": "npm run test:coverage && npm run test:integration",
     "test:coverage": "vitest --run --coverage",
-    "test:integration": "npm run download:vscode && vscode-test",
+    "test:integration": "npm run download:vscode && npm run bundle:customizations && npm run bundle && vscode-test",
     "test:integration:label": "vscode-test --label",
     "test:watch": "vitest --watch",
     "vscode:prepublish": "npm run clean && npm run lint && npm run bundle && npm run bundle:server && npm run bundle:customizations",

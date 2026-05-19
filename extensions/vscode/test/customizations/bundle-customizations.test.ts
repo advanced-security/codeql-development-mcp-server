@@ -167,4 +167,115 @@ describe('bundle-customizations', () => {
       console.warn = originalWarn;
     }
   });
+
+  it('bundling the real source tree produces no broken relative markdown links', async () => {
+    // Run the real bundler against the real source tree into a temp output
+    // dir, then walk every bundled `.md` file and assert that each relative
+    // markdown link resolves to a file inside the output dir.
+    const fakeRoot = join(tmp, 'real-bundle');
+    mkdirSync(fakeRoot, { recursive: true });
+
+    // Mirror the directory layout the bundler expects:
+    //   <root>/extensions/vscode/customizations/{agents,bundle-customizations.config.js}
+    //   <root>/server/src/prompts/<file>
+    //   <root>/.github/skills/<skill>/SKILL.md (+ supporting files)
+    const realExtensionRoot = resolve(__repoRoot, 'extensions', 'vscode');
+    const fakeExt = join(fakeRoot, 'extensions', 'vscode');
+    mkdirSync(fakeExt, { recursive: true });
+    // Symlinks would be simpler but Windows-unfriendly — recursively copy the
+    // small inputs we need.
+    copyTree(join(realExtensionRoot, 'customizations'), join(fakeExt, 'customizations'));
+    copyTree(join(__repoRoot, 'server', 'src', 'prompts'), join(fakeRoot, 'server', 'src', 'prompts'));
+    copyTree(join(__repoRoot, '.github', 'skills'), join(fakeRoot, '.github', 'skills'));
+
+    const { runBundle } = await importBundler();
+    await runBundle({ extensionRoot: fakeExt });
+
+    const broken: { file: string; line: number; target: string }[] = [];
+    for (const mdFile of walkMd(fakeExt)) {
+      // Only inspect files under the bundled chat-customization output dirs.
+      const rel = mdFile.slice(fakeExt.length + 1);
+      if (
+        !rel.startsWith('agents/') &&
+        !rel.startsWith('prompts/') &&
+        !rel.startsWith('skills/')
+      ) {
+        continue;
+      }
+      for (const link of relativeLinksIn(mdFile)) {
+        const resolved = resolve(join(mdFile, '..'), link.target.replace(/[?#].*$/, ''));
+        const insideBundle = !path_relative(fakeExt, resolved).startsWith('..');
+        if (!insideBundle || !existsSync(resolved)) {
+          broken.push({ file: rel, line: link.line, target: link.target });
+        }
+      }
+    }
+
+    if (broken.length > 0) {
+      const summary = broken
+        .map((b) => `  ${b.file}:${b.line}  →  ${b.target}`)
+        .join('\n');
+      throw new Error(`Found ${broken.length} broken relative markdown link(s):\n${summary}`);
+    }
+  });
 });
+
+// --- helpers for the link-validity unit test ---
+
+import { relative as path_relative } from 'path';
+import { readdirSync as _readdirSync } from 'fs';
+
+function copyTree(src: string, dst: string): void {
+  if (!existsSync(src)) return;
+  mkdirSync(dst, { recursive: true });
+  for (const entry of _readdirSync(src, { withFileTypes: true })) {
+    const s = join(src, entry.name);
+    const d = join(dst, entry.name);
+    if (entry.isDirectory()) copyTree(s, d);
+    else if (entry.isFile()) writeFileSync(d, readFileSync(s));
+  }
+}
+
+function* walkMd(root: string): Generator<string> {
+  if (!existsSync(root)) return;
+  for (const entry of _readdirSync(root, { withFileTypes: true })) {
+    const full = join(root, entry.name);
+    if (entry.isDirectory()) yield* walkMd(full);
+    else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) yield full;
+  }
+}
+
+interface RelLink {
+  line: number;
+  target: string;
+}
+
+function relativeLinksIn(filePath: string): RelLink[] {
+  const text = readFileSync(filePath, 'utf8');
+  const lines = text.split(/\r?\n/);
+  const out: RelLink[] = [];
+  const linkRe = /\[(?:[^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
+  let inFence = false;
+  let marker = '';
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const f = /^(\s*)(`{3,}|~{3,})/.exec(line);
+    if (f) {
+      const mk = f[2];
+      if (!inFence) { inFence = true; marker = mk; continue; }
+      if (mk.startsWith(marker[0]) && mk.length >= marker.length) { inFence = false; marker = ''; continue; }
+    }
+    if (inFence) continue;
+    linkRe.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = linkRe.exec(line)) !== null) {
+      const raw = m[1];
+      const stripped = raw.replace(/[?#].*$/, '');
+      if (!stripped) continue;
+      if (/^[a-z][a-z0-9+.-]*:/i.test(stripped)) continue;
+      if (stripped.startsWith('//')) continue;
+      out.push({ line: i + 1, target: raw });
+    }
+  }
+  return out;
+}

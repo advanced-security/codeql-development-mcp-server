@@ -304,9 +304,9 @@ When the external workshop is outside your workspace:
 
 This skill is designed to be used with:
 
-- **Prompt**: [validate-ql-mcp-server-tools-via-workshop](../../prompts/validate-ql-mcp-server-tools-via-workshop.prompt.md) - Uses this skill as part of workshop creation validation
-- **Agent**: [mcp-enabled-ql-workshop-developer](../../agents/mcp-enabled-ql-workshop-developer.md) - Orchestrates validation during workshop creation
-- **Agent**: [ql-mcp-tool-tester](../../agents/ql-mcp-tool-tester.md) - Tests MCP tools including tools query execution
+- **Prompt**: [validate-ql-mcp-server-tools-via-workshop](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/.github/prompts/validate-ql-mcp-server-tools-via-workshop.prompt.md) — uses this skill as part of workshop creation validation.
+- **Agent**: [mcp-enabled-ql-workshop-developer](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/.github/agents/mcp-enabled-ql-workshop-developer.md) — orchestrates validation during workshop creation.
+- **Agent**: [ql-mcp-tool-tester](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/.github/agents/ql-mcp-tool-tester.md) — tests MCP tools including tools query execution.
 
 ## MCP Tools Used
 
@@ -352,6 +352,4 @@ Validation passes when **ALL** of the following are true:
 
 ## Related Resources
 
-- [Server Documentation](../../../server/QL-MCP-SERVER.md)
-- [create-codeql-query-tdd-generic](../create-codeql-query-tdd-generic/SKILL.md) - TDD workflow that uses AST/CFG analysis
-- [create-codeql-query-development-workshop](../create-codeql-query-development-workshop/SKILL.md) - Workshop creation that depends on tools queries
+- [create-codeql-query-development-workshop](../create-codeql-query-development-workshop/SKILL.md) — workshop creation that depends on tools queries.

@@ -59,31 +59,31 @@ suite('Agents Integration Tests', () => {
     assert.ok(Array.isArray(chatAgents) && chatAgents.length >= 2, 'contributes.chatAgents should have >=2 entries');
     const paths: string[] = chatAgents.map((e: { path: string }) => e.path);
     assert.ok(
-      paths.some((p) => p.endsWith('codeql-query-developer.agent.md')),
-      'chatAgents should reference codeql-query-developer.agent.md',
+      paths.some((p) => p.endsWith('ql-mcp-ext-query-developer.agent.md')),
+      'chatAgents should reference ql-mcp-ext-query-developer.agent.md',
     );
     assert.ok(
-      paths.some((p) => p.endsWith('codeql-workshop-author.agent.md')),
-      'chatAgents should reference codeql-workshop-author.agent.md',
+      paths.some((p) => p.endsWith('ql-mcp-ext-workshop-author.agent.md')),
+      'chatAgents should reference ql-mcp-ext-workshop-author.agent.md',
     );
     for (const p of paths) {
       assert.ok(fs.existsSync(path.join(ext.extensionPath, p)), `chatAgents path should exist on disk: ${p}`);
     }
   });
 
-  test('codeql-query-developer.agent.md exists and has correct name frontmatter', () => {
-    const agentPath = path.join(ext.extensionPath, 'agents', 'codeql-query-developer.agent.md');
+  test('ql-mcp-ext-query-developer.agent.md exists and has correct name frontmatter', () => {
+    const agentPath = path.join(ext.extensionPath, 'agents', 'ql-mcp-ext-query-developer.agent.md');
     assert.ok(fs.existsSync(agentPath), `${agentPath} should exist`);
     const content = fs.readFileSync(agentPath, 'utf8');
-    assert.ok(content.includes('name: codeql-query-developer'), 'Should contain name frontmatter');
+    assert.ok(content.includes('name: ql-mcp-ext-query-developer'), 'Should contain name frontmatter');
     assert.ok(!content.includes('model:'), 'Should NOT contain model: key');
   });
 
-  test('codeql-workshop-author.agent.md exists and has correct name frontmatter', () => {
-    const agentPath = path.join(ext.extensionPath, 'agents', 'codeql-workshop-author.agent.md');
+  test('ql-mcp-ext-workshop-author.agent.md exists and has correct name frontmatter', () => {
+    const agentPath = path.join(ext.extensionPath, 'agents', 'ql-mcp-ext-workshop-author.agent.md');
     assert.ok(fs.existsSync(agentPath), `${agentPath} should exist`);
     const content = fs.readFileSync(agentPath, 'utf8');
-    assert.ok(content.includes('name: codeql-workshop-author'), 'Should contain name frontmatter');
+    assert.ok(content.includes('name: ql-mcp-ext-workshop-author'), 'Should contain name frontmatter');
     assert.ok(!content.includes('model:'), 'Should NOT contain model: key');
   });
 
@@ -95,8 +95,8 @@ suite('Agents Integration Tests', () => {
     assert.ok(Array.isArray(manifest.prompts), 'manifest.prompts should be an array');
     assert.ok(Array.isArray(manifest.skills), 'manifest.skills should be an array');
     assert.ok(
-      manifest.agents.some((a: string) => a.includes('codeql-query-developer')),
-      'Manifest should list codeql-query-developer agent',
+      manifest.agents.some((a: string) => a.includes('ql-mcp-ext-query-developer')),
+      'Manifest should list ql-mcp-ext-query-developer agent',
     );
   });
 

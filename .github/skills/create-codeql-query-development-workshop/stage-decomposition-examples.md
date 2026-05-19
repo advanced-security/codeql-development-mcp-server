@@ -13,19 +13,19 @@ This document provides real-world examples of how to decompose complex CodeQL qu
 
 ### Decomposition Strategy: Building Blocks
 
-**Stage 1: Find Dereferences**
+#### Stage 1: Find Dereferences
 
 - Query: Find all `PointerDereferenceExpr`
 - Focus: Basic pattern matching
 - Teaching: CodeQL class hierarchy
 
-**Stage 2: Find Null Literals**
+#### Stage 2: Find Null Literals
 
 - Query: Find null pointer literals
 - Focus: Literal values and types
 - Teaching: Value constraints
 
-**Stage 3: Connect with Data Flow**
+#### Stage 3: Connect with Data Flow
 
 - Query: Use `DataFlow::localFlow` to connect nulls to dereferences
 - Focus: Data flow analysis
@@ -48,31 +48,31 @@ Each stage builds on previous:
 
 ### Decomposition Strategy: Syntactic to Semantic
 
-**Stage 1: Find Database Calls**
+#### Stage 1: Find Database Calls
 
 - Query: Find calls to `Statement.execute*` methods
 - Focus: Method call patterns
 - Teaching: Java method analysis
 
-**Stage 2: Identify User Input**
+#### Stage 2: Identify User Input
 
 - Query: Find servlet request parameters, HTTP inputs
 - Focus: Source identification
 - Teaching: Entry points
 
-**Stage 3: Local Taint Tracking**
+#### Stage 3: Local Taint Tracking
 
 - Query: Use `TaintTracking::localTaint` to find simple cases
 - Focus: Local propagation
 - Teaching: Taint concepts
 
-**Stage 4: Global Taint Tracking**
+#### Stage 4: Global Taint Tracking
 
 - Query: Extend to `TaintTracking::global`
 - Focus: Inter-procedural analysis
 - Teaching: Global configuration
 
-**Stage 5: Add Sanitizers**
+#### Stage 5: Add Sanitizers
 
 - Query: Exclude validated inputs
 - Focus: Barrier guards
@@ -95,37 +95,37 @@ Simple → Complex → Comprehensive:
 
 ### Decomposition Strategy: Local to Global
 
-**Stage 1: Find DOM Sinks**
+#### Stage 1: Find DOM Sinks
 
 - Query: Find `innerHTML`, `outerHTML`, `document.write`
 - Focus: Property access patterns
 - Teaching: JavaScript DOM API
 
-**Stage 2: Find URL Parameters**
+#### Stage 2: Find URL Parameters
 
 - Query: Find `location.search`, `window.location.href`
 - Focus: Browser API sources
 - Teaching: Untrusted data
 
-**Stage 3: Add Request Sources**
+#### Stage 3: Add Request Sources
 
 - Query: Add Express.js request parameters
 - Focus: Server-side sources
 - Teaching: Multiple source types
 
-**Stage 4: Local Taint Tracking**
+#### Stage 4: Local Taint Tracking
 
 - Query: Connect sources to sinks locally
 - Focus: String operations
 - Teaching: Taint flow
 
-**Stage 5: Global Taint Tracking**
+#### Stage 5: Global Taint Tracking
 
 - Query: Track across function boundaries
 - Focus: Full application flow
 - Teaching: Configuration
 
-**Stage 6: Custom Taint Steps**
+#### Stage 6: Custom Taint Steps
 
 - Query: Add framework-specific propagation
 - Focus: Library modeling
@@ -148,31 +148,31 @@ API knowledge → Data flow → Framework specifics:
 
 ### Decomposition Strategy: Simple to Filtered
 
-**Stage 1: Find File Operations**
+#### Stage 1: Find File Operations
 
 - Query: Find all filesystem API calls
 - Focus: High recall
 - Teaching: API patterns (high false positive rate acceptable)
 
-**Stage 2: Find External Inputs**
+#### Stage 2: Find External Inputs
 
 - Query: Find HTTP parameters, command-line args
 - Focus: Source enumeration
 - Teaching: Attack surface
 
-**Stage 3: Connect with Taint Tracking**
+#### Stage 3: Connect with Taint Tracking
 
 - Query: Track external input to file operations
 - Focus: Flow analysis
 - Teaching: Connection (many results, some false positives)
 
-**Stage 4: Filter Path Validation**
+#### Stage 4: Filter Path Validation
 
 - Query: Exclude cases with `contains("..")` checks
 - Focus: Basic filtering
 - Teaching: Guards (fewer results)
 
-**Stage 5: Advanced Filtering**
+#### Stage 5: Advanced Filtering
 
 - Query: Recognize path normalization, sandboxing
 - Focus: Sophisticated guards

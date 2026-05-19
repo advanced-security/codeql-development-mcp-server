@@ -33,16 +33,16 @@ On activation (`onStartupFinished`), the extension:
 1. **Auto-installs** the `codeql-development-mcp-server` npm package (unless `codeql-mcp.autoInstall` is `false`).
 2. **Registers an MCP server definition** (`ql-mcp`) so VS Code's Copilot/MCP integration can discover and launch it.
 3. **Watches** the CodeQL extension's storage paths for databases, query results, and MRVA results, passing them to the MCP server as environment variables.
-4. **Contributes built-in custom agents** (`codeql-query-developer`, `codeql-workshop-author`) declaratively via `contributes.chatAgents` in the extension manifest, so they are discoverable in VS Code Copilot Chat.
+4. **Contributes built-in custom agents** (`ql-mcp-ext-query-developer`, `ql-mcp-ext-workshop-author`) declaratively via `contributes.chatAgents` in the extension manifest, so they are discoverable in VS Code Copilot Chat.
 
 ## Built-in Custom Agents
 
 The extension ships two portable `.agent.md` custom agents that appear in VS Code's Copilot Chat agent picker:
 
-| Agent                    | Description                                                                                |
-| ------------------------ | ------------------------------------------------------------------------------------------ |
-| `codeql-query-developer` | Develop CodeQL queries, libraries, and tests using TDD with the `ql-mcp` MCP server tools. |
-| `codeql-workshop-author` | Create CodeQL query development workshops from production-grade queries.                   |
+| Agent                        | Description                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------ |
+| `ql-mcp-ext-query-developer` | Develop CodeQL queries, libraries, and tests using TDD with the `ql-mcp` MCP server tools. |
+| `ql-mcp-ext-workshop-author` | Create CodeQL query development workshops from production-grade queries.                   |
 
 Both agents use the bundled MCP server tools (`ql-mcp/*`), prompts, and skills that ship with the extension. **No specific model is required** — you choose your own model in VS Code Copilot Chat.
 
