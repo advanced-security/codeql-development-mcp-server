@@ -2,8 +2,11 @@
  * Integration tests for built-in custom agents.
  *
  * These run inside the Extension Development Host with the REAL VS Code API.
- * They verify the agents/ directory is bundled, the .agent.md files exist,
- * and that chat.agentFilesLocations is updated correctly.
+ * They verify that the bundled `agents/` directory and its `.agent.md` files
+ * exist on disk after activation, that `package.json` contributes those agents
+ * via `contributes.chatAgents`, and — critically — that the extension does
+ * NOT write its absolute bundled-agents path into `chat.agentFilesLocations`
+ * (which VS Code rejects for non-prompt/instructions entries).
  */
 
 import * as assert from 'assert';

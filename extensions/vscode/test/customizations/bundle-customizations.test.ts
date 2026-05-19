@@ -174,21 +174,47 @@ describe('bundle-customizations', () => {
     // Run the real bundler against the real source tree into a temp output
     // dir, then walk every bundled `.md` file and assert that each relative
     // markdown link resolves to a file inside the output dir.
+    //
+    // Performance: only copy the inputs the bundler will actually consume
+    // (the customizations source dir, the allowlisted prompt files, and the
+    // allowlisted skill directories). Copying the entire `.github/skills/`
+    // tree would pull in every example workshop fixture on every test run.
     const fakeRoot = join(tmp, 'real-bundle');
     mkdirSync(fakeRoot, { recursive: true });
-
-    // Mirror the directory layout the bundler expects:
-    //   <root>/extensions/vscode/customizations/{agents,bundle-customizations.config.js}
-    //   <root>/server/src/prompts/<file>
-    //   <root>/.github/skills/<skill>/SKILL.md (+ supporting files)
     const realExtensionRoot = resolve(__repoRoot, 'extensions', 'vscode');
     const fakeExt = join(fakeRoot, 'extensions', 'vscode');
     mkdirSync(fakeExt, { recursive: true });
     // Symlinks would be simpler but Windows-unfriendly — recursively copy the
     // small inputs we need.
     copyTree(join(realExtensionRoot, 'customizations'), join(fakeExt, 'customizations'));
-    copyTree(join(__repoRoot, 'server', 'src', 'prompts'), join(fakeRoot, 'server', 'src', 'prompts'));
-    copyTree(join(__repoRoot, '.github', 'skills'), join(fakeRoot, '.github', 'skills'));
+
+    // Load the actual allowlist so the staging set tracks the bundler's
+    // real inputs without duplicating the list in the test.
+    const { prompts: allowedPrompts, skills: allowedSkills } = await import(
+      pathToFileURL(
+        resolve(realExtensionRoot, 'customizations', 'bundle-customizations.config.js'),
+      ).href
+    ) as {
+      prompts: ReadonlyArray<string | { src: string; dst?: string }>;
+      skills: ReadonlyArray<string | { src: string; dst?: string }>;
+    };
+    const srcOf = (e: string | { src: string; dst?: string }) => (typeof e === 'string' ? e : e.src);
+
+    const fakePromptsDir = join(fakeRoot, 'server', 'src', 'prompts');
+    mkdirSync(fakePromptsDir, { recursive: true });
+    for (const entry of allowedPrompts) {
+      const name = srcOf(entry);
+      const src = resolve(__repoRoot, 'server', 'src', 'prompts', name);
+      if (existsSync(src)) writeFileSync(join(fakePromptsDir, name), readFileSync(src));
+    }
+
+    const fakeSkillsRoot = join(fakeRoot, '.github', 'skills');
+    mkdirSync(fakeSkillsRoot, { recursive: true });
+    for (const entry of allowedSkills) {
+      const name = srcOf(entry);
+      const src = resolve(__repoRoot, '.github', 'skills', name);
+      if (existsSync(src)) copyTree(src, join(fakeSkillsRoot, name));
+    }
 
     const { runBundle } = await importBundler();
     await runBundle({ extensionRoot: fakeExt });

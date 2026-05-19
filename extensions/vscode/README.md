@@ -54,7 +54,7 @@ VS Code's [`chat.agentFilesLocations`](https://code.visualstudio.com/docs/copilo
 
 ### Extending at Build Time — Custom VSIX
 
-To bundle your own agents, prompts, and skills into a custom VSIX:
+To override the bundled defaults (or add brand-new agents/prompts/skills — see the limitation below) in a custom VSIX build:
 
 ```bash
 cd extensions/vscode
