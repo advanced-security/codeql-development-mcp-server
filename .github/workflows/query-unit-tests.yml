@@ -36,7 +36,7 @@ permissions:
 jobs:
   query-unit-tests:
     name: Query Unit Tests - ${{ matrix.language }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -63,6 +63,7 @@ jobs:
         uses: ./.github/actions/setup-codeql-environment
         with:
           install-language-runtimes: true
+          languages: ${{ matrix.language }}
 
       ## Install packs used in the unit tests that we're about to run.
       - name: Query Unit Tests - ${{ matrix.language }} - Install CodeQL packs used in unit tests
