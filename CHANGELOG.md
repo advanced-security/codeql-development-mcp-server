@@ -49,8 +49,6 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 ### Security
 
-- **Hardened release workflows against cache poisoning.** All four reusable release workflows (`release-tag.yml`, `release-npm.yml`, `release-vsix.yml`, `release-codeql.yml`) and the orchestrating `release.yml` now opt out of every `actions/cache`, `setup-node` npm cache, `setup-go` cache, `setup-java` Maven cache, `setup-python` pip cache, `setup-ruby` bundler cache, and `actions/cache` for `.nuget`/`~/.rustup`, so a feature-branch contributor can no longer prime a cache entry that a release job would later restore. The `cancel-in-progress: false` change ensures a release cannot be cancelled mid-publish, preventing inconsistent npm/GHCR/tag state. Non-pushing checkouts now use `persist-credentials: false` to limit accidental token reuse, and the `release-codeql.yml` `codeql pack publish` invocation now uses a bash array to avoid word-splitting on the `--allow-prerelease` flag. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
-
 ### Dependencies
 
 - Bumped `actions/dependency-review-action` from 4.9.0 to 5.0.0. ([#278](https://github.com/advanced-security/codeql-development-mcp-server/pull/278))
