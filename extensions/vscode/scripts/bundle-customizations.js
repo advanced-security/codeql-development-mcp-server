@@ -28,7 +28,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'fs';
-import { basename, dirname, join, normalize, resolve } from 'path';
+import { dirname, join, normalize, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
