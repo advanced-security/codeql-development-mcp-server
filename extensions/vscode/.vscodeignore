@@ -27,3 +27,7 @@ coverage/**
 # Bundled server: exclude test/examples content
 server/ql/*/tools/test/**
 server/ql/*/examples/**
+
+# Customization sources (bundled outputs in agents/, prompts/, skills/ ship in VSIX)
+customizations/**
+examples/**

@@ -31,7 +31,7 @@ export interface CLIExecutionOptions {
   env?: Record<string, string>;
 }
 
-// Whitelist of allowed commands to prevent arbitrary command execution
+// Allowlist of allowed commands to prevent arbitrary command execution
 const ALLOWED_COMMANDS = new Set([
   'codeql',
   'git',
@@ -44,7 +44,7 @@ const ALLOWED_COMMANDS = new Set([
 // Additional commands allowed in test environments
 let testCommands: Set<string> | null = null;
 
-// Whitelist of safe environment variables to pass to child processes
+// Allowlist of safe environment variables to pass to child processes
 // This prevents potentially malicious environment variables from being passed through
 const SAFE_ENV_VARS = [
   'HOME',           // User home directory
@@ -61,7 +61,7 @@ const SAFE_ENV_VARS = [
   'USERNAME',       // Current user (Windows)
 ] as const;
 
-// Whitelist of safe environment variable prefixes
+// Allowlist of safe environment variable prefixes
 // These are needed for CodeQL and Node.js functionality
 const SAFE_ENV_PREFIXES = [
   'CODEQL_',        // CodeQL-specific variables
@@ -459,14 +459,14 @@ export function sanitizeCLIArguments(args: string[]): string[] {
 function getSafeEnvironment(additionalEnv?: Record<string, string>): Record<string, string> {
   const safeEnv: Record<string, string> = {};
   
-  // Copy whitelisted environment variables from process.env
+  // Copy allowlisted environment variables from process.env
   for (const key of SAFE_ENV_VARS) {
     if (process.env[key] !== undefined) {
       safeEnv[key] = process.env[key]!;
     }
   }
   
-  // Copy environment variables with whitelisted prefixes
+  // Copy environment variables with allowlisted prefixes
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined && SAFE_ENV_PREFIXES.some(prefix => key.startsWith(prefix))) {
       safeEnv[key] = value;
@@ -499,7 +499,7 @@ function getSafeEnvironment(additionalEnv?: Record<string, string>): Record<stri
  * Security: This function uses execFile() instead of exec() to avoid shell interpretation.
  * Arguments are passed directly to the executable as an array, preventing shell injection.
  * Additional security measures include:
- * - Command whitelist validation
+ * - Command allowlist validation
  * - Shell metacharacter detection in command names
  * - CLI argument sanitization (null bytes, control characters)
  * - Environment variable filtering
@@ -508,9 +508,9 @@ export async function executeCLICommand(options: CLIExecutionOptions): Promise<C
   try {
     const { command, args, cwd, timeout = 300000, env } = options; // 5 minute default timeout
     
-    // Validate command is in the whitelist to prevent arbitrary command execution
+    // Validate command is in the allowlist to prevent arbitrary command execution
     if (!isCommandAllowed(command)) {
-      throw new Error(`Command not allowed: ${command}. Only whitelisted commands can be executed.`);
+      throw new Error(`Command not allowed: ${command}. Only allowlisted commands can be executed.`);
     }
     
     // Validate command to ensure it doesn't contain shell metacharacters

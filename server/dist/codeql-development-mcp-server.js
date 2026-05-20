@@ -42271,7 +42271,7 @@ async function executeCLICommand(options) {
   try {
     const { command, args, cwd, timeout = 3e5, env: env2 } = options;
     if (!isCommandAllowed(command)) {
-      throw new Error(`Command not allowed: ${command}. Only whitelisted commands can be executed.`);
+      throw new Error(`Command not allowed: ${command}. Only allowlisted commands can be executed.`);
     }
     if (command.includes(";") || command.includes("|") || command.includes("&") || command.includes("$") || command.includes("`") || command.includes("\n") || command.includes("\r")) {
       throw new Error(`Invalid command: contains shell metacharacters: ${command}`);

@@ -171,7 +171,7 @@ codeql test run solutions-tests --learn
 
 ## Learning Path
 
-```
+```text
 Exercise 1 (Sinks)
     ↓
 Exercise 2 (Sources)

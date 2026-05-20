@@ -88,6 +88,8 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       globals: {
+        clearTimeout: 'readonly',
+        setTimeout: 'readonly',
         suite: 'readonly',
         test: 'readonly',
         setup: 'readonly',

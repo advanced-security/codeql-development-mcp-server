@@ -49,7 +49,7 @@ When invoking this skill, you must provide:
 
 The skill creates a complete workshop under `<base_dir>/<workshop_name>/`:
 
-```
+```text
 <base_dir>/<workshop_name>/
 ├── README.md                    # Workshop overview and setup instructions
 ├── codeql-workspace.yml         # CodeQL workspace configuration
@@ -264,8 +264,8 @@ void edgeCase() {
 
 The `.expected` file uses CodeQL test format:
 
-```
-| file    | line | col | endLine | endCol | message                |
+```text
+| file     | line | col | endLine | endCol | message                  |
 | test.cpp | 3    | 5   | 3       | 8      | Null pointer dereference |
 | test.cpp | 18   | 17  | 18      | 20     | Null pointer dereference |
 ```
@@ -453,7 +453,7 @@ For detailed guidance:
 
 Some workshops may have optional advanced branches:
 
-```
+```text
 ├── exercises/
 │   ├── Exercise1.ql
 │   ├── Exercise2.ql
@@ -523,14 +523,6 @@ If generated queries have compilation errors:
 5. **Document well**: Clear instructions reduce support burden
 6. **Version control**: Track workshop iterations in git
 7. **Reuse test code**: Same test code across all stages when possible
-
-## Related Skills
-
-- [create-codeql-query-tdd-generic](../create-codeql-query-tdd-generic/SKILL.md) - TDD approach to query development
-- [create-codeql-query-unit-test-cpp](../create-codeql-query-unit-test-cpp/SKILL.md) - Creating C++ query tests
-- [create-codeql-query-unit-test-java](../create-codeql-query-unit-test-java/SKILL.md) - Creating Java query tests
-- [create-codeql-query-unit-test-javascript](../create-codeql-query-unit-test-javascript/SKILL.md) - Creating JavaScript query tests
-- [create-codeql-query-unit-test-python](../create-codeql-query-unit-test-python/SKILL.md) - Creating Python query tests
 
 ## Success Metrics
 

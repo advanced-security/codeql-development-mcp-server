@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { Logger } from './common/logger';
 import { CliResolver } from './codeql/cli-resolver';
@@ -9,9 +11,59 @@ import { DatabaseWatcher } from './bridge/database-watcher';
 import { QueryResultsWatcher } from './bridge/query-results-watcher';
 import { EnvironmentBuilder } from './bridge/environment-builder';
 
+/** Status of bundled custom agents contributed by this extension. */
+export interface BundledAgentsStatus {
+  /** Absolute path to the `agents/` directory inside the installed extension. */
+  readonly bundledDir: string;
+  /** Entries declared under `contributes.chatAgents` in the extension manifest. */
+  readonly contributedAgents: ReadonlyArray<{ readonly path: string }>;
+}
+
 /** API surface returned from activate() for testing and interop. */
 export interface ExtensionApi {
   readonly mcpProvider: McpProvider;
+  /**
+   * Exposes the `EnvironmentBuilder` used to compute environment variables
+   * passed to the MCP server. The bridge/workspace integration tests inspect
+   * its output to verify that storage paths, workspace folders, and the
+   * `CODEQL_PATH` resolution behave correctly without spawning the server.
+   */
+  readonly environmentBuilder: EnvironmentBuilder;
+  /**
+   * Exposes the `ServerManager` so the MCP-server integration tests can
+   * assert the chosen launch command/args and report the installed version
+   * without re-implementing the install lookup.
+   */
+  readonly serverManager: ServerManager;
+  /**
+   * Reads the bundled-agents status off disk via `context.extensionUri`. Used
+   * by the `codeql-mcp.showAgentsStatus` command and by integration tests; the
+   * helper deliberately avoids `context.extension` so it works regardless of
+   * VS Code API surface drift.
+   */
+  getBundledAgentsStatus(): BundledAgentsStatus;
+}
+
+/**
+ * Returns the bundled-agents status for the given extension context. Reads
+ * `package.json` directly from `context.extensionUri.fsPath` so the helper
+ * does not depend on `context.extension` or `vscode.extensions.getExtension`.
+ */
+export function readBundledAgentsStatus(
+  context: vscode.ExtensionContext,
+): BundledAgentsStatus {
+  const extRoot = context.extensionUri.fsPath;
+  const bundledDir = path.join(extRoot, 'agents');
+  let contributedAgents: ReadonlyArray<{ readonly path: string }>;
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(extRoot, 'package.json'), 'utf8'),
+    ) as { contributes?: { chatAgents?: ReadonlyArray<{ path: string }> } };
+    contributedAgents = pkg.contributes?.chatAgents ?? [];
+  } catch {
+    contributedAgents = [];
+  }
+  return { bundledDir, contributedAgents };
 }
 
 const disposables: vscode.Disposable[] = [];
@@ -37,6 +89,13 @@ export async function activate(
   const mcpProvider = new McpProvider(serverManager, envBuilder, logger);
 
   disposables.push(cliResolver, serverManager, packInstaller, storagePaths, envBuilder, mcpProvider);
+
+  // Built-in custom agents are contributed declaratively via
+  // `contributes.chatAgents` in package.json. We deliberately do NOT register
+  // the extension's absolute `agents/` path in `chat.agentFilesLocations` —
+  // VS Code rejects absolute paths there (`Skipping invalid path (glob
+  // patterns and absolute paths not supported)`), so doing so would silently
+  // pollute user settings without making agents discoverable.
 
   // --- Bridge: filesystem watchers ---
   const config = vscode.workspace.getConfiguration('codeql-mcp');
@@ -140,6 +199,22 @@ export async function activate(
       );
       vscode.window.showInformationMessage('CodeQL tool query packs reinstalled successfully.');
     }),
+    vscode.commands.registerCommand('codeql-mcp.showAgentsStatus', () => {
+      const status = readBundledAgentsStatus(context);
+      const lines = [
+        `Bundled agents dir: ${status.bundledDir}`,
+        `Contributed agents: ${status.contributedAgents.length}`,
+        ...status.contributedAgents.map((c) => `  - ${c.path}`),
+      ];
+      logger.info('--- Agents Status ---');
+      for (const line of lines) {
+        logger.info(line);
+      }
+      logger.show();
+      vscode.window.showInformationMessage(
+        `CodeQL MCP: ${status.contributedAgents.length} bundled agent(s) contributed via package.json`,
+      );
+    }),
     vscode.commands.registerCommand('codeql-mcp.showStatus', async () => {
       const cliPath = await cliResolver.resolve();
       const version = await serverManager.getInstalledVersion();
@@ -189,7 +264,12 @@ export async function activate(
   }
 
   logger.info('CodeQL Development MCP Server extension activated.');
-  return { environmentBuilder: envBuilder, mcpProvider, serverManager };
+  return {
+    environmentBuilder: envBuilder,
+    mcpProvider,
+    serverManager,
+    getBundledAgentsStatus: () => readBundledAgentsStatus(context),
+  };
 }
 
 export function deactivate(): void {

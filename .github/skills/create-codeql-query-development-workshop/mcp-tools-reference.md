@@ -613,7 +613,7 @@ Issue: `.qlref` file has wrong path
 
 Solution: Ensure path is relative to exercises/ or solutions/ directory:
 
-```
+```text
 Exercise1.ql  # Not ../Exercise1.ql or /abs/path/Exercise1.ql
 ```
 

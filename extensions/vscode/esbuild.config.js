@@ -34,7 +34,9 @@ const testSuiteConfig = {
   ...shared,
   entryPoints: [
     'test/suite/index.ts',
+    'test/suite/agents.integration.test.ts',
     'test/suite/bridge.integration.test.ts',
+    'test/suite/bundled-markdown-links.integration.test.ts',
     'test/suite/copydb-e2e.integration.test.ts',
     'test/suite/extension.integration.test.ts',
     'test/suite/file-watcher-stability.integration.test.ts',

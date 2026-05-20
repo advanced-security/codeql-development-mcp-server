@@ -64,13 +64,14 @@ public void testCompliant() {
    ```
 
 3. Extract test databases (done automatically by `codeql test run`):
+
    ```bash
    codeql test extract solutions-tests/Exercise1
    ```
 
 ## Workshop Structure
 
-```
+```text
 java-quality-queries-workshop-1/
 ├── exercises/           # Your exercise queries (incomplete)
 │   ├── Exercise1.ql    # Find JUnit test methods
@@ -107,6 +108,7 @@ For each exercise:
 2. **Read the TODO comments** - they explain what to implement
 3. **Implement the missing logic** based on hints
 4. **Run tests** to validate your implementation:
+
    ```bash
    codeql test run exercises-tests/Exercise{N}
    ```
@@ -135,7 +137,7 @@ codeql test run solutions-tests/Exercise{N}
 
 **Example AST Pattern**:
 
-```
+```text
 #-----|         1: (Annotations)
 #   20|           1: [Annotation] Test
 #   21|         3: [TypeAccess] void
@@ -163,7 +165,7 @@ codeql test run solutions-tests/Exercise{N}
 
 **Example AST Pattern for assertThrows**:
 
-```
+```text
 #   71|             0: [MethodCall] assertThrows(...)
 #   72|               0: [TypeAccess] IOException.class
 #   73|               1: [LambdaExpr] () -> ...
@@ -237,15 +239,15 @@ codeql pack install exercises
 
 Ensure the `options` file has correct paths to JUnit stubs:
 
-```
+```text
 //semmle-extractor-options: --javac-args -cp ${testdir}/../../tests-common/stubs/junit-4.13:...
 ```
 
 ## Additional Resources
 
 - [CodeQL for Java Documentation](https://codeql.github.com/docs/codeql-language-guides/codeql-for-java/)
-- [Advanced TDD Guide](../../server/src/prompts/ql-tdd-advanced.prompt.md)
-- [Workshop Structure Reference](./workshop-structure-reference.md)
+- [Advanced TDD Guide](https://github.com/advanced-security/codeql-development-mcp-server/blob/main/server/src/prompts/ql-tdd-advanced.prompt.md)
+- [Workshop Structure Reference](../workshop-structure-reference.md)
 
 ## Source Query
 

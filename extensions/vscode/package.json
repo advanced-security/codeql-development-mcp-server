@@ -133,6 +133,24 @@
         }
       }
     },
+    "chatAgents": [
+      {
+        "path": "./agents/ql-mcp-ext-query-developer.agent.md"
+      },
+      {
+        "path": "./agents/ql-mcp-ext-workshop-author.agent.md"
+      }
+    ],
+    "chatSkills": [
+      {
+        "name": "ql-mcp-ext-create-workshop",
+        "path": "./skills/ql-mcp-ext-create-workshop/SKILL.md"
+      },
+      {
+        "name": "ql-mcp-ext-validate-tools-queries",
+        "path": "./skills/ql-mcp-ext-validate-tools-queries/SKILL.md"
+      }
+    ],
     "commands": [
       {
         "command": "codeql-mcp.reinstallServer",
@@ -142,6 +160,11 @@
       {
         "command": "codeql-mcp.reinstallPacks",
         "title": "Reinstall CodeQL Tool Query Packs",
+        "category": "CodeQL MCP"
+      },
+      {
+        "command": "codeql-mcp.showAgentsStatus",
+        "title": "Show Built-in Custom Agents Status",
         "category": "CodeQL MCP"
       },
       {
@@ -159,8 +182,9 @@
   "scripts": {
     "build": "npm run clean && npm run lint && npm run bundle",
     "bundle": "npm run rebuild:esbuild && node esbuild.config.js",
+    "bundle:customizations": "node scripts/bundle-customizations.js",
     "bundle:server": "node scripts/bundle-server.js",
-    "clean": "rm -rf dist server .vscode-test/* *.vsix",
+    "clean": "rm -rf dist server agents prompts skills .vscode-test/* *.vsix dist-customizations-manifest.json",
     "download:vscode": "node scripts/download-vscode.js",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
@@ -168,10 +192,10 @@
     "rebuild:esbuild": "npm rebuild esbuild --ignore-scripts=false",
     "test": "npm run test:coverage && npm run test:integration",
     "test:coverage": "vitest --run --coverage",
-    "test:integration": "npm run download:vscode && vscode-test",
+    "test:integration": "npm run download:vscode && npm run bundle:customizations && npm run bundle && vscode-test",
     "test:integration:label": "vscode-test --label",
     "test:watch": "vitest --watch",
-    "vscode:prepublish": "npm run clean && npm run lint && npm run bundle && npm run bundle:server",
+    "vscode:prepublish": "npm run clean && npm run lint && npm run bundle && npm run bundle:server && npm run bundle:customizations",
     "watch": "npm run rebuild:esbuild && node esbuild.config.js --watch"
   },
   "devDependencies": {

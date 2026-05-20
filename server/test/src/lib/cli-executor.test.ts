@@ -173,7 +173,7 @@ describe('buildQLTArgs', () => {
 });
 
 describe('executeCLICommand - Security Tests', () => {
-  it('should execute a whitelisted command successfully', async () => {
+  it('should execute an allowlisted command successfully', async () => {
     const result = await executeCLICommand({
       command: 'echo',
       args: ['hello world']
@@ -184,7 +184,7 @@ describe('executeCLICommand - Security Tests', () => {
     expect(result.exitCode).toBe(0);
   });
 
-  it('should reject non-whitelisted commands', async () => {
+  it('should reject non-allowlisted commands', async () => {
     const result = await executeCLICommand({
       command: 'nonexistent-command-xyz',
       args: ['arg1']
@@ -258,7 +258,7 @@ describe('executeCLICommand - Security Tests', () => {
   });
 
   it('should handle command execution errors gracefully', async () => {
-    // Use a whitelisted command that will fail
+    // Use an allowlisted command that will fail
     const result = await executeCLICommand({
       command: 'cat',
       args: ['/nonexistent/file/path']
@@ -331,21 +331,21 @@ describe('executeCLICommand - Security Tests', () => {
     }
   });
 
-  it('should reject whitelisted commands with shell metacharacters', async () => {
-    // Test that even if we try to use a whitelisted command name with metacharacters,
-    // it gets rejected by the metacharacter validation after passing the whitelist
-    // This is a hypothetical case since the whitelist check happens first
+  it('should reject allowlisted commands with shell metacharacters', async () => {
+    // Test that even if we try to use an allowlisted command name with metacharacters,
+    // it gets rejected by the metacharacter validation after passing the allowlist
+    // This is a hypothetical case since the allowlist check happens first
     const result = await executeCLICommand({
       command: 'codeql;ls',
       args: ['test']
     });
     
     expect(result.success).toBe(false);
-    // This will be rejected by whitelist since 'codeql;ls' is not in the whitelist
+    // This will be rejected by allowlist since 'codeql;ls' is not in the allowlist
     expect(result.error).toContain('Command not allowed');
   });
 
-  it('should filter environment variables to safe whitelist', async () => {
+  it('should filter environment variables to safe allowlist', async () => {
     // Set a potentially unsafe environment variable
     const originalEnv = process.env.MALICIOUS_VAR;
     process.env.MALICIOUS_VAR = 'dangerous_value';

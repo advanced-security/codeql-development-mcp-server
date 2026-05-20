@@ -1,7 +1,6 @@
 ---
 name: mcp-enabled-ql-query-developer
 description: An agent enabled with QL MCP Server tools for developing CodeQL queries using test-driven development (TDD).
-model: Claude Opus 4.6 (1M context) (copilot)
 tools: ['agent', 'ql-mcp/*', 'edit', 'read', 'search', 'todo', 'web', 'vscode']
 handoffs:
   - agent: ql-mcp-tool-developer
