@@ -153,11 +153,11 @@ Example1.cs:
 #-----|  -> case ...:
 
 #   41| case ...:
-#-----|  -> After case ...: [no-match]
-#-----|  -> After case ...: [match]
+#-----|  -> 0
 
 #   41| 0
-#-----|  -> Before return ...;
+#-----|  -> After 0 [no-match]
+#-----|  -> After 0 [match]
 
 #   42| Before return ...;
 #-----|  -> 0
@@ -166,11 +166,11 @@ Example1.cs:
 #-----|  -> return ...;
 
 #   43| case ...:
-#-----|  -> After case ...: [no-match]
-#-----|  -> After case ...: [match]
+#-----|  -> 1
 
 #   43| 1
-#-----|  -> Before return ...;
+#-----|  -> After 1 [no-match]
+#-----|  -> After 1 [match]
 
 #   44| Before return ...;
 #-----|  -> 1
@@ -266,13 +266,25 @@ Example1.cs:
 #-----|  -> case ...:
 
 #   41| After case ...: [match]
-#-----|  -> 0
+#-----|  -> Before return ...;
+
+#   41| After 0 [no-match]
+#-----|  -> After case ...: [no-match]
+
+#   41| After 0 [match]
+#-----|  -> After case ...: [match]
 
 #   43| After case ...: [no-match]
 #-----|  -> default:
 
 #   43| After case ...: [match]
-#-----|  -> 1
+#-----|  -> Before return ...;
+
+#   43| After 1 [no-match]
+#-----|  -> After case ...: [no-match]
+
+#   43| After 1 [match]
+#-----|  -> After case ...: [match]
 
 #   45| After default: [match]
 #-----|  -> Before return ...;

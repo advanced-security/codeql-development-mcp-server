@@ -156,15 +156,13 @@ Example1.java:
 #-----|  -> case ...
 
 #   28| case ...
-#-----|  -> After case ... [no-match]
-#-----|  -> After case ... [match]
+#-----|  -> 0
 
 #   29| Before return ...
 #-----|  -> 0
 
 #   30| case ...
-#-----|  -> After case ... [no-match]
-#-----|  -> After case ... [match]
+#-----|  -> 1
 
 #   31| Before return ...
 #-----|  -> 1
@@ -176,13 +174,15 @@ Example1.java:
 #-----|  -> Before ... * ...
 
 #   28| 0
-#-----|  -> Before return ...
+#-----|  -> After 0 [no-match]
+#-----|  -> After 0 [match]
 
 #   29| 0
 #-----|  -> return ...
 
 #   30| 1
-#-----|  -> Before return ...
+#-----|  -> After 1 [no-match]
+#-----|  -> After 1 [match]
 
 #   31| 1
 #-----|  -> return ...
@@ -256,45 +256,6 @@ Example1.java:
 #   33| ... * ...
 #-----|  -> After ... * ...
 
-#    6| After ... > ... [false]
-#-----|  -> { ... }
-
-#    6| After ... > ... [true]
-#-----|  -> { ... }
-
-#   12| After ... < ... [false]
-#-----|  -> After for (...;...;...)
-
-#   12| After ... < ... [true]
-#-----|  -> { ... }
-
-#   19| After ... < ... [false]
-#-----|  -> After if (...)
-
-#   19| After ... < ... [true]
-#-----|  -> { ... }
-
-#   23| After ... > ... [false]
-#-----|  -> After while (...)
-
-#   23| After ... > ... [true]
-#-----|  -> { ... }
-
-#   28| After case ... [no-match]
-#-----|  -> case ...
-
-#   28| After case ... [match]
-#-----|  -> 0
-
-#   30| After case ... [no-match]
-#-----|  -> default
-
-#   30| After case ... [match]
-#-----|  -> 1
-
-#   32| After default [match]
-#-----|  -> Before return ...
-
 #    3| After { ... }
 
 #    3| After super(...)
@@ -364,3 +325,54 @@ Example1.java:
 
 #   33| After ... * ...
 #-----|  -> return ...
+
+#    6| After ... > ... [false]
+#-----|  -> { ... }
+
+#    6| After ... > ... [true]
+#-----|  -> { ... }
+
+#   12| After ... < ... [false]
+#-----|  -> After for (...;...;...)
+
+#   12| After ... < ... [true]
+#-----|  -> { ... }
+
+#   19| After ... < ... [false]
+#-----|  -> After if (...)
+
+#   19| After ... < ... [true]
+#-----|  -> { ... }
+
+#   23| After ... > ... [false]
+#-----|  -> After while (...)
+
+#   23| After ... > ... [true]
+#-----|  -> { ... }
+
+#   28| After case ... [no-match]
+#-----|  -> case ...
+
+#   28| After case ... [match]
+#-----|  -> Before return ...
+
+#   30| After case ... [no-match]
+#-----|  -> default
+
+#   30| After case ... [match]
+#-----|  -> Before return ...
+
+#   32| After default [match]
+#-----|  -> Before return ...
+
+#   28| After 0 [no-match]
+#-----|  -> After case ... [no-match]
+
+#   28| After 0 [match]
+#-----|  -> After case ... [match]
+
+#   30| After 1 [no-match]
+#-----|  -> After case ... [no-match]
+
+#   30| After 1 [match]
+#-----|  -> After case ... [match]
