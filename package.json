@@ -23,13 +23,13 @@
     "npm": ">=11.6.2"
   },
   "devDependencies": {
-    "eslint": "^10.2.1",
+    "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "markdownlint-cli": "^0.48.0",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.58.2"
+    "typescript-eslint": "^8.60.0"
   },
   "scripts": {
     "build": "npm run build -w server && make -C client build && npm run build -w extensions/vscode",
