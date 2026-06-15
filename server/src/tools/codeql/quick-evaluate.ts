@@ -60,8 +60,10 @@ export async function quickEvaluate({
 export function registerQuickEvaluateTool(server: McpServer): void {
   server.tool(
     'quick_evaluate',
-    'Quick evaluate a single class or predicate in isolation from a CodeQL query file. ' +
-      'Useful for debugging — evaluates just the named symbol against the database without running the full query.',
+    'Resolve a class or predicate symbol in a CodeQL query file for quick evaluation. ' +
+      'Locates the symbol position and returns an output path for results. ' +
+      'Note: this tool validates the symbol exists but does not yet execute the evaluation — ' +
+      'use codeql_query_run for full evaluation.',
     {
       file: z.string().describe('Path to the .ql file containing the symbol'),
       db: z.string().describe('Path to the CodeQL database'),
