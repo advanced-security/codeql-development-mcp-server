@@ -132,6 +132,8 @@ Validate the model against a real database:
 - If the `.model.yml` lives under `.github/codeql/extensions/` of the consuming repo, you are **done** — Code Scanning will load it on the next analysis.
 - If you authored a reusable model pack and want it to apply across an organization, publish it to GHCR with `codeql pack publish` and configure it under org Code security → Global settings → CodeQL analysis → Model packs.
 
+> **When data extensions aren't enough**: If `subtypes: True` fails to match subclasses (common when the base type is a library stub not present in the database), or the detection logic cannot be expressed as a source/sink/summary tuple, a QL library change (`.qll`) is needed instead. Use the `codeql://prompts/ql-tdd-basic` workflow to develop and test the fix, then contribute it upstream to `github/codeql`.
+
 ## Validation Checklist
 
 - [ ] Correct tuple format for the language (API Graph vs MaD)
@@ -147,3 +149,13 @@ Validate the model against a real database:
 - `codeql://languages/{{language}}/library-modeling` — Language-specific library modeling guide
 - `codeql://templates/security` — Security query templates
 - `codeql://learning/test-driven-development` — TDD workflow for CodeQL queries
+
+## Troubleshooting
+
+| Issue | Likely Cause | Resolution |
+| ----- | ------------ | ---------- |
+| Extension not found by `codeql query run` | `.github/codeql/extensions/` is only auto-loaded by Code Scanning (GitHub Actions), not the CLI | Move `.model.yml` into the pack's `ext/` directory (e.g., `csharp/ql/lib/ext/`) or pass the directory via `--additional-packs` |
+| Stale results after adding/changing `.model.yml` | Compilation cache is returning previously cached results | Use `--no-default-compilation-cache` with a fresh `--compilation-cache=<empty-dir>` to force recompilation |
+| `subtypes: True` not matching subclass methods | The base type only exists as a library stub in the database, not as extracted source | `subtypes` resolution requires the declaring type to be in the database. For framework base types (e.g., `PageModel`, `ControllerBase`) that are only stubs, use a QL-based source/sink class instead of a data extension |
+| Extension loads but produces no findings | Missing link in the source → summary → sink chain | Verify all hops are modeled — a single missing `summaryModel` between source and sink will break the chain |
+| YAML parse error or silent failure | Wrong column count for the extensible predicate | Double-check the exact column count for your language's format (MaD vs API Graph) — extra or missing columns fail silently |

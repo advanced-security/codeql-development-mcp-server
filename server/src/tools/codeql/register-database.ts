@@ -90,7 +90,8 @@ export async function registerDatabase(dbPath: string): Promise<string> {
 export function registerRegisterDatabaseTool(server: McpServer): void {
   server.tool(
     'register_database',
-    'Register a CodeQL database given a local path to the database directory',
+    'Register a CodeQL database for use by other MCP tools in this session. ' +
+      'Validates the database directory exists, contains codeql-database.yml, and has source files (src.zip or src/).',
     {
       db_path: z.string().describe('Path to the CodeQL database directory'),
     },

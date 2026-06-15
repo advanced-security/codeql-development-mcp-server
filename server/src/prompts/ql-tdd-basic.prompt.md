@@ -214,6 +214,7 @@ codeql_test_accept: {
 - ❌ Not using #codeql_lsp_completion to discover available types
 - ❌ Not setting `workspace_uri` when using LSP tools (completions will be empty)
 - ❌ Creating tests that are too complex
+- ❌ Not clearing compilation cache after adding data extensions (stale cached results hide new models)
 - ❌ Ignoring false positives in results
 - ❌ Not refactoring after tests pass
 

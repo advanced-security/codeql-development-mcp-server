@@ -23,7 +23,7 @@ export const codeqlBqrsDecodeTool: CLIToolDefinition = {
   command: 'codeql',
   subcommand: 'bqrs decode',
   inputSchema: {
-    files: z.array(z.string()).describe('BQRS file(s) to decode'),
+    files: z.array(z.string()).describe('Array of BQRS file path(s) to decode. Pass an array even for a single file, e.g. ["/path/to/results.bqrs"]'),
     output: createCodeQLSchemas.output(),
     format: z.enum(['csv', 'json', 'text', 'bqrs']).optional()
       .describe('Output format: text (human-readable table, default), csv, json (streaming JSON), or bqrs (binary, requires --output)'),
