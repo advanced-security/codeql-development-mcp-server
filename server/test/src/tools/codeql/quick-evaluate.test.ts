@@ -195,7 +195,10 @@ describe('registerQuickEvaluateTool', () => {
     expect(mockServer.tool).toHaveBeenCalledOnce();
     expect(mockServer.tool).toHaveBeenCalledWith(
       'quick_evaluate',
-      'Quick evaluate either a class or a predicate in a CodeQL query for debugging',
+      'Resolve a class or predicate symbol in a CodeQL query file for quick evaluation. ' +
+        'Locates the symbol position and returns an output path for results. ' +
+        'Note: this tool validates the symbol exists but does not yet execute the evaluation — ' +
+        'use codeql_query_run for full evaluation.',
       expect.objectContaining({
         file: expect.any(Object),
         db: expect.any(Object),
