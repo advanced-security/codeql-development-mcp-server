@@ -58,6 +58,13 @@ C# uses a **MaD (Models as Data)** format with **9–10 column tuples** that ide
 | `kind`           | Source/sink/summary kind                                                                        | `"sql-injection"`, `"taint"`                            |
 | `provenance`     | Origin of the model                                                                             | `"manual"`                                              |
 
+### Important: `subtypes` Flag
+
+- `True` — the model applies to the method **and all overrides** in subclasses and implementing classes
+- `False` — only applies to the exact class specified
+
+> **Caveat**: `subtypes: True` requires the base type to be **present in the CodeQL database** as extracted source or a resolved reference. For framework base types that exist only as library stubs (e.g., `Microsoft.AspNetCore.Mvc.RazorPages.PageModel`), subtypes resolution may silently fail to match subclass methods. In these cases, model each concrete class explicitly or implement a QL-based source/sink class instead.
+
 ### Important: C#-Specific Signature Rules
 
 - Type names must be **fully qualified**: `System.String`, not `string`
