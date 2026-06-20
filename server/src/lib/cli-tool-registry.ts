@@ -340,7 +340,12 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
         // accepted and normalized to positional arguments above; this check
         // produces a clear, actionable error that names the correct parameters
         // instead of a generic schema-level "required property" rejection.
-        if (name.startsWith('codeql_bqrs_') && positionalArgs.length === 0) {
+        // Whitespace-only paths are treated as missing so the CLI is never
+        // invoked with an invalid empty path.
+        if (
+          name.startsWith('codeql_bqrs_') &&
+          !positionalArgs.some(arg => typeof arg === 'string' && arg.trim() !== '')
+        ) {
           throw new Error(
             `The "${name}" tool requires a BQRS file path. Provide it via "file" (a single string path) or "files" (an array of string paths).`,
           );

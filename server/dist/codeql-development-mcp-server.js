@@ -194046,7 +194046,7 @@ function registerCLITool(server, definition) {
           }
           positionalArgs = [...positionalArgs, cleanFile];
         }
-        if (name.startsWith("codeql_bqrs_") && positionalArgs.length === 0) {
+        if (name.startsWith("codeql_bqrs_") && !positionalArgs.some((arg) => typeof arg === "string" && arg.trim() !== "")) {
           throw new Error(
             `The "${name}" tool requires a BQRS file path. Provide it via "file" (a single string path) or "files" (an array of string paths).`
           );

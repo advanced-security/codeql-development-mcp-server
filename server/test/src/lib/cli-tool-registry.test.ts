@@ -1698,6 +1698,30 @@ describe('registerCLITool handler behavior', () => {
     expect(executeCodeQLCommand).not.toHaveBeenCalled();
   });
 
+  it('should treat whitespace-only files entries as missing for BQRS tools', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        file: z.string().optional(),
+        files: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    const result = await handler({ files: ['   '] });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('"file"');
+    expect(result.content[0].text).toContain('"files"');
+    expect(executeCodeQLCommand).not.toHaveBeenCalled();
+  });
+
   it('should handle tests parameter as positional for test tools', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_test_run',
