@@ -35,6 +35,10 @@ export const codeqlQueryRunTool: CLIToolDefinition = {
       .describe('Evaluator log verbosity level (1-5, default 5)'),
     'tuple-counting': z.boolean().optional()
       .describe('Display tuple counts for each evaluation step in evaluator logs'),
+    'evaluate-as-overlay': z.boolean().optional()
+      .describe('[Advanced/experimental] Override automatic detection and force the query to be evaluated in overlay mode against an overlay database (one built with --overlay-changes on top of an --overlay-base). Used for diff-informed (incremental) analysis of changed files.'),
+    'cache-at-frontier': z.boolean().optional()
+      .describe('[Advanced/experimental] Force evaluation and caching of intermediate results useful for future overlay evaluation against an overlay-prepared base database.'),
     format: z.enum(['sarif-latest', 'sarifv2.1.0', 'csv', 'graphtext', 'dgml', 'dot']).optional()
       .describe('Output format for query results via codeql bqrs interpret. Defaults to sarif-latest for @kind problem/path-problem queries, graphtext for @kind graph queries. Graph formats (graphtext, dgml, dot) only work with @kind graph queries.'),
     interpretedOutput: z.string().optional()
@@ -52,6 +56,7 @@ export const codeqlQueryRunTool: CLIToolDefinition = {
     'codeql query run --database=mydb --external=data=input.csv --output=results.bqrs MyQuery.ql --format=sarif-latest --interpreted-output=results.sarif',
     'codeql query run --database=mydb --evaluator-log=eval.log --tuple-counting --evaluator-log-level=5 --output=results.bqrs MyQuery.ql',
     'codeql query run --database=mydb --query-name=PrintAST --query-language=javascript --source-files="main.js,utils.js" --format=graphtext',
-    'codeql query run --database=mydb --log-dir=/custom/log/path --tuple-counting --output=results.bqrs MyQuery.ql'
+    'codeql query run --database=mydb --log-dir=/custom/log/path --tuple-counting --output=results.bqrs MyQuery.ql',
+    'codeql query run --database=overlay-db --evaluate-as-overlay --output=results.bqrs MyQuery.ql'
   ]
 };

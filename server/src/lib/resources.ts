@@ -10,7 +10,9 @@
 // Static imports — esbuild inlines the file contents as string literals.
 import learningDataExtensionsContent from '../resources/learning-data-extensions.md';
 import dataflowMigrationContent from '../resources/dataflow-migration-v1-to-v2.md';
+import diffInformedAnalysisContent from '../resources/diff-informed-analysis.md';
 import learningQueryBasicsContent from '../resources/learning-query-basics.md';
+import overlayDatabasesContent from '../resources/overlay-databases.md';
 import performancePatternsContent from '../resources/performance-patterns.md';
 import qlTestDrivenDevelopmentContent from '../resources/ql-test-driven-development.md';
 import queryUnitTestingContent from '../resources/codeql-query-unit-testing.md';
@@ -95,4 +97,18 @@ export function getLearningDataExtensions(): string {
  */
 export function getDataflowMigration(): string {
   return dataflowMigrationContent;
+}
+
+/**
+ * Get the diff-informed (incremental) analysis guide content
+ */
+export function getDiffInformedAnalysis(): string {
+  return diffInformedAnalysisContent;
+}
+
+/**
+ * Get the overlay databases guide content
+ */
+export function getOverlayDatabases(): string {
+  return overlayDatabasesContent;
 }

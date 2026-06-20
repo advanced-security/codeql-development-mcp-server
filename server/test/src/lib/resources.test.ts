@@ -5,7 +5,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   getDataflowMigration,
+  getDiffInformedAnalysis,
   getLearningQueryBasics,
+  getOverlayDatabases,
   getPerformancePatterns,
   getQueryUnitTesting,
   getSecurityTemplates,
@@ -126,6 +128,36 @@ describe('Resources', () => {
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
       expect(result).toContain('v1 to v2');
+    });
+  });
+
+  describe('getDiffInformedAnalysis', () => {
+    it('should return embedded diff-informed analysis content', () => {
+      const result = getDiffInformedAnalysis();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('observeDiffInformedIncrementalMode');
+    });
+
+    it('should document the local diff-range mechanism (restrictAlertsTo + --model-packs)', () => {
+      const result = getDiffInformedAnalysis();
+
+      // The resource must teach how to supply a diff range locally rather than
+      // claiming it is impossible outside the scanning environment.
+      expect(result).toContain('restrictAlertsTo');
+      expect(result).toContain('--model-packs');
+      expect(result).not.toContain('no `codeql database analyze` flag to inject a diff range locally');
+    });
+  });
+
+  describe('getOverlayDatabases', () => {
+    it('should return embedded overlay databases content', () => {
+      const result = getOverlayDatabases();
+
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('overlay-base');
     });
   });
 });

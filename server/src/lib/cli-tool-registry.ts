@@ -61,6 +61,52 @@ export interface CLIToolDefinition {
 }
 
 /**
+ * Environment-variable name prefixes that callers are permitted to set via the
+ * `extractorEnv` tool parameter. These are CodeQL-extractor-scoped variables
+ * (e.g. `LGTM_INDEX_XML_MODE`, `LGTM_INDEX_FILTERS`, `CODEQL_EXTRACTOR_*`) that
+ * are needed to build framework databases such as SAP UI5. The allowlist
+ * deliberately excludes general process variables (PATH, HOME, LD_PRELOAD, …) so
+ * that a tool caller cannot use this parameter to influence the child process
+ * environment beyond extraction behaviour.
+ */
+export const ALLOWED_EXTRACTOR_ENV_PREFIXES = ['LGTM_', 'CODEQL_EXTRACTOR_'] as const;
+
+/**
+ * Parse and validate `extractorEnv` entries (an array of `KEY=VALUE` strings)
+ * into an environment record suitable for passing to a CodeQL extraction
+ * command.
+ *
+ * Each entry must be of the form `KEY=VALUE` and the `KEY` must begin with one
+ * of {@link ALLOWED_EXTRACTOR_ENV_PREFIXES}. Anything else throws, so that the
+ * value can never be used to override security-sensitive variables such as
+ * `PATH`.
+ *
+ * @throws Error if an entry is malformed or its key is not allowlisted.
+ */
+export function parseExtractorEnv(entries: string[]): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const entry of entries) {
+    const eq = entry.indexOf('=');
+    if (eq <= 0) {
+      throw new Error(
+        `Invalid extractorEnv entry "${entry}": expected "KEY=VALUE" with a non-empty key.`,
+      );
+    }
+    const key = entry.slice(0, eq);
+    const value = entry.slice(eq + 1);
+    if (!ALLOWED_EXTRACTOR_ENV_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+      throw new Error(
+        `extractorEnv key "${key}" is not permitted. Only variables beginning with ` +
+          `${ALLOWED_EXTRACTOR_ENV_PREFIXES.join(' or ')} may be set ` +
+          `(e.g. LGTM_INDEX_XML_MODE=ALL).`,
+      );
+    }
+    env[key] = value;
+  }
+  return env;
+}
+
+/**
  * Default result processor that formats CLI output appropriately
  */
 export const defaultCLIResultProcessor = (
@@ -159,7 +205,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               evaluationOutput: params.evaluationOutput,
               directory: params.directory,
               logDir: params.logDir,
-              qlref: params.qlref
+              qlref: params.qlref,
+              extractorEnv: params.extractorEnv
             }
           : {
               _positional: params._positional || [],
@@ -181,7 +228,8 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
               evaluationOutput: params.evaluationOutput,
               directory: params.directory,
               logDir: params.logDir,
-              qlref: params.qlref
+              qlref: params.qlref,
+              extractorEnv: params.extractorEnv
             };
 
         const {
@@ -205,12 +253,40 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           directory,
           logDir: customLogDir,
           qlref,
+          extractorEnv,
         } = extractedParams;
 
         // Get remaining options (everything not extracted above)
         const options = {...params};
         Object.keys(extractedParams).forEach(key => delete options[key]);
         let positionalArgs = Array.isArray(_positional) ? _positional as string[] : [_positional as string];
+
+        // Parse and validate extractor environment variables (e.g.
+        // LGTM_INDEX_XML_MODE=ALL) so they can be injected into the extraction
+        // child process. Only meaningful for database creation/extraction;
+        // undefined otherwise. Invalid/disallowed entries throw and surface to
+        // the caller as a validation error.
+        const extractorEnvRecord = Array.isArray(extractorEnv) && extractorEnv.length > 0
+          ? parseExtractorEnv(extractorEnv as string[])
+          : undefined;
+
+        // Model-pack changes are not reflected in a database's cached BQRS, so a
+        // `database analyze` that adds or changes --model-packs would silently
+        // reuse stale results. Default --rerun on when model packs are requested
+        // (unless the caller explicitly set rerun) so updated models take effect.
+        if (name === 'codeql_database_analyze' && options.rerun === undefined) {
+          const requestsModelPacks =
+            options['model-packs'] !== undefined ||
+            (Array.isArray(params.additionalArgs) &&
+              (params.additionalArgs as string[]).some((a) => /^--model-packs(=|$)/.test(a)));
+          if (requestsModelPacks) {
+            options.rerun = true;
+            logger.info(
+              'codeql_database_analyze: forcing --rerun because model packs were requested; ' +
+              'the cached BQRS does not reflect model-pack changes. Pass rerun:false to override.',
+            );
+          }
+        }
 
         // Handle files parameter as positional arguments for certain tools
         if (files && Array.isArray(files)) {
@@ -692,7 +768,11 @@ export function registerCLITool(server: McpServer, definition: CLIToolDefinition
           }
 
           try {
-            result = await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
+            // Only pass the env argument when extractor environment variables
+            // were supplied, so the common (4-argument) call shape is preserved.
+            result = extractorEnvRecord
+              ? await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd, extractorEnvRecord)
+              : await executeCodeQLCommand(subcommand, options, [...positionalArgs, ...userAdditionalArgs], cwd);
           } finally {
             dbLock?.release();
           }

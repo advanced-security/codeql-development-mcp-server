@@ -35,12 +35,17 @@ export const codeqlDatabaseAnalyzeTool: CLIToolDefinition = {
       .describe('Evaluator log verbosity level (1-5, default 5)'),
     rerun: z.boolean().optional()
       .describe('Force re-evaluation of queries even if BQRS results already exist in the database. Without this, cached results are reused.'),
+    'evaluate-as-overlay': z.boolean().optional()
+      .describe('[Advanced/experimental] Override automatic detection and force queries to be evaluated in overlay mode against an overlay database (one built with --overlay-changes on top of an --overlay-base). Used for diff-informed (incremental) analysis of changed files.'),
+    'cache-at-frontier': z.boolean().optional()
+      .describe('[Advanced/experimental] Force evaluation and caching of intermediate results useful for future overlay evaluation. Enabled by default when evaluating against an overlay-prepared base that has no overlay yet, so it rarely needs to be set explicitly.'),
     verbose: z.boolean().optional().describe('Enable verbose output'),
     additionalArgs: z.array(z.string()).optional().describe('Additional command-line arguments')
   },
   examples: [
     'codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif',
     'codeql database analyze mydb codeql/java-queries --format=csv',
-    'codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif --rerun --tuple-counting'
+    'codeql database analyze mydb queries.qls --format=sarif-latest --output=results.sarif --rerun --tuple-counting',
+    'codeql database analyze overlay-db queries.qls --format=sarif-latest --output=results.sarif --evaluate-as-overlay'
   ]
 };

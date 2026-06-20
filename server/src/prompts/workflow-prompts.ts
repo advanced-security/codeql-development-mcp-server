@@ -217,6 +217,30 @@ export const dataExtensionDevelopmentSchema = z.object({
 });
 
 /**
+ * Schema for diff_informed_analysis_workflow prompt parameters.
+ *
+ * - `language` is **required** – making a query diff-informed and building
+ *   overlay databases are language-specific operations.
+ * - `queryPath` is optional – path to the data-flow/taint query (.ql) to make
+ *   diff-informed.
+ * - `database` is optional – path to a base CodeQL database (or its source
+ *   root) used to build an overlay for incremental analysis.
+ */
+export const diffInformedAnalysisWorkflowSchema = z.object({
+  language: z
+    .enum(SUPPORTED_LANGUAGES)
+    .describe('Programming language for the diff-informed query and databases'),
+  queryPath: z
+    .string()
+    .optional()
+    .describe('Path to the data-flow/taint query (.ql) to make diff-informed'),
+  database: z
+    .string()
+    .optional()
+    .describe('Path to a base CodeQL database (or source root) for overlay analysis'),
+});
+
+/**
  * Schema for test_driven_development prompt parameters.
  *
  * - `language` is **required** – the TDD workflow is language-specific.
@@ -648,6 +672,7 @@ export const WORKFLOW_PROMPT_NAMES = [
   'check_for_duplicated_code',
   'compare_overlapping_alerts',
   'data_extension_development',
+  'diff_informed_analysis_workflow',
   'document_codeql_query',
   'explain_codeql_query',
   'find_overlapping_queries',
@@ -1333,6 +1358,70 @@ ${workspaceUri ? `- **Workspace URI**: ${workspaceUri}
               content: {
                 type: 'text',
                 text: contextSection + content,
+              },
+            },
+          ],
+        };
+      },
+    ),
+  );
+
+  // Diff-Informed Analysis Workflow Prompt
+  server.prompt(
+    'diff_informed_analysis_workflow',
+    'End-to-end workflow for diff-informed (incremental) CodeQL analysis: make a data-flow query diff-informed, validate it with test run --check-diff-informed, and build/evaluate overlay databases for changed files',
+    addCompletions(toPermissiveShape(diffInformedAnalysisWorkflowSchema.shape)),
+    createSafePromptHandler(
+      'diff_informed_analysis_workflow',
+      diffInformedAnalysisWorkflowSchema,
+      async ({ language, queryPath, database }) => {
+        const template = loadPromptTemplate('diff-informed-analysis-workflow.prompt.md');
+
+        const warnings: string[] = [];
+
+        let resolvedQueryPath = queryPath;
+        if (queryPath) {
+          const qpResult = await resolvePromptFilePath(queryPath);
+          if (qpResult.blocked) return blockedPathError(qpResult, 'query path');
+          resolvedQueryPath = qpResult.resolvedPath;
+          if (qpResult.warning) warnings.push(qpResult.warning);
+        }
+
+        let resolvedDatabase = database;
+        if (database) {
+          const dbResult = await resolvePromptFilePath(database);
+          if (dbResult.blocked) return blockedPathError(dbResult, 'database path');
+          resolvedDatabase = dbResult.resolvedPath;
+          if (dbResult.warning) warnings.push(dbResult.warning);
+        }
+
+        const content = processPromptTemplate(template, {
+          language,
+          queryPath: resolvedQueryPath || '<query-path>',
+          database: resolvedDatabase || '<database-path>',
+        });
+
+        let contextSection = '## Diff-Informed Analysis Context\n\n';
+        contextSection += `- **Language**: ${language}\n`;
+        if (resolvedQueryPath) {
+          contextSection += `- **Query Path**: ${markdownInlineCode(resolvedQueryPath)}\n`;
+        }
+        if (resolvedDatabase) {
+          contextSection += `- **Database**: ${markdownInlineCode(resolvedDatabase)}\n`;
+        }
+        contextSection += '\n';
+
+        const warningSection = warnings.length > 0
+          ? warnings.join('\n') + '\n\n'
+          : '';
+
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: warningSection + contextSection + content,
               },
             },
           ],

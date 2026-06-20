@@ -18,8 +18,22 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 - **Second supply-chain hardening pass for release workflows** — All release-generating workflows now opt out of every cache step, pin runners, strictly validate version inputs, and refuse mid-publish cancellation. See **Security** below for the full inventory. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
 - **First-class Rust toolchain support in CI** — `setup-codeql-environment` now installs a pinned Rust toolchain (default `1.80.0`, via a pinned `dtolnay/rust-toolchain` action with `rust-src`) for any matrix entry that includes `rust`, so the CodeQL rust extractor can expand `format!` / `println!` / `vec!` macros against the standard library on Linux runners. The `query-unit-tests.yml` workflow now passes `languages: ${{ matrix.language }}` so each matrix entry only installs its own runtime. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- **Diff-informed analysis & overlay database support** — New MCP primitives help developers make data-flow queries diff-informed (incremental) and build/evaluate overlay databases. A new `diff_informed_analysis_workflow` prompt and two reference resources walk through the query-side opt-in (`observeDiffInformedIncrementalMode`, `getASelectedSourceLocation`, `getASelectedSinkLocation`) and validation via `codeql test run --check-diff-informed`, while `codeql_database_create`, `codeql_database_analyze`, `codeql_query_run`, and `codeql_test_run` gained the corresponding advanced/experimental CLI parameters.
 
 ### Added
+
+#### MCP Server Prompts
+
+| Prompt                            | Description                                                                                                                                                                                                                                        |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `diff_informed_analysis_workflow` | End-to-end workflow to make a data-flow query diff-informed, validate it with `codeql test run --check-diff-informed`, and build/evaluate overlay databases for changed files. Requires `language`; optionally accepts `queryPath` and `database`. |
+
+#### MCP Server Resources
+
+| Resource                                   | Description                                                                                                                      |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql://learning/diff-informed-analysis` | How to make data-flow queries diff-informed (incremental) and validate them locally with `--check-diff-informed`.                |
+| `codeql://guides/overlay-databases`        | How to build and evaluate overlay databases (`overlay-base`, `overlay-changes`, `cache-cleanup=overlay`, `evaluate-as-overlay`). |
 
 #### VS Code Extension
 
@@ -29,6 +43,19 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - **Bundled skills** — Two skills (`ql-mcp-ext-create-workshop`, `ql-mcp-ext-validate-tools-queries`) are copied into the VSIX as static `contributes.chatSkills` contributions so they are available to Copilot Chat alongside the bundled agents. Source dirs in `.github/skills/` retain their original names; the bundler renames on copy and rewrites the `name:` frontmatter so the VS Code skill registry resolves them under the bundled name. ([#281](https://github.com/advanced-security/codeql-development-mcp-server/pull/281))
 
 ### Changed
+
+#### MCP Server Tools
+
+| Tool                      | Change                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql_database_create`  | Added overlay-database parameters `overlay-base` (build a database usable as an overlay base), `overlay-changes` (build an overlay from a JSON changes file), and `cache-cleanup` (`clear`/`trim`/`fit`/`overlay`). Added an `extractorEnv` parameter for passing extractor environment variables (keys restricted to `LGTM_`/`CODEQL_EXTRACTOR_`), e.g. `LGTM_INDEX_XML_MODE=ALL` to extract SAP UI5 XML views. |
+| `codeql_database_analyze` | Added overlay-evaluation parameters `evaluate-as-overlay` and `cache-at-frontier`. Now defaults `--rerun` on when model packs are requested, so model-pack changes are not masked by a stale cached BQRS (pass `rerun: false` to opt out).                                                                                                                                                                       |
+| `codeql_query_run`        | Added overlay-evaluation parameters `evaluate-as-overlay` and `cache-at-frontier`.                                                                                                                                                                                                                                                                                                                               |
+| `codeql_test_run`         | Added `check-diff-informed` (validate diff-informed query filtering) and `evaluate-as-overlay`.                                                                                                                                                                                                                                                                                                                  |
+
+#### MCP Server Resources & Prompts
+
+- **Diff-informed analysis docs now describe local diff-range injection** — The `codeql://learning/diff-informed-analysis` resource and the `diff_informed_analysis_workflow` prompt previously stated that a diff range could not be supplied locally. They now document the real mechanism: populate the `restrictAlertsTo` extensible predicate (`codeql/util`) via a data-extension pack and activate it with `--model-packs` (placing it only on `--additional-packs` resolves but does not apply it).
 
 #### VS Code Extension
 

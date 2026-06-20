@@ -17,6 +17,7 @@ coverage
 extensions/vscode/.vscode-test
 extensions/vscode/test/fixtures/
 node_modules
+perf-reports/
 query-results*
 server/dist/
 server/ql/*/tools/src/*.md

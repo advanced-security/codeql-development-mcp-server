@@ -10,6 +10,7 @@ const EXPECTED_PROMPT_FILES = [
   'check-for-duplicated-code.prompt.md',
   'compare-overlapping-alerts.prompt.md',
   'data-extension-development.prompt.md',
+  'diff-informed-analysis-workflow.prompt.md',
   'document-codeql-query.prompt.md',
   'explain-codeql-query.prompt.md',
   'find-overlapping-queries.prompt.md',
