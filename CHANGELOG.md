@@ -55,7 +55,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 #### MCP Server Resources & Prompts
 
-- **Diff-informed analysis docs now describe local diff-range injection** — The `codeql://learning/diff-informed-analysis` resource and the `diff_informed_analysis_workflow` prompt previously stated that a diff range could not be supplied locally. They now document the real mechanism: populate the `restrictAlertsTo` extensible predicate (`codeql/util`) via a data-extension pack and activate it with `--model-packs` (placing it only on `--additional-packs` resolves but does not apply it).
+- **Diff-informed analysis docs now describe local diff-range injection** — The `codeql://learning/diff-informed-analysis` resource and the `diff_informed_analysis_workflow` prompt document the local mechanism used by Code Scanning: populate the `restrictAlertsTo` extensible predicate (`codeql/util`) via a data-extension pack and activate it with `--model-packs` (placing it only on `--additional-packs` resolves but does not apply it).
 
 #### VS Code Extension
 
