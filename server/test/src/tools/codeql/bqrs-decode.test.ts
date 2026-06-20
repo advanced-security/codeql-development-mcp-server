@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { codeqlBqrsDecodeTool } from '../../../../src/tools/codeql/bqrs-decode';
+import { buildEnhancedToolSchema } from '../../../../src/lib/param-normalization';
 
 describe('codeql_bqrs_decode tool definition', () => {
   it('should have correct tool name', () => {
@@ -20,8 +21,32 @@ describe('codeql_bqrs_decode tool definition', () => {
     expect(codeqlBqrsDecodeTool.subcommand).toBe('bqrs decode');
   });
 
-  it('should have files as required positional input', () => {
+  it('should accept a singular file path via the files array input', () => {
     expect(codeqlBqrsDecodeTool.inputSchema).toHaveProperty('files');
+  });
+
+  it('should also accept a singular file string input as an alias for files', () => {
+    expect(codeqlBqrsDecodeTool.inputSchema).toHaveProperty('file');
+  });
+
+  describe('input schema validation (file vs files)', () => {
+    const schema = buildEnhancedToolSchema(codeqlBqrsDecodeTool.inputSchema);
+
+    it('should accept a singular file string argument', () => {
+      const result = schema.safeParse({ file: '/path/to/results.bqrs', format: 'csv' });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.file).toBe('/path/to/results.bqrs');
+      }
+    });
+
+    it('should accept a files array argument', () => {
+      const result = schema.safeParse({ files: ['/path/to/results.bqrs'], format: 'csv' });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.files).toEqual(['/path/to/results.bqrs']);
+      }
+    });
   });
 
   it('should support result-set parameter for selecting specific result sets', () => {

@@ -1,0 +1,13 @@
+{
+  "toolName": "codeql_bqrs_decode",
+  "arguments": {
+    "file": "client/integration-tests/primitives/tools/codeql_bqrs_decode/decode_singular_file/before/results.bqrs",
+    "format": "csv",
+    "no-titles": true
+  },
+  "assertions": {
+    "responseContains": [
+      "Example test code file found for codeql_test_extract example query."
+    ]
+  }
+}

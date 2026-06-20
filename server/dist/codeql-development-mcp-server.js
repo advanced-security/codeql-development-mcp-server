@@ -194046,6 +194046,11 @@ function registerCLITool(server, definition) {
           }
           positionalArgs = [...positionalArgs, cleanFile];
         }
+        if (name.startsWith("codeql_bqrs_") && positionalArgs.length === 0) {
+          throw new Error(
+            `The "${name}" tool requires a BQRS file path. Provide it via "file" (a single string path) or "files" (an array of string paths).`
+          );
+        }
         if (qlref && name === "codeql_resolve_qlref") {
           positionalArgs = [...positionalArgs, qlref];
         }
@@ -194503,7 +194508,8 @@ var codeqlBqrsDecodeTool = {
   command: "codeql",
   subcommand: "bqrs decode",
   inputSchema: {
-    files: external_exports.array(external_exports.string()).describe('Array of BQRS file paths to decode. Pass an array even for a single file, e.g. ["/path/to/results.bqrs"]'),
+    file: external_exports.string().optional().describe('Path to a single BQRS file to decode, e.g. "/path/to/results.bqrs". Convenience alias for `files`; provide either `file` or `files` (at least one is required).'),
+    files: external_exports.array(external_exports.string()).optional().describe('Array of BQRS file paths to decode, e.g. ["/path/to/results.bqrs"]. Provide either `file` (a single path) or `files` (at least one is required).'),
     output: createCodeQLSchemas.output(),
     format: external_exports.enum(["csv", "json", "text", "bqrs"]).optional().describe("Output format: text (human-readable table, default), csv, json (streaming JSON), or bqrs (binary, requires --output)"),
     "result-set": external_exports.string().optional().describe("Decode a specific result set by name (use codeql_bqrs_info to list available sets). If omitted, all result sets are decoded."),

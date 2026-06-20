@@ -1602,6 +1602,102 @@ describe('registerCLITool handler behavior', () => {
     expect(positionalArgs).toContain('/path/to/results.bqrs');
   });
 
+  it('should handle files array parameter as positional for codeql_bqrs_decode', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        files: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValueOnce({
+      stdout: '{"results": []}',
+      stderr: '',
+      success: true
+    });
+
+    await handler({ files: ['/path/to/results.bqrs'] });
+
+    expect(executeCodeQLCommand).toHaveBeenCalledWith(
+      'bqrs decode',
+      expect.any(Object),
+      ['/path/to/results.bqrs'],
+      undefined
+    );
+  });
+
+  it('should accept either singular file or files array for codeql_bqrs_decode', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        file: z.string().optional(),
+        files: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    executeCodeQLCommand.mockResolvedValue({
+      stdout: '{"results": []}',
+      stderr: '',
+      success: true
+    });
+
+    // Singular file form
+    await handler({ file: '/path/to/results.bqrs' });
+    expect(executeCodeQLCommand).toHaveBeenLastCalledWith(
+      'bqrs decode',
+      expect.any(Object),
+      ['/path/to/results.bqrs'],
+      undefined
+    );
+
+    // Plural files form
+    await handler({ files: ['/path/to/results.bqrs'] });
+    expect(executeCodeQLCommand).toHaveBeenLastCalledWith(
+      'bqrs decode',
+      expect.any(Object),
+      ['/path/to/results.bqrs'],
+      undefined
+    );
+  });
+
+  it('should return a clear error naming file/files when no BQRS path is provided', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_bqrs_decode',
+      description: 'Decode BQRS',
+      command: 'codeql',
+      subcommand: 'bqrs decode',
+      inputSchema: {
+        file: z.string().optional(),
+        files: z.array(z.string()).optional()
+      }
+    };
+
+    registerCLITool(mockServer, definition);
+
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    const result = await handler({});
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('"file"');
+    expect(result.content[0].text).toContain('"files"');
+    expect(executeCodeQLCommand).not.toHaveBeenCalled();
+  });
+
   it('should handle tests parameter as positional for test tools', async () => {
     const definition: CLIToolDefinition = {
       name: 'codeql_test_run',
