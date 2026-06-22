@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 import { MAD_SUPPORTED_LANGUAGES, SUPPORTED_LANGUAGES } from './constants';
 import { addCompletions, getEffectiveLanguage } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
-import { getUserWorkspaceDir } from '../utils/package-paths';
+import { getUserWorkspaceDirs } from '../utils/package-paths';
 import { logger } from '../utils/logger';
 
 // Re-export for backward compatibility with existing consumers and tests.
@@ -101,15 +101,19 @@ function blockedPathError(result: PromptFilePathResult, paramName: string): Prom
  * Resolve a user-supplied file path for a prompt parameter.
  *
  * Handles `file://` URIs (converted via `fileURLToPath`) and plain paths.
- * Relative paths are resolved against `workspaceRoot` (which defaults to
- * `getUserWorkspaceDir()`).  The function never throws — it returns a
- * `warning` string when the path is empty, traverses outside the workspace,
- * or does not exist on disk.  Path traversal attempts are treated as a hard
- * failure: `blocked` is `true` and `resolvedPath` is empty so that the
- * outside-root absolute path is never embedded in the prompt context.
+ * Relative paths are resolved against `workspaceRoot` when supplied; otherwise
+ * they are resolved against every workspace root reported by
+ * `getUserWorkspaceDirs()` (so multi-root VS Code workspaces can target queries
+ * outside the first folder — see issue #300), preferring the first root where
+ * the file exists.  The function never throws — it returns a `warning` string
+ * when the path is empty, traverses outside the workspace, or does not exist on
+ * disk.  Path traversal attempts are treated as a hard failure: `blocked` is
+ * `true` and `resolvedPath` is empty so that the outside-root absolute path is
+ * never embedded in the prompt context.
  *
  * @param filePath      - The raw path value from the prompt parameter.
- * @param workspaceRoot - Directory to resolve relative paths against.
+ * @param workspaceRoot - Directory to resolve relative paths against. When
+ *                        omitted, all workspace roots are tried in order.
  * @returns An object with the resolved absolute path and an optional warning.
  */
 export async function resolvePromptFilePath(
@@ -137,40 +141,79 @@ export async function resolvePromptFilePath(
     }
   }
 
-  const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
-
   // Normalise first to collapse any . or .. segments.
   const normalizedPath = normalize(effectivePath);
 
-  // Resolve to absolute path.
-  const inputWasAbsolute = isAbsolute(normalizedPath);
-  const absolutePath = inputWasAbsolute
-    ? normalizedPath
-    : resolve(effectiveRoot, normalizedPath);
-
-  // Only enforce the workspace-root boundary for relative inputs.
   // Absolute paths are allowed through — users legitimately reference
-  // databases, queries, and pack roots outside the workspace.
-  if (!inputWasAbsolute) {
-    const rel = relative(effectiveRoot, absolutePath);
+  // databases, queries, and pack roots outside the workspace — so they bypass
+  // the workspace-root boundary entirely.
+  if (isAbsolute(normalizedPath)) {
+    return finalizePromptFilePath(normalizedPath, filePath);
+  }
+
+  // Relative inputs are resolved against the workspace root(s). In a multi-root
+  // workspace the referenced file may live in any root folder (issue #300), so
+  // try each candidate root in turn and prefer the first where the file
+  // actually exists. When an explicit `workspaceRoot` is supplied we honour it
+  // verbatim (single root).
+  const candidateRoots = workspaceRoot ? [workspaceRoot] : getUserWorkspaceDirs();
+
+  let firstWithinRoot: string | undefined;
+  for (const root of candidateRoots) {
+    const absolutePath = resolve(root, normalizedPath);
+
+    // Enforce the workspace-root boundary for relative inputs so a relative
+    // path cannot traverse outside the root it is resolved against.
+    const rel = relative(root, absolutePath);
     if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
-      return {
-        blocked: true,
-        resolvedPath: '',
-        warning: '⚠ **File path resolves outside the workspace root.** The path has been blocked for security.',
-      };
+      continue;
+    }
+
+    if (firstWithinRoot === undefined) {
+      firstWithinRoot = absolutePath;
+    }
+
+    // Check existence on disk (advisory only). The first existing match wins.
+    try {
+      await access(absolutePath);
+      return { resolvedPath: absolutePath };
+    } catch {
+      // Not present in this root — keep trying the remaining roots.
     }
   }
 
-  // Check existence on disk (advisory only — the resolved path is always
-  // returned so that downstream tools can attempt the operation themselves
-  // and surface their own errors).
+  // The path escaped every candidate workspace root: block it.
+  if (firstWithinRoot === undefined) {
+    return {
+      blocked: true,
+      resolvedPath: '',
+      warning: '⚠ **File path resolves outside the workspace root.** The path has been blocked for security.',
+    };
+  }
+
+  // Within a root, but the file does not exist in any of them. Return the path
+  // resolved against the primary root so downstream tools can surface their own
+  // error.
+  return {
+    resolvedPath: firstWithinRoot,
+    warning: `⚠ **File path** ${markdownInlineCode(filePath)} **does not exist.**`,
+  };
+}
+
+/**
+ * Finalise resolution for an already-resolved absolute path: return it as-is,
+ * attaching an advisory warning when the file does not exist on disk.
+ */
+async function finalizePromptFilePath(
+  absolutePath: string,
+  originalPath: string,
+): Promise<PromptFilePathResult> {
   try {
     await access(absolutePath);
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `⚠ **File path** ${markdownInlineCode(filePath)} **does not exist.**`,
+      warning: `⚠ **File path** ${markdownInlineCode(originalPath)} **does not exist.**`,
     };
   }
 

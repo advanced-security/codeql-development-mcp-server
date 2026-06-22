@@ -41,7 +41,7 @@ import {
 } from '../../../src/prompts/workflow-prompts';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import { mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
@@ -1896,6 +1896,32 @@ describe('Workflow Prompts', () => {
       // The raw backtick must be preserved and the fence must be at least double.
       expect(result.warning).toContain('bad`name.ql');
       expect(result.warning).toContain('``bad`name.ql``');
+    });
+
+    it('resolves a relative path against any workspace root in a multi-root setup', async () => {
+      // Simulate a multi-root workspace where the query lives in the SECOND root.
+      const rootA = createTestTempDir('multi-root-a');
+      const rootB = createTestTempDir('multi-root-b');
+      const original = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+      try {
+        mkdirSync(join(rootB, 'queries'), { recursive: true });
+        writeFileSync(join(rootB, 'queries', 'q.ql'), 'select 1');
+        process.env.CODEQL_MCP_WORKSPACE_FOLDERS = [rootA, rootB].join(delimiter);
+
+        // No explicit workspaceRoot, so the candidate roots come from the env.
+        const result = await resolvePromptFilePath('queries/q.ql');
+        expect(result.blocked).toBeUndefined();
+        expect(result.resolvedPath).toBe(join(rootB, 'queries', 'q.ql'));
+        expect(result.warning).toBeUndefined();
+      } finally {
+        if (original !== undefined) {
+          process.env.CODEQL_MCP_WORKSPACE_FOLDERS = original;
+        } else {
+          delete process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+        }
+        cleanupTestTempDir(rootA);
+        cleanupTestTempDir(rootB);
+      }
     });
   });
 

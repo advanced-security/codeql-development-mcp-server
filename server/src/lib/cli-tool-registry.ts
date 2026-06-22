@@ -77,12 +77,18 @@ export const ALLOWED_EXTRACTOR_ENV_PREFIXES = ['LGTM_', 'CODEQL_EXTRACTOR_'] as 
  * command.
  *
  * Each entry must be of the form `KEY=VALUE` and the `KEY` must begin with one
- * of {@link ALLOWED_EXTRACTOR_ENV_PREFIXES}. Anything else throws, so that the
+ * of {@link ALLOWED_EXTRACTOR_ENV_PREFIXES}. The `KEY` must also be a valid
+ * POSIX environment-variable name (letters, digits, and underscores only,
+ * starting with a letter or underscore) and the `VALUE` may not contain NUL,
+ * carriage-return, or newline characters. Anything else throws, so that the
  * value can never be used to override security-sensitive variables such as
- * `PATH`.
+ * `PATH` or to smuggle control characters into the child process environment.
  *
- * @throws Error if an entry is malformed or its key is not allowlisted.
+ * @throws Error if an entry is malformed, its key is not allowlisted or is not a
+ * valid environment-variable name, or its value contains control characters.
  */
+const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 export function parseExtractorEnv(entries: string[]): Record<string, string> {
   const env: Record<string, string> = {};
   for (const entry of entries) {
@@ -94,11 +100,24 @@ export function parseExtractorEnv(entries: string[]): Record<string, string> {
     }
     const key = entry.slice(0, eq);
     const value = entry.slice(eq + 1);
+    if (!ENV_KEY_PATTERN.test(key)) {
+      throw new Error(
+        `extractorEnv key "${key}" is not a valid environment-variable name. ` +
+          `Keys may contain only letters, digits, and underscores and must not ` +
+          `start with a digit.`,
+      );
+    }
     if (!ALLOWED_EXTRACTOR_ENV_PREFIXES.some((prefix) => key.startsWith(prefix))) {
       throw new Error(
         `extractorEnv key "${key}" is not permitted. Only variables beginning with ` +
           `${ALLOWED_EXTRACTOR_ENV_PREFIXES.join(' or ')} may be set ` +
           `(e.g. LGTM_INDEX_XML_MODE=ALL).`,
+      );
+    }
+    if (/[\0\r\n]/.test(value)) {
+      throw new Error(
+        `extractorEnv value for "${key}" contains an illegal control character ` +
+          `(NUL, carriage return, or newline).`,
       );
     }
     env[key] = value;

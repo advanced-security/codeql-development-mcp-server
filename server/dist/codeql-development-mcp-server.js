@@ -12810,8 +12810,8 @@ var require_common = __commonJS({
         }
         return debug;
       }
-      function extend4(namespace, delimiter7) {
-        const newDebug = createDebug(this.namespace + (typeof delimiter7 === "undefined" ? ":" : delimiter7) + namespace);
+      function extend4(namespace, delimiter8) {
+        const newDebug = createDebug(this.namespace + (typeof delimiter8 === "undefined" ? ":" : delimiter8) + namespace);
         newDebug.log = this.log;
         return newDebug;
       }
@@ -36412,9 +36412,9 @@ var require_dist2 = __commonJS({
       return new TokenData(consumeUntil(""), str2);
     }
     function compile(path3, options = {}) {
-      const { encode = encodeURIComponent, delimiter: delimiter7 = DEFAULT_DELIMITER } = options;
+      const { encode = encodeURIComponent, delimiter: delimiter8 = DEFAULT_DELIMITER } = options;
       const data = typeof path3 === "object" ? path3 : parse4(path3, options);
-      const fn = tokensToFunction(data.tokens, delimiter7, encode);
+      const fn = tokensToFunction(data.tokens, delimiter8, encode);
       return function path4(params = {}) {
         const missing = [];
         const path5 = fn(params, missing);
@@ -36424,8 +36424,8 @@ var require_dist2 = __commonJS({
         return path5;
       };
     }
-    function tokensToFunction(tokens, delimiter7, encode) {
-      const encoders = tokens.map((token) => tokenToFunction(token, delimiter7, encode));
+    function tokensToFunction(tokens, delimiter8, encode) {
+      const encoders = tokens.map((token) => tokenToFunction(token, delimiter8, encode));
       return (data, missing) => {
         let result = "";
         for (const encoder of encoders) {
@@ -36434,11 +36434,11 @@ var require_dist2 = __commonJS({
         return result;
       };
     }
-    function tokenToFunction(token, delimiter7, encode) {
+    function tokenToFunction(token, delimiter8, encode) {
       if (token.type === "text")
         return () => token.value;
       if (token.type === "group") {
-        const fn = tokensToFunction(token.tokens, delimiter7, encode);
+        const fn = tokensToFunction(token.tokens, delimiter8, encode);
         return (data, missing) => {
           const len = missing.length;
           const value = fn(data, missing);
@@ -36465,7 +36465,7 @@ var require_dist2 = __commonJS({
               throw new TypeError(`Expected "${token.name}/${i2}" to be a string`);
             }
             if (i2 > 0)
-              result += delimiter7;
+              result += delimiter8;
             result += encodeValue(value[i2]);
           }
           return result;
@@ -36484,14 +36484,14 @@ var require_dist2 = __commonJS({
       };
     }
     function match(path3, options = {}) {
-      const { decode = decodeURIComponent, delimiter: delimiter7 = DEFAULT_DELIMITER } = options;
+      const { decode = decodeURIComponent, delimiter: delimiter8 = DEFAULT_DELIMITER } = options;
       const { regexp, keys } = pathToRegexp(path3, options);
       const decoders = keys.map((key) => {
         if (decode === false)
           return NOOP_VALUE;
         if (key.type === "param")
           return decode;
-        return (value) => value.split(delimiter7).map(decode);
+        return (value) => value.split(delimiter8).map(decode);
       });
       return function match2(input) {
         const m = regexp.exec(input);
@@ -36510,7 +36510,7 @@ var require_dist2 = __commonJS({
       };
     }
     function pathToRegexp(path3, options = {}) {
-      const { delimiter: delimiter7 = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
+      const { delimiter: delimiter8 = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
       const keys = [];
       let source = "";
       let combinations = 0;
@@ -36527,15 +36527,15 @@ var require_dist2 = __commonJS({
           }
           if (combinations > 0)
             source += "|";
-          source += toRegExpSource(tokens, delimiter7, keys, data.originalPath);
+          source += toRegExpSource(tokens, delimiter8, keys, data.originalPath);
           combinations++;
         });
       }
       process4(path3);
       let pattern = `^(?:${source})`;
       if (trailing)
-        pattern += "(?:" + escape2(delimiter7) + "$)?";
-      pattern += end ? "$" : "(?=" + escape2(delimiter7) + "|$)";
+        pattern += "(?:" + escape2(delimiter8) + "$)?";
+      pattern += end ? "$" : "(?=" + escape2(delimiter8) + "|$)";
       return { regexp: new RegExp(pattern, sensitive ? "" : "i"), keys };
     }
     function flatten(tokens, index, result, callback) {
@@ -36551,7 +36551,7 @@ var require_dist2 = __commonJS({
       }
       callback(result);
     }
-    function toRegExpSource(tokens, delimiter7, keys, originalPath) {
+    function toRegExpSource(tokens, delimiter8, keys, originalPath) {
       let result = "";
       let backtrack = "";
       let wildcardBacktrack = "";
@@ -36564,7 +36564,7 @@ var require_dist2 = __commonJS({
           if (token.type === type2)
             return true;
           if (token.type === "text") {
-            if (token.value.includes(delimiter7))
+            if (token.value.includes(delimiter8))
               break;
           }
         }
@@ -36587,7 +36587,7 @@ var require_dist2 = __commonJS({
           backtrack += token.value;
           if (prevCaptureType === 2)
             wildcardBacktrack += token.value;
-          if (token.value.includes(delimiter7))
+          if (token.value.includes(delimiter8))
             hasSegmentCapture = 0;
           continue;
         }
@@ -36596,10 +36596,10 @@ var require_dist2 = __commonJS({
             throw new PathError(`Missing text before "${token.name}" ${token.type}`, originalPath);
           }
           if (token.type === "param") {
-            result += hasSegmentCapture & 2 ? `(${negate(delimiter7, backtrack)}+)` : hasInSegment(index, "wildcard") ? `(${negate(delimiter7, peekText(index))}+)` : hasSegmentCapture & 1 ? `(${negate(delimiter7, backtrack)}+|${escape2(backtrack)})` : `(${negate(delimiter7, "")}+)`;
+            result += hasSegmentCapture & 2 ? `(${negate(delimiter8, backtrack)}+)` : hasInSegment(index, "wildcard") ? `(${negate(delimiter8, peekText(index))}+)` : hasSegmentCapture & 1 ? `(${negate(delimiter8, backtrack)}+|${escape2(backtrack)})` : `(${negate(delimiter8, "")}+)`;
             hasSegmentCapture |= prevCaptureType = 1;
           } else {
-            result += hasSegmentCapture & 2 ? `(${negate(backtrack, "")}+)` : wildcardBacktrack ? `(${negate(wildcardBacktrack, "")}+|${negate(delimiter7, "")}+)` : `([^]+)`;
+            result += hasSegmentCapture & 2 ? `(${negate(backtrack, "")}+)` : wildcardBacktrack ? `(${negate(wildcardBacktrack, "")}+|${negate(delimiter8, "")}+)` : `([^]+)`;
             wildcardBacktrack = "";
             hasSegmentCapture |= prevCaptureType = 2;
           }
@@ -40682,12 +40682,13 @@ __export(package_paths_exports, {
   getPackageRootDir: () => getPackageRootDir,
   getPackageVersion: () => getPackageVersion,
   getUserWorkspaceDir: () => getUserWorkspaceDir,
+  getUserWorkspaceDirs: () => getUserWorkspaceDirs,
   getWorkspaceRootDir: () => getWorkspaceRootDir,
   packageRootDir: () => packageRootDir,
   resolveToolQueryPackPath: () => resolveToolQueryPackPath,
   workspaceRootDir: () => workspaceRootDir
 });
-import { dirname, resolve } from "path";
+import { delimiter, dirname, resolve } from "path";
 import { existsSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 function isRunningFromSource(dir) {
@@ -40735,6 +40736,16 @@ function getUserWorkspaceDir() {
     return process.cwd();
   }
   return workspaceRootDir;
+}
+function getUserWorkspaceDirs() {
+  const folders = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+  if (folders) {
+    const dirs = folders.split(delimiter).map((dir) => dir.trim()).filter((dir) => dir.length > 0);
+    if (dirs.length > 0) {
+      return dirs;
+    }
+  }
+  return [getUserWorkspaceDir()];
 }
 var __filename2, __dirname, _cachedVersion, packageRootDir, workspaceRootDir;
 var init_package_paths = __esm({
@@ -40948,7 +40959,7 @@ import { spawn } from "child_process";
 import { EventEmitter } from "events";
 import { setTimeout as setTimeout3, clearTimeout as clearTimeout3 } from "timers";
 import { pathToFileURL } from "url";
-import { delimiter, join as join3 } from "path";
+import { delimiter as delimiter2, join as join3 } from "path";
 var CodeQLLanguageServer;
 var init_language_server = __esm({
   "src/lib/language-server.ts"() {
@@ -40998,7 +41009,7 @@ var init_language_server = __esm({
         const spawnEnv = { ...process.env };
         const codeqlDir = getResolvedCodeQLDir();
         if (codeqlDir && spawnEnv.PATH) {
-          spawnEnv.PATH = `${codeqlDir}${delimiter}${spawnEnv.PATH}`;
+          spawnEnv.PATH = `${codeqlDir}${delimiter2}${spawnEnv.PATH}`;
         } else if (codeqlDir) {
           spawnEnv.PATH = codeqlDir;
         }
@@ -41376,7 +41387,7 @@ var init_language_server = __esm({
 
 // src/lib/query-server.ts
 import { spawn as spawn2 } from "child_process";
-import { delimiter as delimiter2 } from "path";
+import { delimiter as delimiter3 } from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 import { clearTimeout as clearTimeout4, setTimeout as setTimeout4 } from "timers";
 var CodeQLQueryServer;
@@ -41409,7 +41420,7 @@ var init_query_server = __esm({
         const spawnEnv = { ...process.env };
         const codeqlDir = getResolvedCodeQLDir();
         if (codeqlDir && spawnEnv.PATH) {
-          spawnEnv.PATH = `${codeqlDir}${delimiter2}${spawnEnv.PATH}`;
+          spawnEnv.PATH = `${codeqlDir}${delimiter3}${spawnEnv.PATH}`;
         } else if (codeqlDir) {
           spawnEnv.PATH = codeqlDir;
         }
@@ -41591,7 +41602,7 @@ ${body}`;
 
 // src/lib/cli-server.ts
 import { spawn as spawn3 } from "child_process";
-import { delimiter as delimiter3 } from "path";
+import { delimiter as delimiter4 } from "path";
 import { EventEmitter as EventEmitter3 } from "events";
 import { clearTimeout as clearTimeout5, setTimeout as setTimeout5 } from "timers";
 var CodeQLCLIServer;
@@ -41627,7 +41638,7 @@ var init_cli_server = __esm({
         const spawnEnv = { ...process.env };
         const codeqlDir = getResolvedCodeQLDir();
         if (codeqlDir && spawnEnv.PATH) {
-          spawnEnv.PATH = `${codeqlDir}${delimiter3}${spawnEnv.PATH}`;
+          spawnEnv.PATH = `${codeqlDir}${delimiter4}${spawnEnv.PATH}`;
         } else if (codeqlDir) {
           spawnEnv.PATH = codeqlDir;
         }
@@ -42095,7 +42106,7 @@ __export(cli_executor_exports, {
 });
 import { execFile } from "child_process";
 import { accessSync, constants as fsConstants, existsSync as existsSync3, readdirSync, readFileSync as readFileSync3, statSync } from "fs";
-import { basename, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute2, join as join5 } from "path";
+import { basename, delimiter as delimiter5, dirname as dirname2, isAbsolute as isAbsolute2, join as join5 } from "path";
 import { homedir } from "os";
 import { promisify } from "util";
 function enableTestCommands() {
@@ -42247,7 +42258,7 @@ async function validateCodeQLBinaryReachable() {
   const binary2 = resolvedBinaryResult ?? "codeql";
   const env2 = { ...process.env };
   if (resolvedCodeQLDir) {
-    env2.PATH = resolvedCodeQLDir + delimiter4 + (env2.PATH || "");
+    env2.PATH = resolvedCodeQLDir + delimiter5 + (env2.PATH || "");
   }
   try {
     const { stdout } = await execFileAsync(binary2, ["version", "--format=terse"], {
@@ -42291,7 +42302,7 @@ function getSafeEnvironment(additionalEnv) {
     }
   }
   if (resolvedCodeQLDir && safeEnv.PATH) {
-    safeEnv.PATH = `${resolvedCodeQLDir}${delimiter4}${safeEnv.PATH}`;
+    safeEnv.PATH = `${resolvedCodeQLDir}${delimiter5}${safeEnv.PATH}`;
   } else if (resolvedCodeQLDir) {
     safeEnv.PATH = resolvedCodeQLDir;
   }
@@ -191246,7 +191257,7 @@ function cacheDatabaseAnalyzeResults(params, logger2) {
 // src/lib/cli-tool-registry.ts
 init_package_paths();
 import { existsSync as existsSync6, mkdirSync as mkdirSync8, realpathSync, rmSync, writeFileSync as writeFileSync4 } from "fs";
-import { basename as basename5, delimiter as delimiter5, dirname as dirname5, isAbsolute as isAbsolute5, join as join10, resolve as resolve4 } from "path";
+import { basename as basename5, delimiter as delimiter6, dirname as dirname5, isAbsolute as isAbsolute5, join as join10, resolve as resolve4 } from "path";
 
 // ../node_modules/js-yaml/dist/js-yaml.mjs
 function isNothing(subject) {
@@ -193857,6 +193868,7 @@ function acquireDatabaseLock(dbPath) {
   };
 }
 var ALLOWED_EXTRACTOR_ENV_PREFIXES = ["LGTM_", "CODEQL_EXTRACTOR_"];
+var ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 function parseExtractorEnv(entries) {
   const env2 = {};
   for (const entry of entries) {
@@ -193868,9 +193880,19 @@ function parseExtractorEnv(entries) {
     }
     const key = entry.slice(0, eq);
     const value = entry.slice(eq + 1);
+    if (!ENV_KEY_PATTERN.test(key)) {
+      throw new Error(
+        `extractorEnv key "${key}" is not a valid environment-variable name. Keys may contain only letters, digits, and underscores and must not start with a digit.`
+      );
+    }
     if (!ALLOWED_EXTRACTOR_ENV_PREFIXES.some((prefix) => key.startsWith(prefix))) {
       throw new Error(
         `extractorEnv key "${key}" is not permitted. Only variables beginning with ${ALLOWED_EXTRACTOR_ENV_PREFIXES.join(" or ")} may be set (e.g. LGTM_INDEX_XML_MODE=ALL).`
+      );
+    }
+    if (/[\0\r\n]/.test(value)) {
+      throw new Error(
+        `extractorEnv value for "${key}" contains an illegal control character (NUL, carriage return, or newline).`
       );
     }
     env2[key] = value;
@@ -194136,7 +194158,7 @@ function registerCLITool(server, definition) {
                   };
                   writeFileSync4(join10(extDir, "runtime.model.yml"), dump(extensionsData, { lineWidth: -1, flowLevel: 4 }), "utf8");
                   const existingPacks = options["additional-packs"];
-                  options["additional-packs"] = existingPacks ? `${existingPacks}${delimiter5}${extPackDir}` : extPackDir;
+                  options["additional-packs"] = existingPacks ? `${existingPacks}${delimiter6}${extPackDir}` : extPackDir;
                   const modelPacks = options["model-packs"];
                   const modelPacksArray = Array.isArray(modelPacks) ? modelPacks : [];
                   modelPacksArray.push("advanced-security/ql-mcp-runtime-extensions@0.0.0");
@@ -194302,7 +194324,7 @@ function registerCLITool(server, definition) {
           const additionalPacksPath = process.env.CODEQL_ADDITIONAL_PACKS || (existsSync6(defaultExamplesPath) ? defaultExamplesPath : void 0);
           if (additionalPacksPath && (name === "codeql_test_run" || name === "codeql_query_run" || name === "codeql_query_compile" || name === "codeql_database_analyze")) {
             const existingAdditionalPacks = options["additional-packs"];
-            options["additional-packs"] = existingAdditionalPacks ? `${existingAdditionalPacks}${delimiter5}${additionalPacksPath}` : additionalPacksPath;
+            options["additional-packs"] = existingAdditionalPacks ? `${existingAdditionalPacks}${delimiter6}${additionalPacksPath}` : additionalPacksPath;
           }
           if (name === "codeql_test_run") {
             options["keep-databases"] = true;
@@ -195107,12 +195129,12 @@ import { existsSync as existsSync8, readdirSync as readdirSync4, statSync as sta
 import { join as join12 } from "path";
 
 // src/lib/discovery-config.ts
-import { delimiter as delimiter6 } from "path";
+import { delimiter as delimiter7 } from "path";
 function parsePathList(envValue) {
   if (!envValue) {
     return [];
   }
-  return envValue.split(delimiter6).map((p) => p.trim()).filter((p) => p.length > 0);
+  return envValue.split(delimiter7).map((p) => p.trim()).filter((p) => p.length > 0);
 }
 function getDatabaseBaseDirs() {
   return parsePathList(process.env.CODEQL_DATABASES_BASE_DIRS);
@@ -199171,26 +199193,46 @@ async function resolvePromptFilePath(filePath, workspaceRoot) {
       };
     }
   }
-  const effectiveRoot = workspaceRoot ?? getUserWorkspaceDir();
   const normalizedPath = normalize(effectivePath);
-  const inputWasAbsolute = isAbsolute8(normalizedPath);
-  const absolutePath = inputWasAbsolute ? normalizedPath : resolve13(effectiveRoot, normalizedPath);
-  if (!inputWasAbsolute) {
-    const rel = relative3(effectiveRoot, absolutePath);
+  if (isAbsolute8(normalizedPath)) {
+    return finalizePromptFilePath(normalizedPath, filePath);
+  }
+  const candidateRoots = workspaceRoot ? [workspaceRoot] : getUserWorkspaceDirs();
+  let firstWithinRoot;
+  for (const root of candidateRoots) {
+    const absolutePath = resolve13(root, normalizedPath);
+    const rel = relative3(root, absolutePath);
     if (rel === ".." || rel.startsWith(`..${sep4}`) || isAbsolute8(rel)) {
-      return {
-        blocked: true,
-        resolvedPath: "",
-        warning: "\u26A0 **File path resolves outside the workspace root.** The path has been blocked for security."
-      };
+      continue;
+    }
+    if (firstWithinRoot === void 0) {
+      firstWithinRoot = absolutePath;
+    }
+    try {
+      await access2(absolutePath);
+      return { resolvedPath: absolutePath };
+    } catch {
     }
   }
+  if (firstWithinRoot === void 0) {
+    return {
+      blocked: true,
+      resolvedPath: "",
+      warning: "\u26A0 **File path resolves outside the workspace root.** The path has been blocked for security."
+    };
+  }
+  return {
+    resolvedPath: firstWithinRoot,
+    warning: `\u26A0 **File path** ${markdownInlineCode(filePath)} **does not exist.**`
+  };
+}
+async function finalizePromptFilePath(absolutePath, originalPath) {
   try {
     await access2(absolutePath);
   } catch {
     return {
       resolvedPath: absolutePath,
-      warning: `\u26A0 **File path** ${markdownInlineCode(filePath)} **does not exist.**`
+      warning: `\u26A0 **File path** ${markdownInlineCode(originalPath)} **does not exist.**`
     };
   }
   return { resolvedPath: absolutePath };

@@ -66,6 +66,30 @@ describe('parseExtractorEnv', () => {
     expect(() => parseExtractorEnv(['LD_PRELOAD=/x.so'])).toThrow(/not permitted/);
   });
 
+  it('throws when a key contains non-standard characters', () => {
+    expect(() => parseExtractorEnv(['LGTM_BAD-KEY=1'])).toThrow(
+      /not a valid environment-variable name/,
+    );
+    expect(() => parseExtractorEnv(['LGTM_BAD KEY=1'])).toThrow(
+      /not a valid environment-variable name/,
+    );
+  });
+
+  it('throws when a value contains a NUL character', () => {
+    expect(() => parseExtractorEnv(['LGTM_INDEX_XML_MODE=AL\0L'])).toThrow(
+      /illegal control character/,
+    );
+  });
+
+  it('throws when a value contains a newline or carriage return', () => {
+    expect(() => parseExtractorEnv(['LGTM_INDEX_XML_MODE=A\nB'])).toThrow(
+      /illegal control character/,
+    );
+    expect(() => parseExtractorEnv(['LGTM_INDEX_XML_MODE=A\rB'])).toThrow(
+      /illegal control character/,
+    );
+  });
+
   it('exposes the allowed extractor env prefixes', () => {
     expect(ALLOWED_EXTRACTOR_ENV_PREFIXES).toContain('LGTM_');
     expect(ALLOWED_EXTRACTOR_ENV_PREFIXES).toContain('CODEQL_EXTRACTOR_');
