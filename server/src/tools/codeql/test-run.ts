@@ -16,6 +16,10 @@ export const codeqlTestRunTool: CLIToolDefinition = {
       .describe('Show output from extractors during test execution'),
     'keep-databases': z.boolean().optional()
       .describe('Keep test databases after running tests'),
+    'check-diff-informed': z.boolean().optional()
+      .describe('[Advanced/experimental] Check the correct filtering of diff-informed queries. Validates that a query opting into diff-informed analysis (via observeDiffInformedIncrementalMode() in its dataflow configuration) reports the locations it claims through getASelectedSourceLocation/getASelectedSinkLocation. Use this to develop and verify diff-informed queries locally.'),
+    'evaluate-as-overlay': z.boolean().optional()
+      .describe('[Advanced/experimental] Override automatic detection and force test queries to be evaluated in overlay mode against an overlay-prepared test database. Used when developing overlay/diff-informed analysis.'),
     'learn': z.boolean().optional()
       .describe('Accept current output as expected for failing tests'),
     logDir: z.string().optional()
@@ -29,6 +33,7 @@ export const codeqlTestRunTool: CLIToolDefinition = {
     'codeql test run /path/to/tests',
     'codeql test run --learn /path/to/failing/tests',
     'codeql test run --threads=4 --keep-databases /path/to/tests',
-    'codeql test run --log-dir=/custom/log/path /path/to/tests'
+    'codeql test run --log-dir=/custom/log/path /path/to/tests',
+    'codeql test run --check-diff-informed /path/to/tests'
   ]
 };

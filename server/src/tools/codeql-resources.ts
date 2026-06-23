@@ -6,7 +6,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   getLearningDataExtensions,
   getDataflowMigration,
+  getDiffInformedAnalysis,
   getLearningQueryBasics,
+  getOverlayDatabases,
   getPerformancePatterns,
   getQueryUnitTesting,
   getSecurityTemplates,
@@ -246,6 +248,48 @@ export function registerCodeQLResources(server: McpServer): void {
             uri: 'codeql://guides/dataflow-migration-v1-to-v2',
             mimeType: 'text/markdown',
             text: getDataflowMigration(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Learning: Diff-Informed (Incremental) Analysis
+  server.resource(
+    'CodeQL Diff-Informed Analysis',
+    'codeql://learning/diff-informed-analysis',
+    {
+      description: 'Make data-flow queries diff-informed (observeDiffInformedIncrementalMode + selected-location predicates) and validate them with test run --check-diff-informed',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://learning/diff-informed-analysis',
+            mimeType: 'text/markdown',
+            text: getDiffInformedAnalysis(),
+          },
+        ],
+      };
+    }
+  );
+
+  // Guides: Overlay Databases
+  server.resource(
+    'CodeQL Overlay Databases',
+    'codeql://guides/overlay-databases',
+    {
+      description: 'Build and evaluate overlay databases for incremental analysis: overlay-base, overlay-changes, cache-cleanup=overlay, and evaluate-as-overlay',
+      mimeType: 'text/markdown',
+    },
+    async () => {
+      return {
+        contents: [
+          {
+            uri: 'codeql://guides/overlay-databases',
+            mimeType: 'text/markdown',
+            text: getOverlayDatabases(),
           },
         ],
       };

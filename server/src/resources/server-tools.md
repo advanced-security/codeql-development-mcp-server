@@ -4,31 +4,31 @@ This resource provides a complete reference of the default tools exposed by the 
 
 ## CodeQL CLI Tools
 
-| Tool                          | Description                                                                                                                  |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats (text, csv, json). Supports `--result-set` and `--rows` for pagination    |
-| `codeql_bqrs_info`            | Get metadata about BQRS result files: result sets, column types, row counts                                                  |
-| `codeql_bqrs_interpret`       | Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats) |
-| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS, and SARIF output                        |
-| `codeql_database_create`      | Create a CodeQL database from source code                                                                                    |
-| `codeql_generate_log-summary` | Create a summary of a structured JSON evaluator event log file                                                               |
-| `codeql_generate_query-help`  | Generate query help documentation from QLDoc comments                                                                        |
-| `codeql_pack_install`         | Install CodeQL pack dependencies                                                                                             |
-| `codeql_pack_ls`              | List CodeQL packs under a local directory path                                                                               |
-| `codeql_query_compile`        | Compile and validate CodeQL queries                                                                                          |
-| `codeql_query_format`         | Automatically format CodeQL source code files                                                                                |
-| `codeql_query_run`            | Execute a CodeQL query against a database                                                                                    |
-| `codeql_resolve_database`     | Resolve database path and validate database structure                                                                        |
-| `codeql_resolve_files`        | Find files in a directory tree, filtered by extension and glob patterns. Useful for discovering QL library files             |
-| `codeql_resolve_languages`    | List installed CodeQL extractor packs                                                                                        |
-| `codeql_resolve_library-path` | Resolve library path for CodeQL queries and libraries                                                                        |
-| `codeql_resolve_metadata`     | Resolve and return key-value metadata pairs from a CodeQL query source file                                                  |
-| `codeql_resolve_qlref`        | Resolve `.qlref` files to their corresponding query files                                                                    |
-| `codeql_resolve_queries`      | List available CodeQL queries found on the local filesystem                                                                  |
-| `codeql_resolve_tests`        | Resolve the local filesystem paths of unit tests and/or queries under a base directory                                       |
-| `codeql_test_accept`          | Accept new test results as the expected baseline                                                                             |
-| `codeql_test_extract`         | Extract test databases for CodeQL query tests                                                                                |
-| `codeql_test_run`             | Run CodeQL query tests                                                                                                       |
+| Tool                          | Description                                                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codeql_bqrs_decode`          | Decode BQRS result files to human-readable formats (text, csv, json). Supports `--result-set` and `--rows` for pagination                                                       |
+| `codeql_bqrs_info`            | Get metadata about BQRS result files: result sets, column types, row counts                                                                                                     |
+| `codeql_bqrs_interpret`       | Interpret BQRS result files according to query metadata and generate output in specified formats (CSV, SARIF, graph formats)                                                    |
+| `codeql_database_analyze`     | Run queries or query suites against CodeQL databases. Produces evaluator logs, BQRS, and SARIF output. Supports overlay evaluation (`evaluate-as-overlay`, `cache-at-frontier`) |
+| `codeql_database_create`      | Create a CodeQL database from source code. Supports overlay databases (`overlay-base`, `overlay-changes`, `cache-cleanup`)                                                      |
+| `codeql_generate_log-summary` | Create a summary of a structured JSON evaluator event log file                                                                                                                  |
+| `codeql_generate_query-help`  | Generate query help documentation from QLDoc comments                                                                                                                           |
+| `codeql_pack_install`         | Install CodeQL pack dependencies                                                                                                                                                |
+| `codeql_pack_ls`              | List CodeQL packs under a local directory path                                                                                                                                  |
+| `codeql_query_compile`        | Compile and validate CodeQL queries                                                                                                                                             |
+| `codeql_query_format`         | Automatically format CodeQL source code files                                                                                                                                   |
+| `codeql_query_run`            | Execute a CodeQL query against a database. Supports overlay evaluation (`evaluate-as-overlay`, `cache-at-frontier`)                                                             |
+| `codeql_resolve_database`     | Resolve database path and validate database structure                                                                                                                           |
+| `codeql_resolve_files`        | Find files in a directory tree, filtered by extension and glob patterns. Useful for discovering QL library files                                                                |
+| `codeql_resolve_languages`    | List installed CodeQL extractor packs                                                                                                                                           |
+| `codeql_resolve_library-path` | Resolve library path for CodeQL queries and libraries                                                                                                                           |
+| `codeql_resolve_metadata`     | Resolve and return key-value metadata pairs from a CodeQL query source file                                                                                                     |
+| `codeql_resolve_qlref`        | Resolve `.qlref` files to their corresponding query files                                                                                                                       |
+| `codeql_resolve_queries`      | List available CodeQL queries found on the local filesystem                                                                                                                     |
+| `codeql_resolve_tests`        | Resolve the local filesystem paths of unit tests and/or queries under a base directory                                                                                          |
+| `codeql_test_accept`          | Accept new test results as the expected baseline                                                                                                                                |
+| `codeql_test_extract`         | Extract test databases for CodeQL query tests                                                                                                                                   |
+| `codeql_test_run`             | Run CodeQL query tests. Supports diff-informed validation (`check-diff-informed`) and overlay evaluation (`evaluate-as-overlay`)                                                |
 
 ## Language Server Protocol (LSP) Tools
 
@@ -175,3 +175,5 @@ Each rule object:
 - `codeql://server/prompts` — Complete prompt reference
 - `codeql://learning/query-basics` — Query writing reference
 - `codeql://patterns/performance` — Performance profiling guide
+- `codeql://learning/diff-informed-analysis` — Make data-flow queries diff-informed
+- `codeql://guides/overlay-databases` — Build and evaluate overlay databases

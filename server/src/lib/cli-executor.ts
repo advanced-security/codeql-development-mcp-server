@@ -673,15 +673,19 @@ export async function executeCodeQLCommand(
   subcommand: string,
   options: Record<string, unknown>,
   additionalArgs: string[] = [],
-  cwd?: string
+  cwd?: string,
+  env?: Record<string, string>
 ): Promise<CLIExecutionResult> {
   const args = buildCodeQLArgs(subcommand, options);
   args.push(...additionalArgs);
 
   // Determine whether this subcommand can use the persistent cli-server.
   // Commands that need a specific CWD also must use a fresh process because
-  // the cli-server's CWD is fixed at startup.
-  const canUseCLIServer = !FRESH_PROCESS_SUBCOMMANDS.has(subcommand) && !cwd;
+  // the cli-server's CWD is fixed at startup. Commands that need extra
+  // environment variables (e.g. extractor options such as LGTM_INDEX_XML_MODE)
+  // also must use a fresh process because the cli-server's environment is
+  // fixed at startup.
+  const canUseCLIServer = !FRESH_PROCESS_SUBCOMMANDS.has(subcommand) && !cwd && !env;
 
   if (canUseCLIServer) {
     try {
@@ -748,7 +752,8 @@ export async function executeCodeQLCommand(
     command: 'codeql',
     args,
     cwd,
-    timeout: 0
+    timeout: 0,
+    env
   });
 }
 

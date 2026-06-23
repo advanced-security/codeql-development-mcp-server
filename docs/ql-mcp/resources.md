@@ -21,6 +21,8 @@ The server exposes **11 static resources** and a set of **dynamic per-language r
 | CodeQL Security Templates      | `codeql://templates/security`                 | Security query templates for multiple languages and vulnerability classes         |
 | CodeQL Query Unit Testing      | `codeql://guides/query-unit-testing`          | Guide for creating and running unit tests for CodeQL queries                      |
 | CodeQL Dataflow Migration      | `codeql://guides/dataflow-migration-v1-to-v2` | Guide for migrating from legacy v1 dataflow API to modern v2 module-based API     |
+| CodeQL Diff-Informed Analysis  | `codeql://learning/diff-informed-analysis`    | Make data-flow queries diff-informed and validate with `--check-diff-informed`    |
+| CodeQL Overlay Databases       | `codeql://guides/overlay-databases`           | Build and evaluate overlay databases for incremental analysis                     |
 
 ## Language-Specific Resources
 

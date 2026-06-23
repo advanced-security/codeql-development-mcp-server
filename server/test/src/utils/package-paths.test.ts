@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { resolve } from 'path';
+import { delimiter, resolve } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import {
   getPackageRootDir,
@@ -18,6 +18,7 @@ import {
   workspaceRootDir,
   getPackageVersion,
   getUserWorkspaceDir,
+  getUserWorkspaceDirs,
 } from '../../../src/utils/package-paths';
 
 describe('getPackageRootDir', () => {
@@ -159,6 +160,50 @@ describe('getUserWorkspaceDir', () => {
   // module-level constants computed at import time. The npm-installed behavior is
   // instead validated through integration tests where the package is actually
   // installed via npm in a non-monorepo layout.
+});
+
+describe('getUserWorkspaceDirs', () => {
+  const originalFolders = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+  const originalWorkspace = process.env.CODEQL_MCP_WORKSPACE;
+
+  afterEach(() => {
+    if (originalFolders !== undefined) {
+      process.env.CODEQL_MCP_WORKSPACE_FOLDERS = originalFolders;
+    } else {
+      delete process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+    }
+    if (originalWorkspace !== undefined) {
+      process.env.CODEQL_MCP_WORKSPACE = originalWorkspace;
+    } else {
+      delete process.env.CODEQL_MCP_WORKSPACE;
+    }
+  });
+
+  it('returns each entry of CODEQL_MCP_WORKSPACE_FOLDERS in order', () => {
+    const a = resolve('/test/workspace/a');
+    const b = resolve('/test/workspace/b');
+    process.env.CODEQL_MCP_WORKSPACE_FOLDERS = [a, b].join(delimiter);
+    expect(getUserWorkspaceDirs()).toEqual([a, b]);
+  });
+
+  it('trims whitespace and ignores empty entries', () => {
+    const a = resolve('/test/workspace/a');
+    const b = resolve('/test/workspace/b');
+    process.env.CODEQL_MCP_WORKSPACE_FOLDERS = `  ${a} ${delimiter}${delimiter} ${b}  `;
+    expect(getUserWorkspaceDirs()).toEqual([a, b]);
+  });
+
+  it('falls back to the single user workspace dir when unset', () => {
+    delete process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+    process.env.CODEQL_MCP_WORKSPACE = '/test/workspace/single';
+    expect(getUserWorkspaceDirs()).toEqual(['/test/workspace/single']);
+  });
+
+  it('falls back when CODEQL_MCP_WORKSPACE_FOLDERS is empty or whitespace', () => {
+    process.env.CODEQL_MCP_WORKSPACE_FOLDERS = `  ${delimiter} `;
+    process.env.CODEQL_MCP_WORKSPACE = '/test/workspace/single';
+    expect(getUserWorkspaceDirs()).toEqual(['/test/workspace/single']);
+  });
 });
 
 describe('Pre-computed exports', () => {

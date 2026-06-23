@@ -20,6 +20,7 @@ import {
   checkForDuplicatedCodeSchema,
   createSafePromptHandler,
   describeFalsePositivesSchema,
+  diffInformedAnalysisWorkflowSchema,
   documentCodeqlQuerySchema,
   explainCodeqlQuerySchema,
   findOverlappingQueriesSchema,
@@ -40,7 +41,7 @@ import {
 } from '../../../src/prompts/workflow-prompts';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import { mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
@@ -107,8 +108,8 @@ describe('Workflow Prompts', () => {
   // WORKFLOW_PROMPT_NAMES
   // -----------------------------------------------------------------------
   describe('WORKFLOW_PROMPT_NAMES', () => {
-    it('should contain 15 prompt names', () => {
-      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(15);
+    it('should contain 16 prompt names', () => {
+      expect(WORKFLOW_PROMPT_NAMES).toHaveLength(16);
     });
 
     it('should be sorted alphabetically', () => {
@@ -611,6 +612,59 @@ describe('Workflow Prompts', () => {
   });
 
   // -----------------------------------------------------------------------
+  // diffInformedAnalysisWorkflowSchema
+  // -----------------------------------------------------------------------
+  describe('diffInformedAnalysisWorkflowSchema', () => {
+    it('should expose exactly the expected parameter keys', () => {
+      expect(Object.keys(diffInformedAnalysisWorkflowSchema.shape).sort()).toEqual(
+        ['database', 'language', 'queryPath']
+      );
+    });
+
+    it('should accept required language', () => {
+      const result = diffInformedAnalysisWorkflowSchema.safeParse({ language: 'javascript' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject empty object (language is required)', () => {
+      const result = diffInformedAnalysisWorkflowSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept all parameters', () => {
+      const result = diffInformedAnalysisWorkflowSchema.safeParse({
+        database: '/db',
+        language: 'javascript',
+        queryPath: '/q.ql',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.database).toBe('/db');
+        expect(result.data.queryPath).toBe('/q.ql');
+      }
+    });
+
+    it('should leave optional fields as undefined when omitted', () => {
+      const result = diffInformedAnalysisWorkflowSchema.safeParse({ language: 'python' });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.database).toBeUndefined();
+        expect(result.data.queryPath).toBeUndefined();
+      }
+    });
+
+    it('should reject invalid language', () => {
+      const result = diffInformedAnalysisWorkflowSchema.safeParse({ language: 'cobol' });
+      expect(result.success).toBe(false);
+    });
+
+    it.each([...SUPPORTED_LANGUAGES])('should accept language "%s"', (lang) => {
+      const result = diffInformedAnalysisWorkflowSchema.safeParse({ language: lang });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // documentCodeqlQuerySchema
   // -----------------------------------------------------------------------
   describe('documentCodeqlQuerySchema', () => {
@@ -859,6 +913,12 @@ describe('Workflow Prompts', () => {
         required: ['language', 'queryDescription'],
         optional: ['packRoot'],
       },
+      {
+        name: 'diffInformedAnalysisWorkflowSchema',
+        schema: diffInformedAnalysisWorkflowSchema,
+        required: ['language'],
+        optional: ['database', 'queryPath'],
+      },
     ];
 
     it.each(schemaSpecs)(
@@ -933,6 +993,7 @@ describe('Workflow Prompts', () => {
     const allSchemas = {
       checkForDuplicatedCodeSchema,
       describeFalsePositivesSchema,
+      diffInformedAnalysisWorkflowSchema,
       documentCodeqlQuerySchema,
       explainCodeqlQuerySchema,
       findOverlappingQueriesSchema,
@@ -1835,6 +1896,32 @@ describe('Workflow Prompts', () => {
       // The raw backtick must be preserved and the fence must be at least double.
       expect(result.warning).toContain('bad`name.ql');
       expect(result.warning).toContain('``bad`name.ql``');
+    });
+
+    it('resolves a relative path against any workspace root in a multi-root setup', async () => {
+      // Simulate a multi-root workspace where the query lives in the SECOND root.
+      const rootA = createTestTempDir('multi-root-a');
+      const rootB = createTestTempDir('multi-root-b');
+      const original = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+      try {
+        mkdirSync(join(rootB, 'queries'), { recursive: true });
+        writeFileSync(join(rootB, 'queries', 'q.ql'), 'select 1');
+        process.env.CODEQL_MCP_WORKSPACE_FOLDERS = [rootA, rootB].join(delimiter);
+
+        // No explicit workspaceRoot, so the candidate roots come from the env.
+        const result = await resolvePromptFilePath('queries/q.ql');
+        expect(result.blocked).toBeUndefined();
+        expect(result.resolvedPath).toBe(join(rootB, 'queries', 'q.ql'));
+        expect(result.warning).toBeUndefined();
+      } finally {
+        if (original !== undefined) {
+          process.env.CODEQL_MCP_WORKSPACE_FOLDERS = original;
+        } else {
+          delete process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+        }
+        cleanupTestTempDir(rootA);
+        cleanupTestTempDir(rootB);
+      }
     });
   });
 

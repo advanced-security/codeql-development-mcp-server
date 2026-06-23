@@ -14,6 +14,8 @@ import {
   createQLTSchemas,
   createBQRSResultProcessor,
   createDatabaseResultProcessor,
+  parseExtractorEnv,
+  ALLOWED_EXTRACTOR_ENV_PREFIXES,
   CLIToolDefinition
 } from '../../../src/lib/cli-tool-registry';
 import { CLIExecutionResult } from '../../../src/lib/cli-executor';
@@ -24,6 +26,75 @@ vi.mock('../../../src/lib/cli-executor', () => ({
   executeCodeQLCommand: vi.fn(),
   executeQLTCommand: vi.fn()
 }));
+
+describe('parseExtractorEnv', () => {
+  it('parses a valid LGTM_ entry into a record', () => {
+    expect(parseExtractorEnv(['LGTM_INDEX_XML_MODE=ALL'])).toEqual({
+      LGTM_INDEX_XML_MODE: 'ALL',
+    });
+  });
+
+  it('parses multiple entries and preserves "=" characters in the value', () => {
+    expect(
+      parseExtractorEnv([
+        'LGTM_INDEX_FILTERS=include:**/*.json',
+        'CODEQL_EXTRACTOR_JAVASCRIPT_OPTION=a=b',
+      ]),
+    ).toEqual({
+      LGTM_INDEX_FILTERS: 'include:**/*.json',
+      CODEQL_EXTRACTOR_JAVASCRIPT_OPTION: 'a=b',
+    });
+  });
+
+  it('returns an empty record for empty input', () => {
+    expect(parseExtractorEnv([])).toEqual({});
+  });
+
+  it('throws when an entry has no "="', () => {
+    expect(() => parseExtractorEnv(['LGTM_INDEX_XML_MODE'])).toThrow(/KEY=VALUE/);
+  });
+
+  it('throws when an entry has an empty key', () => {
+    expect(() => parseExtractorEnv(['=ALL'])).toThrow(/KEY=VALUE/);
+  });
+
+  it('throws when a key is not in the allowed prefixes (PATH)', () => {
+    expect(() => parseExtractorEnv(['PATH=/evil'])).toThrow(/not permitted/);
+  });
+
+  it('throws when a key is not in the allowed prefixes (LD_PRELOAD)', () => {
+    expect(() => parseExtractorEnv(['LD_PRELOAD=/x.so'])).toThrow(/not permitted/);
+  });
+
+  it('throws when a key contains non-standard characters', () => {
+    expect(() => parseExtractorEnv(['LGTM_BAD-KEY=1'])).toThrow(
+      /not a valid environment-variable name/,
+    );
+    expect(() => parseExtractorEnv(['LGTM_BAD KEY=1'])).toThrow(
+      /not a valid environment-variable name/,
+    );
+  });
+
+  it('throws when a value contains a NUL character', () => {
+    expect(() => parseExtractorEnv(['LGTM_INDEX_XML_MODE=AL\0L'])).toThrow(
+      /illegal control character/,
+    );
+  });
+
+  it('throws when a value contains a newline or carriage return', () => {
+    expect(() => parseExtractorEnv(['LGTM_INDEX_XML_MODE=A\nB'])).toThrow(
+      /illegal control character/,
+    );
+    expect(() => parseExtractorEnv(['LGTM_INDEX_XML_MODE=A\rB'])).toThrow(
+      /illegal control character/,
+    );
+  });
+
+  it('exposes the allowed extractor env prefixes', () => {
+    expect(ALLOWED_EXTRACTOR_ENV_PREFIXES).toContain('LGTM_');
+    expect(ALLOWED_EXTRACTOR_ENV_PREFIXES).toContain('CODEQL_EXTRACTOR_');
+  });
+});
 
 describe('defaultCLIResultProcessor', () => {
   it('should format successful results with stdout', () => {
@@ -283,6 +354,116 @@ describe('registerCLITool handler behavior', () => {
     // Get the mocked function
     const cliExecutor = await import('../../../src/lib/cli-executor');
     executeCodeQLCommand = cliExecutor.executeCodeQLCommand as ReturnType<typeof vi.fn>;
+  });
+
+  it('passes parsed extractorEnv to executeCodeQLCommand for codeql_database_create', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_database_create',
+      description: 'Create a database',
+      command: 'codeql',
+      subcommand: 'database create',
+      inputSchema: {
+        database: z.string(),
+        language: z.string().optional(),
+        extractorEnv: z.array(z.string()).optional(),
+      },
+    };
+
+    registerCLITool(mockServer, definition);
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+    executeCodeQLCommand.mockResolvedValueOnce({ stdout: 'ok', stderr: '', success: true });
+
+    await handler({
+      database: 'mydb',
+      language: 'javascript',
+      extractorEnv: ['LGTM_INDEX_XML_MODE=ALL'],
+    });
+
+    // The parsed extractor env is passed as the 5th argument; it must NOT be
+    // forwarded as a CLI flag in the options object.
+    const call = executeCodeQLCommand.mock.calls[0];
+    expect(call[0]).toBe('database create');
+    expect(call[4]).toEqual({ LGTM_INDEX_XML_MODE: 'ALL' });
+    expect(call[1]).not.toHaveProperty('extractorEnv');
+  });
+
+  it('returns an error (and does not execute) for a disallowed extractorEnv key', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_database_create',
+      description: 'Create a database',
+      command: 'codeql',
+      subcommand: 'database create',
+      inputSchema: {
+        database: z.string(),
+        extractorEnv: z.array(z.string()).optional(),
+      },
+    };
+
+    registerCLITool(mockServer, definition);
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+
+    const result = await handler({ database: 'mydb', extractorEnv: ['PATH=/evil'] });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/not permitted/);
+    expect(executeCodeQLCommand).not.toHaveBeenCalled();
+  });
+
+  it('forces --rerun for codeql_database_analyze when model packs are requested', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_database_analyze',
+      description: 'Analyze a database',
+      command: 'codeql',
+      subcommand: 'database analyze',
+      inputSchema: {
+        database: z.string(),
+        queries: z.string(),
+        rerun: z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional(),
+      },
+    };
+
+    registerCLITool(mockServer, definition);
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+    executeCodeQLCommand.mockResolvedValueOnce({ stdout: 'ok', stderr: '', success: true });
+
+    await handler({
+      database: 'mydb',
+      queries: 'q.ql',
+      additionalArgs: ['--model-packs=advanced-security/foo'],
+    });
+
+    const options = executeCodeQLCommand.mock.calls[0][1];
+    expect(options.rerun).toBe(true);
+  });
+
+  it('does not override an explicit rerun:false for codeql_database_analyze with model packs', async () => {
+    const definition: CLIToolDefinition = {
+      name: 'codeql_database_analyze',
+      description: 'Analyze a database',
+      command: 'codeql',
+      subcommand: 'database analyze',
+      inputSchema: {
+        database: z.string(),
+        queries: z.string(),
+        rerun: z.boolean().optional(),
+        additionalArgs: z.array(z.string()).optional(),
+      },
+    };
+
+    registerCLITool(mockServer, definition);
+    const handler = (mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls[0][2];
+    executeCodeQLCommand.mockResolvedValueOnce({ stdout: 'ok', stderr: '', success: true });
+
+    await handler({
+      database: 'mydb',
+      queries: 'q.ql',
+      rerun: false,
+      additionalArgs: ['--model-packs=advanced-security/foo'],
+    });
+
+    const options = executeCodeQLCommand.mock.calls[0][1];
+    expect(options.rerun).toBe(false);
   });
 
   it('should handle qlref parameter as positional argument for codeql_resolve_qlref', async () => {

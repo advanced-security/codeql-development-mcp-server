@@ -4,21 +4,22 @@ This resource provides a complete reference of the prompts exposed by the CodeQL
 
 ## Prompt Reference
 
-| Prompt                                    | Description                                                                                                   |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `compare_overlapping_alerts`              | Compare CodeQL SARIF alerts across rules, files, runs, databases, or CodeQL versions                          |
-| `data_extension_development`              | End-to-end workflow for creating CodeQL data extensions (Models-as-Data) for third-party libraries            |
-| `document_codeql_query`                   | Create or update standardized markdown documentation for a CodeQL query                                       |
-| `explain_codeql_query`                    | Generate a detailed explanation of a CodeQL query with Mermaid evaluation diagrams                            |
-| `ql_lsp_iterative_development`            | Iterative CodeQL query development using LSP tools for completion, navigation, and validation                 |
-| `ql_tdd_advanced`                         | Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis         |
-| `ql_tdd_basic`                            | Test-driven CodeQL query development checklist — write tests first, implement query, iterate until tests pass |
-| `run_query_and_summarize_false_positives` | Run a CodeQL query and summarize its false positives by root cause                                            |
-| `sarif_rank_false_positives`              | Analyze SARIF results to identify and rank likely false positives                                             |
-| `sarif_rank_true_positives`               | Analyze SARIF results to identify and rank likely true positives                                              |
-| `test_driven_development`                 | End-to-end test-driven development workflow for CodeQL queries using MCP tools                                |
-| `tools_query_workflow`                    | Guide for using PrintAST, PrintCFG, CallGraphFrom, and CallGraphTo tool queries to understand code structure  |
-| `workshop_creation_workflow`              | Guide for creating multi-exercise CodeQL query development workshops from production-grade queries            |
+| Prompt                                    | Description                                                                                                                   |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `compare_overlapping_alerts`              | Compare CodeQL SARIF alerts across rules, files, runs, databases, or CodeQL versions                                          |
+| `data_extension_development`              | End-to-end workflow for creating CodeQL data extensions (Models-as-Data) for third-party libraries                            |
+| `diff_informed_analysis_workflow`         | Make a data-flow query diff-informed, validate it with `test run --check-diff-informed`, and build/evaluate overlay databases |
+| `document_codeql_query`                   | Create or update standardized markdown documentation for a CodeQL query                                                       |
+| `explain_codeql_query`                    | Generate a detailed explanation of a CodeQL query with Mermaid evaluation diagrams                                            |
+| `ql_lsp_iterative_development`            | Iterative CodeQL query development using LSP tools for completion, navigation, and validation                                 |
+| `ql_tdd_advanced`                         | Advanced test-driven CodeQL development with AST visualization, control flow, and call graph analysis                         |
+| `ql_tdd_basic`                            | Test-driven CodeQL query development checklist — write tests first, implement query, iterate until tests pass                 |
+| `run_query_and_summarize_false_positives` | Run a CodeQL query and summarize its false positives by root cause                                                            |
+| `sarif_rank_false_positives`              | Analyze SARIF results to identify and rank likely false positives                                                             |
+| `sarif_rank_true_positives`               | Analyze SARIF results to identify and rank likely true positives                                                              |
+| `test_driven_development`                 | End-to-end test-driven development workflow for CodeQL queries using MCP tools                                                |
+| `tools_query_workflow`                    | Guide for using PrintAST, PrintCFG, CallGraphFrom, and CallGraphTo tool queries to understand code structure                  |
+| `workshop_creation_workflow`              | Guide for creating multi-exercise CodeQL query development workshops from production-grade queries                            |
 
 ## Prompt Categories
 
@@ -54,6 +55,10 @@ This resource provides a complete reference of the prompts exposed by the CodeQL
 ### Data Extension Development
 
 - **`data_extension_development`** — End-to-end procedural workflow for creating CodeQL data extensions (Models-as-Data) for third-party libraries. Covers: identify target library → classify API surface → choose deployment scope → author `.model.yml` → configure pack → test with `codeql_query_run` and `codeql_test_run` → decide next steps. Requires `language`; optionally accepts `libraryName` and `database`. References `codeql://learning/data-extensions` and `codeql://languages/{language}/library-modeling` for format-specific guidance.
+
+### Diff-Informed and Incremental Analysis
+
+- **`diff_informed_analysis_workflow`** — End-to-end workflow for diff-informed (incremental) analysis. Walks through making a data-flow configuration diff-informed (`observeDiffInformedIncrementalMode`, `getASelectedSourceLocation`, `getASelectedSinkLocation`), validating it with `codeql_test_run` using `check-diff-informed`, and building/evaluating overlay databases via `codeql_database_create` (`overlay-base`, `overlay-changes`, `cache-cleanup`) and `codeql_database_analyze`/`codeql_query_run` (`evaluate-as-overlay`). Requires `language`; optionally accepts `queryPath` and `database`. References `codeql://learning/diff-informed-analysis` and `codeql://guides/overlay-databases`.
 
 ## Related Resources
 

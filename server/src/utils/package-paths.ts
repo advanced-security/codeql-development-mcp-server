@@ -15,7 +15,7 @@
  * from an npm install (no parent monorepo).
  */
 
-import { dirname, resolve } from 'path';
+import { delimiter, dirname, resolve } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
@@ -126,6 +126,33 @@ export function getUserWorkspaceDir(): string {
     return process.cwd();
   }
   return workspaceRootDir;
+}
+
+/**
+ * Get the ordered list of user workspace directories used to resolve
+ * user-supplied relative paths.
+ *
+ * In a multi-root VS Code workspace the project spans several root folders, so
+ * a query, database, or pack referenced by a relative path may live in any of
+ * them — not just the first (see issue #300).  When the host sets
+ * `CODEQL_MCP_WORKSPACE_FOLDERS` (a {@link path.delimiter}-separated list, e.g.
+ * `/a/repo:/b/app`) the entries are returned in order so callers can try each
+ * root in turn.  Otherwise this falls back to the single
+ * {@link getUserWorkspaceDir} result, preserving existing single-root
+ * behaviour.
+ */
+export function getUserWorkspaceDirs(): string[] {
+  const folders = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+  if (folders) {
+    const dirs = folders
+      .split(delimiter)
+      .map((dir) => dir.trim())
+      .filter((dir) => dir.length > 0);
+    if (dirs.length > 0) {
+      return dirs;
+    }
+  }
+  return [getUserWorkspaceDir()];
 }
 
 // Pre-computed values for use throughout the server
