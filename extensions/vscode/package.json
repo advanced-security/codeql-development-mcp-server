@@ -95,6 +95,22 @@
           "default": true,
           "markdownDescription": "Copy CodeQL databases from the `GitHub.vscode-codeql` extension storage into a managed directory, removing query-server lock files so the MCP server CLI can operate without contention. Disable to use databases in-place (may fail when the CodeQL query server is running)."
         },
+        "codeql-mcp.queryPackIncludeDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra directories to resolve CodeQL query and pack paths against, in addition to the open workspace folders. Use this to make the prompt-driven workflows target a query repository that is **not** the first workspace folder (or is not opened as a folder at all). Absolute paths are used as-is; relative paths are resolved against **every** workspace folder (so `queries` expands to one candidate per root). Folded into `CODEQL_MCP_WORKSPACE_FOLDERS` and `CODEQL_ADDITIONAL_PACKS`."
+        },
+        "codeql-mcp.queryPackExcludeDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Directories to exclude when resolving CodeQL query and pack paths. Any workspace folder or `queryPackIncludeDirs` entry that matches (or is nested inside) one of these directories is dropped from `CODEQL_MCP_WORKSPACE_FOLDERS` and `CODEQL_ADDITIONAL_PACKS`. Absolute paths are used as-is; relative paths are resolved against every workspace folder. This excludes whole resolution **roots**; to skip nested directory names (e.g. `node_modules`) during scans, use `scanExcludeDirs` instead."
+        },
         "codeql-mcp.serverArgs": {
           "type": "array",
           "items": {

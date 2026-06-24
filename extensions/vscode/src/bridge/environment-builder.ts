@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { delimiter, isAbsolute, join } from 'path';
+import { delimiter, isAbsolute, join, normalize, relative } from 'path';
 import { DisposableObject } from '../common/disposable';
 import type { Logger } from '../common/logger';
 import type { CliResolver } from '../codeql/cli-resolver';
@@ -11,6 +11,85 @@ export type DatabaseCopierFactory = (dest: string, logger: Logger) => DatabaseCo
 
 const defaultCopierFactory: DatabaseCopierFactory = (dest, logger) =>
   new DatabaseCopier(dest, logger);
+
+/** True when `child` is the same path as, or nested inside, `parent`. */
+function isWithin(child: string, parent: string): boolean {
+  if (child === parent) {
+    return true;
+  }
+  const rel = relative(parent, child);
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+}
+
+/**
+ * Resolve user-configured directory entries to absolute candidate paths.
+ *
+ * Absolute entries are used verbatim; relative entries are resolved against
+ * every workspace folder so that, in a multi-root workspace, a relative entry
+ * like `queries` expands to one candidate per root. Blank entries are skipped.
+ */
+function resolveConfiguredDirs(
+  entries: string[],
+  workspaceFolderPaths: string[],
+): string[] {
+  const out: string[] = [];
+  for (const entry of entries) {
+    const trimmed = entry.trim();
+    if (!trimmed) {
+      continue;
+    }
+    if (isAbsolute(trimmed)) {
+      out.push(normalize(trimmed));
+    } else {
+      for (const folder of workspaceFolderPaths) {
+        out.push(normalize(join(folder, trimmed)));
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Compute the ordered, de-duplicated set of directories used to resolve
+ * CodeQL query/database/pack paths.
+ *
+ * Starts with every workspace folder, appends any `queryPackIncludeDirs`, and
+ * removes any root that matches (or is nested inside) a `queryPackExcludeDirs`
+ * entry. This gives users deterministic, ordering-independent control over
+ * which roots the MCP server scans and resolves against (see issue #300).
+ */
+function computeResolutionRoots(
+  workspaceFolderPaths: string[],
+  config: vscode.WorkspaceConfiguration,
+): string[] {
+  const includeResolved = resolveConfiguredDirs(
+    config.get<string[]>('queryPackIncludeDirs', []),
+    workspaceFolderPaths,
+  );
+  const excludeResolved = resolveConfiguredDirs(
+    config.get<string[]>('queryPackExcludeDirs', []),
+    workspaceFolderPaths,
+  );
+
+  const roots: string[] = [];
+  const seen = new Set<string>();
+  for (const candidate of [
+    ...workspaceFolderPaths.map((p) => normalize(p)),
+    ...includeResolved,
+  ]) {
+    if (!seen.has(candidate)) {
+      seen.add(candidate);
+      roots.push(candidate);
+    }
+  }
+
+  if (excludeResolved.length === 0) {
+    return roots;
+  }
+  return roots.filter(
+    (root) => !excludeResolved.some((excluded) => isWithin(root, excluded)),
+  );
+}
 
 /**
  * Assembles the environment variables for the MCP server process.
@@ -64,13 +143,20 @@ export class EnvironmentBuilder extends DisposableObject {
       env.CODEQL_PATH = cliPath;
     }
 
-    // Workspace root and all workspace folders
+    // Workspace root and all workspace folders. The set of directories used to
+    // resolve CodeQL query/database/pack paths is computed from every workspace
+    // folder, then expanded with `queryPackIncludeDirs` and narrowed with
+    // `queryPackExcludeDirs` so multi-root layouts (and query repos opened as a
+    // non-first root, or not opened at all) work deterministically — see #300.
     const workspaceFolders = vscode.workspace.workspaceFolders;
+    const workspaceFolderPaths =
+      workspaceFolders?.map((f) => f.uri.fsPath) ?? [];
+    const resolutionRoots = computeResolutionRoots(workspaceFolderPaths, config);
     if (workspaceFolders && workspaceFolders.length > 0) {
       env.CODEQL_MCP_WORKSPACE = workspaceFolders[0].uri.fsPath;
-      env.CODEQL_MCP_WORKSPACE_FOLDERS = workspaceFolders
-        .map((f) => f.uri.fsPath)
-        .join(delimiter);
+    }
+    if (resolutionRoots.length > 0) {
+      env.CODEQL_MCP_WORKSPACE_FOLDERS = resolutionRoots.join(delimiter);
     }
 
     // Workspace-local scratch directory for tool output (query logs, etc.)
@@ -99,12 +185,9 @@ export class EnvironmentBuilder extends DisposableObject {
       this.storagePaths.getDatabaseStoragePath(),
     ];
 
-    // Also include workspace folder paths
-    if (workspaceFolders) {
-      for (const folder of workspaceFolders) {
-        additionalPaths.push(folder.uri.fsPath);
-      }
-    }
+    // Also include the effective resolution roots (workspace folders plus any
+    // explicitly included query/pack directories, minus excluded ones).
+    additionalPaths.push(...resolutionRoots);
 
     env.CODEQL_ADDITIONAL_PACKS = additionalPaths.join(delimiter);
 

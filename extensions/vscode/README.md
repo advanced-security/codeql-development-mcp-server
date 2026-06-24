@@ -101,6 +101,38 @@ All settings are under the `codeql-mcp` namespace in VS Code settings:
 | `codeql-mcp.additionalDatabaseDirs`        | `[]`       | Additional directories to search for CodeQL databases.              |
 | `codeql-mcp.additionalMrvaRunResultsDirs`  | `[]`       | Additional directories containing MRVA run results.                 |
 | `codeql-mcp.additionalQueryRunResultsDirs` | `[]`       | Additional directories containing query run results.                |
+| `codeql-mcp.queryPackIncludeDirs`          | `[]`       | Extra directories to resolve query/pack paths against (see below).  |
+| `codeql-mcp.queryPackExcludeDirs`          | `[]`       | Directories to exclude as query/pack resolution roots (see below).  |
+
+### Multi-root workspaces and query/pack resolution
+
+The prompt-driven workflows (slash commands) resolve query, pack, database, and
+SARIF paths against **every** folder of a [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces),
+not just the first one. So a query that lives in the second/third root folder —
+for example when the query-development repository and the analysis-target
+repository are opened as separate roots — is found and usable regardless of
+folder order.
+
+Two settings give you explicit, ordering-independent control over which
+directories are used as resolution roots:
+
+- **`codeql-mcp.queryPackIncludeDirs`** — extra directories to resolve query and
+  pack paths against, _in addition_ to the open workspace folders. Use this to
+  target a query repository that is **not** the first workspace folder, or that
+  is not opened as a folder at all. **Absolute** paths are used as-is;
+  **relative** paths are resolved against every workspace folder (so `queries`
+  expands to one candidate per root).
+- **`codeql-mcp.queryPackExcludeDirs`** — directories to exclude as resolution
+  roots. Any workspace folder or `queryPackIncludeDirs` entry that matches (or is
+  nested inside) one of these directories is dropped. Use this to scope
+  resolution away from a large or irrelevant root. Absolute paths are used
+  as-is; relative paths are resolved against every workspace folder.
+
+These settings are folded into the `CODEQL_MCP_WORKSPACE_FOLDERS` and
+`CODEQL_ADDITIONAL_PACKS` environment variables passed to the MCP server.
+They control whole resolution **roots**; to skip _nested_ directory names such
+as `node_modules` or vendor trees during scans, use `codeql-mcp.scanExcludeDirs`
+instead.
 
 ## Commands
 

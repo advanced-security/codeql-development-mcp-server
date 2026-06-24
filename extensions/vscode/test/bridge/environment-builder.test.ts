@@ -377,4 +377,130 @@ describe('EnvironmentBuilder', () => {
     const env = await builder.build();
     expect(env.CODEQL_MCP_SCAN_EXCLUDE_DIRS).toBeUndefined();
   });
+
+  it('should append absolute queryPackIncludeDirs to resolution roots', async () => {
+    const vscode = await import('vscode');
+    const { delimiter } = await import('path');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/ws-a' }, name: 'a', index: 0 },
+      ];
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'queryPackIncludeDirs') return ['/extra/query-repo'];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      const roots = env.CODEQL_MCP_WORKSPACE_FOLDERS.split(delimiter);
+      expect(roots).toContain('/mock/ws-a');
+      expect(roots).toContain('/extra/query-repo');
+      // Additional packs should also include the explicit include dir.
+      expect(env.CODEQL_ADDITIONAL_PACKS).toContain('/extra/query-repo');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should resolve relative queryPackIncludeDirs against each workspace folder', async () => {
+    const vscode = await import('vscode');
+    const { delimiter, join } = await import('path');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/ws-a' }, name: 'a', index: 0 },
+        { uri: { fsPath: '/mock/ws-b' }, name: 'b', index: 1 },
+      ];
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'queryPackIncludeDirs') return ['queries'];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      const roots = env.CODEQL_MCP_WORKSPACE_FOLDERS.split(delimiter);
+      expect(roots).toContain(join('/mock/ws-a', 'queries'));
+      expect(roots).toContain(join('/mock/ws-b', 'queries'));
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should remove excluded workspace folders from resolution roots and additional packs', async () => {
+    const vscode = await import('vscode');
+    const { delimiter } = await import('path');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/ws-a' }, name: 'a', index: 0 },
+        { uri: { fsPath: '/mock/ws-b' }, name: 'b', index: 1 },
+      ];
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'queryPackExcludeDirs') return ['/mock/ws-b'];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      const roots = env.CODEQL_MCP_WORKSPACE_FOLDERS.split(delimiter);
+      expect(roots).toContain('/mock/ws-a');
+      expect(roots).not.toContain('/mock/ws-b');
+      expect(env.CODEQL_ADDITIONAL_PACKS).not.toContain('/mock/ws-b');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should support absolute queryPackIncludeDirs even when no workspace is open', async () => {
+    const vscode = await import('vscode');
+    const { delimiter } = await import('path');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = undefined;
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'queryPackIncludeDirs') return ['/extra/query-repo'];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      const roots = (env.CODEQL_MCP_WORKSPACE_FOLDERS ?? '').split(delimiter).filter(Boolean);
+      expect(roots).toContain('/extra/query-repo');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
 });

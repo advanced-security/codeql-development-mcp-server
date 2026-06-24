@@ -198822,17 +198822,20 @@ async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results)
   }
 }
 async function completeQueryPath(value) {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey2 = `queryPath:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey2 = `queryPath:${workspaces.join("|")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const results = [];
-    try {
-      await findFilesByExtension(workspace, workspace, [".ql", ".qlref"], MAX_SCAN_DEPTH, results);
-    } catch (err) {
-      logger.debug(`completeQueryPath scan error: ${err}`);
+    for (const workspace of workspaces) {
+      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      try {
+        await findFilesByExtension(workspace, workspace, [".ql", ".qlref"], MAX_SCAN_DEPTH, results);
+      } catch (err) {
+        logger.debug(`completeQueryPath scan error: ${err}`);
+      }
     }
-    allResults = results;
+    allResults = [...new Set(results)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -198840,17 +198843,20 @@ async function completeQueryPath(value) {
   return filtered.slice(0, MAX_FILE_COMPLETIONS);
 }
 async function completeSarifPath(value) {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey2 = `sarifPath:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey2 = `sarifPath:${workspaces.join("|")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const results = [];
-    try {
-      await findFilesByExtension(workspace, workspace, [".sarif", ".sarif.json"], MAX_SCAN_DEPTH, results);
-    } catch (err) {
-      logger.debug(`completeSarifPath scan error: ${err}`);
+    for (const workspace of workspaces) {
+      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      try {
+        await findFilesByExtension(workspace, workspace, [".sarif", ".sarif.json"], MAX_SCAN_DEPTH, results);
+      } catch (err) {
+        logger.debug(`completeSarifPath scan error: ${err}`);
+      }
     }
-    allResults = results;
+    allResults = [...new Set(results)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -198858,10 +198864,10 @@ async function completeSarifPath(value) {
   return filtered.slice(0, MAX_FILE_COMPLETIONS);
 }
 async function completeDatabasePath(value) {
-  const workspace = getUserWorkspaceDir();
+  const workspaces = getUserWorkspaceDirs();
   const baseDirs = getDatabaseBaseDirs();
   const homeDbDir = join22(homedir2(), "codeql", "databases");
-  const cacheKey2 = `databasePath:${workspace}:${baseDirs.join(",")}`;
+  const cacheKey2 = `databasePath:${workspaces.join("|")}:${baseDirs.join(",")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const results = [];
@@ -198881,19 +198887,22 @@ async function completeDatabasePath(value) {
         }
       }
     }
-    await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, results);
-    try {
-      const wsEntries = await readdir(workspace, { withFileTypes: true });
-      for (const entry of wsEntries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
-        if (entry.isDirectory() && entry.name.endsWith("-db")) {
-          const fullPath = join22(workspace, entry.name);
-          if (!results.includes(fullPath)) {
-            results.push(fullPath);
+    for (const workspace of workspaces) {
+      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, results);
+      try {
+        const wsEntries = await readdir(workspace, { withFileTypes: true });
+        for (const entry of wsEntries) {
+          if (results.length >= MAX_FILE_COMPLETIONS) break;
+          if (entry.isDirectory() && entry.name.endsWith("-db")) {
+            const fullPath = join22(workspace, entry.name);
+            if (!results.includes(fullPath)) {
+              results.push(fullPath);
+            }
           }
         }
+      } catch {
       }
-    } catch {
     }
     allResults = [...new Set(results)];
     setCachedResults(cacheKey2, allResults);
@@ -198928,12 +198937,12 @@ async function findDatabaseDirs(dir, _baseDir, maxDepth, results) {
   }
 }
 async function completePackRoot(value) {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey2 = `packRoot:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey2 = `packRoot:${workspaces.join("|")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const results = [];
-    async function scan(dir, depth) {
+    async function scan(root, dir, depth) {
       if (depth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
       let entries;
       try {
@@ -198945,21 +198954,24 @@ async function completePackRoot(value) {
         (e) => e.isFile() && e.name === "codeql-pack.yml"
       );
       if (hasPackYml) {
-        results.push(relative2(workspace, dir) || ".");
+        results.push(relative2(root, dir) || ".");
       }
       for (const entry of entries) {
         if (results.length >= MAX_FILE_COMPLETIONS) break;
         if (entry.isDirectory() && !SKIP_DIRS2.has(entry.name)) {
-          await scan(join22(dir, entry.name), depth - 1);
+          await scan(root, join22(dir, entry.name), depth - 1);
         }
       }
     }
-    try {
-      await scan(workspace, MAX_SCAN_DEPTH);
-    } catch (err) {
-      logger.debug(`completePackRoot scan error: ${err}`);
+    for (const workspace of workspaces) {
+      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      try {
+        await scan(workspace, workspace, MAX_SCAN_DEPTH);
+      } catch (err) {
+        logger.debug(`completePackRoot scan error: ${err}`);
+      }
     }
-    allResults = results;
+    allResults = [...new Set(results)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();

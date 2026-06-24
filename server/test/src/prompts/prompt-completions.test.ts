@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { isCompletable, getCompleter } from '@modelcontextprotocol/sdk/server/completable.js';
 import { mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import {
   addCompletions,
@@ -181,8 +181,56 @@ describe('completeQueryPath', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// completeSarifPath
+// Multi-root workspace resolution (issue #300)
 // ─────────────────────────────────────────────────────────────────────────────
+
+describe('completions across multiple workspace roots', () => {
+  let rootA: string;
+  let rootB: string;
+
+  beforeEach(() => {
+    rootA = createTestTempDir('complete-multiroot-a');
+    rootB = createTestTempDir('complete-multiroot-b');
+    vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${rootA}${delimiter}${rootB}`);
+    clearCompletionCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(rootA);
+    cleanupTestTempDir(rootB);
+    clearCompletionCache();
+  });
+
+  it('should find .ql files in a non-first workspace folder', async () => {
+    writeFileSync(join(rootA, 'FirstFolderQuery.ql'), '');
+    writeFileSync(join(rootB, 'SecondFolderQuery.ql'), '');
+
+    const result = await completeQueryPath('');
+    expect(result).toContain('FirstFolderQuery.ql');
+    expect(result).toContain('SecondFolderQuery.ql');
+  });
+
+  it('should find pack roots in a non-first workspace folder', async () => {
+    const packDir = join(rootB, 'my-pack');
+    mkdirSync(packDir, { recursive: true });
+    writeFileSync(join(packDir, 'codeql-pack.yml'), 'name: test/pack\n');
+
+    const result = await completePackRoot('');
+    expect(result).toContain('my-pack');
+  });
+
+  it('should find databases in a non-first workspace folder', async () => {
+    const dbDir = join(rootB, 'my-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+
+    const result = await completeDatabasePath('my-db');
+    expect(result.some((p) => p.endsWith('my-db'))).toBe(true);
+  });
+});
+
+
 
 describe('completeSarifPath', () => {
   let tmpDir: string;
