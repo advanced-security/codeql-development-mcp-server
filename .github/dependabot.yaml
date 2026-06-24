@@ -4,10 +4,28 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    cooldown:
+      default-days: 7
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
+    cooldown:
+      default-days: 7
+    groups:
+      all-github-actions:
+        patterns:
+          - '*'
+  - package-ecosystem: 'gomod'
+    directory: '/client'
+    schedule:
+      interval: 'weekly'
+    cooldown:
+      default-days: 7
+    groups:
+      all-go-dependencies:
+        patterns:
+          - '*'
   - package-ecosystem: 'npm'
     directories:
       - '/'
@@ -16,6 +34,8 @@ updates:
       - '/extensions/vscode/'
     schedule:
       interval: 'weekly'
+    cooldown:
+      default-days: 7
     ignore:
       ## Ignore all updates for 'zod' as our 'zod' version must match the
       ## version of 'zod' used by the '@modelcontextprotocol/sdk' dependency.
