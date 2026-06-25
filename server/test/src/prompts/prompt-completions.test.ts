@@ -181,7 +181,7 @@ describe('completeQueryPath', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Multi-root workspace resolution (issue #300)
+// Multi-root workspace resolution
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('completions across multiple workspace roots', () => {
@@ -227,6 +227,67 @@ describe('completions across multiple workspace roots', () => {
 
     const result = await completeDatabasePath('my-db');
     expect(result.some((p) => p.endsWith('my-db'))).toBe(true);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // A populous first root must NOT starve later roots: each workspace root
+  // has an independent scan budget, so queries / SARIF files / packs / DBs
+  // that live only in non-first roots stay visible in VS Code completions.
+  // ───────────────────────────────────────────────────────────────────────
+
+  /** Big enough to exhaust any reasonable per-call cap (current cap is 50). */
+  const FLOOD = 80;
+
+  it('queryPath: surfaces a non-first root .ql file even when the first root is flooded', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      writeFileSync(join(rootA, `Flood${i}.ql`), '');
+    }
+    const needleDir = join(rootB, 'needle-queries');
+    mkdirSync(needleDir, { recursive: true });
+    writeFileSync(join(needleDir, 'NeedleQuery.ql'), '');
+
+    const result = await completeQueryPath('Needle');
+    expect(result.some((p) => p.endsWith('NeedleQuery.ql'))).toBe(true);
+  });
+
+  it('sarifPath: surfaces a non-first root .sarif file even when the first root is flooded', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      writeFileSync(join(rootA, `flood-${i}.sarif`), '');
+    }
+    const needleDir = join(rootB, 'needle-results');
+    mkdirSync(needleDir, { recursive: true });
+    writeFileSync(join(needleDir, 'needle-results.sarif'), '');
+
+    const result = await completeSarifPath('needle-results');
+    expect(result.some((p) => p.endsWith('needle-results.sarif'))).toBe(true);
+  });
+
+  it('packRoot: surfaces a non-first root pack even when the first root is flooded with packs', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      const packDir = join(rootA, `flood-pack-${i}`);
+      mkdirSync(packDir, { recursive: true });
+      writeFileSync(join(packDir, 'codeql-pack.yml'), `name: flood/p${i}\n`);
+    }
+    const needlePack = join(rootB, 'needle-pack');
+    mkdirSync(needlePack, { recursive: true });
+    writeFileSync(join(needlePack, 'codeql-pack.yml'), 'name: needle/pack\n');
+
+    const result = await completePackRoot('needle');
+    expect(result.some((p) => p.endsWith('needle-pack'))).toBe(true);
+  });
+
+  it('database: surfaces a non-first root DB even when the first root is flooded with DBs', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      const dbDir = join(rootA, `flood-${i}-db`);
+      mkdirSync(dbDir, { recursive: true });
+      writeFileSync(join(dbDir, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+    }
+    const needleDb = join(rootB, 'needle-second-root-db');
+    mkdirSync(needleDb, { recursive: true });
+    writeFileSync(join(needleDb, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+
+    const result = await completeDatabasePath('needle-second-root-db');
+    expect(result.some((p) => p.endsWith('needle-second-root-db'))).toBe(true);
   });
 });
 

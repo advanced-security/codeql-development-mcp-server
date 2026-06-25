@@ -104,7 +104,7 @@ function blockedPathError(result: PromptFilePathResult, paramName: string): Prom
  * Relative paths are resolved against `workspaceRoot` when supplied; otherwise
  * they are resolved against every workspace root reported by
  * `getUserWorkspaceDirs()` (so multi-root VS Code workspaces can target queries
- * outside the first folder — see issue #300), preferring the first root where
+ * outside the first folder), preferring the first root where
  * the file exists.  The function never throws — it returns a `warning` string
  * when the path is empty, traverses outside the workspace, or does not exist on
  * disk.  Path traversal attempts are treated as a hard failure: `blocked` is
@@ -152,7 +152,7 @@ export async function resolvePromptFilePath(
   }
 
   // Relative inputs are resolved against the workspace root(s). In a multi-root
-  // workspace the referenced file may live in any root folder (issue #300), so
+  // workspace the referenced file may live in any root folder, so
   // try each candidate root in turn and prefer the first where the file
   // actually exists. When an explicit `workspaceRoot` is supplied we honour it
   // verbatim (single root).

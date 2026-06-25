@@ -174,7 +174,7 @@ suite('Workspace Scenario Tests', () => {
     console.log(`[workspace-scenario] Managed database dirs: ${managedParts.join(', ')}`);
   });
 
-  test('CODEQL_MCP_WORKSPACE_FOLDERS should list every workspace root (multi-root #300)', async () => {
+  test('CODEQL_MCP_WORKSPACE_FOLDERS should list every workspace root', async () => {
     const envBuilder = api.environmentBuilder;
     if (!envBuilder) return;
 
@@ -196,7 +196,7 @@ suite('Workspace Scenario Tests', () => {
     }
 
     if (folders.length > 1) {
-      // The non-first folders are the crux of #300: assert they are present.
+      // Assert the last (non-first) folder is present.
       assert.ok(
         roots.includes(folders[folders.length - 1].uri.fsPath),
         'CODEQL_MCP_WORKSPACE_FOLDERS should include the last (non-first) workspace folder',

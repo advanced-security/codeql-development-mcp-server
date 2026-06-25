@@ -30,6 +30,20 @@ function createTempDir(prefix: string): string {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
 }
 
+/**
+ * Create a temporary directory that qualifies as a CodeQL workspace by writing a
+ * top-level `codeql-workspace.yml` into it. With the default
+ * `requireCodeqlWorkspace` behavior, only such folders become resolution roots.
+ */
+function createCodeqlWorkspaceTempDir(prefix: string): string {
+  const dir = createTempDir(prefix);
+  fs.writeFileSync(
+    path.join(dir, 'codeql-workspace.yml'),
+    'provide:\n  - "**/qlpack.yml"\n',
+  );
+  return dir;
+}
+
 /** Wait for `onDidChangeWorkspaceFolders` to fire once. */
 function waitForWorkspaceFolderChange(): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -90,7 +104,7 @@ suite('Workspace Folder Change Tests', () => {
   // ---------------------------------------------------------------
   test('CODEQL_MCP_WORKSPACE_FOLDERS should include newly added folder', async () => {
     const envBuilder = api.environmentBuilder;
-    const tempDir = createTempDir('ql-mcp-env-');
+    const tempDir = createCodeqlWorkspaceTempDir('ql-mcp-env-');
 
     // Populate the environment cache before mutating workspace folders.
     const envBefore = await envBuilder.build();
@@ -125,7 +139,7 @@ suite('Workspace Folder Change Tests', () => {
   // ---------------------------------------------------------------
   test('CODEQL_MCP_WORKSPACE_FOLDERS should exclude removed folder', async () => {
     const envBuilder = api.environmentBuilder;
-    const tempDir = createTempDir('ql-mcp-env-rm-');
+    const tempDir = createCodeqlWorkspaceTempDir('ql-mcp-env-rm-');
 
     await addWorkspaceFolder(vscode.Uri.file(tempDir));
 

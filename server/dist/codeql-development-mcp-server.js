@@ -198779,6 +198779,7 @@ import { dirname as dirname9, join as join22, relative as relative2, sep as sep3
 init_logger();
 init_package_paths();
 var MAX_FILE_COMPLETIONS = 50;
+var MAX_PER_ROOT_RAW_MATCHES = MAX_FILE_COMPLETIONS;
 var MAX_SCAN_DEPTH = 8;
 var CACHE_TTL_MS = 5e3;
 var SKIP_DIRS2 = getScanExcludeDirs();
@@ -198797,8 +198798,8 @@ function completeLanguage(value) {
   const lower = (value || "").toLowerCase();
   return [...SUPPORTED_LANGUAGES].filter((lang) => lang.startsWith(lower));
 }
-async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results) {
-  if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results, perCallLimit = MAX_PER_ROOT_RAW_MATCHES) {
+  if (maxDepth <= 0 || results.length >= perCallLimit) return;
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -198806,13 +198807,13 @@ async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results)
     return;
   }
   for (const entry of entries) {
-    if (results.length >= MAX_FILE_COMPLETIONS) break;
+    if (results.length >= perCallLimit) break;
     const fullPath = join22(dir, entry.name);
     if (entry.isDirectory()) {
       if (SKIP_DIRS2.has(entry.name)) {
         continue;
       }
-      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results);
+      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results, perCallLimit);
     } else if (entry.isFile()) {
       const lower = entry.name.toLowerCase();
       if (extensions.some((ext) => lower.endsWith(ext))) {
@@ -198826,16 +198827,17 @@ async function completeQueryPath(value) {
   const cacheKey2 = `queryPath:${workspaces.join("|")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
+    const aggregated = [];
     for (const workspace of workspaces) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      const perRoot = [];
       try {
-        await findFilesByExtension(workspace, workspace, [".ql", ".qlref"], MAX_SCAN_DEPTH, results);
+        await findFilesByExtension(workspace, workspace, [".ql", ".qlref"], MAX_SCAN_DEPTH, perRoot);
       } catch (err) {
         logger.debug(`completeQueryPath scan error: ${err}`);
       }
+      aggregated.push(...perRoot);
     }
-    allResults = [...new Set(results)];
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -198847,16 +198849,17 @@ async function completeSarifPath(value) {
   const cacheKey2 = `sarifPath:${workspaces.join("|")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
+    const aggregated = [];
     for (const workspace of workspaces) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      const perRoot = [];
       try {
-        await findFilesByExtension(workspace, workspace, [".sarif", ".sarif.json"], MAX_SCAN_DEPTH, results);
+        await findFilesByExtension(workspace, workspace, [".sarif", ".sarif.json"], MAX_SCAN_DEPTH, perRoot);
       } catch (err) {
         logger.debug(`completeSarifPath scan error: ${err}`);
       }
+      aggregated.push(...perRoot);
     }
-    allResults = [...new Set(results)];
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -198870,10 +198873,10 @@ async function completeDatabasePath(value) {
   const cacheKey2 = `databasePath:${workspaces.join("|")}:${baseDirs.join(",")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
+    const aggregated = [];
     const allBaseDirs = baseDirs.includes(homeDbDir) ? baseDirs : [...baseDirs, homeDbDir];
     for (const baseDir of allBaseDirs) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      const perBase = [];
       let entries;
       try {
         entries = await readdir(baseDir, { withFileTypes: true });
@@ -198881,30 +198884,32 @@ async function completeDatabasePath(value) {
         continue;
       }
       for (const entry of entries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (perBase.length >= MAX_PER_ROOT_RAW_MATCHES) break;
         if (entry.isDirectory()) {
-          results.push(join22(baseDir, entry.name));
+          perBase.push(join22(baseDir, entry.name));
         }
       }
+      aggregated.push(...perBase);
     }
     for (const workspace of workspaces) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
-      await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, results);
+      const perRoot = [];
+      await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, perRoot);
       try {
         const wsEntries = await readdir(workspace, { withFileTypes: true });
         for (const entry of wsEntries) {
-          if (results.length >= MAX_FILE_COMPLETIONS) break;
+          if (perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) break;
           if (entry.isDirectory() && entry.name.endsWith("-db")) {
             const fullPath = join22(workspace, entry.name);
-            if (!results.includes(fullPath)) {
-              results.push(fullPath);
+            if (!perRoot.includes(fullPath)) {
+              perRoot.push(fullPath);
             }
           }
         }
       } catch {
       }
+      aggregated.push(...perRoot);
     }
-    allResults = [...new Set(results)];
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -198914,8 +198919,8 @@ async function completeDatabasePath(value) {
   }).sort();
   return filtered.slice(0, MAX_FILE_COMPLETIONS);
 }
-async function findDatabaseDirs(dir, _baseDir, maxDepth, results) {
-  if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+async function findDatabaseDirs(dir, _baseDir, maxDepth, results, perCallLimit = MAX_PER_ROOT_RAW_MATCHES) {
+  if (maxDepth <= 0 || results.length >= perCallLimit) return;
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -198930,9 +198935,9 @@ async function findDatabaseDirs(dir, _baseDir, maxDepth, results) {
     return;
   }
   for (const entry of entries) {
-    if (results.length >= MAX_FILE_COMPLETIONS) break;
+    if (results.length >= perCallLimit) break;
     if (entry.isDirectory() && !SKIP_DIRS2.has(entry.name)) {
-      await findDatabaseDirs(join22(dir, entry.name), _baseDir, maxDepth - 1, results);
+      await findDatabaseDirs(join22(dir, entry.name), _baseDir, maxDepth - 1, results, perCallLimit);
     }
   }
 }
@@ -198941,9 +198946,9 @@ async function completePackRoot(value) {
   const cacheKey2 = `packRoot:${workspaces.join("|")}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
-    async function scan(root, dir, depth) {
-      if (depth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+    const aggregated = [];
+    async function scan(root, dir, depth, perRoot) {
+      if (depth <= 0 || perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) return;
       let entries;
       try {
         entries = await readdir(dir, { withFileTypes: true });
@@ -198954,24 +198959,25 @@ async function completePackRoot(value) {
         (e) => e.isFile() && e.name === "codeql-pack.yml"
       );
       if (hasPackYml) {
-        results.push(relative2(root, dir) || ".");
+        perRoot.push(relative2(root, dir) || ".");
       }
       for (const entry of entries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) break;
         if (entry.isDirectory() && !SKIP_DIRS2.has(entry.name)) {
-          await scan(root, join22(dir, entry.name), depth - 1);
+          await scan(root, join22(dir, entry.name), depth - 1, perRoot);
         }
       }
     }
     for (const workspace of workspaces) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      const perRoot = [];
       try {
-        await scan(workspace, workspace, MAX_SCAN_DEPTH);
+        await scan(workspace, workspace, MAX_SCAN_DEPTH, perRoot);
       } catch (err) {
         logger.debug(`completePackRoot scan error: ${err}`);
       }
+      aggregated.push(...perRoot);
     }
-    allResults = [...new Set(results)];
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();

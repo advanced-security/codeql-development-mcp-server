@@ -134,12 +134,11 @@ export function getUserWorkspaceDir(): string {
  *
  * In a multi-root VS Code workspace the project spans several root folders, so
  * a query, database, or pack referenced by a relative path may live in any of
- * them — not just the first (see issue #300).  When the host sets
+ * them — not just the first.  When the host sets
  * `CODEQL_MCP_WORKSPACE_FOLDERS` (a {@link path.delimiter}-separated list, e.g.
  * `/a/repo:/b/app`) the entries are returned in order so callers can try each
  * root in turn.  Otherwise this falls back to the single
- * {@link getUserWorkspaceDir} result, preserving existing single-root
- * behaviour.
+ * {@link getUserWorkspaceDir} result for a single-root workspace.
  */
 export function getUserWorkspaceDirs(): string[] {
   const folders = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;

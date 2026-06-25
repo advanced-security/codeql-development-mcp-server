@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { existsSync } from 'fs';
 import { delimiter, isAbsolute, join, normalize, relative } from 'path';
 import { DisposableObject } from '../common/disposable';
 import type { Logger } from '../common/logger';
@@ -11,6 +12,34 @@ export type DatabaseCopierFactory = (dest: string, logger: Logger) => DatabaseCo
 
 const defaultCopierFactory: DatabaseCopierFactory = (dest, logger) =>
   new DatabaseCopier(dest, logger);
+
+/** Predicate used to test for the presence of a path on disk (injectable for tests). */
+export type FileExists = (path: string) => boolean;
+
+/** Default {@link FileExists} backed by the real filesystem. */
+const defaultFileExists: FileExists = (p) => existsSync(p);
+
+/** Name of the file that marks a folder as the root of a CodeQL workspace. */
+const CODEQL_WORKSPACE_FILE = 'codeql-workspace.yml';
+
+/** Link to the CodeQL workspaces documentation, surfaced in warnings/logs. */
+const CODEQL_WORKSPACES_DOC_URL =
+  'https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-workspaces';
+
+/**
+ * True when `folderPath` contains a top-level `codeql-workspace.yml` file.
+ *
+ * `codeql-workspace.yml` is the marker the CodeQL CLI uses to define a workspace
+ * of related query/library packs (see {@link CODEQL_WORKSPACES_DOC_URL}). It
+ * decides, by default, which multi-root workspace folders are treated as CodeQL
+ * query/pack resolution roots.
+ */
+export function hasTopLevelCodeqlWorkspaceFile(
+  folderPath: string,
+  fileExists: FileExists = defaultFileExists,
+): boolean {
+  return fileExists(join(folderPath, CODEQL_WORKSPACE_FILE));
+}
 
 /** True when `child` is the same path as, or nested inside, `parent`. */
 function isWithin(child: string, parent: string): boolean {
@@ -49,19 +78,41 @@ function resolveConfiguredDirs(
   return out;
 }
 
+/** Result of computing the CodeQL resolution roots. */
+export interface ResolutionRootsResult {
+  /** Ordered, de-duplicated resolution roots. */
+  roots: string[];
+  /**
+   * True when the CodeQL-workspace requirement was active but no open folder
+   * qualified (and no include dirs were configured), so the builder fell back
+   * to using every workspace folder. The caller should surface a warning.
+   */
+  fellBackToAllFolders: boolean;
+}
+
 /**
  * Compute the ordered, de-duplicated set of directories used to resolve
  * CodeQL query/database/pack paths.
  *
- * Starts with every workspace folder, appends any `queryPackIncludeDirs`, and
- * removes any root that matches (or is nested inside) a `queryPackExcludeDirs`
- * entry. This gives users deterministic, ordering-independent control over
- * which roots the MCP server scans and resolves against (see issue #300).
+ * By default (`codeql-mcp.requireCodeqlWorkspace` = true) only workspace folders
+ * that contain a top-level `codeql-workspace.yml` are treated as automatic
+ * resolution roots — matching the CodeQL CLI's own workspace model (see
+ * {@link CODEQL_WORKSPACES_DOC_URL}). `queryPackIncludeDirs` entries are always
+ * added (the explicit opt-in), and any root matching (or nested inside) a
+ * `queryPackExcludeDirs` entry is removed. This gives users deterministic,
+ * ordering-independent control over which roots the MCP server scans.
+ *
+ * When the requirement is active but no open folder qualifies and no include
+ * dirs are configured, the function falls back to using every workspace folder
+ * (and sets `fellBackToAllFolders`) so users without a `codeql-workspace.yml`
+ * are not left with an empty resolution set. Set `requireCodeqlWorkspace` to
+ * false to always use every folder.
  */
-function computeResolutionRoots(
+export function computeResolutionRoots(
   workspaceFolderPaths: string[],
   config: vscode.WorkspaceConfiguration,
-): string[] {
+  fileExists: FileExists = defaultFileExists,
+): ResolutionRootsResult {
   const includeResolved = resolveConfiguredDirs(
     config.get<string[]>('queryPackIncludeDirs', []),
     workspaceFolderPaths,
@@ -71,24 +122,47 @@ function computeResolutionRoots(
     workspaceFolderPaths,
   );
 
+  const requireCodeqlWorkspace = config.get<boolean>('requireCodeqlWorkspace', true);
+  const normalizedFolders = workspaceFolderPaths.map((p) => normalize(p));
+
+  let autoFolders: string[];
+  let fellBackToAllFolders = false;
+  if (requireCodeqlWorkspace) {
+    autoFolders = normalizedFolders.filter((folder) =>
+      hasTopLevelCodeqlWorkspaceFile(folder, fileExists),
+    );
+    // Graceful fallback: when the requirement is active but nothing qualifies
+    // and the user has not pointed us at any include dirs, use every folder so
+    // we never produce an empty/unusable resolution set for existing users.
+    if (
+      autoFolders.length === 0 &&
+      includeResolved.length === 0 &&
+      normalizedFolders.length > 0
+    ) {
+      autoFolders = normalizedFolders;
+      fellBackToAllFolders = true;
+    }
+  } else {
+    autoFolders = normalizedFolders;
+  }
+
   const roots: string[] = [];
   const seen = new Set<string>();
-  for (const candidate of [
-    ...workspaceFolderPaths.map((p) => normalize(p)),
-    ...includeResolved,
-  ]) {
+  for (const candidate of [...autoFolders, ...includeResolved]) {
     if (!seen.has(candidate)) {
       seen.add(candidate);
       roots.push(candidate);
     }
   }
 
-  if (excludeResolved.length === 0) {
-    return roots;
-  }
-  return roots.filter(
-    (root) => !excludeResolved.some((excluded) => isWithin(root, excluded)),
-  );
+  const filtered =
+    excludeResolved.length === 0
+      ? roots
+      : roots.filter(
+          (root) => !excludeResolved.some((excluded) => isWithin(root, excluded)),
+        );
+
+  return { roots: filtered, fellBackToAllFolders };
 }
 
 /**
@@ -143,15 +217,24 @@ export class EnvironmentBuilder extends DisposableObject {
       env.CODEQL_PATH = cliPath;
     }
 
-    // Workspace root and all workspace folders. The set of directories used to
-    // resolve CodeQL query/database/pack paths is computed from every workspace
-    // folder, then expanded with `queryPackIncludeDirs` and narrowed with
-    // `queryPackExcludeDirs` so multi-root layouts (and query repos opened as a
-    // non-first root, or not opened at all) work deterministically — see #300.
+    // Resolution roots for CodeQL query/database/pack paths; selection rules
+    // live in computeResolutionRoots.
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const workspaceFolderPaths =
       workspaceFolders?.map((f) => f.uri.fsPath) ?? [];
-    const resolutionRoots = computeResolutionRoots(workspaceFolderPaths, config);
+    const { roots: resolutionRoots, fellBackToAllFolders } =
+      computeResolutionRoots(workspaceFolderPaths, config);
+    if (fellBackToAllFolders) {
+      this.logger.warn(
+        'codeql-mcp.requireCodeqlWorkspace is enabled but no open workspace ' +
+        'folder contains a top-level codeql-workspace.yml and no ' +
+        'codeql-mcp.queryPackIncludeDirs are configured. Falling back to using ' +
+        'every workspace folder as a CodeQL resolution root. Add a ' +
+        'codeql-workspace.yml to the relevant folder(s), set ' +
+        'codeql-mcp.queryPackIncludeDirs, or set codeql-mcp.requireCodeqlWorkspace ' +
+        `to false to silence this warning. See ${CODEQL_WORKSPACES_DOC_URL}`,
+      );
+    }
     if (workspaceFolders && workspaceFolders.length > 0) {
       env.CODEQL_MCP_WORKSPACE = workspaceFolders[0].uri.fsPath;
     }
