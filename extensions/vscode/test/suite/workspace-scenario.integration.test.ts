@@ -75,7 +75,7 @@ suite('Workspace Scenario Tests', () => {
     );
   });
 
-  test('CODEQL_MCP_WORKSPACE should match first workspace folder when present', async () => {
+  test('CODEQL_MCP_WORKSPACE should match first resolution root when present', async () => {
     const envBuilder = api.environmentBuilder;
     if (!envBuilder) return;
 
@@ -83,10 +83,18 @@ suite('Workspace Scenario Tests', () => {
     const folders = vscode.workspace.workspaceFolders;
 
     if (folders && folders.length > 0) {
+      // CODEQL_MCP_WORKSPACE anchors to the first computed resolution root
+      // (exported via CODEQL_MCP_WORKSPACE_FOLDERS), falling back to the first
+      // open folder only when no resolution roots were computed.
+      const resolutionRoots = (env.CODEQL_MCP_WORKSPACE_FOLDERS ?? '')
+        .split(path.delimiter)
+        .filter(Boolean);
+      const expected =
+        resolutionRoots.length > 0 ? resolutionRoots[0] : folders[0].uri.fsPath;
       assert.strictEqual(
         env.CODEQL_MCP_WORKSPACE,
-        folders[0].uri.fsPath,
-        'CODEQL_MCP_WORKSPACE should equal the first workspace folder path',
+        expected,
+        'CODEQL_MCP_WORKSPACE should equal the first resolution root (or first folder when none)',
       );
     } else {
       assert.strictEqual(

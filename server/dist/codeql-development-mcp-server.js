@@ -198824,7 +198824,7 @@ async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results,
 }
 async function completeQueryPath(value) {
   const workspaces = getUserWorkspaceDirs();
-  const cacheKey2 = `queryPath:${workspaces.join("|")}`;
+  const cacheKey2 = `queryPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const aggregated = [];
@@ -198846,7 +198846,7 @@ async function completeQueryPath(value) {
 }
 async function completeSarifPath(value) {
   const workspaces = getUserWorkspaceDirs();
-  const cacheKey2 = `sarifPath:${workspaces.join("|")}`;
+  const cacheKey2 = `sarifPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const aggregated = [];
@@ -198870,7 +198870,7 @@ async function completeDatabasePath(value) {
   const workspaces = getUserWorkspaceDirs();
   const baseDirs = getDatabaseBaseDirs();
   const homeDbDir = join22(homedir2(), "codeql", "databases");
-  const cacheKey2 = `databasePath:${workspaces.join("|")}:${baseDirs.join(",")}`;
+  const cacheKey2 = `databasePath:${JSON.stringify({ workspaces, baseDirs })}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const aggregated = [];
@@ -198943,7 +198943,7 @@ async function findDatabaseDirs(dir, _baseDir, maxDepth, results, perCallLimit =
 }
 async function completePackRoot(value) {
   const workspaces = getUserWorkspaceDirs();
-  const cacheKey2 = `packRoot:${workspaces.join("|")}`;
+  const cacheKey2 = `packRoot:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
     const aggregated = [];

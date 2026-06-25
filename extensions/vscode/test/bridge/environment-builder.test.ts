@@ -129,6 +129,72 @@ describe('EnvironmentBuilder', () => {
     (vscode.workspace.workspaceFolders as any) = origFolders;
   });
 
+  it('should anchor CODEQL_MCP_WORKSPACE to the first resolution root, not the first open folder', async () => {
+    const vscode = await import('vscode');
+    const { join } = await import('path');
+    const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await import('fs');
+    const { tmpdir } = await import('os');
+    const origFolders = vscode.workspace.workspaceFolders;
+
+    // First open folder lacks codeql-workspace.yml and is therefore excluded
+    // from the resolution roots under the default requireCodeqlWorkspace=true;
+    // the second folder qualifies.
+    const base = mkdtempSync(join(tmpdir(), 'ql-mcp-envb-anchor-'));
+    const withoutFile = join(base, 'without-cqlws');
+    const withFile = join(base, 'with-cqlws');
+    mkdirSync(withoutFile, { recursive: true });
+    mkdirSync(withFile, { recursive: true });
+    writeFileSync(join(withFile, 'codeql-workspace.yml'), 'provide:\n  - "**/qlpack.yml"\n');
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: withoutFile }, name: 'without', index: 0 },
+        { uri: { fsPath: withFile }, name: 'with', index: 1 },
+      ];
+
+      builder.invalidate();
+      const env = await builder.build();
+      // CODEQL_MCP_WORKSPACE must point at the qualifying folder, not the
+      // intentionally excluded first open folder.
+      expect(env.CODEQL_MCP_WORKSPACE).toBe(withFile);
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  it('should fall back CODEQL_MCP_WORKSPACE to the first open folder when there are no resolution roots', async () => {
+    const vscode = await import('vscode');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      // No folder qualifies (no codeql-workspace.yml on disk) and excludes
+      // strip every folder, leaving no resolution roots. CODEQL_MCP_WORKSPACE
+      // should still anchor to the first open folder so relative-path tools
+      // keep working.
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: '/mock/ws-a' }, name: 'a', index: 0 },
+      ];
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'queryPackExcludeDirs') return ['/mock/ws-a'];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      expect(env.CODEQL_MCP_WORKSPACE).toBe('/mock/ws-a');
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
   it('should include CODEQL_ADDITIONAL_PACKS with database storage path', async () => {
     const env = await builder.build();
     expect(env.CODEQL_ADDITIONAL_PACKS).toBeDefined();

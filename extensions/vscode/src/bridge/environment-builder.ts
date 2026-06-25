@@ -236,7 +236,15 @@ export class EnvironmentBuilder extends DisposableObject {
       );
     }
     if (workspaceFolders && workspaceFolders.length > 0) {
-      env.CODEQL_MCP_WORKSPACE = workspaceFolders[0].uri.fsPath;
+      // Anchor relative-path resolution (getUserWorkspaceDir) to the first
+      // computed resolution root so tools do not anchor to a folder that was
+      // intentionally excluded (e.g. requireCodeqlWorkspace=true and the first
+      // open folder lacks a top-level codeql-workspace.yml). Only fall back to
+      // the first open folder when no resolution roots were computed.
+      env.CODEQL_MCP_WORKSPACE =
+        resolutionRoots.length > 0
+          ? resolutionRoots[0]
+          : workspaceFolders[0].uri.fsPath;
     }
     if (resolutionRoots.length > 0) {
       env.CODEQL_MCP_WORKSPACE_FOLDERS = resolutionRoots.join(delimiter);

@@ -151,7 +151,7 @@ async function findFilesByExtension(
  */
 export async function completeQueryPath(value: string): Promise<string[]> {
   const workspaces = getUserWorkspaceDirs();
-  const cacheKey = `queryPath:${workspaces.join('|')}`;
+  const cacheKey = `queryPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {
@@ -184,7 +184,7 @@ export async function completeQueryPath(value: string): Promise<string[]> {
  */
 export async function completeSarifPath(value: string): Promise<string[]> {
   const workspaces = getUserWorkspaceDirs();
-  const cacheKey = `sarifPath:${workspaces.join('|')}`;
+  const cacheKey = `sarifPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {
@@ -221,7 +221,7 @@ export async function completeDatabasePath(value: string): Promise<string[]> {
   const workspaces = getUserWorkspaceDirs();
   const baseDirs = getDatabaseBaseDirs();
   const homeDbDir = join(homedir(), 'codeql', 'databases');
-  const cacheKey = `databasePath:${workspaces.join('|')}:${baseDirs.join(',')}`;
+  const cacheKey = `databasePath:${JSON.stringify({ workspaces, baseDirs })}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {
@@ -342,7 +342,7 @@ async function findDatabaseDirs(
  */
 export async function completePackRoot(value: string): Promise<string[]> {
   const workspaces = getUserWorkspaceDirs();
-  const cacheKey = `packRoot:${workspaces.join('|')}`;
+  const cacheKey = `packRoot:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {

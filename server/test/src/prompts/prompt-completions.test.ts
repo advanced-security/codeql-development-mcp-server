@@ -291,7 +291,124 @@ describe('completions across multiple workspace roots', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Completion cache keys must be collision-free across distinct workspace sets
+//
+// The cache key is derived from the list of workspace roots. A naive
+// `roots.join('|')` encoding collides for distinct root sets when a root path
+// itself contains the `|` separator (valid on POSIX): e.g. `['/x/a|b']` and
+// `['/x/a', 'b']` both encode to `/x/a|b`. A collision makes a later lookup
+// return another workspace set's cached results. These tests pin the
+// unambiguous (JSON) encoding by exercising exactly that collision shape.
+// POSIX-only because `|` is not a valid path character on Windows.
+// ─────────────────────────────────────────────────────────────────────────────
 
+describe('completion cache key collisions across workspace sets', () => {
+  let base: string;
+
+  beforeEach(() => {
+    base = createTestTempDir('complete-cache-collision');
+    clearCompletionCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(base);
+    clearCompletionCache();
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'completeQueryPath: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      mkdirSync(pipeRoot, { recursive: true });
+      mkdirSync(plainRoot, { recursive: true });
+      writeFileSync(join(pipeRoot, 'CollideQuery.ql'), '');
+      writeFileSync(join(plainRoot, 'PlainQuery.ql'), '');
+
+      // First lookup: single root whose path contains `|`.
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completeQueryPath('');
+      expect(first).toContain('CollideQuery.ql');
+
+      // Second lookup: distinct two-root set that collides under `join('|')`
+      // (`${plainRoot}|b`) but is unambiguous under JSON encoding.
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completeQueryPath('');
+      expect(second).toContain('PlainQuery.ql');
+      expect(second).not.toContain('CollideQuery.ql');
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'completeSarifPath: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      mkdirSync(pipeRoot, { recursive: true });
+      mkdirSync(plainRoot, { recursive: true });
+      writeFileSync(join(pipeRoot, 'collide.sarif'), '');
+      writeFileSync(join(plainRoot, 'plain.sarif'), '');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completeSarifPath('');
+      expect(first).toContain('collide.sarif');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completeSarifPath('');
+      expect(second).toContain('plain.sarif');
+      expect(second).not.toContain('collide.sarif');
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'completePackRoot: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      const collidePack = join(pipeRoot, 'collide-pack');
+      const plainPack = join(plainRoot, 'plain-pack');
+      mkdirSync(collidePack, { recursive: true });
+      mkdirSync(plainPack, { recursive: true });
+      writeFileSync(join(collidePack, 'codeql-pack.yml'), 'name: collide/pack\n');
+      writeFileSync(join(plainPack, 'codeql-pack.yml'), 'name: plain/pack\n');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completePackRoot('');
+      expect(first).toContain('collide-pack');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completePackRoot('');
+      expect(second).toContain('plain-pack');
+      expect(second).not.toContain('collide-pack');
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'completeDatabasePath: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      vi.stubEnv('CODEQL_DATABASES_BASE_DIRS', '');
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      const collideDb = join(pipeRoot, 'collide-db');
+      const plainDb = join(plainRoot, 'plain-db');
+      mkdirSync(collideDb, { recursive: true });
+      mkdirSync(plainDb, { recursive: true });
+      writeFileSync(join(collideDb, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+      writeFileSync(join(plainDb, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completeDatabasePath('');
+      expect(first.some((p) => p.endsWith('collide-db'))).toBe(true);
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completeDatabasePath('');
+      expect(second.some((p) => p.endsWith('plain-db'))).toBe(true);
+      expect(second.some((p) => p.endsWith('collide-db'))).toBe(false);
+    },
+  );
+});
 
 describe('completeSarifPath', () => {
   let tmpDir: string;
