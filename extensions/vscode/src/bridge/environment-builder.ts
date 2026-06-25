@@ -235,31 +235,36 @@ export class EnvironmentBuilder extends DisposableObject {
         `to false to silence this warning. See ${CODEQL_WORKSPACES_DOC_URL}`,
       );
     }
-    if (workspaceFolders && workspaceFolders.length > 0) {
-      // Anchor relative-path resolution (getUserWorkspaceDir) to the first
-      // computed resolution root so tools do not anchor to a folder that was
-      // intentionally excluded (e.g. requireCodeqlWorkspace=true and the first
-      // open folder lacks a top-level codeql-workspace.yml). Only fall back to
-      // the first open folder when no resolution roots were computed.
-      env.CODEQL_MCP_WORKSPACE =
-        resolutionRoots.length > 0
-          ? resolutionRoots[0]
-          : workspaceFolders[0].uri.fsPath;
+    // Anchor relative-path resolution (getUserWorkspaceDir) and the default
+    // scratch/tmp directory to the first computed resolution root so tools do
+    // not anchor to a folder that was intentionally excluded (e.g.
+    // requireCodeqlWorkspace=true and the first open folder lacks a top-level
+    // codeql-workspace.yml). Resolution roots can also be produced from
+    // queryPackIncludeDirs even when no workspace is open, so prefer them
+    // before falling back to the first open folder.
+    const workspaceAnchor =
+      resolutionRoots.length > 0
+        ? resolutionRoots[0]
+        : workspaceFolders && workspaceFolders.length > 0
+          ? workspaceFolders[0].uri.fsPath
+          : undefined;
+    if (workspaceAnchor) {
+      env.CODEQL_MCP_WORKSPACE = workspaceAnchor;
     }
     if (resolutionRoots.length > 0) {
       env.CODEQL_MCP_WORKSPACE_FOLDERS = resolutionRoots.join(delimiter);
     }
 
     // Workspace-local scratch directory for tool output (query logs, etc.)
-    // Defaults to `.codeql/ql-mcp` within the first workspace folder.
+    // Defaults to `.codeql/ql-mcp` within the resolution-root anchor.
     // This is also used as CODEQL_MCP_TMP_DIR so that the server writes
     // all temporary output (query logs, external predicate CSVs) inside
     // the workspace, avoiding out-of-workspace file access prompts.
     const scratchRelative = config.get<string>('scratchDir', '.codeql/ql-mcp');
-    if (workspaceFolders && workspaceFolders.length > 0) {
+    if (workspaceAnchor) {
       const scratchDir = isAbsolute(scratchRelative)
         ? scratchRelative
-        : join(workspaceFolders[0].uri.fsPath, scratchRelative);
+        : join(workspaceAnchor, scratchRelative);
       env.CODEQL_MCP_SCRATCH_DIR = scratchDir;
       env.CODEQL_MCP_TMP_DIR = scratchDir;
     } else {

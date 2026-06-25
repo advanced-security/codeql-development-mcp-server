@@ -195,6 +195,97 @@ describe('EnvironmentBuilder', () => {
     }
   });
 
+  it('should anchor CODEQL_MCP_WORKSPACE to the first resolution root when no folders are open', async () => {
+    const vscode = await import('vscode');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      // No workspace is open, but an absolute queryPackIncludeDirs entry still
+      // produces a resolution root. CODEQL_MCP_WORKSPACE must anchor to that
+      // root so relative-path tools do not fall back to process.cwd().
+      (vscode.workspace.workspaceFolders as any) = undefined;
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'queryPackIncludeDirs') return ['/mock/include-root'];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      expect(env.CODEQL_MCP_WORKSPACE).toBe(normalize('/mock/include-root'));
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should anchor the scratch/tmp dir to the first resolution root when no folders are open', async () => {
+    const vscode = await import('vscode');
+    const origFolders = vscode.workspace.workspaceFolders;
+    const originalGetConfig = vscode.workspace.getConfiguration;
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = undefined;
+      vscode.workspace.getConfiguration = () => ({
+        get: (_key: string, defaultVal?: any) => {
+          if (_key === 'queryPackIncludeDirs') return ['/mock/include-root'];
+          return defaultVal;
+        },
+        has: () => false,
+        inspect: () => undefined as any,
+        update: () => Promise.resolve(),
+      }) as any;
+
+      builder.invalidate();
+      const env = await builder.build();
+      const expected = join(normalize('/mock/include-root'), '.codeql/ql-mcp');
+      expect(env.CODEQL_MCP_SCRATCH_DIR).toBe(expected);
+      expect(env.CODEQL_MCP_TMP_DIR).toBe(expected);
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      vscode.workspace.getConfiguration = originalGetConfig;
+    }
+  });
+
+  it('should anchor the scratch/tmp dir to the first resolution root, not the first open folder', async () => {
+    const vscode = await import('vscode');
+    const { join: joinPath } = await import('path');
+    const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await import('fs');
+    const { tmpdir } = await import('os');
+    const origFolders = vscode.workspace.workspaceFolders;
+
+    // First open folder lacks codeql-workspace.yml and is therefore excluded
+    // from the resolution roots; the second folder qualifies. The scratch dir
+    // must anchor to the qualifying folder, not the excluded first folder.
+    const base = mkdtempSync(joinPath(tmpdir(), 'ql-mcp-envb-scratch-'));
+    const withoutFile = joinPath(base, 'without-cqlws');
+    const withFile = joinPath(base, 'with-cqlws');
+    mkdirSync(withoutFile, { recursive: true });
+    mkdirSync(withFile, { recursive: true });
+    writeFileSync(joinPath(withFile, 'codeql-workspace.yml'), 'provide:\n  - "**/qlpack.yml"\n');
+
+    try {
+      (vscode.workspace.workspaceFolders as any) = [
+        { uri: { fsPath: withoutFile }, name: 'without', index: 0 },
+        { uri: { fsPath: withFile }, name: 'with', index: 1 },
+      ];
+
+      builder.invalidate();
+      const env = await builder.build();
+      const expected = joinPath(withFile, '.codeql/ql-mcp');
+      expect(env.CODEQL_MCP_SCRATCH_DIR).toBe(expected);
+      expect(env.CODEQL_MCP_TMP_DIR).toBe(expected);
+    } finally {
+      (vscode.workspace.workspaceFolders as any) = origFolders;
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
   it('should include CODEQL_ADDITIONAL_PACKS with database storage path', async () => {
     const env = await builder.build();
     expect(env.CODEQL_ADDITIONAL_PACKS).toBeDefined();

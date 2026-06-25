@@ -14,7 +14,7 @@
  */
 
 import { defineConfig } from '@vscode/test-cli';
-import { cpSync, rmSync } from 'fs';
+import { cpSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -22,7 +22,12 @@ import { fileURLToPath } from 'url';
 // extensions/vscode/.tmp/ — the shorter path keeps the IPC socket under
 // the 103-char sun_path limit on macOS/Linux.
 const extensionRoot = fileURLToPath(new URL('.', import.meta.url));
-const userDataDir = join(extensionRoot, '..', '..', '.tmp', 'vsc-ud');
+const tmpRoot = join(extensionRoot, '..', '..', '.tmp');
+// Ensure the gitignored .tmp/ exists before anything writes into it. In a
+// clean checkout it is absent, so cpSync/userDataDir would otherwise throw
+// ENOENT because the parent directory is missing.
+mkdirSync(tmpRoot, { recursive: true });
+const userDataDir = join(tmpRoot, 'vsc-ud');
 
 // The multi-root workspace tests mutate the workspace folder list via
 // `vscode.workspace.updateWorkspaceFolders`, which makes VS Code persist (and
@@ -39,10 +44,7 @@ const multiRootFixture = join(
   'multi-root-workspace',
 );
 const multiRootWorkspaceCopy = join(
-  extensionRoot,
-  '..',
-  '..',
-  '.tmp',
+  tmpRoot,
   'multi-root-workspace',
 );
 rmSync(multiRootWorkspaceCopy, { recursive: true, force: true });
