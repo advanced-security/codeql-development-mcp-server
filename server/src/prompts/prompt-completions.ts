@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { getDatabaseBaseDirs } from '../lib/discovery-config';
 import { getScanExcludeDirs } from '../lib/scan-exclude';
 import { logger } from '../utils/logger';
-import { getUserWorkspaceDirs } from '../utils/package-paths';
+import { computeRootLabels, getUserWorkspaceDirs } from '../utils/package-paths';
 import { SUPPORTED_LANGUAGES } from './constants';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -94,6 +94,33 @@ export function completeLanguage(value: string): string[] {
 }
 
 /**
+ * Prefix root-relative completion entries with their root's short label when
+ * the workspace spans multiple roots, so users can see which folder/repo each
+ * entry belongs to without long absolute paths overflowing the picker.
+ *
+ * Single-root workspaces are returned unchanged (bare relative paths). Because
+ * entries are labeled per root, identical relative paths in different roots
+ * stay distinct after de-duplication and remain individually selectable. A
+ * `relPath` of `'.'` (a pack at the root itself) collapses to the bare label.
+ *
+ * @param workspaces Ordered workspace roots (as from `getUserWorkspaceDirs()`).
+ * @param root       The root the `relPaths` were discovered in.
+ * @param relPaths   Paths relative to `root`.
+ * @param labels     Precomputed root→label map, or `undefined` for single root.
+ */
+function labelRootRelativePaths(
+  root: string,
+  relPaths: string[],
+  labels: Map<string, string> | undefined,
+): string[] {
+  const label = labels?.get(root);
+  if (!label) {
+    return relPaths;
+  }
+  return relPaths.map(rel => (rel === '.' ? label : `${label}${sep}${rel}`));
+}
+
+/**
  * Recursively find files matching given extensions under `dir`, up to
  * `maxDepth` levels deep. Returns paths relative to `baseDir`.
  *
@@ -156,6 +183,7 @@ export async function completeQueryPath(value: string): Promise<string[]> {
 
   if (!allResults) {
     // Per-root scan budget so a populous first root cannot starve later roots.
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : undefined;
     const aggregated: string[] = [];
     for (const workspace of workspaces) {
       const perRoot: string[] = [];
@@ -164,7 +192,7 @@ export async function completeQueryPath(value: string): Promise<string[]> {
       } catch (err) {
         logger.debug(`completeQueryPath scan error: ${err}`);
       }
-      aggregated.push(...perRoot);
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
     allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey, allResults);
@@ -189,6 +217,7 @@ export async function completeSarifPath(value: string): Promise<string[]> {
 
   if (!allResults) {
     // Per-root scan budget so a populous first root cannot starve later roots.
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : undefined;
     const aggregated: string[] = [];
     for (const workspace of workspaces) {
       const perRoot: string[] = [];
@@ -197,7 +226,7 @@ export async function completeSarifPath(value: string): Promise<string[]> {
       } catch (err) {
         logger.debug(`completeSarifPath scan error: ${err}`);
       }
-      aggregated.push(...perRoot);
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
     allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey, allResults);
@@ -380,6 +409,7 @@ export async function completePackRoot(value: string): Promise<string[]> {
     }
 
     // Per-root scan budget so a populous first root cannot starve later roots.
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : undefined;
     for (const workspace of workspaces) {
       const perRoot: string[] = [];
       try {
@@ -387,7 +417,7 @@ export async function completePackRoot(value: string): Promise<string[]> {
       } catch (err) {
         logger.debug(`completePackRoot scan error: ${err}`);
       }
-      aggregated.push(...perRoot);
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
 
     allResults = [...new Set(aggregated)];

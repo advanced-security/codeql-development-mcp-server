@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 import { MAD_SUPPORTED_LANGUAGES, SUPPORTED_LANGUAGES } from './constants';
 import { addCompletions, getEffectiveLanguage } from './prompt-completions';
 import { loadPromptTemplate, processPromptTemplate } from './prompt-loader';
-import { getUserWorkspaceDirs } from '../utils/package-paths';
+import { computeRootLabels, getUserWorkspaceDirs } from '../utils/package-paths';
 import { logger } from '../utils/logger';
 
 // Re-export for backward compatibility with existing consumers and tests.
@@ -151,6 +151,19 @@ export async function resolvePromptFilePath(
     return finalizePromptFilePath(normalizedPath, filePath);
   }
 
+  // Multi-root: a completion value may carry a short root-label prefix (e.g.
+  // `repo-a/queries/Foo.ql`, or just `repo-a` for a pack at the root) so users
+  // can disambiguate which folder a file lives in. Peel the label back off and
+  // resolve against that specific root before the generic per-root scan, so
+  // identical relative paths in different roots remain individually selectable.
+  // Only honoured when no explicit `workspaceRoot` was supplied.
+  if (!workspaceRoot) {
+    const labeled = await resolveLabeledRootPath(normalizedPath, filePath);
+    if (labeled) {
+      return labeled;
+    }
+  }
+
   // Relative inputs are resolved against the workspace root(s). In a multi-root
   // workspace the referenced file may live in any root folder, so
   // try each candidate root in turn and prefer the first where the file
@@ -198,6 +211,63 @@ export async function resolvePromptFilePath(
     resolvedPath: firstWithinRoot,
     warning: `⚠ **File path** ${markdownInlineCode(filePath)} **does not exist.**`,
   };
+}
+
+/**
+ * Attempt to resolve a completion value that carries a short root-label prefix
+ * (e.g. `repo-a/queries/Foo.ql`, or just `repo-a` for a pack at the root).
+ *
+ * In multi-root workspaces, path completions prefix each entry with the owning
+ * root's label (see {@link computeRootLabels}) so identical relative paths in
+ * different roots stay distinct and individually selectable. This peels the
+ * label back off and resolves the remainder against that specific root,
+ * returning a result only when the labeled target actually exists on disk — so
+ * a coincidental relative path that merely starts with a folder name still
+ * falls through to the generic per-root scan.
+ *
+ * @param normalizedPath - The normalised (relative) candidate path.
+ * @param originalPath   - The raw user-supplied value (for warning messages).
+ * @returns A resolved result when a labeled target exists, otherwise `undefined`.
+ */
+async function resolveLabeledRootPath(
+  normalizedPath: string,
+  originalPath: string,
+): Promise<PromptFilePathResult | undefined> {
+  const roots = getUserWorkspaceDirs();
+  if (roots.length < 2) {
+    return undefined;
+  }
+
+  const labels = computeRootLabels(roots);
+  for (const [root, label] of labels) {
+    // A bare `<label>` refers to the root itself (e.g. a pack at the root).
+    if (normalizedPath === label) {
+      return finalizePromptFilePath(root, originalPath);
+    }
+
+    const prefix = `${label}${sep}`;
+    if (!normalizedPath.startsWith(prefix)) {
+      continue;
+    }
+
+    const rest = normalizedPath.slice(prefix.length);
+    const absolutePath = resolve(root, rest);
+
+    // Keep the labeled remainder within its root.
+    const rel = relative(root, absolutePath);
+    if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+      continue;
+    }
+
+    try {
+      await access(absolutePath);
+      return { resolvedPath: absolutePath };
+    } catch {
+      // Labeled target absent here — fall through to generic resolution.
+    }
+  }
+
+  return undefined;
 }
 
 /**

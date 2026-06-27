@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { isCompletable, getCompleter } from '@modelcontextprotocol/sdk/server/completable.js';
 import { mkdirSync, writeFileSync } from 'fs';
-import { delimiter, join } from 'path';
+import { basename, delimiter, join, sep } from 'path';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import {
   addCompletions,
@@ -207,8 +207,10 @@ describe('completions across multiple workspace roots', () => {
     writeFileSync(join(rootB, 'SecondFolderQuery.ql'), '');
 
     const result = await completeQueryPath('');
-    expect(result).toContain('FirstFolderQuery.ql');
-    expect(result).toContain('SecondFolderQuery.ql');
+    // Multi-root completions are prefixed with each root's short label so the
+    // user can tell which folder a file belongs to.
+    expect(result).toContain(`${basename(rootA)}${sep}FirstFolderQuery.ql`);
+    expect(result).toContain(`${basename(rootB)}${sep}SecondFolderQuery.ql`);
   });
 
   it('should find pack roots in a non-first workspace folder', async () => {
@@ -217,7 +219,7 @@ describe('completions across multiple workspace roots', () => {
     writeFileSync(join(packDir, 'codeql-pack.yml'), 'name: test/pack\n');
 
     const result = await completePackRoot('');
-    expect(result).toContain('my-pack');
+    expect(result).toContain(`${basename(rootB)}${sep}my-pack`);
   });
 
   it('should find databases in a non-first workspace folder', async () => {
@@ -292,6 +294,72 @@ describe('completions across multiple workspace roots', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Identical relative paths in different roots must both survive de-duplication
+//
+// Completions de-duplicate aggregated results with a Set. Before root labels,
+// two roots exposing the SAME relative path (e.g. both a pack at the root, or
+// both `packs/foo`) collapsed to a single entry, and the dropped root's file
+// was unselectable because resolution always resolved a bare relative path to
+// the first matching root. Labeling each entry with its root keeps the entries
+// distinct so every root's file stays visible and selectable.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('cross-root collisions stay distinct via root labels', () => {
+  let rootA: string;
+  let rootB: string;
+
+  beforeEach(() => {
+    rootA = createTestTempDir('collide-a');
+    rootB = createTestTempDir('collide-b');
+    vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${rootA}${delimiter}${rootB}`);
+    clearCompletionCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(rootA);
+    cleanupTestTempDir(rootB);
+    clearCompletionCache();
+  });
+
+  it('queryPath: identical relative .ql paths in two roots both surface', async () => {
+    mkdirSync(join(rootA, 'queries'), { recursive: true });
+    mkdirSync(join(rootB, 'queries'), { recursive: true });
+    writeFileSync(join(rootA, 'queries', 'Same.ql'), '');
+    writeFileSync(join(rootB, 'queries', 'Same.ql'), '');
+
+    const result = await completeQueryPath('Same');
+    expect(result).toContain(`${basename(rootA)}${sep}queries${sep}Same.ql`);
+    expect(result).toContain(`${basename(rootB)}${sep}queries${sep}Same.ql`);
+  });
+
+  it('packRoot: identical relative pack paths in two roots both surface', async () => {
+    for (const root of [rootA, rootB]) {
+      const packDir = join(root, 'packs', 'shared');
+      mkdirSync(packDir, { recursive: true });
+      writeFileSync(join(packDir, 'codeql-pack.yml'), 'name: x/shared\n');
+    }
+
+    const result = await completePackRoot('shared');
+    expect(result).toContain(`${basename(rootA)}${sep}packs${sep}shared`);
+    expect(result).toContain(`${basename(rootB)}${sep}packs${sep}shared`);
+  });
+
+  it('packRoot: a pack at the root of each folder collapses to the bare label', async () => {
+    for (const root of [rootA, rootB]) {
+      writeFileSync(join(root, 'codeql-pack.yml'), 'name: x/root-pack\n');
+    }
+
+    const result = await completePackRoot('');
+    // The special `.` (pack at the root) becomes the bare root label, and both
+    // roots remain individually selectable rather than collapsing to one `.`.
+    expect(result).toContain(basename(rootA));
+    expect(result).toContain(basename(rootB));
+    expect(result).not.toContain('.');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Completion cache keys must be collision-free across distinct workspace sets
 //
 // The cache key is derived from the list of workspace roots. A naive
@@ -336,7 +404,8 @@ describe('completion cache key collisions across workspace sets', () => {
       // (`${plainRoot}|b`) but is unambiguous under JSON encoding.
       vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
       const second = await completeQueryPath('');
-      expect(second).toContain('PlainQuery.ql');
+      // Two roots now => entries are root-labeled (plainRoot basename is `a`).
+      expect(second).toContain(`${basename(plainRoot)}${sep}PlainQuery.ql`);
       expect(second).not.toContain('CollideQuery.ql');
     },
   );
@@ -357,7 +426,8 @@ describe('completion cache key collisions across workspace sets', () => {
 
       vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
       const second = await completeSarifPath('');
-      expect(second).toContain('plain.sarif');
+      // Two roots now => entries are root-labeled (plainRoot basename is `a`).
+      expect(second).toContain(`${basename(plainRoot)}${sep}plain.sarif`);
       expect(second).not.toContain('collide.sarif');
     },
   );
@@ -380,7 +450,8 @@ describe('completion cache key collisions across workspace sets', () => {
 
       vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
       const second = await completePackRoot('');
-      expect(second).toContain('plain-pack');
+      // Two roots now => entries are root-labeled (plainRoot basename is `a`).
+      expect(second).toContain(`${basename(plainRoot)}${sep}plain-pack`);
       expect(second).not.toContain('collide-pack');
     },
   );

@@ -15,7 +15,7 @@
  * from an npm install (no parent monorepo).
  */
 
-import { delimiter, dirname, resolve } from 'path';
+import { delimiter, dirname, resolve, sep } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
@@ -152,6 +152,81 @@ export function getUserWorkspaceDirs(): string[] {
     }
   }
   return [getUserWorkspaceDir()];
+}
+
+/**
+ * Compute a short, unique display label for each workspace root.
+ *
+ * In a multi-root workspace, path completions prefix each root-relative result
+ * with the owning root's label so users can tell which folder/repo a file lives
+ * in — without surfacing long absolute paths that can overflow the picker. The
+ * label is the folder's basename, extended with just enough trailing parent
+ * segments to disambiguate roots that happen to share a basename. The same
+ * labels are used on the resolution side (see `resolvePromptFilePath`) so
+ * labeled completion values round-trip back to the correct root.
+ *
+ * Labels are joined with the platform path separator so they read naturally in
+ * the picker and resolve consistently. Genuinely identical root paths (which
+ * callers de-duplicate upstream) collapse to the same label.
+ *
+ * @param roots Ordered list of absolute workspace root paths.
+ * @returns A Map from each root path to its unique label.
+ */
+export function computeRootLabels(roots: string[]): Map<string, string> {
+  const segmentsByRoot = new Map<string, string[]>();
+  for (const root of roots) {
+    segmentsByRoot.set(root, root.split(sep).filter((s) => s.length > 0));
+  }
+
+  const labelAtDepth = (segments: string[], depth: number): string => {
+    if (segments.length === 0) {
+      return sep; // filesystem-root edge case
+    }
+    return segments.slice(Math.max(0, segments.length - depth)).join(sep);
+  };
+
+  const depthByRoot = new Map<string, number>();
+  for (const root of roots) {
+    depthByRoot.set(root, 1);
+  }
+
+  // Grow the depth of any roots whose current label collides with another
+  // root, until every label is unique or no further parent segments remain.
+  for (;;) {
+    const labelToRoots = new Map<string, string[]>();
+    for (const root of roots) {
+      const label = labelAtDepth(segmentsByRoot.get(root)!, depthByRoot.get(root)!);
+      const sharing = labelToRoots.get(label);
+      if (sharing) {
+        sharing.push(root);
+      } else {
+        labelToRoots.set(label, [root]);
+      }
+    }
+
+    let progressed = false;
+    for (const sharing of labelToRoots.values()) {
+      if (sharing.length < 2) {
+        continue;
+      }
+      for (const root of sharing) {
+        const depth = depthByRoot.get(root)!;
+        if (depth < segmentsByRoot.get(root)!.length) {
+          depthByRoot.set(root, depth + 1);
+          progressed = true;
+        }
+      }
+    }
+    if (!progressed) {
+      break;
+    }
+  }
+
+  const labels = new Map<string, string>();
+  for (const root of roots) {
+    labels.set(root, labelAtDepth(segmentsByRoot.get(root)!, depthByRoot.get(root)!));
+  }
+  return labels;
 }
 
 // Pre-computed values for use throughout the server

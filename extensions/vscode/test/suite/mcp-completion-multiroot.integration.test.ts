@@ -87,6 +87,13 @@ suite('MCP Multi-Root Completion Integration Tests', () => {
   const secondRootPackRelative = path.join('unique-second-root-packs', 'needle-pack');
   /** Distinctive database directory in the second root. */
   const secondRootDbRelative = 'unique-second-root-db';
+  /**
+   * IDENTICAL relative query path seeded into BOTH the second and third roots.
+   * Exercises the cross-root collision fix: completions must keep both entries
+   * distinct (root-labeled) and a labeled value must resolve to the specific
+   * root the user picked, not merely the first matching one.
+   */
+  const sharedQueryRelative = path.join('shared-queries', 'Dup.ql');
 
   suiteSetup(async function () {
     this.timeout(60_000);
@@ -141,6 +148,14 @@ suite('MCP Multi-Root Completion Integration Tests', () => {
     const thirdQueryDir = path.dirname(path.join(thirdRoot, thirdRootQueryRelative));
     fs.mkdirSync(thirdQueryDir, { recursive: true });
     fs.writeFileSync(path.join(thirdRoot, thirdRootQueryRelative), '');
+
+    // ── Identical relative query path in BOTH the second and third roots, to
+    //    exercise the cross-root collision fix end-to-end.
+    for (const root of [secondRoot, thirdRoot]) {
+      const sharedDir = path.dirname(path.join(root, sharedQueryRelative));
+      fs.mkdirSync(sharedDir, { recursive: true });
+      fs.writeFileSync(path.join(root, sharedQueryRelative), '');
+    }
 
     // ── Spawn the MCP server with the synthetic multi-root env.
     const serverPath = resolveServerPath();
@@ -324,6 +339,66 @@ suite('MCP Multi-Root Completion Integration Tests', () => {
     assert.ok(
       text.includes(expectedAbsolute),
       `explain_codeql_query response should embed the absolute path resolved against the second root.\n` +
+        `Expected to contain: ${expectedAbsolute}\n` +
+        `Got:\n${text.slice(0, 800)}`,
+    );
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Cross-root collision: identical relative paths in two roots must stay
+  // distinct (root-labeled) AND a labeled value must resolve to the picked
+  // root — the regression fixed by PR #308 r3478700118.
+  // ───────────────────────────────────────────────────────────────────────
+
+  test('queryPath completion keeps identical relative paths from different roots distinct', async function () {
+    this.timeout(30_000);
+
+    const result = await client.complete({
+      ref: { type: 'ref/prompt', name: 'explain_codeql_query' },
+      argument: { name: 'queryPath', value: 'Dup' },
+    });
+
+    assert.ok(result.completion, 'Should return completion result');
+    const values = result.completion.values;
+    const matching = values.filter((v) => v.endsWith(sharedQueryRelative));
+
+    assert.ok(
+      matching.length >= 2,
+      `Both roots' copies of ${sharedQueryRelative} should surface as distinct entries.\n` +
+        `Got: ${JSON.stringify(values, null, 2)}`,
+    );
+    assert.strictEqual(
+      new Set(matching).size,
+      matching.length,
+      `Labeled entries must be unique (no collapse).\nGot: ${JSON.stringify(matching, null, 2)}`,
+    );
+  });
+
+  test('explain_codeql_query resolves a root-labeled queryPath to the specific picked root', async function () {
+    this.timeout(30_000);
+
+    // The completion provider labels each entry with the root's basename; build
+    // the labeled value the user would pick for the THIRD root.
+    const labeled = `${path.basename(thirdRoot)}${path.sep}${sharedQueryRelative}`;
+
+    const result = await client.getPrompt({
+      name: 'explain_codeql_query',
+      arguments: { queryPath: labeled, language: 'javascript' },
+    });
+
+    assert.ok(result.messages?.length, 'Prompt should return at least one message');
+    const content = result.messages[0]?.content as unknown as { type: string; text: string };
+    const text = content?.text ?? '';
+
+    const expectedAbsolute = path.join(thirdRoot, sharedQueryRelative);
+    assert.ok(
+      !text.includes('does not exist'),
+      `Labeled queryPath should resolve against the third root and not warn.\n` +
+        `Got:\n${text.slice(0, 800)}`,
+    );
+    assert.ok(
+      text.includes(expectedAbsolute),
+      `Response should embed the path resolved against the THIRD root (not the second).\n` +
         `Expected to contain: ${expectedAbsolute}\n` +
         `Got:\n${text.slice(0, 800)}`,
     );

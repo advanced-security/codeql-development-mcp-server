@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { delimiter, resolve } from 'path';
+import { delimiter, resolve, sep } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import {
   getPackageRootDir,
@@ -19,6 +19,7 @@ import {
   getPackageVersion,
   getUserWorkspaceDir,
   getUserWorkspaceDirs,
+  computeRootLabels,
 } from '../../../src/utils/package-paths';
 
 describe('getPackageRootDir', () => {
@@ -203,6 +204,40 @@ describe('getUserWorkspaceDirs', () => {
     process.env.CODEQL_MCP_WORKSPACE_FOLDERS = `  ${delimiter} `;
     process.env.CODEQL_MCP_WORKSPACE = '/test/workspace/single';
     expect(getUserWorkspaceDirs()).toEqual(['/test/workspace/single']);
+  });
+});
+
+describe('computeRootLabels', () => {
+  it('uses the folder basename as the label when basenames are unique', () => {
+    const a = resolve('/work/repo-a');
+    const b = resolve('/work/repo-b');
+    const labels = computeRootLabels([a, b]);
+    expect(labels.get(a)).toBe('repo-a');
+    expect(labels.get(b)).toBe('repo-b');
+  });
+
+  it('extends colliding basenames with parent segments until unique', () => {
+    const a = resolve('/work/projA/queries');
+    const b = resolve('/work/projB/queries');
+    const labels = computeRootLabels([a, b]);
+    expect(labels.get(a)).toBe(`projA${sep}queries`);
+    expect(labels.get(b)).toBe(`projB${sep}queries`);
+  });
+
+  it('only extends the colliding roots, leaving unique ones at basename depth', () => {
+    const a = resolve('/work/projA/queries');
+    const b = resolve('/work/projB/queries');
+    const c = resolve('/work/other');
+    const labels = computeRootLabels([a, b, c]);
+    expect(labels.get(a)).toBe(`projA${sep}queries`);
+    expect(labels.get(b)).toBe(`projB${sep}queries`);
+    expect(labels.get(c)).toBe('other');
+  });
+
+  it('returns the basename for a single root', () => {
+    const a = resolve('/work/solo');
+    const labels = computeRootLabels([a]);
+    expect(labels.get(a)).toBe('solo');
   });
 });
 
