@@ -10,15 +10,17 @@ This guide covers installation, configuration, and usage of the CodeQL Developme
 
 ## Installation
 
-### VS Code Extension (recommended)
+### VS Code Extension (recommended for IDEs)
 
-The easiest and recommended way to get started is the **VS Code extension** (VSIX
-archive bundle), which automates installation, configuration, and CodeQL CLI
-discovery. Download the `.vsix` from
+If you use `ql-mcp` inside **VS Code** or a compatible fork such as **Cursor**, the
+**VS Code extension** (VSIX archive bundle) is the preferred path — it automates
+installation, configuration, and CodeQL CLI discovery. Download the `.vsix` from
 [GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases)
-and install it in VS Code via `Extensions: Install from VSIX…` in the Command
-Palette, or build from source (`npm run package:vsix` at the repository root).
-See the [VS Code Extension guide](./vscode/extension.md) for details.
+and install it via `Extensions: Install from VSIX…` in the Command Palette, or build
+it from source with `npm run package:vsix`. See the
+[VS Code Extension guide](./vscode/extension.md) for details.
+
+For Copilot CLI or other non-IDE agentic tools, use one of the methods below.
 
 ### From npm
 
