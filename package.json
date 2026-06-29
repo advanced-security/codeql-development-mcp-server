@@ -1,6 +1,6 @@
 {
   "name": "codeql-development-mcp-server_repo",
-  "version": "2.25.6",
+  "version": "2.25.6-next.1",
   "description": "An MCP server supporting LLM requests for CodeQL development tools and resources.",
   "private": true,
   "type": "module",
@@ -35,6 +35,7 @@
     "build": "npm run build -w server && make -C client build && npm run build -w extensions/vscode",
     "build-and-test": "npm run build:all && npm run test:all",
     "build:all": "npm run tidy && npm run build -w server && make -C client build && npm run build -w extensions/vscode",
+    "build:server-and-extension": "npm run build -w server && npm run build -w extensions/vscode",
     "clean": "make -C client clean && npm run clean -w server -w extensions/vscode && npm run clean:test-dbs",
     "clean:test-dbs": "find server/ql .github/skills -type d -name '*.testproj' -exec rm -rf {} + 2>/dev/null; true",
     "dev:stdio": "npm run dev:stdio -w server",

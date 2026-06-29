@@ -55,7 +55,13 @@ Please note that this project is released with a [Contributor Code of Conduct](C
 
 ## Quick Start
 
-### Install via npm (recommended)
+### VS Code extension via VSIX (recommended for IDEs)
+
+If you run `ql-mcp` inside **VS Code** or a compatible fork such as **Cursor**, install the `vscode-codeql-development-mcp-server` extension from a VSIX archive — it bundles the server, auto-registers `ql-mcp`, and discovers the CodeQL CLI. Download the `.vsix` from [GitHub Releases](https://github.com/advanced-security/codeql-development-mcp-server/releases) and install it via `Extensions: Install from VSIX…` in the Command Palette, or build it from source with `npm run package:vsix`. See the [VS Code Extension guide](docs/vscode/extension.md) for details.
+
+For **Copilot CLI** or other non-IDE agentic tools, use one of the methods below.
+
+### Install via npm
 
 No repository clone needed — install from [npmjs.org](https://www.npmjs.com/package/codeql-development-mcp-server):
 
@@ -108,6 +114,8 @@ git clone https://github.com/advanced-security/codeql-development-mcp-server.git
 cd codeql-development-mcp-server
 npm install && npm run build
 ```
+
+> **Server + extension only (no Go client):** `npm run build` also builds the Go `client/` CLI (requires a Go toolchain). To build or package only the server and VS Code extension, use `npm run build:server-and-extension` or `npm run package:vsix` — neither touches `client/`.
 
 ### Verification
 
