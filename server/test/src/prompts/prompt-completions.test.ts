@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { isCompletable, getCompleter } from '@modelcontextprotocol/sdk/server/completable.js';
 import { mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { basename, delimiter, join, sep } from 'path';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import {
   addCompletions,
@@ -181,8 +181,305 @@ describe('completeQueryPath', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// completeSarifPath
+// Multi-root workspace resolution
 // ─────────────────────────────────────────────────────────────────────────────
+
+describe('completions across multiple workspace roots', () => {
+  let rootA: string;
+  let rootB: string;
+
+  beforeEach(() => {
+    rootA = createTestTempDir('complete-multiroot-a');
+    rootB = createTestTempDir('complete-multiroot-b');
+    vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${rootA}${delimiter}${rootB}`);
+    clearCompletionCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(rootA);
+    cleanupTestTempDir(rootB);
+    clearCompletionCache();
+  });
+
+  it('should find .ql files in a non-first workspace folder', async () => {
+    writeFileSync(join(rootA, 'FirstFolderQuery.ql'), '');
+    writeFileSync(join(rootB, 'SecondFolderQuery.ql'), '');
+
+    const result = await completeQueryPath('');
+    // Multi-root completions are prefixed with each root's short label so the
+    // user can tell which folder a file belongs to.
+    expect(result).toContain(`${basename(rootA)}${sep}FirstFolderQuery.ql`);
+    expect(result).toContain(`${basename(rootB)}${sep}SecondFolderQuery.ql`);
+  });
+
+  it('should find pack roots in a non-first workspace folder', async () => {
+    const packDir = join(rootB, 'my-pack');
+    mkdirSync(packDir, { recursive: true });
+    writeFileSync(join(packDir, 'codeql-pack.yml'), 'name: test/pack\n');
+
+    const result = await completePackRoot('');
+    expect(result).toContain(`${basename(rootB)}${sep}my-pack`);
+  });
+
+  it('should find databases in a non-first workspace folder', async () => {
+    const dbDir = join(rootB, 'my-db');
+    mkdirSync(dbDir, { recursive: true });
+    writeFileSync(join(dbDir, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+
+    const result = await completeDatabasePath('my-db');
+    expect(result.some((p) => p.endsWith('my-db'))).toBe(true);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // A populous first root must NOT starve later roots: each workspace root
+  // has an independent scan budget, so queries / SARIF files / packs / DBs
+  // that live only in non-first roots stay visible in VS Code completions.
+  // ───────────────────────────────────────────────────────────────────────
+
+  /** Big enough to exhaust any reasonable per-call cap (current cap is 50). */
+  const FLOOD = 80;
+
+  it('queryPath: surfaces a non-first root .ql file even when the first root is flooded', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      writeFileSync(join(rootA, `Flood${i}.ql`), '');
+    }
+    const needleDir = join(rootB, 'needle-queries');
+    mkdirSync(needleDir, { recursive: true });
+    writeFileSync(join(needleDir, 'NeedleQuery.ql'), '');
+
+    const result = await completeQueryPath('Needle');
+    expect(result.some((p) => p.endsWith('NeedleQuery.ql'))).toBe(true);
+  });
+
+  it('sarifPath: surfaces a non-first root .sarif file even when the first root is flooded', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      writeFileSync(join(rootA, `flood-${i}.sarif`), '');
+    }
+    const needleDir = join(rootB, 'needle-results');
+    mkdirSync(needleDir, { recursive: true });
+    writeFileSync(join(needleDir, 'needle-results.sarif'), '');
+
+    const result = await completeSarifPath('needle-results');
+    expect(result.some((p) => p.endsWith('needle-results.sarif'))).toBe(true);
+  });
+
+  it('packRoot: surfaces a non-first root pack even when the first root is flooded with packs', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      const packDir = join(rootA, `flood-pack-${i}`);
+      mkdirSync(packDir, { recursive: true });
+      writeFileSync(join(packDir, 'codeql-pack.yml'), `name: flood/p${i}\n`);
+    }
+    const needlePack = join(rootB, 'needle-pack');
+    mkdirSync(needlePack, { recursive: true });
+    writeFileSync(join(needlePack, 'codeql-pack.yml'), 'name: needle/pack\n');
+
+    const result = await completePackRoot('needle');
+    expect(result.some((p) => p.endsWith('needle-pack'))).toBe(true);
+  });
+
+  it('database: surfaces a non-first root DB even when the first root is flooded with DBs', async () => {
+    for (let i = 0; i < FLOOD; i++) {
+      const dbDir = join(rootA, `flood-${i}-db`);
+      mkdirSync(dbDir, { recursive: true });
+      writeFileSync(join(dbDir, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+    }
+    const needleDb = join(rootB, 'needle-second-root-db');
+    mkdirSync(needleDb, { recursive: true });
+    writeFileSync(join(needleDb, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+
+    const result = await completeDatabasePath('needle-second-root-db');
+    expect(result.some((p) => p.endsWith('needle-second-root-db'))).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identical relative paths in different roots must both survive de-duplication
+//
+// Completions de-duplicate aggregated results with a Set. Before root labels,
+// two roots exposing the SAME relative path (e.g. both a pack at the root, or
+// both `packs/foo`) collapsed to a single entry, and the dropped root's file
+// was unselectable because resolution always resolved a bare relative path to
+// the first matching root. Labeling each entry with its root keeps the entries
+// distinct so every root's file stays visible and selectable.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('cross-root collisions stay distinct via root labels', () => {
+  let rootA: string;
+  let rootB: string;
+
+  beforeEach(() => {
+    rootA = createTestTempDir('collide-a');
+    rootB = createTestTempDir('collide-b');
+    vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${rootA}${delimiter}${rootB}`);
+    clearCompletionCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(rootA);
+    cleanupTestTempDir(rootB);
+    clearCompletionCache();
+  });
+
+  it('queryPath: identical relative .ql paths in two roots both surface', async () => {
+    mkdirSync(join(rootA, 'queries'), { recursive: true });
+    mkdirSync(join(rootB, 'queries'), { recursive: true });
+    writeFileSync(join(rootA, 'queries', 'Same.ql'), '');
+    writeFileSync(join(rootB, 'queries', 'Same.ql'), '');
+
+    const result = await completeQueryPath('Same');
+    expect(result).toContain(`${basename(rootA)}${sep}queries${sep}Same.ql`);
+    expect(result).toContain(`${basename(rootB)}${sep}queries${sep}Same.ql`);
+  });
+
+  it('packRoot: identical relative pack paths in two roots both surface', async () => {
+    for (const root of [rootA, rootB]) {
+      const packDir = join(root, 'packs', 'shared');
+      mkdirSync(packDir, { recursive: true });
+      writeFileSync(join(packDir, 'codeql-pack.yml'), 'name: x/shared\n');
+    }
+
+    const result = await completePackRoot('shared');
+    expect(result).toContain(`${basename(rootA)}${sep}packs${sep}shared`);
+    expect(result).toContain(`${basename(rootB)}${sep}packs${sep}shared`);
+  });
+
+  it('packRoot: a pack at the root of each folder collapses to the bare label', async () => {
+    for (const root of [rootA, rootB]) {
+      writeFileSync(join(root, 'codeql-pack.yml'), 'name: x/root-pack\n');
+    }
+
+    const result = await completePackRoot('');
+    // The special `.` (pack at the root) becomes the bare root label, and both
+    // roots remain individually selectable rather than collapsing to one `.`.
+    expect(result).toContain(basename(rootA));
+    expect(result).toContain(basename(rootB));
+    expect(result).not.toContain('.');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Completion cache keys must be collision-free across distinct workspace sets
+//
+// The cache key is derived from the list of workspace roots. A naive
+// `roots.join('|')` encoding collides for distinct root sets when a root path
+// itself contains the `|` separator (valid on POSIX): e.g. `['/x/a|b']` and
+// `['/x/a', 'b']` both encode to `/x/a|b`. A collision makes a later lookup
+// return another workspace set's cached results. These tests pin the
+// unambiguous (JSON) encoding by exercising exactly that collision shape.
+// POSIX-only because `|` is not a valid path character on Windows.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('completion cache key collisions across workspace sets', () => {
+  let base: string;
+
+  beforeEach(() => {
+    base = createTestTempDir('complete-cache-collision');
+    clearCompletionCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanupTestTempDir(base);
+    clearCompletionCache();
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'completeQueryPath: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      mkdirSync(pipeRoot, { recursive: true });
+      mkdirSync(plainRoot, { recursive: true });
+      writeFileSync(join(pipeRoot, 'CollideQuery.ql'), '');
+      writeFileSync(join(plainRoot, 'PlainQuery.ql'), '');
+
+      // First lookup: single root whose path contains `|`.
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completeQueryPath('');
+      expect(first).toContain('CollideQuery.ql');
+
+      // Second lookup: distinct two-root set that collides under `join('|')`
+      // (`${plainRoot}|b`) but is unambiguous under JSON encoding.
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completeQueryPath('');
+      // Two roots now => entries are root-labeled (plainRoot basename is `a`).
+      expect(second).toContain(`${basename(plainRoot)}${sep}PlainQuery.ql`);
+      expect(second).not.toContain('CollideQuery.ql');
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'completeSarifPath: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      mkdirSync(pipeRoot, { recursive: true });
+      mkdirSync(plainRoot, { recursive: true });
+      writeFileSync(join(pipeRoot, 'collide.sarif'), '');
+      writeFileSync(join(plainRoot, 'plain.sarif'), '');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completeSarifPath('');
+      expect(first).toContain('collide.sarif');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completeSarifPath('');
+      // Two roots now => entries are root-labeled (plainRoot basename is `a`).
+      expect(second).toContain(`${basename(plainRoot)}${sep}plain.sarif`);
+      expect(second).not.toContain('collide.sarif');
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'completePackRoot: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      const collidePack = join(pipeRoot, 'collide-pack');
+      const plainPack = join(plainRoot, 'plain-pack');
+      mkdirSync(collidePack, { recursive: true });
+      mkdirSync(plainPack, { recursive: true });
+      writeFileSync(join(collidePack, 'codeql-pack.yml'), 'name: collide/pack\n');
+      writeFileSync(join(plainPack, 'codeql-pack.yml'), 'name: plain/pack\n');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completePackRoot('');
+      expect(first).toContain('collide-pack');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completePackRoot('');
+      // Two roots now => entries are root-labeled (plainRoot basename is `a`).
+      expect(second).toContain(`${basename(plainRoot)}${sep}plain-pack`);
+      expect(second).not.toContain('collide-pack');
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'completeDatabasePath: a `|`-containing root must not collide with a two-root set',
+    async () => {
+      vi.stubEnv('CODEQL_DATABASES_BASE_DIRS', '');
+      const pipeRoot = join(base, 'a|b');
+      const plainRoot = join(base, 'a');
+      const collideDb = join(pipeRoot, 'collide-db');
+      const plainDb = join(plainRoot, 'plain-db');
+      mkdirSync(collideDb, { recursive: true });
+      mkdirSync(plainDb, { recursive: true });
+      writeFileSync(join(collideDb, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+      writeFileSync(join(plainDb, 'codeql-database.yml'), 'sourceLocationPrefix: /src\n');
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', pipeRoot);
+      const first = await completeDatabasePath('');
+      expect(first.some((p) => p.endsWith('collide-db'))).toBe(true);
+
+      vi.stubEnv('CODEQL_MCP_WORKSPACE_FOLDERS', `${plainRoot}${delimiter}b`);
+      const second = await completeDatabasePath('');
+      expect(second.some((p) => p.endsWith('plain-db'))).toBe(true);
+      expect(second.some((p) => p.endsWith('collide-db'))).toBe(false);
+    },
+  );
+});
 
 describe('completeSarifPath', () => {
   let tmpDir: string;

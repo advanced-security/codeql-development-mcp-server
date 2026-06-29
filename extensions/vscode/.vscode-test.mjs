@@ -14,6 +14,7 @@
  */
 
 import { defineConfig } from '@vscode/test-cli';
+import { cpSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -21,7 +22,37 @@ import { fileURLToPath } from 'url';
 // extensions/vscode/.tmp/ — the shorter path keeps the IPC socket under
 // the 103-char sun_path limit on macOS/Linux.
 const extensionRoot = fileURLToPath(new URL('.', import.meta.url));
-const userDataDir = join(extensionRoot, '..', '..', '.tmp', 'vsc-ud');
+const tmpRoot = join(extensionRoot, '..', '..', '.tmp');
+// Ensure the gitignored .tmp/ exists before anything writes into it. In a
+// clean checkout it is absent, so cpSync/userDataDir would otherwise throw
+// ENOENT because the parent directory is missing.
+mkdirSync(tmpRoot, { recursive: true });
+const userDataDir = join(tmpRoot, 'vsc-ud');
+
+// The multi-root workspace tests mutate the workspace folder list via
+// `vscode.workspace.updateWorkspaceFolders`, which makes VS Code persist (and
+// normalize, e.g. appending a `"settings": {}` block) the backing
+// `.code-workspace` file. Opening the tracked fixture directly would therefore
+// leave the working tree dirty and fail the CI "uncommitted changes" check.
+// Copy the fixture into the gitignored .tmp/ on each run and open the copy so
+// the tracked fixture is never modified. Folder entries inside the workspace
+// file are relative, so copying the whole directory preserves them.
+const multiRootFixture = join(
+  extensionRoot,
+  'test',
+  'fixtures',
+  'multi-root-workspace',
+);
+const multiRootWorkspaceCopy = join(
+  tmpRoot,
+  'multi-root-workspace',
+);
+rmSync(multiRootWorkspaceCopy, { recursive: true, force: true });
+cpSync(multiRootFixture, multiRootWorkspaceCopy, { recursive: true });
+const multiRootWorkspaceFile = join(
+  multiRootWorkspaceCopy,
+  'test.code-workspace',
+);
 
 export default defineConfig([
   {
@@ -51,7 +82,7 @@ export default defineConfig([
     label: 'multiRoot',
     files: 'dist/test/suite/*.test.cjs',
     version: 'stable',
-    workspaceFolder: './test/fixtures/multi-root-workspace/test.code-workspace',
+    workspaceFolder: multiRootWorkspaceFile,
     launchArgs: ['--user-data-dir', userDataDir],
     mocha: {
       ui: 'tdd',

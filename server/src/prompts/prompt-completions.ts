@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { getDatabaseBaseDirs } from '../lib/discovery-config';
 import { getScanExcludeDirs } from '../lib/scan-exclude';
 import { logger } from '../utils/logger';
-import { getUserWorkspaceDir } from '../utils/package-paths';
+import { computeRootLabels, getUserWorkspaceDirs } from '../utils/package-paths';
 import { SUPPORTED_LANGUAGES } from './constants';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -28,6 +28,15 @@ import { SUPPORTED_LANGUAGES } from './constants';
 
 /** Maximum number of completions to return for file-based lookups. */
 const MAX_FILE_COMPLETIONS = 50;
+
+/**
+ * Per-root scan budget. Each workspace root scan accumulates at most this many
+ * raw matches before bailing out. A separate budget per root ensures that a
+ * populous first workspace folder cannot starve later folders of completion
+ * results. The final, deduplicated list is sliced down to
+ * {@link MAX_FILE_COMPLETIONS}.
+ */
+const MAX_PER_ROOT_RAW_MATCHES = MAX_FILE_COMPLETIONS;
 
 /** Maximum directory depth when scanning for files. */
 const MAX_SCAN_DEPTH = 8;
@@ -85,8 +94,39 @@ export function completeLanguage(value: string): string[] {
 }
 
 /**
+ * Prefix root-relative completion entries with their root's short label when
+ * the workspace spans multiple roots, so users can see which folder/repo each
+ * entry belongs to without long absolute paths overflowing the picker.
+ *
+ * Single-root workspaces are returned unchanged (bare relative paths). Because
+ * entries are labeled per root, identical relative paths in different roots
+ * stay distinct after de-duplication and remain individually selectable. A
+ * `relPath` of `'.'` (a pack at the root itself) collapses to the bare label.
+ *
+ * @param workspaces Ordered workspace roots (as from `getUserWorkspaceDirs()`).
+ * @param root       The root the `relPaths` were discovered in.
+ * @param relPaths   Paths relative to `root`.
+ * @param labels     Precomputed root→label map, or `undefined` for single root.
+ */
+function labelRootRelativePaths(
+  root: string,
+  relPaths: string[],
+  labels: Map<string, string> | undefined,
+): string[] {
+  const label = labels?.get(root);
+  if (!label) {
+    return relPaths;
+  }
+  return relPaths.map(rel => (rel === '.' ? label : `${label}${sep}${rel}`));
+}
+
+/**
  * Recursively find files matching given extensions under `dir`, up to
  * `maxDepth` levels deep. Returns paths relative to `baseDir`.
+ *
+ * `perCallLimit` caps how many matches this scan may accumulate into
+ * `results`; defaults to {@link MAX_PER_ROOT_RAW_MATCHES} so each
+ * workspace-root scan has an independent budget.
  *
  * Silently skips directories that cannot be read (permission errors, etc.).
  */
@@ -96,8 +136,9 @@ async function findFilesByExtension(
   extensions: string[],
   maxDepth: number,
   results: string[],
+  perCallLimit: number = MAX_PER_ROOT_RAW_MATCHES,
 ): Promise<void> {
-  if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+  if (maxDepth <= 0 || results.length >= perCallLimit) return;
 
   let entries;
   try {
@@ -107,7 +148,7 @@ async function findFilesByExtension(
   }
 
   for (const entry of entries) {
-    if (results.length >= MAX_FILE_COMPLETIONS) break;
+    if (results.length >= perCallLimit) break;
 
     const fullPath = join(dir, entry.name);
 
@@ -116,7 +157,7 @@ async function findFilesByExtension(
       if (SKIP_DIRS.has(entry.name)) {
         continue;
       }
-      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results);
+      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results, perCallLimit);
     } else if (entry.isFile()) {
       const lower = entry.name.toLowerCase();
       if (extensions.some(ext => lower.endsWith(ext))) {
@@ -129,20 +170,31 @@ async function findFilesByExtension(
 /**
  * Complete a `queryPath` parameter by finding `.ql` and `.qlref` files
  * in the workspace, filtered by the user's current input.
+ *
+ * In a multi-root VS Code workspace every root folder is scanned so queries
+ * that live outside the first folder are discoverable. Results are returned
+ * relative to the root they were found in; the workflow prompt resolves them
+ * against each root in turn.
  */
 export async function completeQueryPath(value: string): Promise<string[]> {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey = `queryPath:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey = `queryPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {
-    const results: string[] = [];
-    try {
-      await findFilesByExtension(workspace, workspace, ['.ql', '.qlref'], MAX_SCAN_DEPTH, results);
-    } catch (err) {
-      logger.debug(`completeQueryPath scan error: ${err}`);
+    // Per-root scan budget so a populous first root cannot starve later roots.
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : undefined;
+    const aggregated: string[] = [];
+    for (const workspace of workspaces) {
+      const perRoot: string[] = [];
+      try {
+        await findFilesByExtension(workspace, workspace, ['.ql', '.qlref'], MAX_SCAN_DEPTH, perRoot);
+      } catch (err) {
+        logger.debug(`completeQueryPath scan error: ${err}`);
+      }
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
-    allResults = results;
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey, allResults);
   }
 
@@ -156,21 +208,27 @@ export async function completeQueryPath(value: string): Promise<string[]> {
 
 /**
  * Complete a `sarifPath` parameter by finding `.sarif` and `.sarif.json`
- * files in the workspace.
+ * files in the workspace. Scans every workspace root.
  */
 export async function completeSarifPath(value: string): Promise<string[]> {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey = `sarifPath:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey = `sarifPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {
-    const results: string[] = [];
-    try {
-      await findFilesByExtension(workspace, workspace, ['.sarif', '.sarif.json'], MAX_SCAN_DEPTH, results);
-    } catch (err) {
-      logger.debug(`completeSarifPath scan error: ${err}`);
+    // Per-root scan budget so a populous first root cannot starve later roots.
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : undefined;
+    const aggregated: string[] = [];
+    for (const workspace of workspaces) {
+      const perRoot: string[] = [];
+      try {
+        await findFilesByExtension(workspace, workspace, ['.sarif', '.sarif.json'], MAX_SCAN_DEPTH, perRoot);
+      } catch (err) {
+        logger.debug(`completeSarifPath scan error: ${err}`);
+      }
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
-    allResults = results;
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey, allResults);
   }
 
@@ -186,23 +244,25 @@ export async function completeSarifPath(value: string): Promise<string[]> {
  * Complete a `database` / `databasePath` parameter by listing CodeQL
  * database directories from configured base dirs, well-known default
  * locations, and workspace directories containing `codeql-database.yml`.
+ * Every workspace root is scanned.
  */
 export async function completeDatabasePath(value: string): Promise<string[]> {
-  const workspace = getUserWorkspaceDir();
+  const workspaces = getUserWorkspaceDirs();
   const baseDirs = getDatabaseBaseDirs();
   const homeDbDir = join(homedir(), 'codeql', 'databases');
-  const cacheKey = `databasePath:${workspace}:${baseDirs.join(',')}`;
+  const cacheKey = `databasePath:${JSON.stringify({ workspaces, baseDirs })}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {
-    const results: string[] = [];
+    const aggregated: string[] = [];
 
     // Add well-known default location: $HOME/codeql/databases/
     const allBaseDirs = baseDirs.includes(homeDbDir) ? baseDirs : [...baseDirs, homeDbDir];
 
+    // Each configured base dir gets its own budget so one populous dir cannot
+    // starve the others.
     for (const baseDir of allBaseDirs) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
-
+      const perBase: string[] = [];
       let entries;
       try {
         entries = await readdir(baseDir, { withFileTypes: true });
@@ -211,34 +271,42 @@ export async function completeDatabasePath(value: string): Promise<string[]> {
       }
 
       for (const entry of entries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (perBase.length >= MAX_PER_ROOT_RAW_MATCHES) break;
         if (entry.isDirectory()) {
-          results.push(join(baseDir, entry.name));
+          perBase.push(join(baseDir, entry.name));
         }
       }
+      aggregated.push(...perBase);
     }
 
-    // Scan the workspace for directories containing codeql-database.yml
-    await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, results);
+    // Each workspace root gets its own budget so a populous first root cannot
+    // starve the later roots.
+    for (const workspace of workspaces) {
+      const perRoot: string[] = [];
 
-    // Also check the workspace for -db suffixed directories (legacy heuristic)
-    try {
-      const wsEntries = await readdir(workspace, { withFileTypes: true });
-      for (const entry of wsEntries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
-        if (entry.isDirectory() && entry.name.endsWith('-db')) {
-          const fullPath = join(workspace, entry.name);
-          if (!results.includes(fullPath)) {
-            results.push(fullPath);
+      // Scan the workspace for directories containing codeql-database.yml
+      await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, perRoot);
+
+      // Also check the workspace for -db suffixed directories (legacy heuristic)
+      try {
+        const wsEntries = await readdir(workspace, { withFileTypes: true });
+        for (const entry of wsEntries) {
+          if (perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) break;
+          if (entry.isDirectory() && entry.name.endsWith('-db')) {
+            const fullPath = join(workspace, entry.name);
+            if (!perRoot.includes(fullPath)) {
+              perRoot.push(fullPath);
+            }
           }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
+      aggregated.push(...perRoot);
     }
 
     // Deduplicate
-    allResults = [...new Set(results)];
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey, allResults);
   }
 
@@ -257,14 +325,19 @@ export async function completeDatabasePath(value: string): Promise<string[]> {
 /**
  * Recursively find directories containing `codeql-database.yml`
  * (including `.testproj` directories) under `dir`.
+ *
+ * `perCallLimit` bounds how many matches this scan may accumulate into
+ * `results`; defaults to {@link MAX_PER_ROOT_RAW_MATCHES} so each
+ * workspace-root scan has an independent budget.
  */
 async function findDatabaseDirs(
   dir: string,
   _baseDir: string,
   maxDepth: number,
   results: string[],
+  perCallLimit: number = MAX_PER_ROOT_RAW_MATCHES,
 ): Promise<void> {
-  if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+  if (maxDepth <= 0 || results.length >= perCallLimit) return;
 
   let entries;
   try {
@@ -283,27 +356,34 @@ async function findDatabaseDirs(
   }
 
   for (const entry of entries) {
-    if (results.length >= MAX_FILE_COMPLETIONS) break;
+    if (results.length >= perCallLimit) break;
     if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
-      await findDatabaseDirs(join(dir, entry.name), _baseDir, maxDepth - 1, results);
+      await findDatabaseDirs(join(dir, entry.name), _baseDir, maxDepth - 1, results, perCallLimit);
     }
   }
 }
 
 /**
  * Complete a `workspaceUri` / `packRoot` parameter by finding directories
- * that contain a `codeql-pack.yml` file in the workspace.
+ * that contain a `codeql-pack.yml` file in the workspace. Every workspace
+ * root is scanned; results are relative to the root that
+ * contains them.
  */
 export async function completePackRoot(value: string): Promise<string[]> {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey = `packRoot:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey = `packRoot:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey);
 
   if (!allResults) {
-    const results: string[] = [];
+    const aggregated: string[] = [];
 
-    async function scan(dir: string, depth: number): Promise<void> {
-      if (depth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+    async function scan(
+      root: string,
+      dir: string,
+      depth: number,
+      perRoot: string[],
+    ): Promise<void> {
+      if (depth <= 0 || perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) return;
 
       let entries;
       try {
@@ -317,24 +397,30 @@ export async function completePackRoot(value: string): Promise<string[]> {
         e => e.isFile() && e.name === 'codeql-pack.yml',
       );
       if (hasPackYml) {
-        results.push(relative(workspace, dir) || '.');
+        perRoot.push(relative(root, dir) || '.');
       }
 
       for (const entry of entries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) break;
         if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
-          await scan(join(dir, entry.name), depth - 1);
+          await scan(root, join(dir, entry.name), depth - 1, perRoot);
         }
       }
     }
 
-    try {
-      await scan(workspace, MAX_SCAN_DEPTH);
-    } catch (err) {
-      logger.debug(`completePackRoot scan error: ${err}`);
+    // Per-root scan budget so a populous first root cannot starve later roots.
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : undefined;
+    for (const workspace of workspaces) {
+      const perRoot: string[] = [];
+      try {
+        await scan(workspace, workspace, MAX_SCAN_DEPTH, perRoot);
+      } catch (err) {
+        logger.debug(`completePackRoot scan error: ${err}`);
+      }
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
 
-    allResults = results;
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey, allResults);
   }
 

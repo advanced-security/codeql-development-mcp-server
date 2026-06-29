@@ -41,7 +41,7 @@ import {
 } from '../../../src/prompts/workflow-prompts';
 import { createTestTempDir, cleanupTestTempDir } from '../../utils/temp-dir';
 import { mkdirSync, writeFileSync } from 'fs';
-import { delimiter, join } from 'path';
+import { basename, delimiter, join, sep } from 'path';
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
@@ -1912,6 +1912,89 @@ describe('Workflow Prompts', () => {
         const result = await resolvePromptFilePath('queries/q.ql');
         expect(result.blocked).toBeUndefined();
         expect(result.resolvedPath).toBe(join(rootB, 'queries', 'q.ql'));
+        expect(result.warning).toBeUndefined();
+      } finally {
+        if (original !== undefined) {
+          process.env.CODEQL_MCP_WORKSPACE_FOLDERS = original;
+        } else {
+          delete process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+        }
+        cleanupTestTempDir(rootA);
+        cleanupTestTempDir(rootB);
+      }
+    });
+
+    it('resolves a root-labeled value to the correct root when both roots share the relative path', async () => {
+      // Both roots contain `queries/q.ql`. A bare relative path would always
+      // resolve to the FIRST root; the root label disambiguates so the user can
+      // target the second root's file (the fix for PR #308 r3478700118).
+      const rootA = createTestTempDir('label-roundtrip-a');
+      const rootB = createTestTempDir('label-roundtrip-b');
+      const original = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+      try {
+        for (const root of [rootA, rootB]) {
+          mkdirSync(join(root, 'queries'), { recursive: true });
+          writeFileSync(join(root, 'queries', 'q.ql'), 'select 1');
+        }
+        process.env.CODEQL_MCP_WORKSPACE_FOLDERS = [rootA, rootB].join(delimiter);
+
+        const labeled = `${basename(rootB)}${sep}queries${sep}q.ql`;
+        const result = await resolvePromptFilePath(labeled);
+        expect(result.blocked).toBeUndefined();
+        expect(result.resolvedPath).toBe(join(rootB, 'queries', 'q.ql'));
+        expect(result.warning).toBeUndefined();
+      } finally {
+        if (original !== undefined) {
+          process.env.CODEQL_MCP_WORKSPACE_FOLDERS = original;
+        } else {
+          delete process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+        }
+        cleanupTestTempDir(rootA);
+        cleanupTestTempDir(rootB);
+      }
+    });
+
+    it('resolves a bare root label to that root (pack at the root)', async () => {
+      const rootA = createTestTempDir('label-bare-a');
+      const rootB = createTestTempDir('label-bare-b');
+      const original = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+      try {
+        process.env.CODEQL_MCP_WORKSPACE_FOLDERS = [rootA, rootB].join(delimiter);
+
+        const result = await resolvePromptFilePath(basename(rootB));
+        expect(result.blocked).toBeUndefined();
+        expect(result.resolvedPath).toBe(rootB);
+        expect(result.warning).toBeUndefined();
+      } finally {
+        if (original !== undefined) {
+          process.env.CODEQL_MCP_WORKSPACE_FOLDERS = original;
+        } else {
+          delete process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+        }
+        cleanupTestTempDir(rootA);
+        cleanupTestTempDir(rootB);
+      }
+    });
+
+    it('falls through to generic resolution when a labeled target does not exist', async () => {
+      // A relative path that merely starts with a folder basename but whose
+      // labeled target does not exist must NOT be hijacked by label resolution:
+      // it falls through and resolves as a plain relative path.
+      const rootA = createTestTempDir('label-fallthrough-a');
+      const rootB = createTestTempDir('label-fallthrough-b');
+      const original = process.env.CODEQL_MCP_WORKSPACE_FOLDERS;
+      try {
+        // Real file lives in rootA under a directory literally named after rootB.
+        const labelB = basename(rootB);
+        mkdirSync(join(rootA, labelB), { recursive: true });
+        writeFileSync(join(rootA, labelB, 'real.ql'), 'select 1');
+        process.env.CODEQL_MCP_WORKSPACE_FOLDERS = [rootA, rootB].join(delimiter);
+
+        // `${labelB}/real.ql` has no labeled target in rootB, so it falls
+        // through and resolves as the literal relative path inside rootA.
+        const result = await resolvePromptFilePath(`${labelB}${sep}real.ql`);
+        expect(result.blocked).toBeUndefined();
+        expect(result.resolvedPath).toBe(join(rootA, labelB, 'real.ql'));
         expect(result.warning).toBeUndefined();
       } finally {
         if (original !== undefined) {

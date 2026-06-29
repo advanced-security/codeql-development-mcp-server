@@ -75,7 +75,7 @@ suite('Workspace Scenario Tests', () => {
     );
   });
 
-  test('CODEQL_MCP_WORKSPACE should match first workspace folder when present', async () => {
+  test('CODEQL_MCP_WORKSPACE should match first resolution root when present', async () => {
     const envBuilder = api.environmentBuilder;
     if (!envBuilder) return;
 
@@ -83,10 +83,18 @@ suite('Workspace Scenario Tests', () => {
     const folders = vscode.workspace.workspaceFolders;
 
     if (folders && folders.length > 0) {
+      // CODEQL_MCP_WORKSPACE anchors to the first computed resolution root
+      // (exported via CODEQL_MCP_WORKSPACE_FOLDERS), falling back to the first
+      // open folder only when no resolution roots were computed.
+      const resolutionRoots = (env.CODEQL_MCP_WORKSPACE_FOLDERS ?? '')
+        .split(path.delimiter)
+        .filter(Boolean);
+      const expected =
+        resolutionRoots.length > 0 ? resolutionRoots[0] : folders[0].uri.fsPath;
       assert.strictEqual(
         env.CODEQL_MCP_WORKSPACE,
-        folders[0].uri.fsPath,
-        'CODEQL_MCP_WORKSPACE should equal the first workspace folder path',
+        expected,
+        'CODEQL_MCP_WORKSPACE should equal the first resolution root (or first folder when none)',
       );
     } else {
       assert.strictEqual(
@@ -172,5 +180,78 @@ suite('Workspace Scenario Tests', () => {
     // Log for diagnostic purposes
     console.log(`[workspace-scenario] CODEQL_DATABASES_BASE_DIRS: ${dirs}`);
     console.log(`[workspace-scenario] Managed database dirs: ${managedParts.join(', ')}`);
+  });
+
+  test('CODEQL_MCP_WORKSPACE_FOLDERS should list every workspace root', async () => {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) return;
+
+    const env = await envBuilder.build();
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+      // No workspace open — folders env may be unset unless includeDirs are set.
+      return;
+    }
+
+    const roots = String(env.CODEQL_MCP_WORKSPACE_FOLDERS ?? '')
+      .split(path.delimiter)
+      .filter(Boolean);
+    for (const folder of folders) {
+      assert.ok(
+        roots.includes(folder.uri.fsPath),
+        `CODEQL_MCP_WORKSPACE_FOLDERS should include root ${folder.name} (${folder.uri.fsPath}): ${env.CODEQL_MCP_WORKSPACE_FOLDERS}`,
+      );
+    }
+
+    if (folders.length > 1) {
+      // Assert the last (non-first) folder is present.
+      assert.ok(
+        roots.includes(folders[folders.length - 1].uri.fsPath),
+        'CODEQL_MCP_WORKSPACE_FOLDERS should include the last (non-first) workspace folder',
+      );
+    }
+  });
+
+  test('queryPackIncludeDirs/queryPackExcludeDirs tune the resolution roots', async () => {
+    const envBuilder = api.environmentBuilder;
+    if (!envBuilder) return;
+
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length < 2) {
+      // This behaviour is only meaningful in a multi-root workspace.
+      return;
+    }
+
+    const config = vscode.workspace.getConfiguration('codeql-mcp');
+    const extraDir = path.join(folders[0].uri.fsPath, '..', 'external-query-repo');
+    const excludedFolder = folders[folders.length - 1].uri.fsPath;
+
+    try {
+      await config.update('queryPackIncludeDirs', [extraDir], vscode.ConfigurationTarget.Workspace);
+      await config.update('queryPackExcludeDirs', [excludedFolder], vscode.ConfigurationTarget.Workspace);
+      envBuilder.invalidate();
+
+      const env = await envBuilder.build();
+      const roots = String(env.CODEQL_MCP_WORKSPACE_FOLDERS ?? '')
+        .split(path.delimiter)
+        .filter(Boolean);
+
+      assert.ok(
+        roots.some((r: string) => path.normalize(r) === path.normalize(extraDir)),
+        `Included dir should be present in resolution roots: ${env.CODEQL_MCP_WORKSPACE_FOLDERS}`,
+      );
+      assert.ok(
+        !roots.includes(excludedFolder),
+        `Excluded folder should be absent from resolution roots: ${env.CODEQL_MCP_WORKSPACE_FOLDERS}`,
+      );
+      assert.ok(
+        !String(env.CODEQL_ADDITIONAL_PACKS).split(path.delimiter).includes(excludedFolder),
+        `Excluded folder should be absent from CODEQL_ADDITIONAL_PACKS: ${env.CODEQL_ADDITIONAL_PACKS}`,
+      );
+    } finally {
+      await config.update('queryPackIncludeDirs', undefined, vscode.ConfigurationTarget.Workspace);
+      await config.update('queryPackExcludeDirs', undefined, vscode.ConfigurationTarget.Workspace);
+      envBuilder.invalidate();
+    }
   });
 });

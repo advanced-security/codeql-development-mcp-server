@@ -95,6 +95,27 @@
           "default": true,
           "markdownDescription": "Copy CodeQL databases from the `GitHub.vscode-codeql` extension storage into a managed directory, removing query-server lock files so the MCP server CLI can operate without contention. Disable to use databases in-place (may fail when the CodeQL query server is running)."
         },
+        "codeql-mcp.queryPackIncludeDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra directories to resolve CodeQL query and pack paths against, **in addition** to the folders selected by `codeql-mcp.requireCodeqlWorkspace`. This is the explicit opt-in for CodeQL development outside the default `codeql-workspace.yml` pattern: entries here are **always** included as resolution roots, even when they do not contain a top-level `codeql-workspace.yml`. Use it to target a query repository that is **not** opened as the first workspace folder (or is not opened as a folder at all). Absolute paths are used as-is; relative paths are resolved against **every** workspace folder (so `queries` expands to one candidate per root). Folded into `CODEQL_MCP_WORKSPACE_FOLDERS` and `CODEQL_ADDITIONAL_PACKS`."
+        },
+        "codeql-mcp.queryPackExcludeDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Directories to exclude when resolving CodeQL query and pack paths. Any workspace folder or `queryPackIncludeDirs` entry that matches (or is nested inside) one of these directories is dropped from `CODEQL_MCP_WORKSPACE_FOLDERS` and `CODEQL_ADDITIONAL_PACKS`. Absolute paths are used as-is; relative paths are resolved against every workspace folder. This excludes whole resolution **roots**; to exclude specific sub-paths or globs *within* a CodeQL workspace, prefer the `ignore:` block of that folder's `codeql-workspace.yml` (the CodeQL-native mechanism), or use `scanExcludeDirs` to skip nested directory names (e.g. `node_modules`) during scans."
+        },
+        "codeql-mcp.requireCodeqlWorkspace": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "By default, only workspace folders that contain a top-level `codeql-workspace.yml` file are used as CodeQL query/pack **resolution roots**. This matches the CodeQL CLI's own [CodeQL workspaces](https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-workspaces) model and avoids scanning unrelated repositories opened as workspace folders. Folders listed in `codeql-mcp.queryPackIncludeDirs` are **always** included regardless of this setting. Set this to `false` to fall back to the legacy behavior of treating **every** open workspace folder as a resolution root. When this is `true` but no open folder has a `codeql-workspace.yml` and no `queryPackIncludeDirs` are configured, the extension falls back to using every folder and logs a warning, so existing setups keep working."
+        },
         "codeql-mcp.serverArgs": {
           "type": "array",
           "items": {

@@ -101,6 +101,66 @@ All settings are under the `codeql-mcp` namespace in VS Code settings:
 | `codeql-mcp.additionalDatabaseDirs`        | `[]`       | Additional directories to search for CodeQL databases.              |
 | `codeql-mcp.additionalMrvaRunResultsDirs`  | `[]`       | Additional directories containing MRVA run results.                 |
 | `codeql-mcp.additionalQueryRunResultsDirs` | `[]`       | Additional directories containing query run results.                |
+| `codeql-mcp.queryPackIncludeDirs`          | `[]`       | Extra directories to resolve query/pack paths against (see below).  |
+| `codeql-mcp.queryPackExcludeDirs`          | `[]`       | Directories to exclude as query/pack resolution roots (see below).  |
+| `codeql-mcp.requireCodeqlWorkspace`        | `true`     | Use only folders with a top-level `codeql-workspace.yml` (below).   |
+
+### Multi-root workspaces and query/pack resolution
+
+The prompt-driven workflows (slash commands) resolve query, pack, database, and
+SARIF paths against the folders of a [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces),
+not just the first one. So a query that lives in the second/third root folder —
+for example when the query-development repository and the analysis-target
+repository are opened as separate roots — is found and usable regardless of
+folder order.
+
+#### `codeql-workspace.yml` is the default selector (recommended)
+
+By **default** (`codeql-mcp.requireCodeqlWorkspace = true`) only the workspace
+folders that contain a **top-level `codeql-workspace.yml`** file are used as
+CodeQL query/pack **resolution roots**. This matches the CodeQL CLI's own
+[CodeQL workspaces](https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-workspaces)
+model: a `codeql-workspace.yml` marks a folder as a set of related query/library
+packs that resolve against each other from source. A folder you happen to have
+open that does **not** contain a top-level `codeql-workspace.yml` is ignored for
+CodeQL resolution, so unrelated repositories in the same window are not scanned.
+
+> **Requirement:** to have a folder auto-discovered for CodeQL development and
+> testing, add a top-level `codeql-workspace.yml` to it. A minimal example:
+>
+> ```yaml
+> provide:
+>   - '**/qlpack.yml'
+>   - '**/codeql-pack.yml'
+> ```
+
+If `requireCodeqlWorkspace` is `true` but **no** open folder has a
+`codeql-workspace.yml` and no `queryPackIncludeDirs` are configured, the
+extension falls back to using **every** open folder (and logs a warning) so
+existing setups keep working. Set `requireCodeqlWorkspace` to `false` to always
+use every open folder regardless of `codeql-workspace.yml` (the legacy behavior).
+
+#### Opting in and out, and excluding paths
+
+- **`codeql-mcp.queryPackIncludeDirs`** — the explicit opt-in for resolving
+  CodeQL files **outside** the default `codeql-workspace.yml` pattern. Entries
+  here are **always** used as resolution roots, even without a
+  `codeql-workspace.yml`. Use it to target a query repository that is **not**
+  the first workspace folder, or that is not opened as a folder at all.
+  **Absolute** paths are used as-is; **relative** paths are resolved against
+  every workspace folder (so `queries` expands to one candidate per root).
+- **`codeql-mcp.queryPackExcludeDirs`** — directories to exclude as resolution
+  **roots**. Any workspace folder or `queryPackIncludeDirs` entry that matches
+  (or is nested inside) one of these directories is dropped. Absolute paths are
+  used as-is; relative paths are resolved against every workspace folder.
+- To exclude specific **sub-paths or globs within** a CodeQL workspace, prefer
+  the [`ignore:` block](https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-workspaces#example-of-a-codeql-workspaceyml-file)
+  of that folder's `codeql-workspace.yml` — the CodeQL-native mechanism, honored
+  by every CodeQL command. Use `codeql-mcp.scanExcludeDirs` to skip _nested_
+  directory names (e.g. `node_modules`, vendor trees) during workspace scans.
+
+These settings are folded into the `CODEQL_MCP_WORKSPACE_FOLDERS` and
+`CODEQL_ADDITIONAL_PACKS` environment variables passed to the MCP server.
 
 ## Commands
 

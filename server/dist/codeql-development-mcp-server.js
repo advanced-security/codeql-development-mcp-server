@@ -38900,7 +38900,7 @@ var require_send = __commonJS({
     var join23 = path3.join;
     var normalize2 = path3.normalize;
     var resolve15 = path3.resolve;
-    var sep5 = path3.sep;
+    var sep6 = path3.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
@@ -39061,14 +39061,14 @@ var require_send = __commonJS({
       var parts;
       if (root !== null) {
         if (path4) {
-          path4 = normalize2("." + sep5 + path4);
+          path4 = normalize2("." + sep6 + path4);
         }
         if (UP_PATH_REGEXP.test(path4)) {
           debug('malicious path "%s"', path4);
           this.error(403);
           return res;
         }
-        parts = path4.split(sep5);
+        parts = path4.split(sep6);
         path4 = normalize2(join23(root, path4));
       } else {
         if (UP_PATH_REGEXP.test(path4)) {
@@ -39076,7 +39076,7 @@ var require_send = __commonJS({
           this.error(403);
           return res;
         }
-        parts = normalize2(path4).split(sep5);
+        parts = normalize2(path4).split(sep6);
         path4 = resolve15(path4);
       }
       if (containsDotFile(parts)) {
@@ -39170,7 +39170,7 @@ var require_send = __commonJS({
       var self2 = this;
       debug('stat "%s"', path4);
       fs3.stat(path4, function onstat(err, stat) {
-        var pathEndsWithSep = path4[path4.length - 1] === sep5;
+        var pathEndsWithSep = path4[path4.length - 1] === sep6;
         if (err && err.code === "ENOENT" && !extname3(path4) && !pathEndsWithSep) {
           return next(err);
         }
@@ -40679,6 +40679,7 @@ var init_logger = __esm({
 // src/utils/package-paths.ts
 var package_paths_exports = {};
 __export(package_paths_exports, {
+  computeRootLabels: () => computeRootLabels,
   getPackageRootDir: () => getPackageRootDir,
   getPackageVersion: () => getPackageVersion,
   getUserWorkspaceDir: () => getUserWorkspaceDir,
@@ -40688,7 +40689,7 @@ __export(package_paths_exports, {
   resolveToolQueryPackPath: () => resolveToolQueryPackPath,
   workspaceRootDir: () => workspaceRootDir
 });
-import { delimiter, dirname, resolve } from "path";
+import { delimiter, dirname, resolve, sep } from "path";
 import { existsSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 function isRunningFromSource(dir) {
@@ -40746,6 +40747,55 @@ function getUserWorkspaceDirs() {
     }
   }
   return [getUserWorkspaceDir()];
+}
+function computeRootLabels(roots) {
+  const segmentsByRoot = /* @__PURE__ */ new Map();
+  for (const root of roots) {
+    segmentsByRoot.set(root, root.split(sep).filter((s) => s.length > 0));
+  }
+  const labelAtDepth = (segments, depth) => {
+    if (segments.length === 0) {
+      return sep;
+    }
+    return segments.slice(Math.max(0, segments.length - depth)).join(sep);
+  };
+  const depthByRoot = /* @__PURE__ */ new Map();
+  for (const root of roots) {
+    depthByRoot.set(root, 1);
+  }
+  for (; ; ) {
+    const labelToRoots = /* @__PURE__ */ new Map();
+    for (const root of roots) {
+      const label = labelAtDepth(segmentsByRoot.get(root), depthByRoot.get(root));
+      const sharing = labelToRoots.get(label);
+      if (sharing) {
+        sharing.push(root);
+      } else {
+        labelToRoots.set(label, [root]);
+      }
+    }
+    let progressed = false;
+    for (const sharing of labelToRoots.values()) {
+      if (sharing.length < 2) {
+        continue;
+      }
+      for (const root of sharing) {
+        const depth = depthByRoot.get(root);
+        if (depth < segmentsByRoot.get(root).length) {
+          depthByRoot.set(root, depth + 1);
+          progressed = true;
+        }
+      }
+    }
+    if (!progressed) {
+      break;
+    }
+  }
+  const labels = /* @__PURE__ */ new Map();
+  for (const root of roots) {
+    labels.set(root, labelAtDepth(segmentsByRoot.get(root), depthByRoot.get(root)));
+  }
+  return labels;
 }
 var __filename2, __dirname, _cachedVersion, packageRootDir, workspaceRootDir;
 var init_package_paths = __esm({
@@ -172391,8 +172441,8 @@ var require_adm_zip = __commonJS({
         return null;
       }
       function fixPath(zipPath) {
-        const { join: join23, normalize: normalize2, sep: sep5 } = pth.posix;
-        return join23(pth.isAbsolute(zipPath) ? "/" : ".", normalize2(sep5 + zipPath.split("\\").join(sep5) + sep5));
+        const { join: join23, normalize: normalize2, sep: sep6 } = pth.posix;
+        return join23(pth.isAbsolute(zipPath) ? "/" : ".", normalize2(sep6 + zipPath.split("\\").join(sep6) + sep6));
       }
       function filenameFilter(filterfn) {
         if (filterfn instanceof RegExp) {
@@ -188762,13 +188812,13 @@ init_logger();
 // src/lib/log-directory-manager.ts
 init_temp_dir();
 import { mkdirSync as mkdirSync3, existsSync as existsSync5 } from "fs";
-import { join as join7, resolve as resolve3, sep, relative, isAbsolute as isAbsolute3 } from "path";
+import { join as join7, resolve as resolve3, sep as sep2, relative, isAbsolute as isAbsolute3 } from "path";
 import { randomBytes } from "crypto";
 function ensurePathWithinBase(baseDir, targetPath) {
   const absBase = resolve3(baseDir);
   const absTarget = resolve3(targetPath);
   const rel = relative(absBase, absTarget);
-  if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute3(rel)) {
+  if (rel === ".." || rel.startsWith(".." + sep2) || isAbsolute3(rel)) {
     throw new Error(`Provided log directory is outside the allowed base directory: ${absBase}`);
   }
   return absTarget;
@@ -198744,7 +198794,7 @@ function registerLanguageResources(server) {
 
 // src/prompts/workflow-prompts.ts
 import { access as access2 } from "fs/promises";
-import { basename as basename10, isAbsolute as isAbsolute8, normalize, relative as relative3, resolve as resolve13, sep as sep4 } from "path";
+import { basename as basename10, isAbsolute as isAbsolute8, normalize, relative as relative3, resolve as resolve13, sep as sep5 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/prompts/constants.ts
@@ -198775,10 +198825,11 @@ var MAD_SUPPORTED_LANGUAGES = [
 // src/prompts/prompt-completions.ts
 import { readdir, readFile as readFile4 } from "fs/promises";
 import { homedir as homedir2 } from "os";
-import { dirname as dirname9, join as join22, relative as relative2, sep as sep3 } from "path";
+import { dirname as dirname9, join as join22, relative as relative2, sep as sep4 } from "path";
 init_logger();
 init_package_paths();
 var MAX_FILE_COMPLETIONS = 50;
+var MAX_PER_ROOT_RAW_MATCHES = MAX_FILE_COMPLETIONS;
 var MAX_SCAN_DEPTH = 8;
 var CACHE_TTL_MS = 5e3;
 var SKIP_DIRS2 = getScanExcludeDirs();
@@ -198797,8 +198848,15 @@ function completeLanguage(value) {
   const lower = (value || "").toLowerCase();
   return [...SUPPORTED_LANGUAGES].filter((lang) => lang.startsWith(lower));
 }
-async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results) {
-  if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+function labelRootRelativePaths(root, relPaths, labels) {
+  const label = labels?.get(root);
+  if (!label) {
+    return relPaths;
+  }
+  return relPaths.map((rel) => rel === "." ? label : `${label}${sep4}${rel}`);
+}
+async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results, perCallLimit = MAX_PER_ROOT_RAW_MATCHES) {
+  if (maxDepth <= 0 || results.length >= perCallLimit) return;
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -198806,13 +198864,13 @@ async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results)
     return;
   }
   for (const entry of entries) {
-    if (results.length >= MAX_FILE_COMPLETIONS) break;
+    if (results.length >= perCallLimit) break;
     const fullPath = join22(dir, entry.name);
     if (entry.isDirectory()) {
       if (SKIP_DIRS2.has(entry.name)) {
         continue;
       }
-      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results);
+      await findFilesByExtension(fullPath, baseDir, extensions, maxDepth - 1, results, perCallLimit);
     } else if (entry.isFile()) {
       const lower = entry.name.toLowerCase();
       if (extensions.some((ext) => lower.endsWith(ext))) {
@@ -198822,17 +198880,22 @@ async function findFilesByExtension(dir, baseDir, extensions, maxDepth, results)
   }
 }
 async function completeQueryPath(value) {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey2 = `queryPath:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey2 = `queryPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
-    try {
-      await findFilesByExtension(workspace, workspace, [".ql", ".qlref"], MAX_SCAN_DEPTH, results);
-    } catch (err) {
-      logger.debug(`completeQueryPath scan error: ${err}`);
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : void 0;
+    const aggregated = [];
+    for (const workspace of workspaces) {
+      const perRoot = [];
+      try {
+        await findFilesByExtension(workspace, workspace, [".ql", ".qlref"], MAX_SCAN_DEPTH, perRoot);
+      } catch (err) {
+        logger.debug(`completeQueryPath scan error: ${err}`);
+      }
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
-    allResults = results;
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -198840,17 +198903,22 @@ async function completeQueryPath(value) {
   return filtered.slice(0, MAX_FILE_COMPLETIONS);
 }
 async function completeSarifPath(value) {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey2 = `sarifPath:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey2 = `sarifPath:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
-    try {
-      await findFilesByExtension(workspace, workspace, [".sarif", ".sarif.json"], MAX_SCAN_DEPTH, results);
-    } catch (err) {
-      logger.debug(`completeSarifPath scan error: ${err}`);
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : void 0;
+    const aggregated = [];
+    for (const workspace of workspaces) {
+      const perRoot = [];
+      try {
+        await findFilesByExtension(workspace, workspace, [".sarif", ".sarif.json"], MAX_SCAN_DEPTH, perRoot);
+      } catch (err) {
+        logger.debug(`completeSarifPath scan error: ${err}`);
+      }
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
-    allResults = results;
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -198858,16 +198926,16 @@ async function completeSarifPath(value) {
   return filtered.slice(0, MAX_FILE_COMPLETIONS);
 }
 async function completeDatabasePath(value) {
-  const workspace = getUserWorkspaceDir();
+  const workspaces = getUserWorkspaceDirs();
   const baseDirs = getDatabaseBaseDirs();
   const homeDbDir = join22(homedir2(), "codeql", "databases");
-  const cacheKey2 = `databasePath:${workspace}:${baseDirs.join(",")}`;
+  const cacheKey2 = `databasePath:${JSON.stringify({ workspaces, baseDirs })}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
+    const aggregated = [];
     const allBaseDirs = baseDirs.includes(homeDbDir) ? baseDirs : [...baseDirs, homeDbDir];
     for (const baseDir of allBaseDirs) {
-      if (results.length >= MAX_FILE_COMPLETIONS) break;
+      const perBase = [];
       let entries;
       try {
         entries = await readdir(baseDir, { withFileTypes: true });
@@ -198875,38 +198943,43 @@ async function completeDatabasePath(value) {
         continue;
       }
       for (const entry of entries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (perBase.length >= MAX_PER_ROOT_RAW_MATCHES) break;
         if (entry.isDirectory()) {
-          results.push(join22(baseDir, entry.name));
+          perBase.push(join22(baseDir, entry.name));
         }
       }
+      aggregated.push(...perBase);
     }
-    await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, results);
-    try {
-      const wsEntries = await readdir(workspace, { withFileTypes: true });
-      for (const entry of wsEntries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
-        if (entry.isDirectory() && entry.name.endsWith("-db")) {
-          const fullPath = join22(workspace, entry.name);
-          if (!results.includes(fullPath)) {
-            results.push(fullPath);
+    for (const workspace of workspaces) {
+      const perRoot = [];
+      await findDatabaseDirs(workspace, workspace, MAX_SCAN_DEPTH, perRoot);
+      try {
+        const wsEntries = await readdir(workspace, { withFileTypes: true });
+        for (const entry of wsEntries) {
+          if (perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) break;
+          if (entry.isDirectory() && entry.name.endsWith("-db")) {
+            const fullPath = join22(workspace, entry.name);
+            if (!perRoot.includes(fullPath)) {
+              perRoot.push(fullPath);
+            }
           }
         }
+      } catch {
       }
-    } catch {
+      aggregated.push(...perRoot);
     }
-    allResults = [...new Set(results)];
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
   const filtered = allResults.filter((p) => {
-    const lastSeg = p.split(sep3).pop() ?? "";
+    const lastSeg = p.split(sep4).pop() ?? "";
     return p.toLowerCase().includes(lower) || lastSeg.toLowerCase().includes(lower);
   }).sort();
   return filtered.slice(0, MAX_FILE_COMPLETIONS);
 }
-async function findDatabaseDirs(dir, _baseDir, maxDepth, results) {
-  if (maxDepth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+async function findDatabaseDirs(dir, _baseDir, maxDepth, results, perCallLimit = MAX_PER_ROOT_RAW_MATCHES) {
+  if (maxDepth <= 0 || results.length >= perCallLimit) return;
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -198921,20 +198994,20 @@ async function findDatabaseDirs(dir, _baseDir, maxDepth, results) {
     return;
   }
   for (const entry of entries) {
-    if (results.length >= MAX_FILE_COMPLETIONS) break;
+    if (results.length >= perCallLimit) break;
     if (entry.isDirectory() && !SKIP_DIRS2.has(entry.name)) {
-      await findDatabaseDirs(join22(dir, entry.name), _baseDir, maxDepth - 1, results);
+      await findDatabaseDirs(join22(dir, entry.name), _baseDir, maxDepth - 1, results, perCallLimit);
     }
   }
 }
 async function completePackRoot(value) {
-  const workspace = getUserWorkspaceDir();
-  const cacheKey2 = `packRoot:${workspace}`;
+  const workspaces = getUserWorkspaceDirs();
+  const cacheKey2 = `packRoot:${JSON.stringify(workspaces)}`;
   let allResults = getCachedResults(cacheKey2);
   if (!allResults) {
-    const results = [];
-    async function scan(dir, depth) {
-      if (depth <= 0 || results.length >= MAX_FILE_COMPLETIONS) return;
+    const aggregated = [];
+    async function scan(root, dir, depth, perRoot) {
+      if (depth <= 0 || perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) return;
       let entries;
       try {
         entries = await readdir(dir, { withFileTypes: true });
@@ -198945,21 +199018,26 @@ async function completePackRoot(value) {
         (e) => e.isFile() && e.name === "codeql-pack.yml"
       );
       if (hasPackYml) {
-        results.push(relative2(workspace, dir) || ".");
+        perRoot.push(relative2(root, dir) || ".");
       }
       for (const entry of entries) {
-        if (results.length >= MAX_FILE_COMPLETIONS) break;
+        if (perRoot.length >= MAX_PER_ROOT_RAW_MATCHES) break;
         if (entry.isDirectory() && !SKIP_DIRS2.has(entry.name)) {
-          await scan(join22(dir, entry.name), depth - 1);
+          await scan(root, join22(dir, entry.name), depth - 1, perRoot);
         }
       }
     }
-    try {
-      await scan(workspace, MAX_SCAN_DEPTH);
-    } catch (err) {
-      logger.debug(`completePackRoot scan error: ${err}`);
+    const labels = workspaces.length > 1 ? computeRootLabels(workspaces) : void 0;
+    for (const workspace of workspaces) {
+      const perRoot = [];
+      try {
+        await scan(workspace, workspace, MAX_SCAN_DEPTH, perRoot);
+      } catch (err) {
+        logger.debug(`completePackRoot scan error: ${err}`);
+      }
+      aggregated.push(...labelRootRelativePaths(workspace, perRoot, labels));
     }
-    allResults = results;
+    allResults = [...new Set(aggregated)];
     setCachedResults(cacheKey2, allResults);
   }
   const lower = (value || "").toLowerCase();
@@ -199197,12 +199275,18 @@ async function resolvePromptFilePath(filePath, workspaceRoot) {
   if (isAbsolute8(normalizedPath)) {
     return finalizePromptFilePath(normalizedPath, filePath);
   }
+  if (!workspaceRoot) {
+    const labeled = await resolveLabeledRootPath(normalizedPath, filePath);
+    if (labeled) {
+      return labeled;
+    }
+  }
   const candidateRoots = workspaceRoot ? [workspaceRoot] : getUserWorkspaceDirs();
   let firstWithinRoot;
   for (const root of candidateRoots) {
     const absolutePath = resolve13(root, normalizedPath);
     const rel = relative3(root, absolutePath);
-    if (rel === ".." || rel.startsWith(`..${sep4}`) || isAbsolute8(rel)) {
+    if (rel === ".." || rel.startsWith(`..${sep5}`) || isAbsolute8(rel)) {
       continue;
     }
     if (firstWithinRoot === void 0) {
@@ -199225,6 +199309,34 @@ async function resolvePromptFilePath(filePath, workspaceRoot) {
     resolvedPath: firstWithinRoot,
     warning: `\u26A0 **File path** ${markdownInlineCode(filePath)} **does not exist.**`
   };
+}
+async function resolveLabeledRootPath(normalizedPath, originalPath) {
+  const roots = getUserWorkspaceDirs();
+  if (roots.length < 2) {
+    return void 0;
+  }
+  const labels = computeRootLabels(roots);
+  for (const [root, label] of labels) {
+    if (normalizedPath === label) {
+      return finalizePromptFilePath(root, originalPath);
+    }
+    const prefix = `${label}${sep5}`;
+    if (!normalizedPath.startsWith(prefix)) {
+      continue;
+    }
+    const rest = normalizedPath.slice(prefix.length);
+    const absolutePath = resolve13(root, rest);
+    const rel = relative3(root, absolutePath);
+    if (rel === ".." || rel.startsWith(`..${sep5}`) || isAbsolute8(rel)) {
+      continue;
+    }
+    try {
+      await access2(absolutePath);
+      return { resolvedPath: absolutePath };
+    } catch {
+    }
+  }
+  return void 0;
 }
 async function finalizePromptFilePath(absolutePath, originalPath) {
   try {
