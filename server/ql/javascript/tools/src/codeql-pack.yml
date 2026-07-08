@@ -1,6 +1,6 @@
 name: advanced-security/ql-mcp-javascript-tools-src
-version: 2.25.6-next.1
+version: 2.26.0
 description: 'Queries for codeql-development-mcp-server tools for javascript language'
 library: false
 dependencies:
-  codeql/javascript-all: 2.7.2
+  codeql/javascript-all: 2.8.0
