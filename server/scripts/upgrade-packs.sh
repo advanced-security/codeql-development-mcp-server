@@ -77,6 +77,22 @@ fi
 
 cd "${REPO_ROOT}"
 
+## Packs whose upgrade was skipped because a transitive dependency is not yet
+## published to the CodeQL package registry (an upstream publishing gap that is
+## outside this repository's control). Reported at the end of the run.
+SKIPPED_PACKS=()
+
+## Return 0 if the given `codeql pack upgrade` output indicates that a
+## dependency could not be resolved because it is not (yet) published to the
+## package registry, 1 otherwise. This distinguishes an upstream publishing
+## gap — e.g. a newly split-out library pack such as 'codeql/namebinding' that
+## a bumped codeql/<lang>-all now depends on but which has not landed on
+## ghcr.io yet — from a genuine local failure that should abort the run.
+is_unpublished_dependency_error() {
+	local output="$1"
+	echo "${output}" | grep -qiE "not found in the registry|Could not create access credentials"
+}
+
 ## Resolve and pin the latest compatible version of the codeql/<lang>-all
 ## upstream dependency in a source pack's codeql-pack.yml.
 ##
@@ -132,11 +148,25 @@ pin_upstream_dep() {
 	## float. Only the pinning step is skipped for wildcard deps.
 	local upgrade_output
 	if ! upgrade_output=$(codeql pack upgrade -- "${pack_dir}" 2>&1); then
-		echo "  ❌ codeql pack upgrade failed for ${pack_dir}:" >&2
-		echo "${upgrade_output}" >&2
+		## Always restore the original pinned manifest on failure so the pack
+		## keeps its last known-good dependency version.
 		if [[ "${is_wildcard}" == false ]]; then
 			mv "${pack_yml}.bak" "${pack_yml}"
 		fi
+
+		## An unpublished transitive dependency is an upstream publishing gap,
+		## not a local defect. Keep the existing pin, record the skip, and let
+		## the rest of the languages upgrade so the pipeline still makes
+		## progress instead of aborting entirely.
+		if is_unpublished_dependency_error "${upgrade_output}"; then
+			echo "  ⚠️  Skipping ${pack_dir}: a transitive dependency is not yet published to the registry — keeping ${dep_name} at ${dep_old_version}." >&2
+			echo "${upgrade_output}" | sed 's/^/      /' >&2
+			SKIPPED_PACKS+=("${pack_dir}")
+			return 0
+		fi
+
+		echo "  ❌ codeql pack upgrade failed for ${pack_dir}:" >&2
+		echo "${upgrade_output}" >&2
 		return 1
 	fi
 
@@ -186,7 +216,18 @@ upgrade_packs() {
 	fi
 	if [[ -d "${_parent_dir}/test" ]]; then
 		echo "INFO: Running 'codeql pack upgrade' for '${_parent_dir}/test'..."
-		codeql pack upgrade -- "${_parent_dir}/test"
+		local test_output
+		if test_output=$(codeql pack upgrade -- "${_parent_dir}/test" 2>&1); then
+			echo "${test_output}"
+		elif is_unpublished_dependency_error "${test_output}"; then
+			echo "  ⚠️  Skipping ${_parent_dir}/test: a transitive dependency is not yet published to the registry." >&2
+			echo "${test_output}" | sed 's/^/      /' >&2
+			SKIPPED_PACKS+=("${_parent_dir}/test")
+		else
+			echo "  ❌ codeql pack upgrade failed for ${_parent_dir}/test:" >&2
+			echo "${test_output}" >&2
+			return 1
+		fi
 	else
 		echo "WARNING: Directory '${_parent_dir}/test' not found, skipping" >&2
 	fi
@@ -214,4 +255,14 @@ else
 fi
 
 echo ""
-echo "✅ All CodeQL pack lock files upgraded successfully."
+if [[ ${#SKIPPED_PACKS[@]} -gt 0 ]]; then
+	echo "⚠️  CodeQL pack lock files upgraded, but the following packs were skipped"
+	echo "    because a transitive dependency is not yet published to the registry."
+	echo "    They were left on their current pinned versions and should be"
+	echo "    re-upgraded once the missing dependency is available:"
+	for skipped in "${SKIPPED_PACKS[@]}"; do
+		echo "      - ${skipped}"
+	done
+else
+	echo "✅ All CodeQL pack lock files upgraded successfully."
+fi

@@ -14,8 +14,11 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.26.0] — 2026-07-08
+
 ### Highlights
 
+- **Upgraded CodeQL CLI to v2.26.0** — All bundled CodeQL tool query packs were re-resolved against the v2.26.0 library set (`actions-all` 0.4.38, `cpp-all` 11.0.0, `csharp-all` 7.0.0, `go-all` 7.2.0, `java-all` 9.2.0, `javascript-all` 2.8.0, `python-all` 7.2.0, `swift-all` 6.7.1), and every language's query unit tests pass under the new CLI. The Ruby and Rust tool packs are intentionally held at their last-compatible library versions (`ruby-all` 5.2.2, `rust-all` 0.2.15): the upstream `ruby-all` 6.0.0 and `rust-all` 0.2.16 releases for CLI 2.26.0 declare a dependency on `codeql/namebinding`, which is not yet published to the public GitHub Container Registry and therefore cannot be resolved. The pinned versions still compile and test cleanly under 2.26.0 and will be re-upgraded once `codeql/namebinding` is available.
 - **Second supply-chain hardening pass for release workflows** — All release-generating workflows now opt out of every cache step, pin runners, strictly validate version inputs, and refuse mid-publish cancellation. See **Security** below for the full inventory. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
 - **First-class Rust toolchain support in CI** — `setup-codeql-environment` now installs a pinned Rust toolchain (default `1.80.0`, via a pinned `dtolnay/rust-toolchain` action with `rust-src`) for any matrix entry that includes `rust`, so the CodeQL rust extractor can expand `format!` / `println!` / `vec!` macros against the standard library on Linux runners. The `query-unit-tests.yml` workflow now passes `languages: ${{ matrix.language }}` so each matrix entry only installs its own runtime. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
 - **Diff-informed analysis & overlay database support** — New MCP primitives help developers make data-flow queries diff-informed (incremental) and build/evaluate overlay databases. A new `diff_informed_analysis_workflow` prompt and two reference resources walk through the query-side opt-in (`observeDiffInformedIncrementalMode`, `getASelectedSourceLocation`, `getASelectedSinkLocation`) and validation via `codeql test run --check-diff-informed`, while `codeql_database_create`, `codeql_database_analyze`, `codeql_query_run`, and `codeql_test_run` gained the corresponding advanced/experimental CLI parameters. ([#304](https://github.com/advanced-security/codeql-development-mcp-server/pull/304))
@@ -63,6 +66,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 #### MCP Server Resources & Prompts
 
 - **Diff-informed analysis docs now describe local diff-range injection** — The `codeql://learning/diff-informed-analysis` resource and the `diff_informed_analysis_workflow` prompt document the local mechanism used by Code Scanning: populate the `restrictAlertsTo` extensible predicate (`codeql/util`) via a data-extension pack and activate it with `--model-packs` (placing it only on `--additional-packs` resolves but does not apply it).
+- **Refined prompt, resource, and tool descriptions from a real-world debugging session** — Clarified and tightened guidance across multiple MCP prompts, resources, and tool descriptions based on lessons learned while driving the server end-to-end. ([#294](https://github.com/advanced-security/codeql-development-mcp-server/pull/294))
 
 #### VS Code Extension
 
@@ -76,6 +80,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - The `setup-codeql-environment` composite action now matches the `languages` input with comma-bounded tokens (`contains(format(',{0},', inputs.languages), ',java,')`) instead of bare substring `contains()`. This fixes a latent bug where the JavaScript matrix entry triggered the Java setup steps because `contains('javascript', 'java')` was true. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
 - `query-unit-tests.yml` matrix entries now pass `languages: ${{ matrix.language }}` to the composite action so each language matrix entry installs only its own runtime instead of the full default set, and `runs-on` is pinned to `ubuntu-24.04`. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
 - All release workflow `version` inputs (in `release.yml`, `release-tag.yml`, `release-npm.yml`, `release-vsix.yml`, `release-codeql.yml`) now document the actual accepted format (`^vMAJOR.MINOR.PATCH(-PRERELEASE)?$` where `PRERELEASE` may contain alphanumerics, dots, and hyphens) and are validated against that regex via an `env:` intermediate variable. Validation also runs `git check-ref-format "refs/tags/${VERSION}"` so values that pass the regex but are rejected by git as a tag ref (e.g. `v1.2.3-..`, `v1.2.3-foo.`, `v1.2.3-foo.lock`, `v1.2.3-a..b`) are caught up front instead of failing later in `actions/checkout`. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- **`upgrade-packs.sh` now tolerates unpublished upstream transitive dependencies.** When `codeql pack upgrade` fails because a newly introduced transitive dependency of a `codeql/<lang>-all` pack has not yet been published to the registry, the script keeps that pack on its last-known-good pin, records it as skipped, and continues upgrading the remaining languages instead of aborting the entire run. This is what allows the CLI 2.26.0 upgrade to complete for every other language while Ruby and Rust wait on `codeql/namebinding`.
 
 ### Fixed
 
@@ -88,8 +93,19 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 ### Dependencies
 
+- **Upgraded the CodeQL CLI dependency to v2.26.0.** All version-bearing files (`.codeql-version`, the root/server/extension `package.json` files, the per-language `codeql-pack.yml` manifests, and the server `VERSION` constant) and the `codeql-pack.lock.yml` lock files were updated. This release also rolls up the interim CodeQL CLI point upgrades to v2.25.5 ([#283](https://github.com/advanced-security/codeql-development-mcp-server/pull/283)) and v2.25.6 ([#290](https://github.com/advanced-security/codeql-development-mcp-server/pull/290)) and the accompanying Node.js dependency refresh ([#285](https://github.com/advanced-security/codeql-development-mcp-server/pull/285)).
 - Bumped `actions/dependency-review-action` from 4.9.0 to 5.0.0. ([#278](https://github.com/advanced-security/codeql-development-mcp-server/pull/278))
 - Added `dtolnay/rust-toolchain` (pinned to the `stable` branch commit SHA `29eef336d9b2848a0b548edc03f92a220660cdb8`) as a new dependency of `setup-codeql-environment` for the rust language. ([#279](https://github.com/advanced-security/codeql-development-mcp-server/pull/279))
+- Bumped `actions/checkout` from 6.0.2 to 6.0.3 ([#289](https://github.com/advanced-security/codeql-development-mcp-server/pull/289)) and from 6.0.3 to 7.0.0 ([#297](https://github.com/advanced-security/codeql-development-mcp-server/pull/297)).
+- Bumped `hono` from 4.12.18 to 4.12.25. ([#292](https://github.com/advanced-security/codeql-development-mcp-server/pull/292))
+- Bumped the Go MCP client dependency `github.com/mark3labs/mcp-go`. ([#306](https://github.com/advanced-security/codeql-development-mcp-server/pull/306), [#310](https://github.com/advanced-security/codeql-development-mcp-server/pull/310))
+- Bumped the `all-github-actions` group with three updates. ([#311](https://github.com/advanced-security/codeql-development-mcp-server/pull/311))
+- Pinned additional GitHub Actions to commit SHAs and added a Dependabot cooldown window. ([#305](https://github.com/advanced-security/codeql-development-mcp-server/pull/305))
+- Bumped dev dependencies: `esbuild` 0.28.0 → 0.28.1 ([#293](https://github.com/advanced-security/codeql-development-mcp-server/pull/293)), `vite` 8.0.14 → 8.0.16 ([#295](https://github.com/advanced-security/codeql-development-mcp-server/pull/295)), `form-data` 4.0.5 → 4.0.6 ([#296](https://github.com/advanced-security/codeql-development-mcp-server/pull/296)), `undici` 7.25.0 → 7.28.0 ([#298](https://github.com/advanced-security/codeql-development-mcp-server/pull/298)).
+
+**Full Changelog**: [`v2.25.4...v2.26.0`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.4...v2.26.0)
+
+---
 
 ## [v2.25.4] — 2026-05-08
 
@@ -595,7 +611,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.25.4...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.0...HEAD
+[v2.26.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.0
 [v2.25.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.4
 [v2.25.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.3
 [v2.25.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.2
