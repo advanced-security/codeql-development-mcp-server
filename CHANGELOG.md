@@ -14,6 +14,26 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.26.1] — 2026-07-17
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.26.1** — All bundled CodeQL tool query packs were re-resolved against the v2.26.1 library set (`actions-all` 0.4.39, `cpp-all` 12.0.0, `csharp-all` 7.1.0, `go-all` 7.2.1, `java-all` 9.2.1, `javascript-all` 2.8.1, `python-all` 7.2.1, `ruby-all` 6.0.1, `rust-all` 0.2.17, `swift-all` 6.7.2), and every language's query unit tests pass under the new CLI. ([#314](https://github.com/advanced-security/codeql-development-mcp-server/pull/314))
+- **Ruby and Rust tool packs are back on their latest upstream library sets** — The `codeql/namebinding` dependency that blocked the `ruby-all` and `rust-all` upgrades in v2.26.0 is now published to the public GitHub Container Registry, so both packs move off their pinned versions (`ruby-all` 5.2.2 → 6.0.1, `rust-all` 0.2.15 → 0.2.17) and compile and test cleanly under 2.26.1. ([#314](https://github.com/advanced-security/codeql-development-mcp-server/pull/314))
+
+### Fixed
+
+- **Ruby `PrintAST` and `PrintCFG` unit tests failed after the `ruby-all` 6.0.1 upgrade.** Regenerated the ruby `PrintAST.expected` and `PrintCFG.expected` baselines to match the output produced by the new library set under CLI 2.26.1. ([#314](https://github.com/advanced-security/codeql-development-mcp-server/pull/314))
+
+### Dependencies
+
+- **Upgraded the CodeQL CLI dependency to v2.26.1.** All version-bearing files (`.codeql-version`, the root/server/extension `package.json` files, the per-language `codeql-pack.yml` manifests, and the server `VERSION` constant) and the `codeql-pack.lock.yml` lock files were updated. ([#314](https://github.com/advanced-security/codeql-development-mcp-server/pull/314))
+- Bumped the Go MCP client dependency `github.com/mark3labs/mcp-go` from 0.55.1 to 0.56.0. ([#313](https://github.com/advanced-security/codeql-development-mcp-server/pull/313))
+
+**Full Changelog**: [`v2.26.0...v2.26.1`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.0...v2.26.1)
+
+---
+
 ## [v2.26.0] — 2026-07-08
 
 ### Highlights
@@ -611,7 +631,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.0...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.1...HEAD
+[v2.26.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.1
 [v2.26.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.0
 [v2.25.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.4
 [v2.25.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.3
