@@ -52,7 +52,7 @@
     "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
   },
   "engines": {
-    "node": ">=25.6.0",
+    "node": "^24.15.0 || >=26.0.0",
     "npm": ">=11.6.2"
   },
   "dependencies": {
@@ -67,11 +67,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/adm-zip": "^0.5.8",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^26.1.1",
+    "@types/node": "^24.13.3",
     "@vitest/coverage-v8": "^4.1.10",
     "esbuild": "^0.28.1",
     "eslint": "^10.7.0",

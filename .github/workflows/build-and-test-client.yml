@@ -69,7 +69,7 @@ jobs:
           echo "✅ Lint checks passed" >> $GITHUB_STEP_SUMMARY
 
   integration-tests:
-    name: Integration Tests (${{ matrix.os }}, ${{ matrix.mcp-mode }})
+    name: Integration Tests (${{ matrix.os }}, ${{ matrix.mcp-mode }}, Node ${{ matrix.node }})
     needs: build-and-test-client
     runs-on: ${{ matrix.os }}
 
@@ -77,6 +77,7 @@ jobs:
       fail-fast: false
       matrix:
         mcp-mode: [http, stdio]
+        node: ['.node-version', '26']
         os: [ubuntu-latest, windows-latest]
 
     env:
@@ -105,6 +106,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           cache: 'npm'
+          node-version: ${{ matrix.node != '.node-version' && matrix.node || '' }}
           node-version-file: '.node-version'
 
       - name: Install OS dependencies (Ubuntu)
@@ -195,16 +197,17 @@ jobs:
       - name: Summary
         shell: bash
         run: |
-          echo "## Integration Tests (${{ matrix.os }}, ${{ matrix.mcp-mode }})" >> $GITHUB_STEP_SUMMARY
-          echo "✅ MCP server integration tests passed on ${{ matrix.os }} with ${{ matrix.mcp-mode }} transport" >> $GITHUB_STEP_SUMMARY
+          echo "## Integration Tests (${{ matrix.os }}, ${{ matrix.mcp-mode }}, Node ${{ matrix.node }})" >> $GITHUB_STEP_SUMMARY
+          echo "✅ MCP server integration tests passed on ${{ matrix.os }} with ${{ matrix.mcp-mode }} transport (Node ${{ matrix.node }})" >> $GITHUB_STEP_SUMMARY
 
   codeql-path-tests:
-    name: CODEQL_PATH Tests (${{ matrix.os }})
+    name: CODEQL_PATH Tests (${{ matrix.os }}, Node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
+        node: ['.node-version', '26']
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
@@ -215,6 +218,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           cache: 'npm'
+          node-version: ${{ matrix.node != '.node-version' && matrix.node || '' }}
           node-version-file: '.node-version'
 
       - name: Install server dependencies
@@ -317,7 +321,7 @@ jobs:
       - name: Summary
         shell: bash
         run: |
-          echo "## CODEQL_PATH Tests (${{ matrix.os }})" >> $GITHUB_STEP_SUMMARY
+          echo "## CODEQL_PATH Tests (${{ matrix.os }}, Node ${{ matrix.node }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Test | Result |" >> $GITHUB_STEP_SUMMARY
           echo "| ---- | ------ |" >> $GITHUB_STEP_SUMMARY
@@ -329,4 +333,5 @@ jobs:
           echo "| ------ | ----- |" >> $GITHUB_STEP_SUMMARY
           echo "| CodeQL Version | ${{ steps.locate-codeql.outputs.codeql-version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CodeQL Binary | \`${{ steps.locate-codeql.outputs.codeql-binary }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node | ${{ matrix.node }} |" >> $GITHUB_STEP_SUMMARY
           echo "| OS | ${{ matrix.os }} |" >> $GITHUB_STEP_SUMMARY

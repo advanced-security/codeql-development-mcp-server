@@ -19,7 +19,7 @@
   "author": "@github/ps-codeql",
   "license": "LicenseRef-CodeQL-Terms",
   "engines": {
-    "node": ">=25.6.0",
+    "node": "^24.15.0 || >=26.0.0",
     "npm": ">=11.6.2"
   },
   "devDependencies": {
@@ -30,6 +30,9 @@
     "prettier": "^3.9.5",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.64.0"
+  },
+  "overrides": {
+    "@types/node": "^24.13.3"
   },
   "scripts": {
     "build": "npm run build -w server && make -C client build && npm run build -w extensions/vscode",
@@ -60,5 +63,10 @@
   "workspaces": [
     "server",
     "extensions/vscode"
-  ]
+  ],
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "keytar@7.9.0": true,
+    "@vscode/vsce-sign@2.0.9": true
+  }
 }
