@@ -39,12 +39,19 @@ jobs:
       - name: Build Server - Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Build Server - Setup Node.js environment
+      - name: Build Server - Setup Node.js environment (from .node-version)
+        if: matrix.node == '.node-version'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           cache: 'npm'
-          node-version: ${{ matrix.node != '.node-version' && matrix.node || '' }}
           node-version-file: '.node-version'
+
+      - name: Build Server - Setup Node.js environment (explicit version)
+        if: matrix.node != '.node-version'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          cache: 'npm'
+          node-version: ${{ matrix.node }}
 
       - name: Build Server - Install dependencies
         run: npm ci --include=optional --ignore-scripts

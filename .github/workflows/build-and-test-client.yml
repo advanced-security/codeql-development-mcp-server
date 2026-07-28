@@ -102,12 +102,19 @@ jobs:
           cache-dependency-path: 'client/go.sum'
           go-version-file: 'client/go.mod'
 
-      - name: Setup Node.js environment
+      - name: Setup Node.js environment (from .node-version)
+        if: matrix.node == '.node-version'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           cache: 'npm'
-          node-version: ${{ matrix.node != '.node-version' && matrix.node || '' }}
           node-version-file: '.node-version'
+
+      - name: Setup Node.js environment (explicit version)
+        if: matrix.node != '.node-version'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          cache: 'npm'
+          node-version: ${{ matrix.node }}
 
       - name: Install OS dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -214,12 +221,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup Node.js
+      - name: Setup Node.js (from .node-version)
+        if: matrix.node == '.node-version'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           cache: 'npm'
-          node-version: ${{ matrix.node != '.node-version' && matrix.node || '' }}
           node-version-file: '.node-version'
+
+      - name: Setup Node.js (explicit version)
+        if: matrix.node != '.node-version'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          cache: 'npm'
+          node-version: ${{ matrix.node }}
 
       - name: Install server dependencies
         run: npm ci --workspace=server
