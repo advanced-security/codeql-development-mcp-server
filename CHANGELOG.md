@@ -14,6 +14,21 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+### Changed
+
+#### Infrastructure & CI/CD
+
+- **Realigned the supported Node.js versions with the Node.js LTS release line.** The `engines.node` constraint in the root, `server`, and `extensions/vscode` `package.json` files moved from `>=25.6.0` to `^24.15.0 || >=26.0.0`, and `.node-version` moved from `v25.6.0` to `v24.18.0`. Node.js 25 is no longer supported: it is a non-LTS ("Current") line, and transitive dependencies such as `ini` have already dropped support for it. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+- **Added Node.js matrix testing to the build workflows.** `build-server.yml`, `build-and-test-client.yml`, and `build-and-test-extension.yml` now run against both Node 24 (via `.node-version`) and Node 26, with the Node version surfaced in job names and `$GITHUB_STEP_SUMMARY` output. Each matrix entry uses two `if:`-guarded `actions/setup-node` steps so `node-version` is never passed as an empty string (which would otherwise take precedence over `node-version-file` and silently select the runner's default Node). ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+- **Pinned `@types/node` repo-wide via a root `overrides` entry** (`^24.13.3`) so every workspace type-checks against a single Node typings version that matches the supported Node 24 LTS baseline. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+
+### Dependencies
+
+- Upgraded server runtime dependencies: `adm-zip` 0.5.17 → 0.6.0 and `js-yaml` 4.1.1 → 5.2.2 (5.2.2 carries a fix for a high-severity advisory affecting 5.2.1). Both packages now ship their own type declarations, so the `@types/adm-zip` and `@types/js-yaml` devDependencies were removed. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+- Upgraded shared devDependencies across the root, `server`, and `extensions/vscode` workspaces: `@types/node` 25.9.1 → 24.13.3, `eslint` 10.4.0 → 10.7.0, `eslint-plugin-prettier` 5.5.5 → 5.5.6, `prettier` 3.8.3 → 3.9.5, `typescript-eslint` 8.60.0 → 8.64.0, `vitest` / `@vitest/coverage-v8` 4.1.7 → 4.1.10, and `markdownlint-cli` 0.48.0 → 0.49.1. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+- Upgraded VS Code extension devDependencies: `@vscode/test-cli` 0.0.12 → 0.0.15, `@vscode/test-electron` 2.5.2 → 3.0.0, and `@vscode/vsce` 3.9.1 → 3.9.2. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+- Upgraded Go MCP client dependencies: `github.com/mark3labs/mcp-go` 0.56.0 → 0.57.0, plus refreshed transitive modules (`cli/safeexec`, `google/jsonschema-go`, `henvic/httpretty`, `lucasb-eyer/go-colorful`, `mattn/go-isatty`, `spf13/cast`, `spf13/pflag`, `thlib/go-timezone-local`, and `golang.org/x/{sys,term,text}`). ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+
 ## [v2.26.1] — 2026-07-17
 
 ### Highlights
