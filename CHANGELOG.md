@@ -14,6 +14,13 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.26.2] — 2026-07-29
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.26.2** — All bundled CodeQL tool query packs were re-resolved against the v2.26.2 library set (`actions-all` 0.4.40, `cpp-all` 12.0.1, `csharp-all` 7.1.1, `go-all` 7.2.2, `java-all` 9.2.2, `javascript-all` 2.8.2, `python-all` 7.2.2, `ruby-all` 6.0.2, `rust-all` 0.2.18, `swift-all` 6.8.0). ([#329](https://github.com/advanced-security/codeql-development-mcp-server/pull/329))
+- **Realigned Node.js support with the LTS release line** — Node.js 24 is now the default development and CI runtime, Node.js 26 is tested across the build workflows, and the unsupported non-LTS Node.js 25 line has been removed from the package engine constraints. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+
 ### Changed
 
 #### Infrastructure & CI/CD
@@ -22,12 +29,23 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 - **Added Node.js matrix testing to the build workflows.** `build-server.yml`, `build-and-test-client.yml`, and `build-and-test-extension.yml` now run against both Node 24 (via `.node-version`) and Node 26, with the Node version surfaced in job names and `$GITHUB_STEP_SUMMARY` output. Each matrix entry uses two `if:`-guarded `actions/setup-node` steps so `node-version` is never passed as an empty string (which would otherwise take precedence over `node-version-file` and silently select the runner's default Node). ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
 - **Pinned `@types/node` repo-wide via a root `overrides` entry** (`^24.13.3`) so every workspace type-checks against a single Node typings version that matches the supported Node 24 LTS baseline. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
 
+### Security
+
+- Upgraded the transitive `brace-expansion` dependency from 1.1.14 to 1.1.16, incorporating the v1 backport for CVE-2026-13149. ([#320](https://github.com/advanced-security/codeql-development-mcp-server/pull/320))
+
 ### Dependencies
 
+- **Upgraded the CodeQL CLI dependency to v2.26.2.** All version-bearing files (including `.codeql-version`, the root/server/extension `package.json` files, the per-language `codeql-pack.yml` manifests, and the server `VERSION` constant) and all `codeql-pack.lock.yml` files were updated. ([#329](https://github.com/advanced-security/codeql-development-mcp-server/pull/329))
 - Upgraded server runtime dependencies: `adm-zip` 0.5.17 → 0.6.0 and `js-yaml` 4.1.1 → 5.2.2 (5.2.2 carries a fix for a high-severity advisory affecting 5.2.1). Both packages now ship their own type declarations, so the `@types/adm-zip` and `@types/js-yaml` devDependencies were removed. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
 - Upgraded shared devDependencies across the root, `server`, and `extensions/vscode` workspaces: `@types/node` 25.9.1 → 24.13.3, `eslint` 10.4.0 → 10.7.0, `eslint-plugin-prettier` 5.5.5 → 5.5.6, `prettier` 3.8.3 → 3.9.5, `typescript-eslint` 8.60.0 → 8.64.0, `vitest` / `@vitest/coverage-v8` 4.1.7 → 4.1.10, and `markdownlint-cli` 0.48.0 → 0.49.1. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
 - Upgraded VS Code extension devDependencies: `@vscode/test-cli` 0.0.12 → 0.0.15, `@vscode/test-electron` 2.5.2 → 3.0.0, and `@vscode/vsce` 3.9.1 → 3.9.2. ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
 - Upgraded Go MCP client dependencies: `github.com/mark3labs/mcp-go` 0.56.0 → 0.57.0, plus refreshed transitive modules (`cli/safeexec`, `google/jsonschema-go`, `henvic/httpretty`, `lucasb-eyer/go-colorful`, `mattn/go-isatty`, `spf13/cast`, `spf13/pflag`, `thlib/go-timezone-local`, and `golang.org/x/{sys,term,text}`). ([#328](https://github.com/advanced-security/codeql-development-mcp-server/pull/328))
+- Bumped `hono` from 4.12.25 to 4.12.31. ([#323](https://github.com/advanced-security/codeql-development-mcp-server/pull/323))
+- Bumped `actions/setup-go` from 6.5.0 to 7.0.0, `actions/setup-node` from 6.4.0 to 7.0.0, and `softprops/action-gh-release` from 3.0.1 to 3.0.2. ([#325](https://github.com/advanced-security/codeql-development-mcp-server/pull/325))
+
+**Full Changelog**: [`v2.26.1...v2.26.2`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.1...v2.26.2)
+
+---
 
 ## [v2.26.1] — 2026-07-17
 
@@ -646,7 +664,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.1...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.2...HEAD
+[v2.26.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.2
 [v2.26.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.1
 [v2.26.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.0
 [v2.25.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.25.4
