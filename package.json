@@ -63,10 +63,5 @@
   "workspaces": [
     "server",
     "extensions/vscode"
-  ],
-  "allowScripts": {
-    "esbuild@0.28.1": true,
-    "keytar@7.9.0": true,
-    "@vscode/vsce-sign@2.0.9": true
-  }
+  ]
 }
