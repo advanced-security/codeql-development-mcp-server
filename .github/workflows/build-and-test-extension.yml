@@ -29,18 +29,31 @@ permissions:
 
 jobs:
   build-and-test-extension:
-    name: Build and Test Extension
+    name: Build and Test Extension (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['.node-version', '26']
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup Node.js environment
+      - name: Setup Node.js environment (from .node-version)
+        if: matrix.node == '.node-version'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
+
+      - name: Setup Node.js environment (explicit version)
+        if: matrix.node != '.node-version'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          cache: 'npm'
+          node-version: ${{ matrix.node }}
 
       - name: Install dependencies
         run: npm ci --include=optional --ignore-scripts
