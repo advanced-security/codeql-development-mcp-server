@@ -32,7 +32,8 @@
     "typescript-eslint": "^8.64.0"
   },
   "overrides": {
-    "@types/node": "^24.13.3"
+    "@types/node": "^24.13.3",
+    "serialize-javascript": "^7.0.5"
   },
   "scripts": {
     "build": "npm run build -w server && make -C client build && npm run build -w extensions/vscode",
