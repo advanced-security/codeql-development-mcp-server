@@ -14,6 +14,24 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.26.3] — 2026-08-14
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.26.3** — All bundled CodeQL tool query packs were re-resolved against the v2.26.3 library set (`actions-all` 0.5.0, `cpp-all` 12.0.2, `csharp-all` 7.1.2, `go-all` 7.2.3, `java-all` 9.2.3, `javascript-all` 2.9.0, `python-all` 7.2.3, `ruby-all` 6.0.3, `rust-all` 0.2.19, `swift-all` 6.8.1). ([#343](https://github.com/advanced-security/codeql-development-mcp-server/pull/343))
+
+### Dependencies
+
+- **Upgraded the CodeQL CLI dependency to v2.26.3.** All version-bearing files (including `.codeql-version`, the root/server/extension `package.json` files, the per-language `codeql-pack.yml` manifests, and the server `VERSION` constant) and all `codeql-pack.lock.yml` files were updated. ([#343](https://github.com/advanced-security/codeql-development-mcp-server/pull/343))
+- Upgraded server runtime dependencies: `@modelcontextprotocol/sdk` 1.29.0 → 1.30.0, `js-yaml` 5.2.2 → 5.3.0, and `sql.js` 1.14.1 → 1.14.2. ([#345](https://github.com/advanced-security/codeql-development-mcp-server/pull/345))
+- Upgraded shared devDependencies across the root, `server`, and `extensions/vscode` workspaces: `eslint` 10.7.0 → 10.8.1, `esbuild` 0.28.1 → 0.28.2, `mocha` 11.7.6 → 11.8.0, `prettier` 3.9.5 → 3.9.6, and `typescript-eslint` 8.64.0 → 8.67.0. ([#345](https://github.com/advanced-security/codeql-development-mcp-server/pull/345))
+- Upgraded the VS Code extension devDependency `@vscode/test-electron` from 3.0.0 to 3.1.0. ([#345](https://github.com/advanced-security/codeql-development-mcp-server/pull/345))
+- Bumped the transitive `ip-address` dependency from 10.2.0 to 10.5.0. ([#339](https://github.com/advanced-security/codeql-development-mcp-server/pull/339))
+
+**Full Changelog**: [`v2.26.2...v2.26.3`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.2...v2.26.3)
+
+---
+
 ## [v2.26.2] — 2026-07-29
 
 ### Highlights
@@ -664,7 +682,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.2...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.3...HEAD
+[v2.26.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.3
 [v2.26.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.2
 [v2.26.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.1
 [v2.26.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.0
