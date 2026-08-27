@@ -1,6 +1,6 @@
 name: advanced-security/ql-mcp-go-tools-src
-version: 2.26.3
+version: 2.26.4
 description: 'Queries for codeql-development-mcp-server tools for go language'
 library: false
 dependencies:
-  codeql/go-all: 7.2.3
+  codeql/go-all: 7.3.0
