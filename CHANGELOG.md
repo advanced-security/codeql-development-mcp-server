@@ -14,6 +14,22 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.26.4] — 2026-08-26
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.26.4** — All bundled CodeQL tool query packs were re-resolved against the v2.26.4 library set (`actions-all` 0.6.0, `cpp-all` 12.0.3, `csharp-all` 7.2.0, `go-all` 7.3.0, `java-all` 9.2.4, `javascript-all` 2.10.0, `python-all` 7.2.4, `ruby-all` 6.0.4, `rust-all` 0.2.20, `swift-all` 6.8.2). ([#349](https://github.com/advanced-security/codeql-development-mcp-server/pull/349))
+
+### Dependencies
+
+- **Upgraded the CodeQL CLI dependency to v2.26.4.** All version-bearing files (including `.codeql-version`, the root/server/extension `package.json` files, the per-language `codeql-pack.yml` manifests, and the server `VERSION` constant) and all `codeql-pack.lock.yml` files were updated. ([#349](https://github.com/advanced-security/codeql-development-mcp-server/pull/349))
+- Bumped the Go MCP client dependency `github.com/mark3labs/mcp-go` from 0.57.0 to 0.58.0. ([#347](https://github.com/advanced-security/codeql-development-mcp-server/pull/347))
+- Upgraded the shared devDependency `@types/node` from `^24.13.3` to `^26.2.0` across the root, `server`, and `extensions/vscode` workspaces, keeping the root `overrides` entry in sync. ([#348](https://github.com/advanced-security/codeql-development-mcp-server/pull/348))
+
+**Full Changelog**: [`v2.26.3...v2.26.4`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.3...v2.26.4)
+
+---
+
 ## [v2.26.3] — 2026-08-14
 
 ### Highlights
@@ -682,7 +698,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.3...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.4...HEAD
+[v2.26.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.4
 [v2.26.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.3
 [v2.26.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.2
 [v2.26.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.1
