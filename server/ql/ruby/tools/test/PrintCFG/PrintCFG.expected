@@ -1,27 +1,89 @@
 Example1.rb:
-#    4| enter simple_method
-#-----|  -> x
-
-#   17| enter complex_method
-#-----|  -> value
-
-#    1| enter Example1.rb
+#    1| Entry
 #-----|  -> simple_method
 
-#   11| enter do ... end
+#   11| Entry
 #-----|  -> i
 
+#    4| Entry
+#-----|  -> x
+
+#   17| Entry
+#-----|  -> value
+
+#    1| Normal Exit
+#-----|  -> Exit
+
+#   11| Normal Exit
+#-----|  -> Exit
+
+#    4| Normal Exit
+#-----|  -> Exit
+
+#   17| Normal Exit
+#-----|  -> Exit
+
+#    1| Exit
+
+#   11| Exit
+
+#    4| Exit
+
+#   17| Exit
+
+#   11| do ... end
+#-----|  -> call to each
+
+#    4| simple_method
+#-----|  -> complex_method
+
+#   17| complex_method
+#-----|  -> Normal Exit
+
 #    7| else ...
-#-----|  -> if ...
+#-----|  -> Before call to puts
 
-#    6| call to puts
-#-----|  -> then ...
+#   29| else ...
+#-----|  -> Before ... * ...
 
-#    8| call to puts
-#-----|  -> else ...
+#   24| case ...
+#-----|  -> value
 
-#   11| call to each
-#-----|  -> exit simple_method (normal)
+#    6| Before call to puts
+#-----|  -> self
+
+#    8| Before call to puts
+#-----|  -> self
+
+#   11| Before call to each
+#-----|  -> ( ... )
+
+#   12| Before call to puts
+#-----|  -> self
+
+#   20| do ...
+#-----|  -> Before ... = ...
+
+#   21| Before ... = ...
+#-----|  -> value
+
+#   25| when ...
+#-----|  -> 0
+
+#   27| when ...
+#-----|  -> 1
+
+#   18| ... if ...
+#-----|  -> Before ... < ...
+
+#   18| Before return
+#-----|  -> Before - ...
+
+#   20| while ...
+#-----|  -> [LoopHeader] while ...
+
+#   18| Before - ...
+#-----|  -> 1
 
 #    6| Positive
 #-----|  -> "Positive"
@@ -29,18 +91,29 @@ Example1.rb:
 #    8| Non-positive
 #-----|  -> "Non-positive"
 
-#    5| ... > ...
-#-----|  -> self
-#-----|  -> self
+#   18| Before ... < ...
+#-----|  -> value
 
-#    6| "Positive"
-#-----|  -> call to puts
+#    5| Before ... > ...
+#-----|  -> x
 
-#    8| "Non-positive"
-#-----|  -> call to puts
+#   20| Before ... > ...
+#-----|  -> value
 
-#   11| _ .. _
-#-----|  -> ( ... )
+#   21| Before ... / ...
+#-----|  -> value
+
+#   30| Before ... * ...
+#-----|  -> value
+
+#    6| Before "Positive"
+#-----|  -> Positive
+
+#    8| Before "Non-positive"
+#-----|  -> Non-positive
+
+#   11| Before _ .. _
+#-----|  -> 0
 
 #    5| 0
 #-----|  -> ... > ...
@@ -50,80 +123,6 @@ Example1.rb:
 
 #   11| 2
 #-----|  -> _ .. _
-
-#   11| ( ... )
-#-----|  -> do ... end
-
-#    5| then ...
-#-----|  -> if ...
-
-#    5| if ...
-#-----|  -> 0
-
-#   11| do ... end
-#-----|  -> call to each
-
-#    4| x
-#-----|  -> x
-
-#    5| x
-#-----|  -> 0
-
-#    6| self
-#-----|  -> Positive
-
-#    8| self
-#-----|  -> Non-positive
-
-#   29| else ...
-#-----|  -> case ...
-
-#   24| case ...
-#-----|  -> exit complex_method (normal)
-
-#   20| do ...
-#-----|  -> value
-
-#   21| ... = ...
-#-----|  -> do ...
-
-#   25| [no-match] when ...
-#-----|  -> 1
-
-#   25| [match] when ...
-#-----|  -> 0
-
-#   27| [no-match] when ...
-#-----|  -> value
-
-#   27| [match] when ...
-#-----|  -> 1
-
-#   18| ... if ...
-#-----|  -> value
-
-#   18| return
-#-----|  -> exit complex_method (normal)
-
-#   20| while ...
-#-----|  -> value
-
-#   18| - ...
-#-----|  -> return
-
-#   18| ... < ...
-#-----|  -> ... if ...
-#-----|  -> 1
-
-#   20| ... > ...
-#-----|  -> while ...
-#-----|  -> value
-
-#   21| ... / ...
-#-----|  -> ... = ...
-
-#   30| ... * ...
-#-----|  -> else ...
 
 #   18| 1
 #-----|  -> - ...
@@ -138,30 +137,60 @@ Example1.rb:
 #-----|  -> ... / ...
 
 #   25| 0
-#-----|  -> [no-match] when ...
-#-----|  -> [match] when ...
+#-----|  -> After 0 [no-match]
+#-----|  -> After 0 [match]
 
 #   26| 0
-#-----|  -> then ...
+#-----|  -> After then ...
 
 #   27| 1
-#-----|  -> [no-match] when ...
-#-----|  -> [match] when ...
+#-----|  -> After 1 [no-match]
+#-----|  -> After 1 [match]
 
 #   28| 1
-#-----|  -> then ...
+#-----|  -> After then ...
 
 #   30| 2
 #-----|  -> ... * ...
 
+#   11| ( ... )
+#-----|  -> Before _ .. _
+
+#    5| then ...
+#-----|  -> Before call to puts
+
 #   25| then ...
-#-----|  -> case ...
+#-----|  -> 0
 
 #   27| then ...
-#-----|  -> case ...
+#-----|  -> 1
+
+#    5| ...
+#-----|  -> if ...
+
+#   12| ...
+#-----|  -> Before call to puts
+
+#   18| ...
+#-----|  -> ... if ...
+
+#    5| if ...
+#-----|  -> Before ... > ...
+
+#    4| x
+#-----|  -> ...
+
+#    5| x
+#-----|  -> 0
+
+#   11| i
+#-----|  -> ...
+
+#   12| i
+#-----|  -> call to puts
 
 #   17| value
-#-----|  -> value
+#-----|  -> ...
 
 #   18| value
 #-----|  -> 0
@@ -170,51 +199,196 @@ Example1.rb:
 #-----|  -> 10
 
 #   21| value
-#-----|  -> value
+#-----|  -> Before ... / ...
 
 #   21| value
 #-----|  -> 2
 
 #   24| value
-#-----|  -> 0
+#-----|  -> when ...
 
 #   30| value
 #-----|  -> 2
 
-#    4| simple_method
-#-----|  -> complex_method
+#   29| else ...
+#-----|  -> After else ... [match]
 
-#   17| complex_method
-#-----|  -> exit Example1.rb (normal)
+#    6| self
+#-----|  -> Before "Positive"
 
-#   12| call to puts
-#-----|  -> exit do ... end (normal)
-
-#   11| i
-#-----|  -> self
-
-#   12| i
-#-----|  -> call to puts
+#    8| self
+#-----|  -> Before "Non-positive"
 
 #   12| self
 #-----|  -> i
 
-#    4| exit simple_method
+#   20| [LoopHeader] while ...
+#-----|  -> Before ... > ...
 
-#   17| exit complex_method
+#    6| call to puts
+#-----|  -> After call to puts
 
-#    1| exit Example1.rb
+#    8| call to puts
+#-----|  -> After call to puts
 
-#   11| exit do ... end
+#   11| call to each
+#-----|  -> After call to each
 
-#    4| exit simple_method (normal)
-#-----|  -> exit simple_method
+#   12| call to puts
+#-----|  -> After call to puts
 
-#   17| exit complex_method (normal)
-#-----|  -> exit complex_method
+#   21| ... = ...
+#-----|  -> After ... = ...
 
-#    1| exit Example1.rb (normal)
-#-----|  -> exit Example1.rb
+#   18| return
+#-----|  -> Normal Exit
 
-#   11| exit do ... end (normal)
-#-----|  -> exit do ... end
+#   18| - ...
+#-----|  -> After - ...
+
+#   18| ... < ...
+#-----|  -> After ... < ... [false]
+#-----|  -> After ... < ... [true]
+
+#    5| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#   20| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#   21| ... / ...
+#-----|  -> After ... / ...
+
+#   30| ... * ...
+#-----|  -> After ... * ...
+
+#    6| "Positive"
+#-----|  -> After "Positive"
+
+#    8| "Non-positive"
+#-----|  -> After "Non-positive"
+
+#   11| _ .. _
+#-----|  -> After _ .. _
+
+#   25| After when ... [no-match]
+#-----|  -> when ...
+
+#   25| After when ... [match]
+#-----|  -> then ...
+
+#   27| After when ... [no-match]
+#-----|  -> else ...
+
+#   27| After when ... [match]
+#-----|  -> then ...
+
+#   18| After ... < ... [false]
+#-----|  -> After ... if ...
+
+#   18| After ... < ... [true]
+#-----|  -> Before return
+
+#    5| After ... > ... [false]
+#-----|  -> else ...
+
+#    5| After ... > ... [true]
+#-----|  -> then ...
+
+#   20| After ... > ... [false]
+#-----|  -> After while ...
+
+#   20| After ... > ... [true]
+#-----|  -> do ...
+
+#   25| After 0 [no-match]
+#-----|  -> After when ... [no-match]
+
+#   25| After 0 [match]
+#-----|  -> After when ... [match]
+
+#   27| After 1 [no-match]
+#-----|  -> After when ... [no-match]
+
+#   27| After 1 [match]
+#-----|  -> After when ... [match]
+
+#   29| After else ... [match]
+#-----|  -> else ...
+
+#    7| After else ...
+#-----|  -> After if ...
+
+#   29| After else ...
+#-----|  -> After case ...
+
+#   24| After case ...
+#-----|  -> After ...
+
+#    6| After call to puts
+#-----|  -> After then ...
+
+#    8| After call to puts
+#-----|  -> After else ...
+
+#   11| After call to each
+#-----|  -> After ...
+
+#   12| After call to puts
+#-----|  -> After ...
+
+#   20| After do ...
+#-----|  -> [LoopHeader] while ...
+
+#   21| After ... = ...
+#-----|  -> After do ...
+
+#   18| After ... if ...
+#-----|  -> while ...
+
+#   20| After while ...
+#-----|  -> case ...
+
+#   18| After - ...
+#-----|  -> return
+
+#   21| After ... / ...
+#-----|  -> ... = ...
+
+#   30| After ... * ...
+#-----|  -> After else ...
+
+#    6| After "Positive"
+#-----|  -> call to puts
+
+#    8| After "Non-positive"
+#-----|  -> call to puts
+
+#   11| After _ .. _
+#-----|  -> After ( ... )
+
+#   11| After ( ... )
+#-----|  -> do ... end
+
+#    5| After then ...
+#-----|  -> After if ...
+
+#   25| After then ...
+#-----|  -> After case ...
+
+#   27| After then ...
+#-----|  -> After case ...
+
+#    5| After ...
+#-----|  -> Normal Exit
+
+#   12| After ...
+#-----|  -> Normal Exit
+
+#   18| After ...
+#-----|  -> Normal Exit
+
+#    5| After if ...
+#-----|  -> Before call to each
