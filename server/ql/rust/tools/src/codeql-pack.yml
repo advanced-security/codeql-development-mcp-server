@@ -1,6 +1,6 @@
 name: advanced-security/ql-mcp-rust-tools-src
-version: 2.26.4
+version: 2.27.0
 description: 'Queries for codeql-development-mcp-server tools for rust language'
 library: false
 dependencies:
-  codeql/rust-all: 0.2.20
+  codeql/rust-all: 0.2.21
