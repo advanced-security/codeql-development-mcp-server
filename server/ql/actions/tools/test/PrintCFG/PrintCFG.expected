@@ -2,6 +2,11 @@ workflow.yml:
 #    1| enter name: Example1
 #-----|  -> name: Example1
 
+nested/action-example1/action.yml:
+#    1| enter name: S ...  action
+#-----|  -> name: S ...  action
+
+workflow.yml:
 #    1| name: Example1
 #-----|  -> Job: test
 
@@ -17,7 +22,29 @@ workflow.yml:
 #    5| Job: test
 #-----|  -> Uses Step
 
+nested/action-example1/action.yml:
+#    1| name: S ...  action
+#-----|  -> using: composite
+
+#    4| using: composite
+#-----|  -> Run Step
+
+#    6| Run Step
+#-----|  -> echo "Selected"
+
+#    6| echo "Selected"
+#-----|  -> exit name: S ...  action (normal)
+
+workflow.yml:
 #    1| exit name: Example1 (normal)
 #-----|  -> exit name: Example1
 
+nested/action-example1/action.yml:
+#    1| exit name: S ...  action (normal)
+#-----|  -> exit name: S ...  action
+
+workflow.yml:
 #    1| exit name: Example1
+
+nested/action-example1/action.yml:
+#    1| exit name: S ...  action

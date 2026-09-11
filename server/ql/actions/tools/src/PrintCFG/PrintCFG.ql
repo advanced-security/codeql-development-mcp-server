@@ -36,8 +36,10 @@ predicate shouldPrintNode(Node node) {
     or
     // Match by ending path component
     exists(string absolute | absolute = node.getLocation().getFile().getAbsolutePath() |
-      absolute.length() >= selectedFile.length() and
-      absolute.suffix(absolute.length() - selectedFile.length()) = selectedFile
+      absolute = selectedFile
+      or
+      absolute.length() > selectedFile.length() and
+      absolute.suffix(absolute.length() - selectedFile.length() - 1) = "/" + selectedFile
     )
   )
 }

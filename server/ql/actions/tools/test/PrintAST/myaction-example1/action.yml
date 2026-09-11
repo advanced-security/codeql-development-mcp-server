@@ -1,0 +1,7 @@
+name: Unselected action
+description: A directory component must match in full
+runs:
+  using: composite
+  steps:
+    - run: echo "Not selected"
+      shell: bash
