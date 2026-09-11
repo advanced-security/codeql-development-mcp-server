@@ -21,8 +21,6 @@ string getSelectedSourceFile() {
 /**
  * Configuration for PrintAST that uses external predicates to specify source files.
  *
- * Every other supported language selects files this way. Actions previously hard-coded a `test/`
- * directory structure instead, so the query printed nothing at all for a real repository.
  * Matching is done on the location's own strings because the actions library does not expose a
  * `File` type the way the other languages' libraries do.
  */
