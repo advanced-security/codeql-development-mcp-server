@@ -1,2 +1,6 @@
-# This repository is maintained by:
-* @advanced-security/es-codeql @data-douser @enyil
+## This repository is maintained by:
+* @data-douser
+
+## Changes to Actions workflows require review by:
+.github/workflows/*.yml @advanced-security/es-codeql @data-douser
+
