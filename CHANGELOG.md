@@ -14,6 +14,40 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.27.0] — 2026-09-13
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.27.0** — All bundled CodeQL tool query packs were re-resolved against the v2.27.0 library set (`actions-all` 0.6.1, `cpp-all` 12.1.0, `csharp-all` 7.3.0, `go-all` 7.3.1, `java-all` 9.3.0, `javascript-all` 2.10.1, `python-all` 7.2.5, `ruby-all` 7.0.0, `rust-all` 0.2.21, `swift-all` 6.8.3). ([#353](https://github.com/advanced-security/codeql-development-mcp-server/pull/353))
+- **Actions `PrintAST` and `PrintCFG` now support Models-as-Data source selection** — Both queries consume runtime data extensions to select workflow and composite-action files by exact relative path, basename, or path suffix. `PrintCFG` now requires `sourceFiles`, preventing unbounded repository-wide graph output. ([#360](https://github.com/advanced-security/codeql-development-mcp-server/pull/360))
+
+### Changed
+
+#### CodeQL Query Packs
+
+- **Added Models-as-Data source-file selection to the Actions `PrintAST` and `PrintCFG` queries.** A shared `selectedSourceFiles` extensible predicate now receives the MCP server's runtime data extension, bringing Actions in line with the other language tool packs. Query tests cover workflows, composite actions, nested paths, and path-boundary matching. ([#360](https://github.com/advanced-security/codeql-development-mcp-server/pull/360))
+
+### Fixed
+
+- **Ruby `PrintCFG` unit tests failed after the `ruby-all` 7.0.0 upgrade.** Regenerated the expected output for the upstream shared CFG node-label convention (`Entry`, `Exit`, `Normal Exit`, `Before`, and `After`) introduced with CodeQL CLI v2.27.0. The query implementation and MCP API are unchanged. ([#355](https://github.com/advanced-security/codeql-development-mcp-server/pull/355))
+
+### Security
+
+- Upgraded `hono` from 4.13.2 to 4.13.7, incorporating fixes for query-parser cache/proxy interpretation differentials, static-site-generation path traversal, and `parseBody()` memory exhaustion. ([#354](https://github.com/advanced-security/codeql-development-mcp-server/pull/354))
+- Upgraded `smol-toml` from 1.7.0 to 1.7.2, incorporating the fix for GHSA-7w5x-hrqm-74c2. ([#357](https://github.com/advanced-security/codeql-development-mcp-server/pull/357))
+- Applied npm audit fixes by upgrading the transitive `fast-uri` (3.1.5 → 3.1.7), `js-yaml` (4.3.1 → 4.3.2), and `qs` (6.15.3 → 6.16.0) dependencies. ([#364](https://github.com/advanced-security/codeql-development-mcp-server/pull/364))
+
+### Dependencies
+
+- **Upgraded the CodeQL CLI dependency to v2.27.0.** All version-bearing files (including `.codeql-version`, the root/server/extension `package.json` files, the per-language `codeql-pack.yml` manifests, and the server `VERSION` constant) and all `codeql-pack.lock.yml` files were updated. ([#353](https://github.com/advanced-security/codeql-development-mcp-server/pull/353))
+- Upgraded Go MCP client dependencies: `github.com/cli/go-gh/v2` 2.13.0 → 2.16.0 and `github.com/mark3labs/mcp-go` 0.58.0 → 1.0.0, with accompanying transitive module updates. ([#361](https://github.com/advanced-security/codeql-development-mcp-server/pull/361))
+- Upgraded the shared `vitest` devDependency from 4.1.10 to 4.1.11 across the server and VS Code extension workspaces. ([#358](https://github.com/advanced-security/codeql-development-mcp-server/pull/358))
+- Bumped `softprops/action-gh-release` from 3.0.2 to 3.0.3. ([#362](https://github.com/advanced-security/codeql-development-mcp-server/pull/362))
+
+**Full Changelog**: [`v2.26.4...v2.27.0`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.4...v2.27.0)
+
+---
+
 ## [v2.26.4] — 2026-08-26
 
 ### Highlights
@@ -698,7 +732,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.26.4...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.0...HEAD
+[v2.27.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.0
 [v2.26.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.4
 [v2.26.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.3
 [v2.26.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.2
