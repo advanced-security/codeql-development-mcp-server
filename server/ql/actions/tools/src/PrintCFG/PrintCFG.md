@@ -6,7 +6,9 @@ Produces a representation of a file's Control Flow Graph (CFG) for GitHub Action
 
 The Control Flow Graph represents the order in which steps and jobs are executed in a GitHub Actions workflow. Each node in the graph represents a control-flow element (job, step, or action component), and edges represent possible execution paths between them.
 
-This query outputs all CFG nodes and their successor relationships for GitHub Actions YAML files, which is useful for understanding workflow execution flow and analyzing action dependencies.
+This query outputs CFG nodes and their successor relationships for the GitHub Actions YAML files selected by `sourceFiles`, which is useful for understanding workflow execution flow and analyzing action dependencies.
+
+When invoking this query with `codeql_query_run` for the `actions` language, `sourceFiles` is required. Provide a comma-separated list of source file paths, such as `".github/workflows/ci.yml,action.yml"`.
 
 ## Use Cases
 

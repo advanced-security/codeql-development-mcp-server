@@ -3,3 +3,5 @@ version: 2.27.0
 dependencies:
   advanced-security/ql-mcp-actions-tools-src: ${workspace}
 extractor: actions
+dataExtensions:
+  - 'ext/*.model.yml'

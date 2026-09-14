@@ -1,0 +1,7 @@
+name: Selected action
+description: A complete directory suffix still matches
+runs:
+  using: composite
+  steps:
+    - run: echo "Selected"
+      shell: bash

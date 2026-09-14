@@ -1,0 +1,7 @@
+extensions:
+  - addsTo:
+      pack: advanced-security/ql-mcp-actions-tools-src
+      extensible: selectedSourceFiles
+    data:
+      - ['.github/workflows/reusable_workflow.yml']
+      - ['action-example1/action.yml']

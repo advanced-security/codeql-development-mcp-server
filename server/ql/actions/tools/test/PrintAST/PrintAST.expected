@@ -63,6 +63,35 @@ action-example1/action.yml:
 
 #   18| [ExpressionImpl] inputs.who-to-greet
 
+nested/action-example1/action.yml:
+#    1| [CompositeActionImpl] name: S ...  action
+#-----| 1 -> [ScalarValueImpl] Selected action
+#-----| 2 -> [ScalarValueImpl] A complete directory suffix still matches
+#-----| 3 -> [RunsImpl] using: composite
+#-----| 4 -> [ScalarValueImpl] composite
+#-----| 5 -> [ScalarValueImpl] echo "Selected"
+#-----| 6 -> [ScalarValueImpl] bash
+
+#    1| [ScalarValueImpl] Selected action
+
+#    2| [ScalarValueImpl] A complete directory suffix still matches
+
+#    4| [RunsImpl] using: composite
+#-----| 1 -> [ScalarValueImpl] composite
+#-----| 2 -> [StepImpl] Run Step
+#-----| 3 -> [ScalarValueImpl] echo "Selected"
+#-----| 4 -> [ScalarValueImpl] bash
+
+#    4| [ScalarValueImpl] composite
+
+#    6| [StepImpl] Run Step
+#-----| 1 -> [ScalarValueImpl] echo "Selected"
+#-----| 2 -> [ScalarValueImpl] bash
+
+#    6| [ScalarValueImpl] echo "Selected"
+
+#    7| [ScalarValueImpl] bash
+
 .github/workflows/reusable_workflow.yml:
 #    1| [WorkflowImpl] name: R ... example
 #-----| 1 -> [ScalarValueImpl] Reusable workflow example
