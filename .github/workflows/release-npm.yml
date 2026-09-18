@@ -106,6 +106,7 @@ jobs:
       - name: npm - Upload release build artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
+          include-hidden-files: true
           name: release-build-${{ steps.version.outputs.version }}
           path: |
             .node-version
