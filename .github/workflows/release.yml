@@ -213,6 +213,11 @@ jobs:
           name: codeql-development-mcp-server-vsix-${{ needs.resolve-version.outputs.version }}
           path: dist-vsix
 
+      - name: Release - Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.node-version'
+
       - name: Release - Create distribution directory
         run: |
           mkdir -p dist-package/server
