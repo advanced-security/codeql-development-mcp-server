@@ -1,0 +1,7 @@
+extractedLockFiles
+| .github/workflows/actions.lock |
+pinnedUses
+| .github/workflows/build.yml | actions/cache/restore | v4.2.4 |
+| .github/workflows/build.yml | actions/checkout | v5.0.0 |
+unpinnedUses
+| .github/workflows/build.yml | tj-actions/changed-files |

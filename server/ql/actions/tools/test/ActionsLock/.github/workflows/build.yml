@@ -1,0 +1,24 @@
+name: Build
+
+on:
+  push:
+    branches: ['main']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Restore build cache
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809
+        with:
+          path: ./build
+          key: build-cache
+      - name: Get changed files
+        uses: tj-actions/changed-files@v40
+      - name: Report
+        run: echo "done"
