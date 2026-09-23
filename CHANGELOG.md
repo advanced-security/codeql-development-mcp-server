@@ -14,6 +14,33 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.27.1] — 2026-09-22
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.27.1** — All bundled CodeQL tool query packs were re-resolved against the v2.27.1 library set (`actions-all` 0.6.2, `cpp-all` 12.1.1, `csharp-all` 7.3.1, `go-all` 7.3.2, `java-all` 9.3.1, `javascript-all` 2.10.2, `python-all` 7.2.6, `ruby-all` 7.0.1, `rust-all` 0.2.22, `swift-all` 6.8.4). ([#369](https://github.com/advanced-security/codeql-development-mcp-server/pull/369))
+- **Actions query unit tests now cover `.github/workflows/actions.lock`** — `codeql/actions-all` 0.6.2 is the first library version to ship `codeql/actions/Lock.qll`, so the Actions tool pack gained a dedicated test asserting that the lockfile is extracted and that `ActionsLock.pins` resolves the `uses:` steps it covers. ([#369](https://github.com/advanced-security/codeql-development-mcp-server/pull/369))
+
+### Added
+
+#### CodeQL Query Packs
+
+- **Added an `actions` query unit test for `.github/workflows/actions.lock` extraction.** The new `server/ql/actions/tools/test/ActionsLock` test uses a `semmle-extractor-options: --file-type YAML` directive so `codeql test run` indexes the lockfile (which `codeql database create` picks up automatically via the Actions autobuilder path filters), then asserts that `ActionsLock.pins` resolves both a repository-level pin and a sub-action pin while leaving an unpinned `uses:` step uncovered. ([#369](https://github.com/advanced-security/codeql-development-mcp-server/pull/369))
+
+### Fixed
+
+- **C# `PrintAST` unit tests failed after the `csharp-all` 7.3.1 upgrade.** Regenerated the expected output for the upstream `ForeachStmt` → `ForEachStmt` AST class rename introduced with CodeQL CLI v2.27.1. ([#369](https://github.com/advanced-security/codeql-development-mcp-server/pull/369))
+- **Rust `PrintAST` unit tests failed after the `rust-all` 0.2.22 upgrade.** Regenerated the expected output for the changed standard-library macro expansions — `format!` now expands through `$crate::intrinsics::must_use(...)` and `vec!` through `$crate::boxed::box_assume_init_into_vec_unsafe(...)`. The query implementation and MCP API are unchanged. ([#369](https://github.com/advanced-security/codeql-development-mcp-server/pull/369))
+- **The `Create GitHub Release` job failed during release packaging.** `release.yml` now runs `actions/setup-node` with `node-version-file: '.node-version'` before packaging, and `release-npm.yml` sets `include-hidden-files: true` on the build artifact upload so `.node-version` is carried through. ([#368](https://github.com/advanced-security/codeql-development-mcp-server/pull/368))
+
+### Dependencies
+
+- **Upgraded the CodeQL CLI dependency to v2.27.1.** All version-bearing files (including `.codeql-version`, the root/server/extension `package.json` files, the per-language `codeql-pack.yml` manifests, and the server `VERSION` constant) and all `codeql-pack.lock.yml` files were updated. ([#369](https://github.com/advanced-security/codeql-development-mcp-server/pull/369))
+
+**Full Changelog**: [`v2.27.0...v2.27.1`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.0...v2.27.1)
+
+---
+
 ## [v2.27.0] — 2026-09-13
 
 ### Highlights
@@ -732,7 +759,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.0...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.1...HEAD
+[v2.27.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.1
 [v2.27.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.0
 [v2.26.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.4
 [v2.26.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.3
