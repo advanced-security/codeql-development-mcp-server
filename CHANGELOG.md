@@ -16,7 +16,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 
 ### Dependencies
 
-- Updated Go MCP client and Node.js server dependencies. ([#371](https://github.com/advanced-security/codeql-development-mcp-server/pull/371))
+- Updated Go MCP client, Node.js server, VS Code extension, and repository tooling dependencies. ([#371](https://github.com/advanced-security/codeql-development-mcp-server/pull/371))
 
 ## [v2.27.1] — 2026-09-22
 
