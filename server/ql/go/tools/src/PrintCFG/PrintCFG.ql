@@ -14,7 +14,8 @@ import semmle.go.controlflow.ControlFlowGraph
  */
 query predicate nodes(ControlFlow::Node node, string property, string value) {
   property = "semmle.label" and
-  value = node.toString()
+  value =
+    node.toString().replaceAll(node.getFile().getAbsolutePath(), node.getFile().getRelativePath())
 }
 
 query predicate edges(ControlFlow::Node pred, ControlFlow::Node succ) {

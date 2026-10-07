@@ -1,119 +1,62 @@
 Example1.go:
-#   30| case 0
-#-----|  -> 0
-#-----|  -> 1
+#    7| Entry
+#-----|  -> x
 
-#   32| case 1
-#-----|  -> 1
+#   20| Entry
 #-----|  -> value
 
-#   22| return statement
-#-----|  -> exit
+#   39| Entry
+#-----|  -> block statement
 
-#   31| return statement
-#-----|  -> exit
+#    0| Entry
+#-----|  -> Example1.go
 
-#   33| return statement
-#-----|  -> exit
+#    7| Exceptional Exit
+#-----|  -> Exit
 
-#   35| return statement
-#-----|  -> exit
+#    7| Normal Exit
+#-----|  -> Exit
+
+#   20| Exceptional Exit
+#-----|  -> Exit
+
+#   20| Normal Exit
+#-----|  -> Exit
+
+#   39| Exceptional Exit
+#-----|  -> Exit
+
+#   39| Normal Exit
+#-----|  -> Exit
+
+#    0| Normal Exit
+#-----|  -> Exit
+
+#    7| Exit
+
+#   20| Exit
+
+#   39| Exit
+
+#    0| Exit
+
+#    4| import declaration
+#-----|  -> function declaration
 
 #    7| function declaration
-#-----|  -> skip
-
-#   20| function declaration
-#-----|  -> skip
-
-#   39| function declaration
-#-----|  -> exit
-
-#    8| ...>... is false
-#-----|  -> selection of Println
-
-#    8| ...>... is true
-#-----|  -> selection of Println
-
-#   14| ...<... is false
-#-----|  -> exit
-
-#   14| ...<... is true
-#-----|  -> selection of Println
-
-#   21| ...<... is false
-#-----|  -> value
-
-#   21| ...<... is true
-#-----|  -> -...
-
-#   25| ...>... is false
-#-----|  -> value
-
-#   25| ...>... is true
-#-----|  -> skip
-
-#   14| assignment to i
-#-----|  -> i
-
-#   26| assignment to value
-#-----|  -> value
-
-#   41| assignment to result
-#-----|  -> selection of Println
-
-#   14| increment statement
-#-----|  -> i
-
-#    7| exit
-
-#   20| exit
-
-#   39| exit
-
-#    0| exit
-
-#    7| entry
-#-----|  -> argument corresponding to x
-
-#   20| entry
-#-----|  -> argument corresponding to value
-
-#   39| entry
-#-----|  -> simpleMethod
-
-#    0| entry
-#-----|  -> skip
-
-#   14| 1
-#-----|  -> rhs of increment statement
-
-#   14| rhs of increment statement
-#-----|  -> increment statement
-
-#    4| skip
-#-----|  -> skip
-
-#    7| skip
 #-----|  -> function declaration
 
-#   14| skip
-#-----|  -> 0
+#    7| x
+#-----|  -> block statement
 
-#   20| skip
-#-----|  -> function declaration
+#    7| block statement
+#-----|  -> if statement
 
-#   26| skip
-#-----|  -> value
+#    8| if statement
+#-----|  -> Before ...>...
 
-#   39| skip
-#-----|  -> function declaration
-
-#   41| skip
-#-----|  -> complexMethod
-
-#    8| ...>...
-#-----|  -> ...>... is false
-#-----|  -> ...>... is true
+#    8| Before ...>...
+#-----|  -> x
 
 #    8| x
 #-----|  -> 0
@@ -121,32 +64,47 @@ Example1.go:
 #    8| 0
 #-----|  -> ...>...
 
-#    9| call to Println
-#-----|  -> exit
-#-----|  -> skip
+#    8| block statement
+#-----|  -> expression statement
 
-#    9| selection of Println
-#-----|  -> "Positive"
+#    9| expression statement
+#-----|  -> Before call to Println
+
+#    9| Before call to Println
+#-----|  -> Before selection of Println
+
+#    9| Before selection of Println
+#-----|  -> selection of Println
 
 #    9| "Positive"
 #-----|  -> call to Println
 
-#   11| call to Println
-#-----|  -> exit
-#-----|  -> skip
+#   10| block statement
+#-----|  -> expression statement
 
-#   11| selection of Println
-#-----|  -> "Non-positive"
+#   11| expression statement
+#-----|  -> Before call to Println
+
+#   11| Before call to Println
+#-----|  -> Before selection of Println
+
+#   11| Before selection of Println
+#-----|  -> selection of Println
 
 #   11| "Non-positive"
 #-----|  -> call to Println
 
-#   14| 0
-#-----|  -> assignment to i
+#   14| for statement
+#-----|  -> ... := ...
 
-#   14| ...<...
-#-----|  -> ...<... is false
-#-----|  -> ...<... is true
+#   14| ... := ...
+#-----|  -> 0
+
+#   14| 0
+#-----|  -> assign:0 ... := ...
+
+#   14| Before ...<...
+#-----|  -> i
 
 #   14| i
 #-----|  -> 3
@@ -154,22 +112,41 @@ Example1.go:
 #   14| 3
 #-----|  -> ...<...
 
+#   14| Before increment statement
+#-----|  -> i
+
 #   14| i
-#-----|  -> 1
+#-----|  -> increment statement
 
-#   15| call to Println
-#-----|  -> exit
-#-----|  -> i
+#   14| block statement
+#-----|  -> expression statement
 
-#   15| selection of Println
-#-----|  -> i
+#   15| expression statement
+#-----|  -> Before call to Println
+
+#   15| Before call to Println
+#-----|  -> Before selection of Println
+
+#   15| Before selection of Println
+#-----|  -> selection of Println
 
 #   15| i
 #-----|  -> call to Println
 
-#   21| ...<...
-#-----|  -> ...<... is false
-#-----|  -> ...<... is true
+#   20| function declaration
+#-----|  -> function declaration
+
+#   20| value
+#-----|  -> block statement
+
+#   20| block statement
+#-----|  -> if statement
+
+#   21| if statement
+#-----|  -> Before ...<...
+
+#   21| Before ...<...
+#-----|  -> value
 
 #   21| value
 #-----|  -> 0
@@ -177,12 +154,20 @@ Example1.go:
 #   21| 0
 #-----|  -> ...<...
 
-#   22| -...
-#-----|  -> return statement
+#   21| block statement
+#-----|  -> Before return statement
 
-#   25| ...>...
-#-----|  -> ...>... is false
-#-----|  -> ...>... is true
+#   22| Before return statement
+#-----|  -> Before -...
+
+#   22| Before -...
+#-----|  -> -...
+
+#   25| for statement
+#-----|  -> Before ...>...
+
+#   25| Before ...>...
+#-----|  -> value
 
 #   25| value
 #-----|  -> 10
@@ -190,9 +175,14 @@ Example1.go:
 #   25| 10
 #-----|  -> ...>...
 
-#   26| .../...
-#-----|  -> assignment to value
-#-----|  -> exit
+#   25| block statement
+#-----|  -> ... = ...
+
+#   26| ... = ...
+#-----|  -> Before .../...
+
+#   26| Before .../...
+#-----|  -> value
 
 #   26| value
 #-----|  -> 2
@@ -200,23 +190,46 @@ Example1.go:
 #   26| 2
 #-----|  -> .../...
 
+#   29| expression-switch statement
+#-----|  -> value
+
 #   29| value
+#-----|  -> case clause
+
+#   30| case clause
 #-----|  -> 0
 
 #   30| 0
-#-----|  -> case 0
+#-----|  -> After 0 [no-match]
+#-----|  -> After 0 [match]
+
+#   31| Before return statement
+#-----|  -> 0
 
 #   31| 0
 #-----|  -> return statement
 
+#   32| case clause
+#-----|  -> 1
+
 #   32| 1
-#-----|  -> case 1
+#-----|  -> After 1 [no-match]
+#-----|  -> After 1 [match]
+
+#   33| Before return statement
+#-----|  -> 1
 
 #   33| 1
 #-----|  -> return statement
 
-#   35| ...*...
-#-----|  -> return statement
+#   34| case clause
+#-----|  -> After case clause [match]
+
+#   35| Before return statement
+#-----|  -> Before ...*...
+
+#   35| Before ...*...
+#-----|  -> value
 
 #   35| value
 #-----|  -> 2
@@ -224,9 +237,17 @@ Example1.go:
 #   35| 2
 #-----|  -> ...*...
 
-#   40| call to simpleMethod
-#-----|  -> exit
-#-----|  -> skip
+#   39| function declaration
+#-----|  -> After Example1.go
+
+#   39| block statement
+#-----|  -> expression statement
+
+#   40| expression statement
+#-----|  -> Before call to simpleMethod
+
+#   40| Before call to simpleMethod
+#-----|  -> simpleMethod
 
 #   40| simpleMethod
 #-----|  -> 5
@@ -234,9 +255,11 @@ Example1.go:
 #   40| 5
 #-----|  -> call to simpleMethod
 
-#   41| call to complexMethod
-#-----|  -> assignment to result
-#-----|  -> exit
+#   41| ... := ...
+#-----|  -> Before call to complexMethod
+
+#   41| Before call to complexMethod
+#-----|  -> complexMethod
 
 #   41| complexMethod
 #-----|  -> 20
@@ -244,23 +267,259 @@ Example1.go:
 #   41| 20
 #-----|  -> call to complexMethod
 
-#   42| call to Println
-#-----|  -> exit
+#   42| expression statement
+#-----|  -> Before call to Println
 
-#   42| selection of Println
-#-----|  -> result
+#   42| Before call to Println
+#-----|  -> Before selection of Println
+
+#   42| Before selection of Println
+#-----|  -> selection of Println
 
 #   42| result
 #-----|  -> call to Println
 
-#    7| initialization of x
-#-----|  -> x
+#    0| Example1.go
+#-----|  -> import declaration
 
-#   20| initialization of value
-#-----|  -> value
+#    8| ...>...
+#-----|  -> After ...>... [false]
+#-----|  -> After ...>... [true]
 
-#    7| argument corresponding to x
-#-----|  -> initialization of x
+#    9| call to Println
+#-----|  -> Exceptional Exit
+#-----|  -> After call to Println
 
-#   20| argument corresponding to value
-#-----|  -> initialization of value
+#    9| selection of Println
+#-----|  -> After selection of Println
+
+#   11| call to Println
+#-----|  -> Exceptional Exit
+#-----|  -> After call to Println
+
+#   11| selection of Println
+#-----|  -> After selection of Println
+
+#   14| ...<...
+#-----|  -> After ...<... [false]
+#-----|  -> After ...<... [true]
+
+#   14| increment statement
+#-----|  -> After increment statement
+
+#   15| call to Println
+#-----|  -> Exceptional Exit
+#-----|  -> After call to Println
+
+#   15| selection of Println
+#-----|  -> After selection of Println
+
+#   21| ...<...
+#-----|  -> After ...<... [false]
+#-----|  -> After ...<... [true]
+
+#   22| return statement
+#-----|  -> Normal Exit
+
+#   22| -...
+#-----|  -> After -...
+
+#   25| ...>...
+#-----|  -> After ...>... [false]
+#-----|  -> After ...>... [true]
+
+#   26| .../...
+#-----|  -> Exceptional Exit
+#-----|  -> After .../...
+
+#   31| return statement
+#-----|  -> Normal Exit
+
+#   33| return statement
+#-----|  -> Normal Exit
+
+#   35| return statement
+#-----|  -> Normal Exit
+
+#   35| ...*...
+#-----|  -> After ...*...
+
+#   40| call to simpleMethod
+#-----|  -> Exceptional Exit
+#-----|  -> After call to simpleMethod
+
+#   41| call to complexMethod
+#-----|  -> Exceptional Exit
+#-----|  -> After call to complexMethod
+
+#   42| call to Println
+#-----|  -> Exceptional Exit
+#-----|  -> After call to Println
+
+#   42| selection of Println
+#-----|  -> After selection of Println
+
+#    8| After ...>... [false]
+#-----|  -> block statement
+
+#    8| After ...>... [true]
+#-----|  -> block statement
+
+#   14| After ...<... [false]
+#-----|  -> After for statement
+
+#   14| After ...<... [true]
+#-----|  -> block statement
+
+#   21| After ...<... [false]
+#-----|  -> After if statement
+
+#   21| After ...<... [true]
+#-----|  -> block statement
+
+#   25| After ...>... [false]
+#-----|  -> After for statement
+
+#   25| After ...>... [true]
+#-----|  -> block statement
+
+#   30| After case clause [no-match]
+#-----|  -> case clause
+
+#   30| After case clause [match]
+#-----|  -> Before return statement
+
+#   30| After 0 [no-match]
+#-----|  -> After case clause [no-match]
+
+#   30| After 0 [match]
+#-----|  -> After case clause [match]
+
+#   32| After case clause [no-match]
+#-----|  -> case clause
+
+#   32| After case clause [match]
+#-----|  -> Before return statement
+
+#   32| After 1 [no-match]
+#-----|  -> After case clause [no-match]
+
+#   32| After 1 [match]
+#-----|  -> After case clause [match]
+
+#   34| After case clause [match]
+#-----|  -> Before return statement
+
+#   14| [LoopHeader] for statement
+#-----|  -> Before increment statement
+
+#   14| assign:0 ... := ...
+#-----|  -> After ... := ...
+
+#   25| [LoopHeader] for statement
+#-----|  -> Before ...>...
+
+#   26| assign:0 ... = ...
+#-----|  -> After ... = ...
+
+#   41| assign:0 ... := ...
+#-----|  -> After ... := ...
+
+#    7| After block statement
+#-----|  -> Normal Exit
+
+#    8| After if statement
+#-----|  -> for statement
+
+#    8| After block statement
+#-----|  -> After if statement
+
+#    9| After expression statement
+#-----|  -> After block statement
+
+#    9| After call to Println
+#-----|  -> After expression statement
+
+#    9| After selection of Println
+#-----|  -> "Positive"
+
+#   10| After block statement
+#-----|  -> After if statement
+
+#   11| After expression statement
+#-----|  -> After block statement
+
+#   11| After call to Println
+#-----|  -> After expression statement
+
+#   11| After selection of Println
+#-----|  -> "Non-positive"
+
+#   14| After for statement
+#-----|  -> After block statement
+
+#   14| After ... := ...
+#-----|  -> Before ...<...
+
+#   14| After increment statement
+#-----|  -> Before ...<...
+
+#   14| After block statement
+#-----|  -> [LoopHeader] for statement
+
+#   15| After expression statement
+#-----|  -> After block statement
+
+#   15| After call to Println
+#-----|  -> After expression statement
+
+#   15| After selection of Println
+#-----|  -> i
+
+#   21| After if statement
+#-----|  -> for statement
+
+#   22| After -...
+#-----|  -> return statement
+
+#   25| After for statement
+#-----|  -> expression-switch statement
+
+#   25| After block statement
+#-----|  -> [LoopHeader] for statement
+
+#   26| After ... = ...
+#-----|  -> After block statement
+
+#   26| After .../...
+#-----|  -> assign:0 ... = ...
+
+#   35| After ...*...
+#-----|  -> return statement
+
+#   39| After block statement
+#-----|  -> Normal Exit
+
+#   40| After expression statement
+#-----|  -> ... := ...
+
+#   40| After call to simpleMethod
+#-----|  -> After expression statement
+
+#   41| After ... := ...
+#-----|  -> expression statement
+
+#   41| After call to complexMethod
+#-----|  -> assign:0 ... := ...
+
+#   42| After expression statement
+#-----|  -> After block statement
+
+#   42| After call to Println
+#-----|  -> After expression statement
+
+#   42| After selection of Println
+#-----|  -> result
+
+#    0| After Example1.go
+#-----|  -> Normal Exit
