@@ -31,6 +31,57 @@ Example1.rb:
 
 #   17| Exit
 
+#   20| [LoopHeader] while ...
+#-----|  -> Before ... > ...
+
+#    6| call to puts
+#-----|  -> After call to puts
+
+#    8| call to puts
+#-----|  -> After call to puts
+
+#   11| call to each
+#-----|  -> After call to each
+
+#   12| call to puts
+#-----|  -> After call to puts
+
+#   21| ... = ...
+#-----|  -> After ... = ...
+
+#   18| return
+#-----|  -> Normal Exit
+
+#   18| - ...
+#-----|  -> After - ...
+
+#   18| ... < ...
+#-----|  -> After ... < ... [false]
+#-----|  -> After ... < ... [true]
+
+#    5| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#   20| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#   21| ... / ...
+#-----|  -> After ... / ...
+
+#   30| ... * ...
+#-----|  -> After ... * ...
+
+#    6| "Positive"
+#-----|  -> After "Positive"
+
+#    8| "Non-positive"
+#-----|  -> After "Non-positive"
+
+#   11| _ .. _
+#-----|  -> After _ .. _
+
 #   11| do ... end
 #-----|  -> call to each
 
@@ -222,102 +273,6 @@ Example1.rb:
 #   12| self
 #-----|  -> i
 
-#   20| [LoopHeader] while ...
-#-----|  -> Before ... > ...
-
-#    6| call to puts
-#-----|  -> After call to puts
-
-#    8| call to puts
-#-----|  -> After call to puts
-
-#   11| call to each
-#-----|  -> After call to each
-
-#   12| call to puts
-#-----|  -> After call to puts
-
-#   21| ... = ...
-#-----|  -> After ... = ...
-
-#   18| return
-#-----|  -> Normal Exit
-
-#   18| - ...
-#-----|  -> After - ...
-
-#   18| ... < ...
-#-----|  -> After ... < ... [false]
-#-----|  -> After ... < ... [true]
-
-#    5| ... > ...
-#-----|  -> After ... > ... [false]
-#-----|  -> After ... > ... [true]
-
-#   20| ... > ...
-#-----|  -> After ... > ... [false]
-#-----|  -> After ... > ... [true]
-
-#   21| ... / ...
-#-----|  -> After ... / ...
-
-#   30| ... * ...
-#-----|  -> After ... * ...
-
-#    6| "Positive"
-#-----|  -> After "Positive"
-
-#    8| "Non-positive"
-#-----|  -> After "Non-positive"
-
-#   11| _ .. _
-#-----|  -> After _ .. _
-
-#   25| After when ... [no-match]
-#-----|  -> when ...
-
-#   25| After when ... [match]
-#-----|  -> then ...
-
-#   27| After when ... [no-match]
-#-----|  -> else ...
-
-#   27| After when ... [match]
-#-----|  -> then ...
-
-#   18| After ... < ... [false]
-#-----|  -> After ... if ...
-
-#   18| After ... < ... [true]
-#-----|  -> Before return
-
-#    5| After ... > ... [false]
-#-----|  -> else ...
-
-#    5| After ... > ... [true]
-#-----|  -> then ...
-
-#   20| After ... > ... [false]
-#-----|  -> After while ...
-
-#   20| After ... > ... [true]
-#-----|  -> do ...
-
-#   25| After 0 [no-match]
-#-----|  -> After when ... [no-match]
-
-#   25| After 0 [match]
-#-----|  -> After when ... [match]
-
-#   27| After 1 [no-match]
-#-----|  -> After when ... [no-match]
-
-#   27| After 1 [match]
-#-----|  -> After when ... [match]
-
-#   29| After else ... [match]
-#-----|  -> else ...
-
 #    7| After else ...
 #-----|  -> After if ...
 
@@ -392,3 +347,48 @@ Example1.rb:
 
 #    5| After if ...
 #-----|  -> Before call to each
+
+#   25| After when ... [no-match]
+#-----|  -> when ...
+
+#   25| After when ... [match]
+#-----|  -> then ...
+
+#   27| After when ... [no-match]
+#-----|  -> else ...
+
+#   27| After when ... [match]
+#-----|  -> then ...
+
+#   18| After ... < ... [false]
+#-----|  -> After ... if ...
+
+#   18| After ... < ... [true]
+#-----|  -> Before return
+
+#    5| After ... > ... [false]
+#-----|  -> else ...
+
+#    5| After ... > ... [true]
+#-----|  -> then ...
+
+#   20| After ... > ... [false]
+#-----|  -> After while ...
+
+#   20| After ... > ... [true]
+#-----|  -> do ...
+
+#   25| After 0 [no-match]
+#-----|  -> After when ... [no-match]
+
+#   25| After 0 [match]
+#-----|  -> After when ... [match]
+
+#   27| After 1 [no-match]
+#-----|  -> After when ... [no-match]
+
+#   27| After 1 [match]
+#-----|  -> After when ... [match]
+
+#   29| After else ... [match]
+#-----|  -> else ...

@@ -55,6 +55,7 @@ Example1.go:
 #   17|             1: [Ident, TypeName] Example1
 #   17|                 Type = Example1
 #   17|             2: [KeyValueExpr] key-value pair
+#   17|                 Type = string
 #   17|               1: [Ident, VariableName] name
 #   17|                   Type = string
 #   17|               2: [Ident, VariableName] name
@@ -125,13 +126,14 @@ Example1.go:
 #   25|                 2: [Ident, VariableName] i
 #   25|                     Type = int
 #   29|       3: [RangeStmt] range statement
-#   29|         1: [BlankIdent, VariableName] _
-#   29|             Type = int
-#   29|         2: [Ident, VariableName] n
-#   29|             Type = int
-#   29|         3: [Ident, VariableName] numbers
+#   29|         1: [RangeElementExpr] range element
+#   29|           1: [BlankIdent, VariableName] _
+#   29|               Type = int
+#   29|           2: [Ident, VariableName] n
+#   29|               Type = int
+#   29|         2: [Ident, VariableName] numbers
 #   29|             Type = []int
-#   29|         4: [BlockStmt] block statement
+#   29|         3: [BlockStmt] block statement
 #   30|           1: [ExprStmt] expression statement
 #   30|             1: [CallExpr] call to Println
 #   30|                 Type = (int, error)

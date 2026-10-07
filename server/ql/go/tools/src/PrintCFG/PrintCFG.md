@@ -49,6 +49,8 @@ The query produces two relations:
 - `nodes(ControlFlow::Node, string, string)`: Each CFG node with its label
 - `edges(ControlFlow::Node, ControlFlow::Node)`: Successor relationships between nodes
 
+The graph includes file-level initialization, function entry and exit nodes, and before/after nodes for expressions and statements. File paths in labels are relative to the source root so that output does not depend on the checkout location.
+
 ## References
 
 - [Go Control Structures](https://go.dev/doc/effective_go#control-structures)

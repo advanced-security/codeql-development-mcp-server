@@ -23,6 +23,76 @@ Example1.cs:
 
 #    4| Exit
 
+#   20| [LoopHeader] for (...;...;...) ...
+#-----|  -> Before ...++
+
+#   34| [LoopHeader] while (...) ...
+#-----|  -> Before ... > ...
+
+#    9| Int32 x = ...
+#-----|  -> After Int32 x = ...
+
+#   11| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#   13| call to method WriteLine
+#-----|  -> After call to method WriteLine
+
+#   17| call to method WriteLine
+#-----|  -> After call to method WriteLine
+
+#   20| Int32 i = ...
+#-----|  -> After Int32 i = ...
+
+#   20| ... < ...
+#-----|  -> After ... < ... [false]
+#-----|  -> After ... < ... [true]
+
+#   20| ...++
+#-----|  -> After ...++
+
+#   22| call to method WriteLine
+#-----|  -> After call to method WriteLine
+
+#   29| ... < ...
+#-----|  -> After ... < ... [false]
+#-----|  -> After ... < ... [true]
+
+#   31| return ...;
+#-----|  -> Normal Exit
+
+#   31| -...
+#-----|  -> After -...
+
+#   34| ... > ...
+#-----|  -> After ... > ... [false]
+#-----|  -> After ... > ... [true]
+
+#   36| ... = ...
+#-----|  -> After ... = ...
+
+#   36| ... / ...
+#-----|  -> After ... / ...
+
+#   42| return ...;
+#-----|  -> Normal Exit
+
+#   44| return ...;
+#-----|  -> Normal Exit
+
+#   46| return ...;
+#-----|  -> Normal Exit
+
+#   46| ... * ...
+#-----|  -> After ... * ...
+
+#    4| call to method <object initializer>
+#-----|  -> After call to method <object initializer>
+
+#    4| call to constructor Object
+#-----|  -> After call to constructor Object
+
 #    4| {...}
 #-----|  -> Normal Exit
 
@@ -238,57 +308,6 @@ Example1.cs:
 #   27| value
 #-----|  -> {...}
 
-#   11| After ... > ... [false]
-#-----|  -> {...}
-
-#   11| After ... > ... [true]
-#-----|  -> {...}
-
-#   20| After ... < ... [false]
-#-----|  -> After for (...;...;...) ...
-
-#   20| After ... < ... [true]
-#-----|  -> {...}
-
-#   29| After ... < ... [false]
-#-----|  -> After if (...) ...
-
-#   29| After ... < ... [true]
-#-----|  -> {...}
-
-#   34| After ... > ... [false]
-#-----|  -> After while (...) ...
-
-#   34| After ... > ... [true]
-#-----|  -> {...}
-
-#   41| After case ...: [no-match]
-#-----|  -> case ...:
-
-#   41| After case ...: [match]
-#-----|  -> Before return ...;
-
-#   41| After 0 [no-match]
-#-----|  -> After case ...: [no-match]
-
-#   41| After 0 [match]
-#-----|  -> After case ...: [match]
-
-#   43| After case ...: [no-match]
-#-----|  -> default:
-
-#   43| After case ...: [match]
-#-----|  -> Before return ...;
-
-#   43| After 1 [no-match]
-#-----|  -> After case ...: [no-match]
-
-#   43| After 1 [match]
-#-----|  -> After case ...: [match]
-
-#   45| After default: [match]
-#-----|  -> Before return ...;
-
 #    7| After {...}
 #-----|  -> Normal Exit
 
@@ -367,72 +386,53 @@ Example1.cs:
 #    4| After call to constructor Object
 #-----|  -> {...}
 
-#   20| [LoopHeader] for (...;...;...) ...
-#-----|  -> Before ...++
+#   11| After ... > ... [false]
+#-----|  -> {...}
 
-#   34| [LoopHeader] while (...) ...
-#-----|  -> Before ... > ...
+#   11| After ... > ... [true]
+#-----|  -> {...}
 
-#    9| Int32 x = ...
-#-----|  -> After Int32 x = ...
+#   20| After ... < ... [false]
+#-----|  -> After for (...;...;...) ...
 
-#   11| ... > ...
-#-----|  -> After ... > ... [false]
-#-----|  -> After ... > ... [true]
+#   20| After ... < ... [true]
+#-----|  -> {...}
 
-#   13| call to method WriteLine
-#-----|  -> After call to method WriteLine
+#   29| After ... < ... [false]
+#-----|  -> After if (...) ...
 
-#   17| call to method WriteLine
-#-----|  -> After call to method WriteLine
+#   29| After ... < ... [true]
+#-----|  -> {...}
 
-#   20| Int32 i = ...
-#-----|  -> After Int32 i = ...
+#   34| After ... > ... [false]
+#-----|  -> After while (...) ...
 
-#   20| ... < ...
-#-----|  -> After ... < ... [false]
-#-----|  -> After ... < ... [true]
+#   34| After ... > ... [true]
+#-----|  -> {...}
 
-#   20| ...++
-#-----|  -> After ...++
+#   41| After case ...: [no-match]
+#-----|  -> case ...:
 
-#   22| call to method WriteLine
-#-----|  -> After call to method WriteLine
+#   41| After case ...: [match]
+#-----|  -> Before return ...;
 
-#   29| ... < ...
-#-----|  -> After ... < ... [false]
-#-----|  -> After ... < ... [true]
+#   41| After 0 [no-match]
+#-----|  -> After case ...: [no-match]
 
-#   31| return ...;
-#-----|  -> Normal Exit
+#   41| After 0 [match]
+#-----|  -> After case ...: [match]
 
-#   31| -...
-#-----|  -> After -...
+#   43| After case ...: [no-match]
+#-----|  -> default:
 
-#   34| ... > ...
-#-----|  -> After ... > ... [false]
-#-----|  -> After ... > ... [true]
+#   43| After case ...: [match]
+#-----|  -> Before return ...;
 
-#   36| ... = ...
-#-----|  -> After ... = ...
+#   43| After 1 [no-match]
+#-----|  -> After case ...: [no-match]
 
-#   36| ... / ...
-#-----|  -> After ... / ...
+#   43| After 1 [match]
+#-----|  -> After case ...: [match]
 
-#   42| return ...;
-#-----|  -> Normal Exit
-
-#   44| return ...;
-#-----|  -> Normal Exit
-
-#   46| return ...;
-#-----|  -> Normal Exit
-
-#   46| ... * ...
-#-----|  -> After ... * ...
-
-#    4| call to method <object initializer>
-#-----|  -> After call to method <object initializer>
-
-#    4| call to constructor Object
-#-----|  -> After call to constructor Object
+#   45| After default: [match]
+#-----|  -> Before return ...;
