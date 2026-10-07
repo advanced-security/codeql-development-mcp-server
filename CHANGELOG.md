@@ -14,23 +14,37 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.27.2] — 2026-10-07
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.27.2** and refreshed all bundled language query packs. ([#382](https://github.com/advanced-security/codeql-development-mcp-server/pull/382))
+- **Removed Dependabot's 7-day cooldown** so dependency updates reach downstream projects as soon as they are published, alongside npm security updates including a critical `proxy-addr` fix. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
+
 ### Changed
 
 #### Infrastructure & CI/CD
 
-- Removed the 7-day Dependabot `cooldown` window (added in [#305](https://github.com/advanced-security/codeql-development-mcp-server/pull/305)) from the `devcontainers`, `github-actions`, `gomod`, and `npm` ecosystems, so downstream projects receive dependency updates as soon as they are published. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
-- Dependabot no longer proposes `typescript` major-version updates until `typescript-eslint` supports them; the grouped npm update PR otherwise fails `npm ci` with `ERESOLVE`. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
+- Removed the 7-day Dependabot `cooldown` window (added in [#305](https://github.com/advanced-security/codeql-development-mcp-server/pull/305)) from the `devcontainers`, `github-actions`, `gomod`, and `npm` ecosystems. Dependabot also ignores TypeScript major updates until `typescript-eslint` supports them, avoiding grouped updates that fail `npm ci` with `ERESOLVE`. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
+
+### Fixed
+
+- Refreshed C#, Go, Java, and Ruby `PrintCFG` snapshots for upstream CFG changes and the Go `PrintAST` snapshot for `go-all` 8.0.0. Go `PrintCFG` labels now use source-root-relative paths so output is independent of the checkout location. ([#382](https://github.com/advanced-security/codeql-development-mcp-server/pull/382))
 
 ### Security
 
-- Upgraded transitive npm dependencies to incorporate published advisory fixes: `proxy-addr` 2.0.7 → 2.0.8 (GHSA-jqcg-44mw-7w3h, critical), `source-map-js` 1.2.1 → 1.2.2 (GHSA-68fv-2mgg-jv7q), `brace-expansion` 2.1.4 → 2.1.7 and 5.0.9 → 5.0.12 (GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr), `fast-uri` 3.1.7 → 3.1.8 (GHSA-hrr3-gc8f-f4qj), and `serialize-javascript` 7.1.1 → 7.1.2 (GHSA-gfhx-hw2g-v5hg). ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
-- Upgraded the transitive `ip-address` dependency from 10.5.0 to 10.7.3, incorporating the fixes for GHSA-rpw4-54j3-4h4q, GHSA-2vr4-cq9g-pvrc, GHSA-j6r3-76f7-8jcv, and GHSA-h3mg-xc3c-68pw. ([#376](https://github.com/advanced-security/codeql-development-mcp-server/pull/376))
+- Upgraded vulnerable transitive npm dependencies: `proxy-addr` 2.0.7 → 2.0.8 (critical, GHSA-jqcg-44mw-7w3h), `source-map-js` 1.2.1 → 1.2.2 (GHSA-68fv-2mgg-jv7q), `brace-expansion` 2.1.4 → 2.1.7 and 5.0.9 → 5.0.12 (GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr), `fast-uri` 3.1.7 → 3.1.8 (GHSA-hrr3-gc8f-f4qj), and `serialize-javascript` 7.1.1 → 7.1.2 (GHSA-gfhx-hw2g-v5hg). ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
+- Upgraded the transitive `ip-address` dependency from 10.5.0 to 10.7.3, incorporating fixes for GHSA-rpw4-54j3-4h4q, GHSA-2vr4-cq9g-pvrc, GHSA-j6r3-76f7-8jcv, and GHSA-h3mg-xc3c-68pw. ([#376](https://github.com/advanced-security/codeql-development-mcp-server/pull/376))
 - Upgraded the transitive `markdown-it` devDependency from 14.3.0 to 14.3.2, incorporating the fix for GHSA-253c-mchw-3w2r. ([#375](https://github.com/advanced-security/codeql-development-mcp-server/pull/375))
 
 ### Dependencies
 
-- Updated npm dependencies across the root, server, and VS Code extension workspaces to their latest compatible minor/patch releases: `@modelcontextprotocol/sdk` ^1.31.0, `eslint` ^10.11.0, `typescript-eslint` ^8.71.0, `prettier` ^3.9.9, `vitest` and `@vitest/coverage-v8` ^5.0.3, `mocha` ^12.0.2, and `@types/node` ^26.6.3, plus the transitive `js-yaml` 5.2.3. The server bundle (`server/dist`) was rebuilt. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
-- Held the transitive `ip-address` dependency at 10.7.2 rather than the 10.7.3 from [#376](https://github.com/advanced-security/codeql-development-mcp-server/pull/376), because the npm feed used for local development does not serve 10.7.3 yet. 10.7.2 already includes the fixes for all four `ip-address` advisories listed above, which were patched in 10.5.1 and 10.7.1. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
+- Updated the CodeQL CLI to v2.27.2 and aligned version-bearing files and CodeQL pack locks. The packs now use `actions-all` 0.6.3, `cpp-all` 12.2.0, `csharp-all` 7.4.0, `go-all` 8.0.0, `java-all` 9.3.2, `javascript-all` 2.10.3, `python-all` 7.2.7, `ruby-all` 7.0.2, `rust-all` 0.2.23, and `swift-all` 6.8.5. ([#382](https://github.com/advanced-security/codeql-development-mcp-server/pull/382))
+- Updated compatible npm dependencies across the root, server, and VS Code extension workspaces, including `@modelcontextprotocol/sdk` ^1.31.0, `eslint` ^10.11.0, `typescript-eslint` ^8.71.0, `prettier` ^3.9.9, `vitest` and `@vitest/coverage-v8` ^5.0.3, `mocha` ^12.0.2, `@types/node` ^26.6.3, and transitive `js-yaml` 5.2.3. Rebuilt the server bundle. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
+
+**Full Changelog**: [`v2.27.1...v2.27.2`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.1...v2.27.2)
+
+---
 
 ## [v2.27.1] — 2026-09-23
 
@@ -778,7 +792,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.1...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.2...HEAD
+[v2.27.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.2
 [v2.27.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.1
 [v2.27.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.0
 [v2.26.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.26.4
