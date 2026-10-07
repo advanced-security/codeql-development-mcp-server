@@ -1,6 +1,6 @@
 name: advanced-security/ql-mcp-java-tools-src
-version: 2.27.1
+version: 2.27.2
 description: 'Queries for codeql-development-mcp-server tools for java language'
 library: false
 dependencies:
-  codeql/java-all: 9.3.1
+  codeql/java-all: 9.3.2
