@@ -4,14 +4,10 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    cooldown:
-      default-days: 7
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
-    cooldown:
-      default-days: 7
     groups:
       all-github-actions:
         patterns:
@@ -20,8 +16,6 @@ updates:
     directory: '/client'
     schedule:
       interval: 'weekly'
-    cooldown:
-      default-days: 7
     groups:
       all-go-dependencies:
         patterns:
@@ -34,8 +28,6 @@ updates:
       - '/extensions/vscode/'
     schedule:
       interval: 'weekly'
-    cooldown:
-      default-days: 7
     ignore:
       ## Ignore all updates for 'zod' as our 'zod' version must match the
       ## version of 'zod' used by the '@modelcontextprotocol/sdk' dependency.
@@ -46,6 +38,10 @@ updates:
       ## Bump this manually together with 'engines.vscode' when raising the
       ## minimum supported VS Code version.
       - dependency-name: '@types/vscode'
+      ## Ignore 'typescript' major updates until 'typescript-eslint' supports
+      ## them; otherwise the grouped PR fails 'npm ci' with ERESOLVE.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
     versioning-strategy: 'increase'
     groups:
       all-npm-dependencies:
