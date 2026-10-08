@@ -19,7 +19,7 @@ _Changes on `main` since the latest tagged release that have not yet been includ
 ### Highlights
 
 - **Upgraded CodeQL CLI to v2.27.2** and refreshed all bundled language query packs. ([#382](https://github.com/advanced-security/codeql-development-mcp-server/pull/382))
-- **Removed Dependabot's 7-day cooldown** so dependency updates reach downstream projects as soon as they are published, alongside npm security updates including a critical `proxy-addr` fix. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
+- **Removed Dependabot's 7-day cooldown** so weekly dependency update checks no longer impose an additional seven-day delay, alongside npm security updates including a critical `proxy-addr` fix. ([#383](https://github.com/advanced-security/codeql-development-mcp-server/pull/383))
 
 ### Changed
 
