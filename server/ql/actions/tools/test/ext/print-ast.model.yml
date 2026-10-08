@@ -5,3 +5,4 @@ extensions:
     data:
       - ['.github/workflows/reusable_workflow.yml']
       - ['action-example1/action.yml']
+      - ['.github/workflows/actions.lock']
