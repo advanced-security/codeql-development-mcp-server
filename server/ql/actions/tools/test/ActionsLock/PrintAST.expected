@@ -1,0 +1,24 @@
+.github/workflows/actions.lock:
+#    1| [ActionsLock] .github/workflows/actions.lock
+#    1|   1: [YamlScalar] version
+#    1|   2: [YamlScalar] 1
+#    2|   3: [YamlScalar] workflows
+#    3|   4: [YamlMapping] .github ... ld.yml:
+#    3|     1: [YamlScalar] .github/workflows/build.yml
+#    4|     2: [YamlSequence] - actio ... @v4.2.4
+#    4|       1: [YamlScalar] actions/cache@v4.2.4
+#    5|       2: [YamlScalar] actions/checkout@v5.0.0
+#    6|   5: [YamlScalar] dependencies
+#    7|   6: [YamlMapping] actions ... v4.2.4:
+#    7|     1: [YamlScalar] actions/cache@v4.2.4
+#    8|     2: [YamlMapping] ref: v4.2.4
+#    8|       1: [YamlScalar] ref
+#    8|       2: [YamlScalar] v4.2.4
+#    9|       3: [YamlScalar] commit
+#    9|       4: [YamlScalar] sha1-0400d5f644dc74513175e3cd8d07132dd4860809
+#   10|     3: [YamlScalar] actions/checkout@v5.0.0
+#   11|     4: [YamlMapping] ref: v5.0.0
+#   11|       1: [YamlScalar] ref
+#   11|       2: [YamlScalar] v5.0.0
+#   12|       3: [YamlScalar] commit
+#   12|       4: [YamlScalar] sha1-08c6903cd8c0fde910a37f88322edcfb5dd907a8

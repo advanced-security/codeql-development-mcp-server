@@ -10,6 +10,8 @@ This query outputs CFG nodes and their successor relationships for the GitHub Ac
 
 When invoking this query with `codeql_query_run` for the `actions` language, `sourceFiles` is required. Provide a comma-separated list of source file paths, such as `".github/workflows/ci.yml,action.yml"`.
 
+Lockfiles have no control flow; use `PrintAST` to inspect `actions.lock`.
+
 ## Use Cases
 
 This query is primarily used for:
