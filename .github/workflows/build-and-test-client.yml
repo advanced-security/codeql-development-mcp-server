@@ -106,14 +106,14 @@ jobs:
 
       - name: Setup Node.js environment (from .node-version)
         if: matrix.node == '.node-version'
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
 
       - name: Setup Node.js environment (explicit version)
         if: matrix.node != '.node-version'
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           cache: 'npm'
           node-version: ${{ matrix.node }}
@@ -225,14 +225,14 @@ jobs:
 
       - name: Setup Node.js (from .node-version)
         if: matrix.node == '.node-version'
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
 
       - name: Setup Node.js (explicit version)
         if: matrix.node != '.node-version'
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           cache: 'npm'
           node-version: ${{ matrix.node }}

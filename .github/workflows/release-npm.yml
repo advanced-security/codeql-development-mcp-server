@@ -67,7 +67,7 @@ jobs:
           persist-credentials: false
 
       - name: npm - Setup Node.js
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
           registry-url: 'https://registry.npmjs.org'
@@ -106,7 +106,7 @@ jobs:
           echo "✅ Published npm package to npmjs.org (with provenance)"
 
       - name: npm - Upload release build artifact
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           include-hidden-files: true
           name: release-build-${{ steps.version.outputs.version }}
