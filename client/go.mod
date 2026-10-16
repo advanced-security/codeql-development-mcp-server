@@ -3,8 +3,8 @@ module github.com/advanced-security/codeql-development-mcp-server/client
 go 1.26.0
 
 require (
-	github.com/cli/go-gh/v2 v2.16.1
-	github.com/mark3labs/mcp-go v1.1.1
+	github.com/cli/go-gh/v2 v2.16.2
+	github.com/mark3labs/mcp-go v1.2.1
 	github.com/spf13/cobra v1.10.2
 )
 
