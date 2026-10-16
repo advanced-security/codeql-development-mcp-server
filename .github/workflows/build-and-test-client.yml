@@ -1,3 +1,5 @@
+# This workflow is managed by gh actions-lock.
+
 name: Build and Test Client - CodeQL Development MCP Server
 
 on:
@@ -40,10 +42,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       - name: Setup Go environment
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@v7.0.0
         with:
           cache-dependency-path: 'client/go.sum'
           go-version-file: 'client/go.mod'
@@ -94,24 +96,24 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       - name: Setup Go environment
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@v7.0.0
         with:
           cache-dependency-path: 'client/go.sum'
           go-version-file: 'client/go.mod'
 
       - name: Setup Node.js environment (from .node-version)
         if: matrix.node == '.node-version'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
 
       - name: Setup Node.js environment (explicit version)
         if: matrix.node != '.node-version'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version: ${{ matrix.node }}
@@ -128,7 +130,7 @@ jobs:
         run: npm ci --workspace=server
 
       - name: Setup CodeQL environment
-        uses: ./.github/actions/setup-codeql-environment
+        uses: $/.github/actions/setup-codeql-environment
         with:
           install-language-runtimes: false
 
@@ -219,18 +221,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       - name: Setup Node.js (from .node-version)
         if: matrix.node == '.node-version'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
 
       - name: Setup Node.js (explicit version)
         if: matrix.node != '.node-version'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version: ${{ matrix.node }}
@@ -242,7 +244,7 @@ jobs:
         run: npm run bundle -w server
 
       - name: Setup CodeQL environment
-        uses: ./.github/actions/setup-codeql-environment
+        uses: $/.github/actions/setup-codeql-environment
         with:
           add-to-path: false
           install-language-runtimes: false

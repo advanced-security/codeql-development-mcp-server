@@ -1,3 +1,5 @@
+# This workflow is managed by gh actions-lock.
+
 name: Build and Test Extension - CodeQL Development MCP Server
 
 on:
@@ -39,18 +41,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       - name: Setup Node.js environment (from .node-version)
         if: matrix.node == '.node-version'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
 
       - name: Setup Node.js environment (explicit version)
         if: matrix.node != '.node-version'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version: ${{ matrix.node }}
@@ -74,13 +76,13 @@ jobs:
           npm run bundle:server
 
       - name: Setup CodeQL environment for integration tests
-        uses: ./.github/actions/setup-codeql-environment
+        uses: $/.github/actions/setup-codeql-environment
         with:
           add-to-path: 'true'
           install-language-runtimes: 'false'
 
       - name: Cache VS Code for integration tests
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache@v6.1.0
         with:
           key: vscode-test-${{ runner.os }}-stable
           path: extensions/vscode/.vscode-test
