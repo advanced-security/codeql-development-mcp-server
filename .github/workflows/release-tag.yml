@@ -105,7 +105,7 @@ jobs:
 
       - name: Tag - Setup Node.js
         if: steps.check-tag.outputs.tag_exists != 'true'
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 

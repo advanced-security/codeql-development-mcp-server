@@ -68,7 +68,7 @@ jobs:
           persist-credentials: false
 
       - name: VSIX - Setup Node.js
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
@@ -119,7 +119,7 @@ jobs:
           done
 
       - name: VSIX - Upload artifact
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: codeql-development-mcp-server-vsix-${{ steps.version.outputs.version }}
           path: extensions/vscode/${{ steps.package.outputs.vsix_name }}
