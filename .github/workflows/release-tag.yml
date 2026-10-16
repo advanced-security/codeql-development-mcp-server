@@ -1,3 +1,5 @@
+# This workflow is managed by gh actions-lock.
+
 name: Release Tag - Create Version Tag
 
 on:
@@ -42,7 +44,7 @@ jobs:
 
     steps:
       - name: Tag - Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -95,7 +97,7 @@ jobs:
 
       - name: Tag - Setup CodeQL environment
         if: steps.check-tag.outputs.tag_exists != 'true'
-        uses: ./.github/actions/setup-codeql-environment
+        uses: $/.github/actions/setup-codeql-environment
         with:
           add-to-path: true
           install-language-runtimes: false
@@ -103,7 +105,7 @@ jobs:
 
       - name: Tag - Setup Node.js
         if: steps.check-tag.outputs.tag_exists != 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version-file: '.node-version'
 

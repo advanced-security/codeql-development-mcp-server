@@ -1,3 +1,5 @@
+# This workflow is managed by gh actions-lock.
+
 name: 'Copilot Setup Steps'
 
 on:
@@ -31,7 +33,7 @@ jobs:
 
     steps:
       - name: Copilot Setup - Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         ## TODO : fix and/or rework to avoid "token not provided" error when this workflow
         ## is initiated purely for use by Copilot Coding Agent (CCA) (i.e. not triggered
         ## by normal code change). Uncomment the `with` section or refactor approach.
@@ -40,7 +42,7 @@ jobs:
         #  token: ${{ secrets.QL_DEV_TOKEN }}
 
       - name: Copilot Setup - Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
@@ -49,7 +51,7 @@ jobs:
         run: npm ci --include=optional --ignore-scripts
 
       - name: Copilot Setup - Setup CodeQL environment
-        uses: ./.github/actions/setup-codeql-environment
+        uses: $/.github/actions/setup-codeql-environment
         with:
           install-language-runtimes: true
 
@@ -73,7 +75,7 @@ jobs:
           npm run bundle:server
 
       - name: Copilot Setup - Cache VS Code for integration tests
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache@v6.1.0
         with:
           key: vscode-test-${{ runner.os }}-stable
           path: extensions/vscode/.vscode-test

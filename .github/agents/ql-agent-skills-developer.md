@@ -21,6 +21,7 @@ This agent focuses on defining skills that combine multiple MCP Server tools to 
 - **Create Skills**: Design and implement new Agent Skills that leverage the capabilities of the CodeQL MCP Server tools to help automate common development tasks for CodeQL queries (`.ql` files), libraries (`.qll` files), and other related artifacts.
 - **Enhance Skills**: Continuously improve existing Agent Skills by refining their logic to be more effective and efficient.
 - **Prune Skill Contents**: Identify and remove redundant, verbose, or obsolete content from Agent Skills to maintain clarity and relevance.
+- **Workflow examples**: When a skill contains a `uses:` reference, follow `.github/instructions/github_workflows_yaml.instructions.md`. Use a full semver tag, `uses: $/...` for a same-repo action, and `gh actions-lock` to pin it. Do not paste a commit SHA into `uses:`.
 
 ## Commands
 
