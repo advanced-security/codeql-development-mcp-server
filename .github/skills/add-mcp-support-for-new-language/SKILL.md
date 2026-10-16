@@ -252,7 +252,7 @@ strategy:
 
 ### 6.2 Special OS Requirements
 
-If the language requires a specific OS (like Swift requires macOS), create a dedicated workflow:
+If the language requires a specific OS (like Swift requires macOS), create a dedicated workflow. External actions use a full semver tag; the commit is pinned in `.github/workflows/actions.lock`, not inline. Same-repo actions use `uses: $/...`. After adding the workflow, run `gh actions-lock` from the repo root and commit the lockfile diff. Do not paste commit SHAs into `uses:`.
 
 ```yaml
 # .github/workflows/query-unit-tests-{language}.yml
@@ -283,13 +283,13 @@ jobs:
     runs-on: {os}-latest  # e.g., macos-latest, windows-latest
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
       - run: npm ci --workspaces --ignore-scripts
-      - uses: ./.github/actions/setup-codeql-environment
+      - uses: $/.github/actions/setup-codeql-environment
         with:
           install-language-runtimes: false
       - run: ./server/scripts/install-packs.sh --language {language}
@@ -552,7 +552,7 @@ Before submitting the PR:
 - [ ] `docs/public.md` Supported Languages table updated
 - [ ] Documentation updated (4+ files)
 - [ ] Skills updated (2+ files)
-- [ ] CI workflow configured (matrix or dedicated)
+- [ ] CI workflow configured (matrix or dedicated), with `gh actions-lock` regenerating `.github/workflows/actions.lock`
 - [ ] Server bundle rebuilt (`server/dist/codeql-development-mcp-server.js`)
 - [ ] All existing tests still pass
 - [ ] New language tests pass

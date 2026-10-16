@@ -1,3 +1,5 @@
+# This workflow is managed by gh actions-lock.
+
 name: Query Unit Tests - Swift (macOS)
 
 on:
@@ -32,10 +34,10 @@ jobs:
 
     steps:
       - name: Query Unit Tests - swift - Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       - name: Query Unit Tests - swift - Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@v7.0.0
         with:
           cache: 'npm'
           node-version-file: '.node-version'
@@ -44,7 +46,7 @@ jobs:
         run: npm ci --workspaces --ignore-scripts
 
       - name: Query Unit Tests - swift - Setup CodeQL environment
-        uses: ./.github/actions/setup-codeql-environment
+        uses: $/.github/actions/setup-codeql-environment
         with:
           install-language-runtimes: false
 

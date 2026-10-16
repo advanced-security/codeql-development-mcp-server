@@ -12,6 +12,8 @@
 #   3. Replace {RUNNER_OS} with the required runner (e.g., macos-latest, windows-latest)
 #   4. Update the file extension in the workflow if needed
 #
+# This workflow is managed by gh actions-lock.
+
 name: Query Unit Tests ({LANGUAGE})
 
 on:
@@ -43,12 +45,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@v7.0.1
 
-      - name: Set up CodeQL CLI
-        uses: github/codeql-action/init@480db559a14342288b67e54bd959dd52dc3ee68f # v3
+      - name: Set up CodeQL environment
+        uses: $/.github/actions/setup-codeql-environment
         with:
-          languages: '{LANGUAGE}'
+          install-language-runtimes: false
 
       - name: Install CodeQL packs
         run: |

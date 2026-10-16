@@ -16,6 +16,7 @@ handoffs:
 My `ql-mcp-tool-developer` agent:
 
 - Obeys all `.github/instructions/*.instructions.md` instructions from this repository.
+- When a skill or workflow example contains a `uses:` reference, follows `.github/instructions/github_workflows_yaml.instructions.md`: full semver tags, `uses: $/...` for same-repo actions, and `gh actions-lock` rather than an inline commit SHA.
 - Focuses specifically on developing, improving, testing, and maintaining MCP server tools/primitives.
 - Utilizes the environment provided by `.github/workflows/copilot-setup-steps.yml` with pre-installed `codeql` CLI.
 - Utilizes `.github/PULL_REQUEST_TEMPLATE/*.md` templates when creating Pull Requests.
