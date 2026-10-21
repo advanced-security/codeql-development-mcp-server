@@ -8,7 +8,6 @@
 
 import codeql.actions.Ast
 private import codeql.actions.Cfg
-import codeql.actions.controlflow.BasicBlocks
 import ExternalPredicates
 
 /**
