@@ -1,50 +1,78 @@
+nested/cfg-example1/action.yml:
+#    1| Normal Exit
+#-----|  -> Exit
+
 workflow.yml:
-#    1| enter name: Example1
+#    1| Normal Exit
+#-----|  -> Exit
+
+nested/cfg-example1/action.yml:
+#    1| Entry
+#-----|  -> name: S ...  action
+
+workflow.yml:
+#    1| Entry
 #-----|  -> name: Example1
 
 nested/cfg-example1/action.yml:
-#    1| enter name: S ...  action
-#-----|  -> name: S ...  action
+#    1| Exit
+
+workflow.yml:
+#    1| Exit
+
+nested/cfg-example1/action.yml:
+#    1| name: S ...  action
+#-----|  -> using: composite
 
 workflow.yml:
 #    1| name: Example1
 #-----|  -> Job: test
 
+nested/cfg-example1/action.yml:
+#    6| Run Step
+#-----|  -> echo "Selected"
+
+workflow.yml:
 #    7| Uses Step
 #-----|  -> Run Step
 
 #    8| Run Step
 #-----|  -> echo "Testing"
 
+nested/cfg-example1/action.yml:
+#    4| using: composite
+#-----|  -> Run Step
+
+#    6| echo "Selected"
+#-----|  -> After Run Step
+
+workflow.yml:
 #    9| echo "Testing"
-#-----|  -> exit name: Example1 (normal)
+#-----|  -> After Run Step
 
 #    5| Job: test
 #-----|  -> Uses Step
 
 nested/cfg-example1/action.yml:
-#    1| name: S ...  action
-#-----|  -> using: composite
-
-#    4| using: composite
-#-----|  -> Run Step
-
-#    6| Run Step
-#-----|  -> echo "Selected"
-
-#    6| echo "Selected"
-#-----|  -> exit name: S ...  action (normal)
+#    1| After name: S ...  action
+#-----|  -> Normal Exit
 
 workflow.yml:
-#    1| exit name: Example1 (normal)
-#-----|  -> exit name: Example1
+#    1| After name: Example1
+#-----|  -> Normal Exit
 
 nested/cfg-example1/action.yml:
-#    1| exit name: S ...  action (normal)
-#-----|  -> exit name: S ...  action
+#    6| After Run Step
+#-----|  -> After using: composite
 
 workflow.yml:
-#    1| exit name: Example1
+#    8| After Run Step
+#-----|  -> After Job: test
 
 nested/cfg-example1/action.yml:
-#    1| exit name: S ...  action
+#    4| After using: composite
+#-----|  -> After name: S ...  action
+
+workflow.yml:
+#    5| After Job: test
+#-----|  -> After name: Example1

@@ -40,9 +40,10 @@ jobs:
 
 In the resulting CFG:
 
-- Each job creates a CFG scope
+- The workflow is the CFG scope, so control flows from its `Entry` node to its `Normal Exit` and `Exit` nodes
 - Steps within a job execute sequentially
 - Actions and run commands create control flow nodes
+- The workflow, the job and the `run` step each have an `After` node, reached once everything they contain has executed
 
 ## Output Format
 
@@ -50,6 +51,8 @@ The query produces two relations:
 
 - `nodes(Node, string, string)`: Each CFG node with its label
 - `edges(Node, Node)`: Successor relationships between nodes
+
+The graph includes `Entry`, `Normal Exit` and `Exit` nodes for each workflow and composite action, and an `After` node for each element that contains other elements, such as a job or a `run` step.
 
 ## References
 
