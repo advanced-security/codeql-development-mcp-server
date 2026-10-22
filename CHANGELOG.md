@@ -14,6 +14,43 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.27.3] — 2026-10-22
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.27.3** and refreshed all bundled language query packs. `actions-all` 0.7.0 adds explicit `Entry`, `Normal Exit`, and `Exit` nodes to the Actions control-flow graph, which changes the Actions `PrintCFG` output. ([#392](https://github.com/advanced-security/codeql-development-mcp-server/pull/392))
+- **Patched the MCP TypeScript SDK** by upgrading `@modelcontextprotocol/sdk` to 1.32.1, which fixes two high-severity and two moderate-severity advisories. ([#397](https://github.com/advanced-security/codeql-development-mcp-server/pull/397))
+- **GitHub Actions `uses:` references are now pinned in `.github/workflows/actions.lock`**, so Dependabot can keep pinned commits current when security advisories are published. ([#391](https://github.com/advanced-security/codeql-development-mcp-server/pull/391))
+
+### Changed
+
+#### Infrastructure & CI/CD
+
+- Workflows and composite actions now reference external actions by full semver tag (for example `@v7.1.0`) instead of an inline commit SHA, and same-repository actions by `$/...`. `gh actions-lock` records the commit each tag resolves to in `.github/workflows/actions.lock`, and each onboarded workflow carries a `# This workflow is managed by gh actions-lock.` header. `dtolnay/rust-toolchain@master` remains the documented exception. The workflow instructions, agent definitions, skills, and templates were updated to match. ([#391](https://github.com/advanced-security/codeql-development-mcp-server/pull/391))
+- The repository `.npmrc` now sets `registry=https://registry.npmjs.org/` and `min-release-age=0`, so `npm install` and `npm run upgrade` resolve the latest releases from the public npm registry even when user or global npm config points at a private feed or sets a release cooldown. `package-lock.json` now resolves every package from `registry.npmjs.org`. ([#397](https://github.com/advanced-security/codeql-development-mcp-server/pull/397))
+- `npm run upgrade` no longer passes `--peer` to `npm-check-updates`, which could not read peer metadata and proposed `typescript` 7, failing `npm install` with `ERESOLVE`. A new `.ncurc.cjs` holds `typescript` to its current major version while `typescript-eslint` requires `typescript <6.1.0`. ([#397](https://github.com/advanced-security/codeql-development-mcp-server/pull/397))
+
+### Fixed
+
+- Regenerated the Actions and Java `PrintCFG` snapshots for upstream CFG changes: `actions-all` 0.7.0 adds `Entry`, `Normal Exit`, and `Exit` nodes, and `java-all` 9.3.3 adds `After …` nodes. The Actions `PrintCFG` query no longer imports `codeql.actions.controlflow.BasicBlocks`. ([#392](https://github.com/advanced-security/codeql-development-mcp-server/pull/392))
+
+### Security
+
+- Upgraded `@modelcontextprotocol/sdk` from 1.31.0 to 1.32.1, fixing GHSA-22jm-h49p-29qw (high), GHSA-46jr-4wx8-v453 (high), GHSA-6prh-2h8m-c8cw, and GHSA-rvq5-wwqv-78pq, and its transitive `hono` dependency from 4.13.7 to 4.13.13 (GHSA-5r4p-p66f-jhc7). ([#397](https://github.com/advanced-security/codeql-development-mcp-server/pull/397))
+- Upgraded the transitive `vite` devDependency from 8.3.1 to 8.3.5, fixing GHSA-587h-7wmj-h5pm (high), GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw, GHSA-rq7h-c2jc-7f22, GHSA-vfpm-58rq-9qcg, and GHSA-9jrq-w75r-8gcw. ([#397](https://github.com/advanced-security/codeql-development-mcp-server/pull/397))
+- Upgraded the transitive `markdown-it` devDependency from 14.3.2 to 14.3.3, fixing GHSA-gfr2-rv44-r23c (high) and GHSA-vfgh-jcmw-g37q. ([#395](https://github.com/advanced-security/codeql-development-mcp-server/pull/395))
+
+### Dependencies
+
+- Updated the CodeQL CLI to v2.27.3 and aligned version-bearing files and CodeQL pack locks. The packs now use `actions-all` 0.7.0, `cpp-all` 12.3.0, `csharp-all` 7.4.1, `go-all` 8.0.1, `java-all` 9.3.3, `javascript-all` 2.10.4, `python-all` 7.2.8, `ruby-all` 7.1.0, `rust-all` 0.2.24, and `swift-all` 6.8.6. ([#392](https://github.com/advanced-security/codeql-development-mcp-server/pull/392))
+- Updated npm dependencies across the root, server, and VS Code extension workspaces to the latest compatible public releases, including `dotenv` ^18.0.8 (major), `express` ^5.3.0, `sql.js` ^1.15.1, `js-yaml` ^5.5.0, `eslint` ^10.13.0, `typescript-eslint` ^8.72.0, `prettier` ^3.9.10, `eslint-plugin-prettier` ^5.5.7, `vitest` and `@vitest/coverage-v8` ^5.0.5, `mocha` ^12.0.3, and `@types/node` ^26.6.5. Refreshed transitive dependencies and rebuilt the server bundle; `typescript` remains at 6.0.3. ([#397](https://github.com/advanced-security/codeql-development-mcp-server/pull/397))
+- Updated Go MCP client dependencies: `github.com/cli/go-gh/v2` 2.16.1 → 2.16.2 and `github.com/mark3labs/mcp-go` 1.1.1 → 1.2.1. ([#388](https://github.com/advanced-security/codeql-development-mcp-server/pull/388))
+- Updated GitHub Actions: `actions/setup-node` 7.0.0 → 7.1.0, `actions/upload-artifact` 7.0.1 → 7.0.2, and `actions/download-artifact` 8.0.1 → 8.0.2. ([#389](https://github.com/advanced-security/codeql-development-mcp-server/pull/389))
+
+**Full Changelog**: [`v2.27.2...v2.27.3`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.2...v2.27.3)
+
+---
+
 ## [v2.27.2] — 2026-10-07
 
 ### Highlights
@@ -792,7 +829,8 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.2...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.3...HEAD
+[v2.27.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.3
 [v2.27.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.2
 [v2.27.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.1
 [v2.27.0]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.0
