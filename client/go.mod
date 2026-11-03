@@ -1,10 +1,10 @@
 module github.com/advanced-security/codeql-development-mcp-server/client
 
-go 1.26.0
+go 1.26.7
 
 require (
-	github.com/cli/go-gh/v2 v2.16.2
-	github.com/mark3labs/mcp-go v1.2.1
+	github.com/cli/go-gh/v2 v2.17.0
+	github.com/mark3labs/mcp-go v1.4.0
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -23,10 +23,10 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/thlib/go-timezone-local v0.0.8 // indirect
+	github.com/thlib/go-timezone-local v0.0.9 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/term v0.46.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
