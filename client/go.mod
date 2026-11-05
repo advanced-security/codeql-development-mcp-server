@@ -4,7 +4,7 @@ go 1.26.7
 
 require (
 	github.com/cli/go-gh/v2 v2.17.0
-	github.com/mark3labs/mcp-go v1.4.0
+	github.com/mark3labs/mcp-go v1.5.0
 	github.com/spf13/cobra v1.10.2
 )
 
