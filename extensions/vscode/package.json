@@ -16,7 +16,7 @@
     "url": "https://github.com/advanced-security/codeql-development-mcp-server/issues"
   },
   "engines": {
-    "vscode": "^1.115.0",
+    "vscode": "^1.114.0",
     "node": "^24.15.0 || >=26.0.0"
   },
   "categories": [
@@ -223,7 +223,7 @@
     "@eslint/js": "^10.0.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "^26.6.5",
-    "@types/vscode": "^1.115.0",
+    "@types/vscode": "^1.114.0",
     "@vitest/coverage-v8": "^5.0.5",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
