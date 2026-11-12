@@ -226,7 +226,7 @@ jobs:
         run: xvfb-run -a npm run build-and-test
 
       - name: Update - Create Pull Request
-        uses: peter-evans/create-pull-request@v8.1.1
+        uses: peter-evans/create-pull-request@v8.1.2
         with:
           title: 'Upgrade CodeQL CLI dependency to ${{ needs.detect-update.outputs.version }}'
           body: |
