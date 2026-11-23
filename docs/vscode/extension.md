@@ -45,6 +45,8 @@ code --install-extension extensions/vscode/codeql-development-mcp-server-vX.Y.Z.
 
 The extension requires the [CodeQL extension](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-codeql) (`GitHub.vscode-codeql`) and will prompt you to install it if missing.
 
+When updating dependencies, pin `@types/vscode` to an exact version no newer than the minimum in `engines.vscode`. If there are no typings for that editor release, use the nearest earlier release; a caret range can silently pull in newer APIs.
+
 ## What it does
 
 On activation the extension:
