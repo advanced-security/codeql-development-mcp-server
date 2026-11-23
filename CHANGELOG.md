@@ -14,6 +14,24 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+### Changed
+
+#### Infrastructure & CI/CD
+
+- The repository `.npmrc` no longer hard-codes `registry=https://registry.npmjs.org/`, so user or organization npm configuration (for example, a private package feed) applies to `npm install`. `engine-strict`, `ignore-scripts`, and `min-release-age=0` are unchanged. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+
+#### VS Code Extension
+
+- `extensions/vscode/tsconfig.json` now sets `"types": ["node", "vscode"]` so Node and VS Code typings are included explicitly. The contributor docs note that `@types/vscode` must be pinned to an exact version no newer than the `engines.vscode` minimum. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+
+### Fixed
+
+- Pinned `@types/vscode` to 1.110.0 (previously `^1.114.0`, which resolved to 1.140.0) so the extension cannot use VS Code APIs newer than the supported `engines.vscode` minimum of 1.114.0. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+
+### Dependencies
+
+- Updated npm dependencies across the root, server, and VS Code extension workspaces to the latest supportable versions, including `vitest` and `@vitest/coverage-v8` 5.1.0 (pinned), `sql.js` 1.16.0 (pinned), `@modelcontextprotocol/sdk` ^1.32.2, `dotenv` ^18.0.10, `eslint` ^10.15.0, `typescript-eslint` ^8.73.0, `prettier` ^3.10.1, `markdownlint-cli` ^0.50.0, `@vscode/vsce` ^4.1.1, `glob` ^14.0.6, and `@types/node` ^26.6.6. Rebuilt the server bundle. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+
 ## [v2.27.3] — 2026-10-22
 
 ### Highlights
