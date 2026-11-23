@@ -141,6 +141,14 @@ Create a `.vscode/mcp.json` in your project root to share the configuration with
 | `HTTP_PORT`      | HTTP port (when using `http`)          | `3000`   |
 | `DEBUG`          | Enable debug logging                   | `false`  |
 
+HTTP is an unauthenticated, loopback-only transport for trusted native clients,
+not browsers or remote access. Prefer `stdio`; never proxy, tunnel, or forward the
+HTTP port. `HTTP_HOST` accepts only `localhost` (default; binds to `127.0.0.1`),
+`127.0.0.1`, or `::1`. Requests with non-loopback Host headers or any
+Origin/Sec-Fetch-Site header are rejected, and CORS is not enabled. See
+[HTTP security boundary](../server/README.md#http-security-boundary) for the full
+restrictions and local-user trust assumptions.
+
 `CODEQL_PATH` is the most important variable. When set, the server uses the specified binary instead of looking for `codeql` on `PATH`. This lets you pin a specific CodeQL CLI version independently of what is installed globally:
 
 ```bash

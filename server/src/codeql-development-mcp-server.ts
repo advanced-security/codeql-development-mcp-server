@@ -6,9 +6,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import express from 'express';
-import cors from 'cors';
+import { createLocalHttpApp, getHttpConfiguration } from './lib/http-transport';
 import dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
 import { realpathSync } from 'fs';
 import { resolve } from 'path';
 import { pathToFileURL } from 'url';
@@ -43,6 +43,8 @@ const VERSION = '2.27.4';
  */
 export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<McpServer> {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
+  // Reject unsafe HTTP settings before starting the CodeQL CLI or registering tools.
+  const httpConfiguration = mode === 'http' ? getHttpConfiguration() : undefined;
 
   // Resolve the CodeQL CLI binary path (honors CODEQL_PATH env var).
   // This must happen before any tool registration so that all CodeQL commands
@@ -113,12 +115,10 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
     logger.info('McpServer started successfully on STDIO transport');
   } else {
     // HTTP mode
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
+    const app = createLocalHttpApp();
 
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => Math.random().toString(36).substring(7),
+      sessionIdGenerator: randomUUID,
     });
     await server.connect(transport);
 
@@ -140,8 +140,8 @@ export async function startServer(mode: 'stdio' | 'http' = 'stdio'): Promise<Mcp
       });
     });
 
-    const host = process.env.HTTP_HOST || 'localhost';
-    const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3000;
+    if (!httpConfiguration) throw new Error('Missing HTTP configuration');
+    const { host, port } = httpConfiguration;
     
     // Return a promise that keeps the process alive
     return new Promise<McpServer>((resolve, reject) => {

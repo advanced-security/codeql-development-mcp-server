@@ -119,6 +119,26 @@ Full reference: [Resources](https://github.com/advanced-security/codeql-developm
 | `HTTP_PORT`      | HTTP port (when using HTTP mode)       | `3000`   |
 | `DEBUG`          | Enable debug logging                   | `false`  |
 
+### HTTP security boundary
+
+Prefer the default `stdio` transport. HTTP mode is only for trusted native clients
+on a trusted local machine. It has **no authentication or TLS** and does not
+isolate local users or processes: clients can execute build commands and access
+files with the server's privileges.
+
+HTTP binds only to loopback. Set `HTTP_HOST` to `localhost` (the default, which
+binds to `127.0.0.1` without a DNS lookup), `127.0.0.1`, or `::1`; any other value
+is rejected at startup. Requests must use `localhost`, `127.0.0.1`, or `[::1]` with
+the listener's port in the `Host` header. All requests with an `Origin` or
+`Sec-Fetch-Site` header are rejected, including same-origin browser requests and
+`Origin: null`. Browser clients and CORS are not supported. `HTTP_PORT`, or `PORT`
+when `HTTP_PORT` is unset, must be an integer from 1 to 65535.
+
+Do not expose HTTP mode through a reverse proxy, tunnel, port forward, or public
+container port. Host/Origin checks are browser protections, **not authentication**:
+a non-browser client or proxy can supply local-looking headers. Remote deployments
+and shared untrusted machines are not supported by this transport.
+
 ## Troubleshooting
 
 - **Tool query errors (e.g., PrintAST fails):** Run `codeql-development-mcp-server-setup-packs` to install CodeQL pack dependencies

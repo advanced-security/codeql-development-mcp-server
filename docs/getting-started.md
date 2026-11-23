@@ -109,6 +109,18 @@ Add to your `mcp.json` file:
 | `CODEQL_QUERY_RUN_RESULTS_DIRS` | Colon-separated directories containing per-run query result subdirectories | —        |
 | `CODEQL_MRVA_RUN_RESULTS_DIRS`  | Colon-separated directories containing MRVA run result subdirectories      | —        |
 
+### HTTP mode restrictions
+
+Prefer `stdio`. HTTP is unauthenticated and supports only trusted native clients
+on a trusted local machine, not browsers or remote access. Clients can execute
+build commands and access files as the server user. `HTTP_HOST` accepts only
+`localhost` (default; binds to `127.0.0.1`), `127.0.0.1`, or `::1`. Requests
+require a loopback `Host` with the listener's port and must not contain `Origin`
+or `Sec-Fetch-Site`. CORS is not enabled. `HTTP_PORT` (or `PORT` if unset) must be
+an integer from 1 to 65535. Do not proxy, tunnel, or forward this port: these
+checks are not authentication and do not isolate local users. See
+[HTTP security boundary](../server/README.md#http-security-boundary).
+
 ## Verification
 
 1. Restart VS Code

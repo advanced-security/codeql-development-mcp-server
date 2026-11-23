@@ -37525,281 +37525,27 @@ var require_express2 = __commonJS({
   }
 });
 
-// ../node_modules/object-assign/index.js
-var require_object_assign = __commonJS({
-  "../node_modules/object-assign/index.js"(exports, module) {
+// src/utils/logger.ts
+var logger;
+var init_logger = __esm({
+  "src/utils/logger.ts"() {
     "use strict";
-    var getOwnPropertySymbols = Object.getOwnPropertySymbols;
-    var hasOwnProperty = Object.prototype.hasOwnProperty;
-    var propIsEnumerable = Object.prototype.propertyIsEnumerable;
-    function toObject(val) {
-      if (val === null || val === void 0) {
-        throw new TypeError("Object.assign cannot be called with null or undefined");
-      }
-      return Object(val);
-    }
-    function shouldUseNative() {
-      try {
-        if (!Object.assign) {
-          return false;
-        }
-        var test1 = new String("abc");
-        test1[5] = "de";
-        if (Object.getOwnPropertyNames(test1)[0] === "5") {
-          return false;
-        }
-        var test2 = {};
-        for (var i = 0; i < 10; i++) {
-          test2["_" + String.fromCharCode(i)] = i;
-        }
-        var order2 = Object.getOwnPropertyNames(test2).map(function(n) {
-          return test2[n];
-        });
-        if (order2.join("") !== "0123456789") {
-          return false;
-        }
-        var test3 = {};
-        "abcdefghijklmnopqrst".split("").forEach(function(letter) {
-          test3[letter] = letter;
-        });
-        if (Object.keys(Object.assign({}, test3)).join("") !== "abcdefghijklmnopqrst") {
-          return false;
-        }
-        return true;
-      } catch (err) {
-        return false;
-      }
-    }
-    module.exports = shouldUseNative() ? Object.assign : function(target, source) {
-      var from;
-      var to = toObject(target);
-      var symbols;
-      for (var s = 1; s < arguments.length; s++) {
-        from = Object(arguments[s]);
-        for (var key in from) {
-          if (hasOwnProperty.call(from, key)) {
-            to[key] = from[key];
-          }
-        }
-        if (getOwnPropertySymbols) {
-          symbols = getOwnPropertySymbols(from);
-          for (var i = 0; i < symbols.length; i++) {
-            if (propIsEnumerable.call(from, symbols[i])) {
-              to[symbols[i]] = from[symbols[i]];
-            }
-          }
+    logger = {
+      info: (message, ...args) => {
+        console.error(`[INFO] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
+      },
+      error: (message, ...args) => {
+        console.error(`[ERROR] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
+      },
+      warn: (message, ...args) => {
+        console.error(`[WARN] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
+      },
+      debug: (message, ...args) => {
+        if (process.env.DEBUG) {
+          console.error(`[DEBUG] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
         }
       }
-      return to;
     };
-  }
-});
-
-// ../node_modules/cors/lib/index.js
-var require_lib3 = __commonJS({
-  "../node_modules/cors/lib/index.js"(exports, module) {
-    (function() {
-      "use strict";
-      var assign = require_object_assign();
-      var vary = require_vary();
-      var defaults = {
-        origin: "*",
-        methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-        preflightContinue: false,
-        optionsSuccessStatus: 204
-      };
-      function isString(s) {
-        return typeof s === "string" || s instanceof String;
-      }
-      function isOriginAllowed(origin, allowedOrigin) {
-        if (Array.isArray(allowedOrigin)) {
-          for (var i = 0; i < allowedOrigin.length; ++i) {
-            if (isOriginAllowed(origin, allowedOrigin[i])) {
-              return true;
-            }
-          }
-          return false;
-        } else if (isString(allowedOrigin)) {
-          return origin === allowedOrigin;
-        } else if (allowedOrigin instanceof RegExp) {
-          return allowedOrigin.test(origin);
-        } else {
-          return !!allowedOrigin;
-        }
-      }
-      function configureOrigin(options, req) {
-        var requestOrigin = req.headers.origin, headers = [], isAllowed;
-        if (!options.origin || options.origin === "*") {
-          headers.push([{
-            key: "Access-Control-Allow-Origin",
-            value: "*"
-          }]);
-        } else if (isString(options.origin)) {
-          headers.push([{
-            key: "Access-Control-Allow-Origin",
-            value: options.origin
-          }]);
-          headers.push([{
-            key: "Vary",
-            value: "Origin"
-          }]);
-        } else {
-          isAllowed = isOriginAllowed(requestOrigin, options.origin);
-          headers.push([{
-            key: "Access-Control-Allow-Origin",
-            value: isAllowed ? requestOrigin : false
-          }]);
-          headers.push([{
-            key: "Vary",
-            value: "Origin"
-          }]);
-        }
-        return headers;
-      }
-      function configureMethods(options) {
-        var methods = options.methods;
-        if (methods.join) {
-          methods = options.methods.join(",");
-        }
-        return {
-          key: "Access-Control-Allow-Methods",
-          value: methods
-        };
-      }
-      function configureCredentials(options) {
-        if (options.credentials === true) {
-          return {
-            key: "Access-Control-Allow-Credentials",
-            value: "true"
-          };
-        }
-        return null;
-      }
-      function configureAllowedHeaders(options, req) {
-        var allowedHeaders = options.allowedHeaders || options.headers;
-        var headers = [];
-        if (!allowedHeaders) {
-          allowedHeaders = req.headers["access-control-request-headers"];
-          headers.push([{
-            key: "Vary",
-            value: "Access-Control-Request-Headers"
-          }]);
-        } else if (allowedHeaders.join) {
-          allowedHeaders = allowedHeaders.join(",");
-        }
-        if (allowedHeaders && allowedHeaders.length) {
-          headers.push([{
-            key: "Access-Control-Allow-Headers",
-            value: allowedHeaders
-          }]);
-        }
-        return headers;
-      }
-      function configureExposedHeaders(options) {
-        var headers = options.exposedHeaders;
-        if (!headers) {
-          return null;
-        } else if (headers.join) {
-          headers = headers.join(",");
-        }
-        if (headers && headers.length) {
-          return {
-            key: "Access-Control-Expose-Headers",
-            value: headers
-          };
-        }
-        return null;
-      }
-      function configureMaxAge(options) {
-        var maxAge = (typeof options.maxAge === "number" || options.maxAge) && options.maxAge.toString();
-        if (maxAge && maxAge.length) {
-          return {
-            key: "Access-Control-Max-Age",
-            value: maxAge
-          };
-        }
-        return null;
-      }
-      function applyHeaders(headers, res) {
-        for (var i = 0, n = headers.length; i < n; i++) {
-          var header = headers[i];
-          if (header) {
-            if (Array.isArray(header)) {
-              applyHeaders(header, res);
-            } else if (header.key === "Vary" && header.value) {
-              vary(res, header.value);
-            } else if (header.value) {
-              res.setHeader(header.key, header.value);
-            }
-          }
-        }
-      }
-      function cors2(options, req, res, next) {
-        var headers = [], method = req.method && req.method.toUpperCase && req.method.toUpperCase();
-        if (method === "OPTIONS") {
-          headers.push(configureOrigin(options, req));
-          headers.push(configureCredentials(options));
-          headers.push(configureMethods(options));
-          headers.push(configureAllowedHeaders(options, req));
-          headers.push(configureMaxAge(options));
-          headers.push(configureExposedHeaders(options));
-          applyHeaders(headers, res);
-          if (options.preflightContinue) {
-            next();
-          } else {
-            res.statusCode = options.optionsSuccessStatus;
-            res.setHeader("Content-Length", "0");
-            res.end();
-          }
-        } else {
-          headers.push(configureOrigin(options, req));
-          headers.push(configureCredentials(options));
-          headers.push(configureExposedHeaders(options));
-          applyHeaders(headers, res);
-          next();
-        }
-      }
-      function middlewareWrapper(o) {
-        var optionsCallback = null;
-        if (typeof o === "function") {
-          optionsCallback = o;
-        } else {
-          optionsCallback = function(req, cb) {
-            cb(null, o);
-          };
-        }
-        return function corsMiddleware(req, res, next) {
-          optionsCallback(req, function(err, options) {
-            if (err) {
-              next(err);
-            } else {
-              var corsOptions = assign({}, defaults, options);
-              var originCallback = null;
-              if (corsOptions.origin && typeof corsOptions.origin === "function") {
-                originCallback = corsOptions.origin;
-              } else if (corsOptions.origin) {
-                originCallback = function(origin, cb) {
-                  cb(null, corsOptions.origin);
-                };
-              }
-              if (originCallback) {
-                originCallback(req.headers.origin, function(err2, origin) {
-                  if (err2 || !origin) {
-                    next(err2);
-                  } else {
-                    corsOptions.origin = origin;
-                    cors2(corsOptions, req, res, next);
-                  }
-                });
-              } else {
-                next();
-              }
-            }
-          });
-        };
-      }
-      module.exports = middlewareWrapper;
-    })();
   }
 });
 
@@ -38192,30 +37938,6 @@ var require_dist8 = __commonJS({
     module.exports.parse = S.parse;
     module.exports.populate = S.populate;
     __require.main === module && qe(process.argv.slice(2));
-  }
-});
-
-// src/utils/logger.ts
-var logger;
-var init_logger = __esm({
-  "src/utils/logger.ts"() {
-    "use strict";
-    logger = {
-      info: (message, ...args) => {
-        console.error(`[INFO] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
-      },
-      error: (message, ...args) => {
-        console.error(`[ERROR] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
-      },
-      warn: (message, ...args) => {
-        console.error(`[WARN] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
-      },
-      debug: (message, ...args) => {
-        if (process.env.DEBUG) {
-          console.error(`[DEBUG] ${(/* @__PURE__ */ new Date()).toISOString()} ${message}`, ...args);
-        }
-      }
-    };
   }
 });
 
@@ -192693,10 +192415,50 @@ var StreamableHTTPServerTransport = class {
   }
 };
 
-// src/codeql-development-mcp-server.ts
+// src/lib/http-transport.ts
 var import_express = __toESM(require_express2(), 1);
-var import_cors = __toESM(require_lib3(), 1);
+init_logger();
+function createLocalHttpApp() {
+  const app = (0, import_express.default)();
+  app.use((req, res, next) => {
+    const port = req.socket.localPort;
+    const authorities = ["127.0.0.1", "[::1]", "localhost"].flatMap(
+      (host) => port === 80 ? [host, `${host}:80`] : [`${host}:${port}`]
+    );
+    const hostCount = req.rawHeaders.filter(
+      (_, index) => index % 2 === 0 && req.rawHeaders[index].toLowerCase() === "host"
+    ).length;
+    let error2;
+    if (!port || hostCount !== 1 || !authorities.includes(req.headers.host ?? "")) {
+      error2 = "Invalid Host header: only this loopback listener is allowed";
+    } else if (req.headers.origin !== void 0 || req.headers["sec-fetch-site"] !== void 0) {
+      error2 = "Browser requests are not supported by the local HTTP transport";
+    }
+    if (error2) {
+      logger.warn(`Rejected HTTP request: ${error2}`);
+      res.status(403).json({ jsonrpc: "2.0", error: { code: -32e3, message: error2 }, id: null });
+      return;
+    }
+    next();
+  });
+  app.use(import_express.default.json());
+  return app;
+}
+function getHttpConfiguration(env2 = process.env) {
+  const host = env2.HTTP_HOST ?? "localhost";
+  const port = env2.HTTP_PORT ?? env2.PORT ?? "3000";
+  if (!["127.0.0.1", "::1", "localhost"].includes(host)) {
+    throw new Error("HTTP_HOST must be localhost, 127.0.0.1, or ::1; remote HTTP access is not supported");
+  }
+  if (!/^[0-9]+$/.test(port) || Number(port) < 1 || Number(port) > 65535) {
+    throw new Error("HTTP_PORT (or PORT) must be an integer between 1 and 65535");
+  }
+  return { host: host === "localhost" ? "127.0.0.1" : host, port: Number(port) };
+}
+
+// src/codeql-development-mcp-server.ts
 var import_dotenv = __toESM(require_dist8(), 1);
+import { randomUUID as randomUUID4 } from "crypto";
 import { realpathSync as realpathSync3 } from "fs";
 import { resolve as resolve14 } from "path";
 import { pathToFileURL as pathToFileURL5 } from "url";
@@ -206697,6 +206459,7 @@ var PACKAGE_NAME = "codeql-development-mcp-server";
 var VERSION = "2.27.4";
 async function startServer(mode = "stdio") {
   logger.info(`Starting CodeQL Development MCP McpServer v${VERSION} in ${mode} mode`);
+  const httpConfiguration = mode === "http" ? getHttpConfiguration() : void 0;
   const codeqlBinary = resolveCodeQLBinary();
   logger.info(`CodeQL CLI binary: ${codeqlBinary}`);
   const codeqlVersion = await validateCodeQLBinaryReachable();
@@ -206728,11 +206491,9 @@ async function startServer(mode = "stdio") {
     await server.connect(transport);
     logger.info("McpServer started successfully on STDIO transport");
   } else {
-    const app = (0, import_express.default)();
-    app.use((0, import_cors.default)());
-    app.use(import_express.default.json());
+    const app = createLocalHttpApp();
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => Math.random().toString(36).substring(7)
+      sessionIdGenerator: randomUUID4
     });
     await server.connect(transport);
     app.all("/mcp", (req, res) => {
@@ -206751,8 +206512,8 @@ async function startServer(mode = "stdio") {
         status: "running"
       });
     });
-    const host = process.env.HTTP_HOST || "localhost";
-    const port = Number(process.env.HTTP_PORT || process.env.PORT) || 3e3;
+    if (!httpConfiguration) throw new Error("Missing HTTP configuration");
+    const { host, port } = httpConfiguration;
     return new Promise((resolve15, reject) => {
       const httpServer = app.listen(port, host, () => {
         logger.info(`HTTP server listening on http://${host}:${port}/mcp`);
@@ -207093,13 +206854,6 @@ serve-static/index.js:
    * Copyright(c) 2014-2016 Douglas Christopher Wilson
    * MIT Licensed
    *)
-
-object-assign/index.js:
-  (*
-  object-assign
-  (c) Sindre Sorhus
-  @license MIT
-  *)
 
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 5.5.0 https://github.com/nodeca/js-yaml @license MIT *)
