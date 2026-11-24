@@ -14,23 +14,58 @@ release cadence.
 
 _Changes on `main` since the latest tagged release that have not yet been included in a stable release._
 
+## [v2.27.5] — 2026-11-23
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.27.5** and refreshed all bundled language query packs. ([#423](https://github.com/advanced-security/codeql-development-mcp-server/pull/423))
+- **Hardened the local HTTP transport** against browser-originated requests and DNS rebinding. ([commit](https://github.com/advanced-security/codeql-development-mcp-server/commit/0099cdcdbfbc4c83d758cc4495d0380fc57275da))
+
 ### Changed
-
-#### Infrastructure & CI/CD
-
-- The repository `.npmrc` no longer hard-codes `registry=https://registry.npmjs.org/`, so user or organization npm configuration (for example, a private package feed) applies to `npm install`. `engine-strict`, `ignore-scripts`, and `min-release-age=0` are unchanged. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
 
 #### VS Code Extension
 
-- `extensions/vscode/tsconfig.json` now sets `"types": ["node", "vscode"]` so Node and VS Code typings are included explicitly. The contributor docs note that `@types/vscode` must be pinned to an exact version no newer than the `engines.vscode` minimum. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+- Lowered the minimum supported VS Code version from 1.115.0 to 1.114.0. ([#411](https://github.com/advanced-security/codeql-development-mcp-server/pull/411))
+- Explicitly include Node.js and VS Code typings in the extension TypeScript configuration, and document the compatible `@types/vscode` version requirement. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+
+#### Infrastructure & CI/CD
+
+- Removed the hard-coded npm registry from `.npmrc` so user or organization registry configuration applies to installs; retained the other npm settings. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
 
 ### Fixed
 
-- Pinned `@types/vscode` to 1.110.0 (previously `^1.114.0`, which resolved to 1.140.0) so the extension cannot use VS Code APIs newer than the supported `engines.vscode` minimum of 1.114.0. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+- Pinned `@types/vscode` to 1.110.0 so the extension cannot compile against VS Code APIs newer than its supported minimum. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+
+### Security
+
+- Restricted the local HTTP transport to loopback hosts, rejected browser-originated requests, and replaced non-cryptographic session IDs with UUIDs. ([commit](https://github.com/advanced-security/codeql-development-mcp-server/commit/0099cdcdbfbc4c83d758cc4495d0380fc57275da))
+- Updated `hono` from 4.13.13 to 4.13.21, including fixes for JWT signature canonicalization and host changes in client request URLs. ([#421](https://github.com/advanced-security/codeql-development-mcp-server/pull/421))
 
 ### Dependencies
 
-- Updated npm dependencies across the root, server, and VS Code extension workspaces to the latest supportable versions, including `vitest` and `@vitest/coverage-v8` 5.1.0 (pinned), `sql.js` 1.16.0 (pinned), `@modelcontextprotocol/sdk` ^1.32.2, `dotenv` ^18.0.10, `eslint` ^10.15.0, `typescript-eslint` ^8.73.0, `prettier` ^3.10.1, `markdownlint-cli` ^0.50.0, `@vscode/vsce` ^4.1.1, `glob` ^14.0.6, and `@types/node` ^26.6.6. Rebuilt the server bundle. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+- Updated the CodeQL CLI to v2.27.5 and aligned version-bearing files and CodeQL pack locks. The packs now use `actions-all` 0.7.2, `cpp-all` 12.4.1, `csharp-all` 7.4.3, `go-all` 9.0.0, `java-all` 9.3.5, `javascript-all` 3.0.1, `python-all` 7.2.10, `ruby-all` 7.1.2, `rust-all` 0.2.26, and `swift-all` 6.8.8. ([#423](https://github.com/advanced-security/codeql-development-mcp-server/pull/423))
+- Updated the Go MCP client dependency `github.com/mark3labs/mcp-go` from 1.4.0 to 1.5.0. ([#409](https://github.com/advanced-security/codeql-development-mcp-server/pull/409))
+- Updated npm dependencies across the root, server, and VS Code extension workspaces, including `@modelcontextprotocol/sdk` ^1.32.2, `dotenv` ^18.0.10, `eslint` ^10.15.0, `typescript-eslint` ^8.73.0, `prettier` ^3.10.1, `markdownlint-cli` ^0.50.0, `@vscode/vsce` ^4.1.1, and `glob` ^14.0.6. `vitest` and `@vitest/coverage-v8` are pinned to 5.1.0, and `sql.js` to 1.16.0. Rebuilt the server bundle. ([#422](https://github.com/advanced-security/codeql-development-mcp-server/pull/422))
+- Updated GitHub Actions: `softprops/action-gh-release` 3.0.3 → 3.0.4 and `peter-evans/create-pull-request` 8.1.1 → 8.1.3. ([#412](https://github.com/advanced-security/codeql-development-mcp-server/pull/412), [#417](https://github.com/advanced-security/codeql-development-mcp-server/pull/417))
+
+**Full Changelog**: [`v2.27.4...v2.27.5`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.4...v2.27.5)
+
+---
+
+## [v2.27.4] — 2026-11-03
+
+### Highlights
+
+- **Upgraded CodeQL CLI to v2.27.4** and refreshed all bundled language query packs. ([#406](https://github.com/advanced-security/codeql-development-mcp-server/pull/406))
+
+### Dependencies
+
+- Updated the CodeQL CLI to v2.27.4 and aligned version-bearing files and CodeQL pack locks. The packs now use `actions-all` 0.7.1, `cpp-all` 12.4.0, `csharp-all` 7.4.2, `go-all` 8.1.0, `java-all` 9.3.4, `javascript-all` 3.0.0, `python-all` 7.2.9, `ruby-all` 7.1.1, `rust-all` 0.2.25, and `swift-all` 6.8.7. ([#406](https://github.com/advanced-security/codeql-development-mcp-server/pull/406))
+- Updated Go MCP client dependencies: `github.com/cli/go-gh/v2` 2.16.2 → 2.17.0 and `github.com/mark3labs/mcp-go` 1.2.1 → 1.4.0. ([#399](https://github.com/advanced-security/codeql-development-mcp-server/pull/399))
+
+**Full Changelog**: [`v2.27.3...v2.27.4`](https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.3...v2.27.4)
+
+---
 
 ## [v2.27.3] — 2026-10-22
 
@@ -847,7 +882,9 @@ _Initial public release of the CodeQL Development MCP Server._
 
 <!-- Link definitions -->
 
-[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.3...HEAD
+[Unreleased]: https://github.com/advanced-security/codeql-development-mcp-server/compare/v2.27.5...HEAD
+[v2.27.5]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.5
+[v2.27.4]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.4
 [v2.27.3]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.3
 [v2.27.2]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.2
 [v2.27.1]: https://github.com/advanced-security/codeql-development-mcp-server/releases/tag/v2.27.1
