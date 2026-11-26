@@ -27,7 +27,7 @@ jobs:
           node-version-file: '.node-version'
 
       - name: Lint and Format - Setup Go
-        uses: actions/setup-go@v7.0.0
+        uses: actions/setup-go@v7.1.0
         with:
           go-version-file: 'client/go.mod'
           cache-dependency-path: 'client/go.sum'

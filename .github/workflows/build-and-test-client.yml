@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Setup Go environment
-        uses: actions/setup-go@v7.0.0
+        uses: actions/setup-go@v7.1.0
         with:
           cache-dependency-path: 'client/go.sum'
           go-version-file: 'client/go.mod'
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Setup Go environment
-        uses: actions/setup-go@v7.0.0
+        uses: actions/setup-go@v7.1.0
         with:
           cache-dependency-path: 'client/go.sum'
           go-version-file: 'client/go.mod'
