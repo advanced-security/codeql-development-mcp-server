@@ -26,10 +26,10 @@
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
-    "markdownlint-cli": "^0.50.0",
+    "markdownlint-cli": "^0.50.1",
     "prettier": "^3.10.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.73.0"
+    "typescript-eslint": "^8.74.0"
   },
   "overrides": {
     "@types/node": "^26.2.0"
